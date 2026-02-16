@@ -1,6 +1,5 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
 import "./App.css";
 
 function App() {
@@ -23,9 +22,7 @@ function App() {
         <a href="https://tauri.app" target="_blank">
           <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
         </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <a href="https://react.dev" target="_blank">Logo</a>
       </div>
       <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
@@ -34,13 +31,8 @@ function App() {
         onSubmit={(e) => {
           e.preventDefault();
           greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
+        }}>
+        <input id="greet-input" onChange={(e) => setName(e.currentTarget.value)} placeholder="Enter a name..." />
         <button type="submit">Greet</button>
       </form>
       <p>{greetMsg}</p>

@@ -1,33 +1,5 @@
 # Roadmap
 
-## Assumptions
-
-- **Canonical storage = OS locations (folders)** + **sidecar SQLite index + JSON settings**.
-- Markdown parsing/rendering is **authoritative in Rust** (single source of truth), using a spec-complete CommonMark+GFM engine (recommended: **Comrak**). ([Crates.io][1])
-- Frontend uses **Elm architecture** with `Model/Msg/update/Cmd/Sub`.
-- Rust communicates with the frontend via **Tauri commands + events**. ([Tauri][2])
-
-## Repo skeleton, contracts, and fixtures
-
-### Deliverables
-
-- Workspace layout:
-    - `src/` (React UI)
-    - `crates/core/` (`writer-core` domain types, markdown API, storage API)
-    - `crates/markdown/` (`writer-md` markdown engine wrapper around Comrak)
-    - `crates/store/` (`writer-store` SQLite + FTS)
-    - `src-tauri/` (`writer` Tauri app + command handlers)
-- "Fixtures" folder:
-    - `fixtures/markdown/` with input markdown + expected HTML + expected outline metadata
-    - `fixtures/render/` for XSS / raw HTML testcases
-
-## Verification
-
-- CI runs:
-    - Rust unit tests for markdown fixtures
-    - UI typecheck + lint
-- A single "hello command" roundtrip: UI invokes `ping` and prints result. ([Tauri][2])
-
 ## Location system + permissions + persisted access
 
 Users add folders ("locations"), and access persists across restarts—without granting broad filesystem access.
@@ -51,11 +23,6 @@ Users add folders ("locations"), and access persists across restarts—without g
    - Validate roots still exist
    - Emit events for missing/changed locations
 
-### Verification
-
-- Add location → restart app → still lists location and can read a test file within it.
-- Attempt open outside location root → must fail with a structured error.
-
 ## Rust command layer "ports" + event channel (foundation for Elm Cmd/Sub)
 
 A stable backend API surface that the Elm-style frontend treats as "ports".
@@ -76,10 +43,6 @@ A stable backend API surface that the Elm-style frontend treats as "ports".
    - `Sub` variants:
      - backend events stream → `Msg::BackendEvent(...)`
 
-### Verification
-
-- Manual: trigger a backend event (e.g., "tick") and see it update UI state without direct UI polling.
-
 ## Document catalog + safe IO + atomic saves
 
 Open/edit/save files in locations safely and predictably.
@@ -98,11 +61,6 @@ Open/edit/save files in locations safely and predictably.
 4. **Editor autosave loop**
    - Debounced save in Elm (`Msg::EditorChanged` → schedule save `Cmd`)
    - Save status machine: `Idle | Dirty | Saving | Saved | Error`
-
-### Verification
-
-- Kill app mid-save: file is either old or new, never truncated/partial.
-- Modify file externally; open in app; verify reload prompt or auto-reconcile.
 
 ## Markdown engine (Rust): parse, render, and metadata extraction
 
@@ -139,14 +97,6 @@ A "thorough" Markdown pipeline: deterministic HTML, structured metadata, and sou
      - Outline JSON match
      - Sourcepos presence for block nodes
 
-### Verification
-
-- Run fixture suite; add at least:
-
-    - tables, tasklists, autolinks
-    - nested blockquotes, code fences
-    - "raw HTML" cases (ensure safe behavior by default)
-
 ## Editor MVP (React): CodeMirror 6 + Markdown language + Elm integration
 
 A robust text editor that cooperates with Elm state management (no "hidden state surprises").
@@ -170,11 +120,6 @@ A robust text editor that cooperates with Elm state management (no "hidden state
    - `Msg::SaveFinished`
    - `Msg::DocOpened`
 
-### Verification
-
-- Open a 200KB markdown file and type smoothly.
-- No infinite loops between editor updates and Elm state reconciliation.
-
 ## Preview renderer + scroll/selection sync (editor ↔ rendered HTML)
 
 High-quality Markdown rendering with predictable safety and a stable sync model.
@@ -197,11 +142,6 @@ High-quality Markdown rendering with predictable safety and a stable sync model.
      - preview scroll → nearest sourcepos line
    - Implement coarse sync first (block-level), refine later. ([Docs.rs][6])
 
-### Verification
-
-- Cursor on heading → preview scrolls to that heading block.
-- Scrolling preview updates "current section" indicator in editor.
-
 ## Indexing + search (SQLite FTS), driven by watcher + reconciliation
 
 Fast global search across locations with correct incremental updates.
@@ -220,11 +160,6 @@ Fast global search across locations with correct incremental updates.
 3. **Search API**
 
    - `search(query, filters, limit) -> SearchHit[]` with snippets
-
-### Verification
-
-- Delete `app.db` → app still opens docs → "Rebuild index" works.
-- Modify file externally → index updates and search finds new content.
 
 ## Markdown "thoroughness" upgrades (extensions, diagnostics, export)
 
@@ -249,11 +184,6 @@ Make Markdown handling feel professional and predictable for writers.
    - HTML export (direct from Rust renderer)
    - PDF export (later; separate milestone due to complexity)
 
-### Verification
-
-- "Export HTML" matches preview output exactly.
-- Diagnostics appear deterministically for fixtures.
-
 ## Hardening
 
 ### Tasks
@@ -270,17 +200,6 @@ Make Markdown handling feel professional and predictable for writers.
 
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
-
-### Verification
-
-- Load 10k-note library (or synthetic corpus) and keep UI responsive.
-- Fuzz-ish tests for markdown parser inputs (crash-free).
-
-## Defaults (to keep this "correct")
-
-- **Rust is authoritative** for Markdown → HTML, and the UI is a "viewer" of that output.
-- Default profile is **GFM-safe**: rich features, but no unsafe raw HTML. ([Crates.io][1])
-- Use Comrak **sourcepos** as the backbone for editor↔preview sync; it’s explicitly supported in Comrak render options (with known limitations around lists/inlines). ([Docs.rs][6])
 
 [1]: https://crates.io/crates/comrak "comrak - crates.io: Rust Package Registry"
 [2]: https://v2.tauri.app/develop/calling-rust/ "Calling Rust from the Frontend"
