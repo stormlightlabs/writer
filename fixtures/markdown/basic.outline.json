@@ -7,8 +7,5 @@
     { "level": 2, "text": "Section 2" }
   ],
   "word_count": 42,
-  "task_items": {
-    "total": 2,
-    "completed": 1
-  }
+  "task_items": { "total": 2, "completed": 1 }
 }

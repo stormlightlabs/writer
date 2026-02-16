@@ -216,3 +216,51 @@ export function locationValidate(
 ): Cmd {
   return invokeCmd<Array<[LocationId, string]>>("location_validate", {}, onOk, onErr);
 }
+
+export type DocRef = { location_id: LocationId; rel_path: string };
+
+export type DocMeta = {
+  location_id: LocationId;
+  rel_path: string;
+  title: string;
+  updated_at: string;
+  word_count: number;
+};
+
+export type DocContent = { text: string; meta: DocMeta };
+
+export type SaveStatus = "Idle" | "Dirty" | "Saving" | "Saved" | "Error";
+
+export type EditorState = {
+  doc_ref: DocRef | null;
+  text: string;
+  save_status: SaveStatus;
+  cursor_line: number;
+  cursor_column: number;
+  selection_from: number | null;
+  selection_to: number | null;
+};
+
+export type EditorMsg =
+  | { type: "EditorChanged"; text: string }
+  | { type: "SaveRequested" }
+  | { type: "SaveFinished"; success: boolean; error?: AppError }
+  | { type: "DocOpened"; doc: DocContent }
+  | { type: "CursorMoved"; line: number; column: number }
+  | { type: "SelectionChanged"; from: number; to: number | null };
+
+export function docList(
+  locationId: LocationId,
+  onOk: (docs: DocMeta[]) => void,
+  onErr: (error: AppError) => void,
+): Cmd {
+  return invokeCmd<DocMeta[]>("doc_list", { locationId }, onOk, onErr);
+}
+
+export function docOpen(docRef: DocRef, onOk: (doc: DocContent) => void, onErr: (error: AppError) => void): Cmd {
+  return invokeCmd<DocContent>("doc_open", { docRef }, onOk, onErr);
+}
+
+export function docSave(docRef: DocRef, text: string, onOk: () => void, onErr: (error: AppError) => void): Cmd {
+  return invokeCmd<null>("doc_save", { docRef, text }, onOk, onErr);
+}

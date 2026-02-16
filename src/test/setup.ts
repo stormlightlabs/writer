@@ -1,7 +1,3 @@
-/**
- * Vitest test setup file
- */
-
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
@@ -45,3 +41,129 @@ console.warn = (...args: unknown[]) => {
   }
   originalWarn.apply(console, args);
 };
+
+Object.defineProperty(globalThis, "DOMRect", {
+  writable: true,
+  value: class DOMRect {
+    x = 0;
+    y = 0;
+    width = 0;
+    height = 0;
+    top = 0;
+    right = 0;
+    bottom = 0;
+    left = 0;
+    constructor(x = 0, y = 0, width = 0, height = 0) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      this.top = y;
+      this.right = x + width;
+      this.bottom = y + height;
+      this.left = x;
+    }
+    static fromRect(rect: { x?: number; y?: number; width?: number; height?: number }) {
+      return new DOMRect(rect.x, rect.y, rect.width, rect.height);
+    }
+    toJSON() {
+      return {
+        x: this.x,
+        y: this.y,
+        width: this.width,
+        height: this.height,
+        top: this.top,
+        right: this.right,
+        bottom: this.bottom,
+        left: this.left,
+      };
+    }
+  },
+});
+
+if (!globalThis.Range.prototype.getClientRects) {
+  Object.defineProperty(globalThis.Range.prototype, "getClientRects", {
+    value: () => ({ length: 0, item: () => null, [Symbol.iterator]: function*() {} }),
+  });
+}
+
+if (!globalThis.Range.prototype.getBoundingClientRect) {
+  Object.defineProperty(globalThis.Range.prototype, "getBoundingClientRect", { value: () => new DOMRect() });
+}
+
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.defineProperty(globalThis, "ResizeObserver", { writable: true, value: ResizeObserverMock });
+
+Object.defineProperty(globalThis, "Selection", {
+  writable: true,
+  value: class Selection {
+    anchorNode: Node | null = null;
+    anchorOffset = 0;
+    focusNode: Node | null = null;
+    focusOffset = 0;
+    isCollapsed = true;
+    rangeCount = 0;
+    type = "None";
+
+    addRange() {}
+    collapse() {}
+    collapseToEnd() {}
+    collapseToStart() {}
+    containsNode() {
+      return false;
+    }
+    deleteFromDocument() {}
+    empty() {}
+    extend() {}
+    getRangeAt() {
+      return null;
+    }
+    removeAllRanges() {}
+    removeRange() {}
+    selectAllChildren() {}
+    setBaseAndExtent() {}
+    toString() {
+      return "";
+    }
+  },
+});
+
+globalThis.getSelection = () => new Selection();
+
+Element.prototype.getBoundingClientRect = function() {
+  return new DOMRect(0, 0, 100, 20);
+};
+
+globalThis.document.elementFromPoint = () => null;
+
+Element.prototype.scrollTo = function() {};
+Element.prototype.scrollBy = function() {};
+
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+Object.defineProperty(globalThis, "IntersectionObserver", { writable: true, value: IntersectionObserverMock });
+
+Object.defineProperty(globalThis, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});

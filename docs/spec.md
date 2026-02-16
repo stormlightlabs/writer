@@ -44,7 +44,7 @@ Tauri's **dialog plugin** can open file/directory selectors; selected paths are 
 
 ### Editor
 
-- Split view optional (preview later; not required)
+- Split view
 - Focus modes:
     - typewriter scroll
     - distraction-free

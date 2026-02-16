@@ -1,40 +1,31 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
+import { Editor } from "./components/Editor";
+import { useEditor } from "./hooks/useEditor";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const { model, dispatch } = useEditor();
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">Logo</a>
+    <main className="container" style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      <header style={{ padding: "1rem", borderBottom: "1px solid #393939", backgroundColor: "#161616" }}>
+        <h1 style={{ margin: 0, color: "#f4f4f4" }}>Writer</h1>
+        <div style={{ color: "#a8a8a8", fontSize: "0.875rem", marginTop: "0.5rem" }}>
+          {model.saveStatus === "Saving" && "Saving..."}
+          {model.saveStatus === "Saved" && "Saved"}
+          {model.saveStatus === "Dirty" && "Unsaved changes"}
+          {model.saveStatus === "Error" && "Error saving"}
+          {model.saveStatus === "Idle" && "Ready"}
+        </div>
+      </header>
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        <Editor
+          initialText={model.text}
+          theme="dark"
+          onChange={(text) => dispatch({ type: "EditorChanged", text })}
+          onSave={() => dispatch({ type: "SaveRequested" })}
+          onCursorMove={(line, column) => dispatch({ type: "CursorMoved", line, column })}
+          onSelectionChange={(from, to) => dispatch({ type: "SelectionChanged", from, to })} />
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}>
-        <input id="greet-input" onChange={(e) => setName(e.currentTarget.value)} placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }

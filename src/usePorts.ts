@@ -23,6 +23,8 @@ import {
   SubscriptionManager,
 } from "./ports";
 
+export type { AppError, LocationDescriptor } from "./ports";
+
 interface UsePortsState<T> {
   data: T | null;
   error: AppError | null;
