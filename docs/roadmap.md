@@ -23,7 +23,7 @@ Users add folders ("locations"), and access persists across restarts—without g
    - Validate roots still exist
    - Emit events for missing/changed locations
 
-## Rust command layer "ports" + event channel (foundation for Elm Cmd/Sub)
+## Rust command layer "ports" + event channel
 
 A stable backend API surface that the Elm-style frontend treats as "ports".
 
