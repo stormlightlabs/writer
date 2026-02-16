@@ -3,7 +3,10 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
-use writer_core::{AppError, BackendEvent, CommandResult, LocationDescriptor, LocationId};
+use writer_core::{
+    AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
+    SaveResult,
+};
 use writer_store::Store;
 
 /// Application state shared across commands
@@ -172,4 +175,160 @@ pub fn reconcile_locations(app: &AppHandle) -> Result<(), AppError> {
     );
 
     Ok(())
+}
+
+/// Lists documents in a location
+#[tauri::command]
+pub fn doc_list(
+    state: State<'_, AppState>, location_id: i64, options: Option<DocListOptions>,
+) -> Result<CommandResult<Vec<DocMeta>>, ()> {
+    let id = LocationId(location_id);
+    tracing::debug!("Listing documents for location: id={}", location_id);
+
+    match state.store.doc_list(id, options) {
+        Ok(docs) => {
+            tracing::debug!("Found {} documents in location {}", docs.len(), location_id);
+            Ok(CommandResult::ok(docs))
+        }
+        Err(e) => {
+            tracing::error!("Failed to list documents: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Opens a document by location_id and relative path
+#[tauri::command]
+pub fn doc_open(
+    state: State<'_, AppState>, location_id: i64, rel_path: String,
+) -> Result<CommandResult<DocContent>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!("Opening document: location={:?}, path={:?}", location_id, rel_path);
+
+    match DocId::new(location_id, rel_path) {
+        Ok(doc_id) => match state.store.doc_open(&doc_id) {
+            Ok(content) => {
+                tracing::info!(
+                    "Document opened successfully: location={:?}, size={} bytes",
+                    doc_id.location_id,
+                    content.meta.size_bytes
+                );
+                Ok(CommandResult::ok(content))
+            }
+            Err(e) => {
+                tracing::error!("Failed to open document: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Invalid document reference: {}", e);
+            Ok(CommandResult::err(AppError::invalid_path(format!(
+                "Invalid path: {}",
+                e
+            ))))
+        }
+    }
+}
+
+/// Saves a document with atomic write semantics
+#[tauri::command]
+pub fn doc_save(
+    app: AppHandle, state: State<'_, AppState>, location_id: i64, rel_path: String, text: String,
+) -> Result<CommandResult<SaveResult>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!(
+        "Saving document: location={:?}, path={:?}, size={} bytes",
+        location_id,
+        rel_path,
+        text.len()
+    );
+
+    match DocId::new(location_id, rel_path) {
+        Ok(doc_id) => match state.store.doc_save(&doc_id, &text, None) {
+            Ok(result) => {
+                if result.conflict_detected {
+                    tracing::warn!(
+                        "Conflicted copy detected: location={:?}, path={:?}",
+                        doc_id.location_id,
+                        doc_id.rel_path
+                    );
+
+                    let event = BackendEvent::ConflictDetected {
+                        location_id: doc_id.location_id,
+                        rel_path: doc_id.rel_path.clone(),
+                        conflict_filename: doc_id
+                            .rel_path
+                            .file_name()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_else(|| "unknown".to_string()),
+                    };
+
+                    if let Err(e) = app.emit("backend-event", event) {
+                        tracing::error!("Failed to emit conflict event: {}", e);
+                    }
+                }
+
+                tracing::info!(
+                    "Document saved successfully: location={:?}, size={} bytes",
+                    doc_id.location_id,
+                    text.len()
+                );
+
+                Ok(CommandResult::ok(result))
+            }
+            Err(e) => {
+                tracing::error!("Failed to save document: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Invalid document reference: {}", e);
+            Ok(CommandResult::err(AppError::invalid_path(format!(
+                "Invalid path: {}",
+                e
+            ))))
+        }
+    }
+}
+
+/// Checks if a document exists in a location
+#[tauri::command]
+pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!(
+        "Checking document existence: location={:?}, path={:?}",
+        location_id,
+        rel_path
+    );
+
+    match DocId::new(location_id, rel_path) {
+        Ok(doc_id) => match state.store.location_get(doc_id.location_id) {
+            Ok(Some(location)) => {
+                let full_path = doc_id.resolve(&location.root_path);
+                let exists = full_path.exists();
+                Ok(CommandResult::ok(exists))
+            }
+            Ok(None) => {
+                tracing::warn!("Location not found: {:?}", doc_id.location_id);
+                Ok(CommandResult::err(AppError::not_found("Location not found")))
+            }
+            Err(e) => {
+                tracing::error!("Failed to check location: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Invalid document reference: {}", e);
+            Ok(CommandResult::err(AppError::invalid_path(format!(
+                "Invalid path: {}",
+                e
+            ))))
+        }
+    }
 }

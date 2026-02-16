@@ -2,6 +2,132 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+/// Unique identifier for a document within a location
+/// Combines location_id + rel_path for stable identity
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct DocId {
+    pub location_id: LocationId,
+    pub rel_path: PathBuf,
+}
+
+impl DocId {
+    /// Creates a new DocId after validating the relative path
+    pub fn new(location_id: LocationId, rel_path: PathBuf) -> Result<Self, PathError> {
+        let normalized = normalize_relative_path(&rel_path)?;
+        Ok(Self { location_id, rel_path: normalized })
+    }
+
+    /// Resolves this DocId against a location root path
+    pub fn resolve(&self, location_root: &Path) -> PathBuf {
+        location_root.join(&self.rel_path)
+    }
+
+    /// Converts to a DocRef for operations
+    pub fn to_doc_ref(&self) -> DocRef {
+        DocRef { location_id: self.location_id, rel_path: self.rel_path.clone() }
+    }
+}
+
+impl From<DocRef> for DocId {
+    fn from(doc_ref: DocRef) -> Self {
+        Self { location_id: doc_ref.location_id, rel_path: doc_ref.rel_path }
+    }
+}
+
+/// Metadata for a document in the catalog
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DocMeta {
+    pub id: DocId,
+    pub filename: String,
+    pub size_bytes: u64,
+    pub mtime: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub content_hash: Option<String>,
+    pub encoding: Encoding,
+    pub line_ending: LineEnding,
+    pub is_conflict: bool,
+    pub title: Option<String>,
+    pub word_count: Option<usize>,
+}
+
+/// File encoding detection and preservation
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default)]
+pub enum Encoding {
+    #[default]
+    Utf8,
+    Utf8WithBom,
+    Utf16Le,
+    Utf16Be,
+}
+
+
+/// Line ending style preservation
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default)]
+pub enum LineEnding {
+    #[default]
+    Lf,
+    CrLf,
+    Auto,
+}
+
+
+/// Document content with metadata for opening
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DocContent {
+    pub text: String,
+    pub meta: DocMeta,
+}
+
+/// Options for listing documents
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct DocListOptions {
+    pub recursive: bool,
+    pub extensions: Option<Vec<String>>,
+    pub sort_by: Option<DocSortField>,
+    pub sort_order: SortOrder,
+}
+
+/// Sort fields for document listing
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum DocSortField {
+    Name,
+    Modified,
+    Created,
+    Size,
+}
+
+/// Sort order
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
+pub enum SortOrder {
+    Ascending,
+    #[default]
+    Descending,
+}
+
+
+/// Save policy options
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
+pub enum SavePolicy {
+    /// Atomic save: write to temp, fsync, rename
+    #[default]
+    Atomic,
+    /// In-place overwrite (not recommended for production)
+    InPlace,
+}
+
+
+/// Result of a save operation
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SaveResult {
+    pub success: bool,
+    pub new_meta: Option<DocMeta>,
+    pub conflict_detected: bool,
+}
+
 /// Unique identifier for a location
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LocationId(pub i64);
@@ -192,6 +318,26 @@ pub enum BackendEvent {
     },
     /// Emitted during startup reconciliation
     ReconciliationComplete { checked: usize, missing: Vec<LocationId> },
+    /// Emitted when a conflicted copy is detected
+    ConflictDetected {
+        location_id: LocationId,
+        rel_path: PathBuf,
+        conflict_filename: String,
+    },
+    /// Emitted when a document is modified externally
+    DocModifiedExternally { doc_id: DocId, new_mtime: DateTime<Utc> },
+    /// Emitted when save status changes (for UI feedback)
+    SaveStatusChanged { doc_id: DocId, status: SaveStatus },
+}
+
+/// Save status for UI feedback loop
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SaveStatus {
+    Idle,
+    Dirty,
+    Saving,
+    Saved,
+    Error,
 }
 
 /// Normalizes a relative path and rejects any path traversal attempts
@@ -247,6 +393,27 @@ pub fn is_path_within_location(resolved_path: &PathBuf, location_root: &PathBuf)
     };
 
     resolved_canonical.starts_with(&root_canonical)
+}
+
+/// Pattern for detecting cloud provider conflicted copies
+/// Examples:
+/// - "My Document (conflict).md"
+/// - "My Document (John's conflicted copy 2024-01-15).md"
+/// - "My Document (Case conflicted copy).md"
+pub static CONFLICT_PATTERNS: &[&str] = &[
+    "(conflict)",
+    "'s conflicted copy",
+    ".conflicted copy",
+    " (conflicted copy",
+    " conflicted copy)",
+    "(conflicted copy",
+    "conflicted copy",
+];
+
+/// Detects if a filename indicates a conflicted copy from cloud providers
+pub fn is_conflicted_filename(filename: &str) -> bool {
+    let lower = filename.to_lowercase();
+    CONFLICT_PATTERNS.iter().any(|pattern| lower.contains(pattern))
 }
 
 #[cfg(test)]
@@ -329,5 +496,65 @@ mod tests {
         let rel_path = PathBuf::from("../../../secret.txt");
         let result = DocRef::new(location_id, rel_path);
         assert!(matches!(result, Err(PathError::PathTraversalAttempt)));
+    }
+
+    #[test]
+    fn test_doc_id_creation() {
+        let location_id = LocationId(1);
+        let rel_path = PathBuf::from("docs/file.md");
+        let doc_id = DocId::new(location_id, rel_path.clone()).unwrap();
+
+        assert_eq!(doc_id.location_id, location_id);
+        assert_eq!(doc_id.rel_path, rel_path);
+    }
+
+    #[test]
+    fn test_doc_id_to_doc_ref() {
+        let location_id = LocationId(1);
+        let rel_path = PathBuf::from("docs/file.md");
+        let doc_id = DocId::new(location_id, rel_path.clone()).unwrap();
+
+        let doc_ref = doc_id.to_doc_ref();
+        assert_eq!(doc_ref.location_id, location_id);
+        assert_eq!(doc_ref.rel_path, rel_path);
+    }
+
+    #[test]
+    fn test_is_conflicted_filename_basic() {
+        assert!(is_conflicted_filename("My Doc (conflict).md"));
+        assert!(is_conflicted_filename("My Doc conflicted copy.md"));
+        assert!(is_conflicted_filename("My Doc (John's conflicted copy).md"));
+        assert!(is_conflicted_filename("My Doc (Case conflicted copy 2024-01-15).md"));
+    }
+
+    #[test]
+    fn test_is_conflicted_filename_false() {
+        assert!(!is_conflicted_filename("My Doc.md"));
+        assert!(!is_conflicted_filename("Conflict Resolution.md"));
+        assert!(!is_conflicted_filename("regular-file.txt"));
+    }
+
+    #[test]
+    fn test_default_encoding() {
+        let enc: Encoding = Default::default();
+        assert!(matches!(enc, Encoding::Utf8));
+    }
+
+    #[test]
+    fn test_default_line_ending() {
+        let le: LineEnding = Default::default();
+        assert!(matches!(le, LineEnding::Lf));
+    }
+
+    #[test]
+    fn test_default_save_policy() {
+        let policy: SavePolicy = Default::default();
+        assert!(matches!(policy, SavePolicy::Atomic));
+    }
+
+    #[test]
+    fn test_default_sort_order() {
+        let order: SortOrder = Default::default();
+        assert!(matches!(order, SortOrder::Descending));
     }
 }

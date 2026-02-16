@@ -1,7 +1,10 @@
 use tauri::Manager;
 
 mod commands;
-use commands::{location_add_via_dialog, location_list, location_remove, location_validate};
+use commands::{
+    doc_exists, doc_list, doc_open, doc_save, location_add_via_dialog, location_list, location_remove,
+    location_validate,
+};
 
 pub use commands::AppState;
 
@@ -42,7 +45,11 @@ pub fn run() {
             location_add_via_dialog,
             location_list,
             location_remove,
-            location_validate
+            location_validate,
+            doc_list,
+            doc_open,
+            doc_save,
+            doc_exists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

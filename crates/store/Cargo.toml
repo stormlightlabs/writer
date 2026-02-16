@@ -12,6 +12,7 @@ chrono = "0.4"
 rusqlite = { version = "0.38", features = ["bundled", "chrono", "serde_json"] }
 dirs = "6"
 tracing = "0.1"
+tempfile = "3"
 
 [dev-dependencies]
 tempfile = "3"

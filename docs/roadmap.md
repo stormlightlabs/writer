@@ -62,7 +62,7 @@ Open/edit/save files in locations safely and predictably.
    - Debounced save in Elm (`Msg::EditorChanged` → schedule save `Cmd`)
    - Save status machine: `Idle | Dirty | Saving | Saved | Error`
 
-## Markdown engine (Rust): parse, render, and metadata extraction
+## Markdown engine (Rust)
 
 A "thorough" Markdown pipeline: deterministic HTML, structured metadata, and source mapping support.
 
@@ -83,19 +83,16 @@ A "thorough" Markdown pipeline: deterministic HTML, structured metadata, and sou
    - Enable `render.sourcepos` to include source position attributes in HTML output (useful for editor↔preview sync). ([Docs.rs][6])
 4. **Metadata extraction**
    - Extract:
-
-     - title (first H1)
-     - headings outline (H1–H6)
-     - link refs
-     - task items count
-     - word count estimate
+      - title (first H1)
+      - headings outline (H1–H6)
+      - link refs
+      - task items count
+      - word count estimate
 5. **Golden tests**
-
    - For each fixture:
-
-     - Markdown → HTML exact match
-     - Outline JSON match
-     - Sourcepos presence for block nodes
+      - Markdown → HTML exact match
+      - Outline JSON match
+      - Sourcepos presence for block nodes
 
 ## Editor MVP (React): CodeMirror 6 + Markdown language + Elm integration
 
@@ -127,19 +124,15 @@ High-quality Markdown rendering with predictable safety and a stable sync model.
 ### Tasks
 
 1. **Backend preview command**
-
    - `markdown_render(doc_ref, text, profile) -> { html, outline, diagnostics }`
    - Cache rendered HTML by `(doc_id, content_hash, profile)`
 2. **Frontend preview**
-
    - Render HTML in a sandboxed container (no inline scripts)
    - Apply CSS theme consistent with editor
 3. **Sync strategy**
-
    - Use `data-sourcepos` (from Comrak sourcepos) to map:
-
-     - editor cursor line → preview anchor
-     - preview scroll → nearest sourcepos line
+      - editor cursor line → preview anchor
+      - preview scroll → nearest sourcepos line
    - Implement coarse sync first (block-level), refine later. ([Docs.rs][6])
 
 ## Indexing + search (SQLite FTS), driven by watcher + reconciliation
@@ -149,55 +142,45 @@ Fast global search across locations with correct incremental updates.
 ### Tasks
 
 1. **SQLite schema**
-
    - `docs(location_id, rel_path, mtime, size, hash, title, updated_at, …)`
    - `docs_fts(content, tokenize=...)`
 2. **Index update pipeline**
-
    - On save: update FTS row
    - On watcher event: queue reindex for changed file
    - On startup: reconcile catalog vs filesystem (drift repair)
 3. **Search API**
-
    - `search(query, filters, limit) -> SearchHit[]` with snippets
 
 ## Markdown "thoroughness" upgrades (extensions, diagnostics, export)
 
 Make Markdown handling feel professional and predictable for writers.
 
-### Tasks (pick the ones you want "first-class")
+### Tasks
 
 1. **Front matter**
    - Parse YAML/TOML front matter (Comrak supports front matter extension; decide format). ([GitHub][5])
 2. **Footnotes, definition lists, tables**
-
    - Enable and test; ensure preview styles cover them. ([GitHub][5])
 3. **Diagnostics**
-
    - Lint-like warnings:
-
-     - duplicate heading IDs
-     - malformed links
-     - mixed line endings
+      - duplicate heading IDs
+      - malformed links
+      - mixed line endings
 4. **Export**
-
    - HTML export (direct from Rust renderer)
-   - PDF export (later; separate milestone due to complexity)
+   - PDF export
 
 ## Hardening
 
 ### Tasks
 
 1. **Security**
-
    - Prove: no fs access outside scoped locations
    - Prove: preview cannot execute scripts (CSP / sandbox strategy)
 2. **Perf**
-
    - Incremental render scheduling (debounce, worker thread)
    - Indexing in background with progress events
 3. **Recovery**
-
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
 
