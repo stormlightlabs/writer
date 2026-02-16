@@ -140,35 +140,33 @@ function Results(
   );
 }
 
-function SearchInput(
+const SearchInput = (
   { query, handleQueryChange, clearQuery }: {
     query: string;
     handleQueryChange: ChangeEventHandler<HTMLInputElement>;
     clearQuery: MouseEventHandler<HTMLButtonElement>;
   },
-) {
-  return (
-    <div className="flex-1 relative">
-      <SearchIcon
-        size={18}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-secondary pointer-events-none" />
-      <input
-        type="text"
-        value={query}
-        onChange={handleQueryChange}
-        placeholder="Search across all documents..."
-        autoFocus
-        className="w-full pl-10 pr-3 py-2.5 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)]" />
-      {query && (
-        <button
-          onClick={clearQuery}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
-          <XIcon size={14} />
-        </button>
-      )}
-    </div>
-  );
-}
+) => (
+  <div className="flex-1 relative">
+    <SearchIcon
+      size={18}
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-secondary pointer-events-none" />
+    <input
+      type="text"
+      value={query}
+      onChange={handleQueryChange}
+      placeholder="Search across all documents..."
+      autoFocus
+      className="w-full pl-10 pr-3 py-2.5 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)]" />
+    {query && (
+      <button
+        onClick={clearQuery}
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
+        <XIcon size={14} />
+      </button>
+    )}
+  </div>
+);
 
 function FilterLocation(
   { location, filters, handleToggleLocation }: {

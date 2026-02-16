@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import type { DocMeta } from "../ports";
 import type { LineEnding } from "../types";
 
@@ -13,18 +12,14 @@ export type StatusBarProps = {
   lineEnding?: LineEnding;
 };
 
-function StatusItem({ label, value, title }: { label?: string; value: string | number; title?: string }) {
-  return (
-    <div title={title} className="flex items-center gap-1 text-xs text-text-secondary px-2">
-      {label && <span className="text-text-placeholder">{label}:</span>}
-      <span>{value}</span>
-    </div>
-  );
-}
+const StatusItem = ({ label, value, title }: { label?: string; value: string | number; title?: string }) => (
+  <div title={title} className="flex items-center gap-1 text-xs text-text-secondary px-2">
+    {label && <span className="text-text-placeholder">{label}:</span>}
+    <span>{value}</span>
+  </div>
+);
 
-function StatusDivider() {
-  return <div className="w-px h-3 bg-border-subtle" />;
-}
+const StatusDivider = () => <div className="w-px h-3 bg-border-subtle" />;
 
 function formatDate(dateString: string) {
   try {
@@ -35,14 +30,10 @@ function formatDate(dateString: string) {
   }
 }
 
-export function StatusBar(
-  { docMeta, cursorLine, cursorColumn, wordCount, charCount, selectionCount, encoding = "utf8", lineEnding = "LF" }:
-    StatusBarProps,
-) {
-  const StatusMeta = useCallback(() => {
-    if (!docMeta) {
-      return null;
-    }
+const StatusMeta = (
+  { docMeta, wordCount, charCount }: { docMeta: DocMeta | null; wordCount: number; charCount: number },
+) => {
+  if (docMeta) {
     return (
       <>
         <StatusItem
@@ -55,25 +46,29 @@ export function StatusBar(
         <StatusItem label="Chars" value={charCount.toLocaleString()} />
       </>
     );
-  }, [docMeta, wordCount, charCount]);
+  }
 
-  const SelectedCount = useCallback(() => {
-    if (selectionCount === undefined || selectionCount === 0) {
-      return null;
-    }
-    return (
-      <>
-        <StatusDivider />
-        <StatusItem label="Selected" value={selectionCount.toLocaleString()} />
-      </>
-    );
-  }, [selectionCount]);
+  return null;
+};
 
+const SelectedCount = ({ selectionCount }: { selectionCount: number }) => (
+  <>
+    <StatusDivider />
+    <StatusItem label="Selected" value={selectionCount.toLocaleString()} />
+  </>
+);
+
+export function StatusBar(
+  { docMeta, cursorLine, cursorColumn, wordCount, charCount, selectionCount, encoding = "utf8", lineEnding = "LF" }:
+    StatusBarProps,
+) {
   return (
     <footer className="h-6 bg-layer-01 border-t border-border-subtle flex items-center justify-between px-4 font-mono">
       <div className="flex items-center gap-2">
-        {docMeta ? <StatusMeta /> : <span className="text-xs text-text-placeholder">No document open</span>}
-        <SelectedCount />
+        {docMeta
+          ? <StatusMeta docMeta={docMeta} wordCount={wordCount} charCount={charCount} />
+          : <span className="text-xs text-text-placeholder">No document open</span>}
+        {selectionCount && selectionCount > 0 ? <SelectedCount selectionCount={selectionCount} /> : null}
       </div>
 
       <div className="flex items-center gap-2">

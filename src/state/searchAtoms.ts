@@ -8,7 +8,6 @@ export const searchFiltersAtom = atom<SearchFilters>({});
 
 export const activeSearchFilterCountAtom = atom((get) => {
   const filters = get(searchFiltersAtom);
-
   return (filters.locations?.length ?? 0) + (filters.fileTypes?.length ?? 0) + (filters.dateRange ? 1 : 0);
 });
 

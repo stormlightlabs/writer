@@ -1,4 +1,4 @@
-import type { MouseEventHandler} from "react";
+import type { MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
 import type { SaveStatus } from "../ports";
 import { CheckIcon, EyeIcon, FocusIcon, RefreshIcon, SaveIcon, SettingsIcon, SplitViewIcon } from "./icons";
@@ -75,28 +75,28 @@ function ToolbarButton(
   );
 }
 
-function SaveStatusIndicator({ status }: { status: SaveStatus }) {
-  const getStatusDisplay = () => {
-    switch (status) {
-      case "Saving": {
-        return { icon: <SaveIcon size={14} />, text: "Saving...", color: "text-accent-cyan" };
-      }
-      case "Saved": {
-        return { icon: <CheckIcon size={14} />, text: "Saved", color: "text-accent-green" };
-      }
-      case "Dirty": {
-        return { icon: null, text: "Unsaved", color: "text-accent-yellow" };
-      }
-      case "Error": {
-        return { icon: null, text: "Error", color: "text-support-error" };
-      }
-      default: {
-        return { icon: null, text: "Ready", color: "text-text-placeholder" };
-      }
+const getStatusDisplay = (status: SaveStatus) => {
+  switch (status) {
+    case "Saving": {
+      return { icon: <SaveIcon size={14} />, text: "Saving...", color: "text-accent-cyan" };
     }
-  };
+    case "Saved": {
+      return { icon: <CheckIcon size={14} />, text: "Saved", color: "text-accent-green" };
+    }
+    case "Dirty": {
+      return { icon: null, text: "Unsaved", color: "text-accent-yellow" };
+    }
+    case "Error": {
+      return { icon: null, text: "Error", color: "text-support-error" };
+    }
+    default: {
+      return { icon: null, text: "Ready", color: "text-text-placeholder" };
+    }
+  }
+};
 
-  const { icon, text, color } = getStatusDisplay();
+function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+  const { icon, text, color } = getStatusDisplay(status);
 
   return (
     <div

@@ -81,7 +81,7 @@ const DocumentTab = (
 
   const classes = useMemo(() => {
     const base = [
-      "flex items-center gap-1.5 px-3 min-w-[120px] max-w-[200px] shrink-0 cursor-pointer border-r border-border-subtle select-none transition-all duration-150",
+      "group flex items-center gap-1.5 px-3 min-w-[120px] max-w-[200px] shrink-0 cursor-pointer border-r border-border-subtle select-none transition-all duration-150",
     ];
 
     if (isActive) {
@@ -106,7 +106,7 @@ const DocumentTab = (
     () => (
       <button
         onClick={handleCloseTabClick}
-        className="tab-close-btn w-4 h-4 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded shrink-0 opacity-0 transition-all duration-150"
+        className="tab-close-btn w-4 h-4 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded shrink-0 opacity-0 transition-all duration-150 group-hover:opacity-100 hover:text-icon-primary hover:bg-layer-hover-01"
         title="Close tab">
         <XIcon size={12} />
       </button>
@@ -263,17 +263,6 @@ export function DocumentTabs({ tabs, activeTabId, onSelectTab, onCloseTab, onReo
         </div>
       )}
 
-      <style>
-        {`
-        div[draggable]:hover .tab-close-btn {
-          opacity: 1 !important;
-        }
-        div[draggable] .tab-close-btn:hover {
-          color: var(--color-icon-primary) !important;
-          background-color: var(--color-layer-hover-01);
-        }
-      `}
-      </style>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { type StateCreator, create } from "zustand";
+import { create, type StateCreator } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type { Tab } from "../components/DocumentTabs";
 import type { DocMeta, DocRef, LocationDescriptor } from "../ports";
@@ -57,10 +57,7 @@ export type WorkspaceActions = {
   setLoadingDocuments: (value: boolean) => void;
 };
 
-export type TabsState = {
-  tabs: Tab[];
-  activeTabId: string | null;
-};
+export type TabsState = { tabs: Tab[]; activeTabId: string | null };
 
 export type TabsActions = {
   openDocumentTab: (docRef: DocRef, title: string) => OpenDocumentTabResult;
@@ -96,10 +93,7 @@ function getInitialWorkspaceState(): WorkspaceState {
 }
 
 function getInitialTabsState(): TabsState {
-  return {
-    tabs: [],
-    activeTabId: null,
-  };
+  return { tabs: [], activeTabId: null };
 }
 
 const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActions> = (set) => ({
@@ -315,12 +309,7 @@ export function useWorkspaceActions() {
 }
 
 export function useTabsState() {
-  return useAppStore(
-    useShallow((state) => ({
-      tabs: state.tabs,
-      activeTabId: state.activeTabId,
-    })),
-  );
+  return useAppStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
 }
 
 export function useTabsActions() {
@@ -338,9 +327,5 @@ export function useTabsActions() {
 export function resetAppStore(): void {
   nextTabId = 1;
 
-  useAppStore.setState({
-    ...getInitialLayoutState(),
-    ...getInitialWorkspaceState(),
-    ...getInitialTabsState(),
-  });
+  useAppStore.setState({ ...getInitialLayoutState(), ...getInitialWorkspaceState(), ...getInitialTabsState() });
 }
