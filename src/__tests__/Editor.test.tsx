@@ -6,7 +6,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Editor } from "../components/Editor";
 
-describe("Editor", () => {
+describe(Editor, () => {
   const mockOnChange = vi.fn();
 
   beforeEach(() => {
@@ -81,7 +81,7 @@ describe("Editor", () => {
     });
 
     it("should render in disabled state", () => {
-      render(<Editor disabled={true} />);
+      render(<Editor disabled />);
       const container = screen.getByTestId("editor-container");
       expect(container).toBeInTheDocument();
     });
@@ -96,7 +96,7 @@ describe("Editor", () => {
         fireEvent.input(content, { target: { textContent: "New text" } });
 
         await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
+          expect(mockOnChange).toHaveBeenCalledWith();
         }, { timeout: 100 });
       }
     });
@@ -113,7 +113,7 @@ describe("Editor", () => {
         expect(mockOnChange).not.toHaveBeenCalled();
 
         await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalled();
+          expect(mockOnChange).toHaveBeenCalledWith();
         }, { timeout: 200 });
       }
     });

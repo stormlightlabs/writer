@@ -1,3 +1,4 @@
+// oxlint-disable max-classes-per-file
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
@@ -5,7 +6,7 @@ type EventWrapper = { payload: unknown };
 
 type EventHandler = (event: EventWrapper) => void;
 
-const mockListeners: Map<string, Set<EventHandler>> = new Map();
+const mockListeners = new Map<string, Set<EventHandler>>();
 
 export function emitBackendEvent(event: unknown) {
   const listeners = mockListeners.get("backend-event");
@@ -21,6 +22,7 @@ export function clearMockListeners() {
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 vi.mock("@tauri-apps/api/event", () => ({
+  // oxlint-disable-next-line require-await
   listen: vi.fn(async (eventName: string, handler: EventHandler) => {
     if (!mockListeners.has(eventName)) {
       mockListeners.set(eventName, new Set());
@@ -135,14 +137,14 @@ Object.defineProperty(globalThis, "Selection", {
 
 globalThis.getSelection = () => new Selection();
 
-Element.prototype.getBoundingClientRect = function() {
+Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
   return new DOMRect(0, 0, 100, 20);
 };
 
 globalThis.document.elementFromPoint = () => null;
 
-Element.prototype.scrollTo = function() {};
-Element.prototype.scrollBy = function() {};
+Element.prototype.scrollTo = function scrollTo() {};
+Element.prototype.scrollBy = function scrollBy() {};
 
 class IntersectionObserverMock {
   observe() {}

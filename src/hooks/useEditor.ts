@@ -1,5 +1,5 @@
 /**
- * useEditor hook
+ * UseEditor hook
  *
  * Provides Elm-style state management for the Editor component.
  *
@@ -10,7 +10,8 @@
  */
 
 import { useCallback, useState } from "react";
-import { AppError, Cmd, DocContent, docOpen, DocRef, docSave, none, runCmd, SaveResult, SaveStatus } from "../ports";
+import type { AppError, Cmd, DocContent, DocRef, SaveResult, SaveStatus } from "../ports";
+import { docOpen, docSave, none, runCmd } from "../ports";
 
 export interface EditorModel {
   docRef: DocRef | null;
@@ -110,8 +111,9 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
       return [{ ...model, selectionFrom: msg.from, selectionTo: msg.to }, none];
     }
 
-    default:
+    default: {
       return [model, none];
+    }
   }
 }
 

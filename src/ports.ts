@@ -7,8 +7,10 @@
  * - Messages (Msg): Events that flow through the update loop
  */
 
-import { invoke, InvokeArgs } from "@tauri-apps/api/core";
-import { Event as TauriEvent, listen, UnlistenFn } from "@tauri-apps/api/event";
+import type { InvokeArgs } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 
 export type ErrorCode =
   | "NOT_FOUND"
@@ -126,25 +128,29 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     }
 
     case "Batch": {
-      for (const subCmd of cmd.commands) {
+      for await (const subCmd of cmd.commands) {
         await runCmd(subCmd);
       }
       break;
     }
 
-    case "StartWatch":
+    case "StartWatch": {
       console.warn("StartWatch not yet implemented");
       break;
+    }
 
-    case "StopWatch":
+    case "StopWatch": {
       console.warn("StopWatch not yet implemented");
       break;
+    }
 
-    case "None":
+    case "None": {
       break;
+    }
 
-    default:
+    default: {
       console.warn("Unknown command type:", cmd);
+    }
   }
 }
 
@@ -152,7 +158,7 @@ export async function runCmd(cmd: Cmd): Promise<void> {
  * Manages active subscriptions and their cleanup functions.
  */
 export class SubscriptionManager {
-  private unlistenFns: Map<string, UnlistenFn> = new Map();
+  private unlistenFns = new Map<string, UnlistenFn>();
 
   /**
    * Activates a subscription, returning a cleanup function.
@@ -170,12 +176,14 @@ export class SubscriptionManager {
         };
       }
 
-      case "None":
+      case "None": {
         return () => {};
+      }
 
-      default:
+      default: {
         console.warn("Unknown subscription type:", sub);
         return () => {};
+      }
     }
   }
 
@@ -277,8 +285,4 @@ export function docSave(
   return invokeCmd<SaveResult>("doc_save", { locationId, relPath, text }, onOk, onErr);
 }
 
-export type SaveResult = {
-  success: boolean;
-  new_meta: DocMeta | null;
-  conflict_detected: boolean;
-};
+export type SaveResult = { success: boolean; new_meta: DocMeta | null; conflict_detected: boolean };

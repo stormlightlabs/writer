@@ -6,36 +6,36 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AppError,
-  backendEvents,
-  batch,
   type BatchCmd,
   type Cmd,
-  err,
   type InvokeCmd,
+  type LocationDescriptor,
+  type StartWatchCmd,
+  type StopWatchCmd,
+  SubscriptionManager,
+  backendEvents,
+  batch,
+  err,
   invokeCmd,
   isErr,
   isOk,
   locationAddViaDialog,
-  type LocationDescriptor,
   locationList,
   locationRemove,
   locationValidate,
-  none,
   noSub,
+  none,
   ok,
   runCmd,
   startWatch,
-  type StartWatchCmd,
   stopWatch,
-  type StopWatchCmd,
-  SubscriptionManager,
 } from "../ports";
 
-describe("CommandResult", () => {
-  describe("ok", () => {
+describe("commandResult", () => {
+  describe(ok, () => {
     it("should create an Ok result with value", () => {
       const result = ok(42);
-      expect(result).toEqual({ type: "ok", value: 42 });
+      expect(result).toStrictEqual({ type: "ok", value: 42 });
     });
 
     it("should work with complex objects", () => {
@@ -46,9 +46,9 @@ describe("CommandResult", () => {
         added_at: new Date().toISOString(),
       };
       const result = ok(descriptor);
-      expect(isOk(result)).toBe(true);
+      expect(isOk(result)).toBeTruthy();
       if (isOk(result)) {
-        expect(result.value).toEqual(descriptor);
+        expect(result.value).toStrictEqual(descriptor);
       }
     });
 
@@ -60,15 +60,15 @@ describe("CommandResult", () => {
         added_at: "2024-01-02",
       }];
       const result = ok(locations);
-      expect(isOk(result)).toBe(true);
+      expect(isOk(result)).toBeTruthy();
     });
   });
 
-  describe("err", () => {
+  describe(err, () => {
     it("should create an Err result with error", () => {
       const error: AppError = { code: "NOT_FOUND", message: "Resource not found" };
       const result = err(error);
-      expect(result).toEqual({ type: "err", error });
+      expect(result).toStrictEqual({ type: "err", error });
     });
 
     it("should work with all error codes", () => {
@@ -85,7 +85,7 @@ describe("CommandResult", () => {
       codes.forEach((code) => {
         const error: AppError = { code, message: "test error" };
         const result = err(error);
-        expect(isErr(result)).toBe(true);
+        expect(isErr(result)).toBeTruthy();
         if (isErr(result)) {
           expect(result.error.code).toBe(code);
         }
@@ -101,33 +101,33 @@ describe("CommandResult", () => {
     });
   });
 
-  describe("isOk", () => {
+  describe(isOk, () => {
     it("should return true for Ok results", () => {
-      expect(isOk(ok("success"))).toBe(true);
-      expect(isOk(ok(null))).toBe(true);
-      expect(isOk(ok(undefined))).toBe(true);
+      expect(isOk(ok("success"))).toBeTruthy();
+      expect(isOk(ok(null))).toBeTruthy();
+      expect(isOk(ok())).toBeTruthy();
     });
 
     it("should return false for Err results", () => {
-      expect(isOk(err({ code: "NOT_FOUND", message: "" }))).toBe(false);
+      expect(isOk(err({ code: "NOT_FOUND", message: "" }))).toBeFalsy();
     });
 
     it("should narrow type correctly", () => {
       const result = ok(42);
       if (isOk(result)) {
-        const value: number = result.value;
+        const {value} = result;
         expect(value).toBe(42);
       }
     });
   });
 
-  describe("isErr", () => {
+  describe(isErr, () => {
     it("should return true for Err results", () => {
-      expect(isErr(err({ code: "IO_ERROR", message: "" }))).toBe(true);
+      expect(isErr(err({ code: "IO_ERROR", message: "" }))).toBeTruthy();
     });
 
     it("should return false for Ok results", () => {
-      expect(isErr(ok("success"))).toBe(false);
+      expect(isErr(ok("success"))).toBeFalsy();
     });
 
     it("should narrow type correctly", () => {
@@ -140,8 +140,8 @@ describe("CommandResult", () => {
   });
 });
 
-describe("Command Builders", () => {
-  describe("invokeCmd", () => {
+describe("command Builders", () => {
+  describe(invokeCmd, () => {
     it("should create an Invoke command", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -149,7 +149,7 @@ describe("Command Builders", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("test_command");
-      expect(cmd.payload).toEqual({ id: 1 });
+      expect(cmd.payload).toStrictEqual({ id: 1 });
       expect(cmd.onOk).toBe(onOk);
       expect(cmd.onErr).toBe(onErr);
     });
@@ -168,7 +168,7 @@ describe("Command Builders", () => {
     });
   });
 
-  describe("startWatch", () => {
+  describe(startWatch, () => {
     it("should create a StartWatch command", () => {
       const cmd = startWatch(123) as StartWatchCmd;
       expect(cmd.type).toBe("StartWatch");
@@ -178,11 +178,11 @@ describe("Command Builders", () => {
     it("should accept any number as location ID", () => {
       expect((startWatch(0) as StartWatchCmd).locationId).toBe(0);
       expect((startWatch(-1) as StartWatchCmd).locationId).toBe(-1);
-      expect((startWatch(999999) as StartWatchCmd).locationId).toBe(999999);
+      expect((startWatch(999_999) as StartWatchCmd).locationId).toBe(999_999);
     });
   });
 
-  describe("stopWatch", () => {
+  describe(stopWatch, () => {
     it("should create a StopWatch command", () => {
       const cmd = stopWatch(456) as StopWatchCmd;
       expect(cmd.type).toBe("StopWatch");
@@ -190,7 +190,7 @@ describe("Command Builders", () => {
     });
   });
 
-  describe("batch", () => {
+  describe(batch, () => {
     it("should create a Batch command with multiple commands", () => {
       const cmd1 = startWatch(1);
       const cmd2 = startWatch(2);
@@ -217,15 +217,15 @@ describe("Command Builders", () => {
     });
   });
 
-  describe("none", () => {
+  describe(none, () => {
     it("should create a None command", () => {
       expect(none.type).toBe("None");
     });
   });
 });
 
-describe("Subscription Builders", () => {
-  describe("backendEvents", () => {
+describe("subscription Builders", () => {
+  describe(backendEvents, () => {
     it("should create a BackendEvents subscription", () => {
       const handler = vi.fn();
       const sub = backendEvents(handler);
@@ -253,19 +253,19 @@ describe("Subscription Builders", () => {
     });
   });
 
-  describe("noSub", () => {
+  describe(noSub, () => {
     it("should create a None subscription", () => {
       expect(noSub.type).toBe("None");
     });
   });
 });
 
-describe("runCmd", () => {
+describe(runCmd, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("Invoke commands", () => {
+  describe("invoke commands", () => {
     it("should call onOk with result value on success", async () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -331,7 +331,7 @@ describe("runCmd", () => {
     });
   });
 
-  describe("Batch commands", () => {
+  describe("batch commands", () => {
     it("should execute all commands in batch", async () => {
       const onOk1 = vi.fn();
       const onOk2 = vi.fn();
@@ -374,7 +374,7 @@ describe("runCmd", () => {
     });
   });
 
-  describe("Watch commands", () => {
+  describe("watch commands", () => {
     it("should handle StartWatch (currently no-op)", async () => {
       const cmd = startWatch(123);
       await expect(runCmd(cmd)).resolves.toBeUndefined();
@@ -386,14 +386,14 @@ describe("runCmd", () => {
     });
   });
 
-  describe("None command", () => {
+  describe("none command", () => {
     it("should do nothing for None command", async () => {
       await expect(runCmd(none)).resolves.toBeUndefined();
       expect(invoke).not.toHaveBeenCalled();
     });
   });
 
-  describe("Unknown command type", () => {
+  describe("unknown command type", () => {
     it("should warn on unknown command type", async () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const unknownCmd = { type: "Unknown" } as unknown as Cmd;
@@ -406,7 +406,7 @@ describe("runCmd", () => {
   });
 });
 
-describe("SubscriptionManager", () => {
+describe(SubscriptionManager, () => {
   let manager: SubscriptionManager;
 
   beforeEach(() => {
@@ -456,8 +456,8 @@ describe("SubscriptionManager", () => {
   });
 });
 
-describe("Location Commands", () => {
-  describe("locationAddViaDialog", () => {
+describe("location Commands", () => {
+  describe(locationAddViaDialog, () => {
     it("should create correct command", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -465,11 +465,11 @@ describe("Location Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("location_add_via_dialog");
-      expect(cmd.payload).toEqual({});
+      expect(cmd.payload).toStrictEqual({});
     });
   });
 
-  describe("locationList", () => {
+  describe(locationList, () => {
     it("should create correct command", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -477,11 +477,11 @@ describe("Location Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("location_list");
-      expect(cmd.payload).toEqual({});
+      expect(cmd.payload).toStrictEqual({});
     });
   });
 
-  describe("locationRemove", () => {
+  describe(locationRemove, () => {
     it("should create correct command with locationId", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -489,11 +489,11 @@ describe("Location Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("location_remove");
-      expect(cmd.payload).toEqual({ locationId: 123 });
+      expect(cmd.payload).toStrictEqual({ locationId: 123 });
     });
   });
 
-  describe("locationValidate", () => {
+  describe(locationValidate, () => {
     it("should create correct command", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -501,7 +501,7 @@ describe("Location Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("location_validate");
-      expect(cmd.payload).toEqual({});
+      expect(cmd.payload).toStrictEqual({});
     });
   });
 });

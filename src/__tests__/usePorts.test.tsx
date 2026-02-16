@@ -5,11 +5,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AppError, LocationDescriptor } from "../ports";
+import type { AppError, LocationDescriptor } from "../ports";
 import { emitBackendEvent } from "../test/setup";
 import { useBackendEvents, useLocations, usePorts } from "../usePorts";
 
-describe("usePorts", () => {
+describe(usePorts, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -20,13 +20,17 @@ describe("usePorts", () => {
 
       expect(result.current.data).toBeNull();
       expect(result.current.error).toBeNull();
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
     });
   });
 
   describe("execute", () => {
     it("should set loading state during command execution", async () => {
-      vi.mocked(invoke).mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      vi.mocked(invoke).mockImplementation(() =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 10);
+        })
+      );
 
       const { result } = renderHook(() => usePorts<unknown>());
 
@@ -34,9 +38,9 @@ describe("usePorts", () => {
         result.current.execute({ type: "Invoke", command: "test", payload: {}, onOk: vi.fn(), onErr: vi.fn() });
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result.current.loading).toBeTruthy();
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
     });
 
     it("should clear loading state after command completes", async () => {
@@ -44,13 +48,13 @@ describe("usePorts", () => {
 
       const { result } = renderHook(() => usePorts<unknown>());
 
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
 
       await act(async () => {
         await result.current.execute({ type: "Invoke", command: "test", payload: {}, onOk: vi.fn(), onErr: vi.fn() });
       });
 
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
     });
 
     it("should handle None command without side effects", async () => {
@@ -60,7 +64,7 @@ describe("usePorts", () => {
         await result.current.execute({ type: "None" });
       });
 
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
       expect(invoke).not.toHaveBeenCalled();
     });
 
@@ -75,7 +79,7 @@ describe("usePorts", () => {
       });
 
       expect(onOk).toHaveBeenCalledWith("success");
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
     });
   });
 
@@ -95,12 +99,12 @@ describe("usePorts", () => {
 
       expect(result.current.data).toBeNull();
       expect(result.current.error).toBeNull();
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
     });
   });
 });
 
-describe("useBackendEvents", () => {
+describe(useBackendEvents, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -121,7 +125,7 @@ describe("useBackendEvents", () => {
 
     emitBackendEvent({ type: "LocationMissing", location_id: 42, path: "/missing/path" });
 
-    expect(onLocationMissing).toHaveBeenCalledTimes(1);
+    expect(onLocationMissing).toHaveBeenCalledOnce();
     expect(onLocationMissing).toHaveBeenCalledWith(42, "/missing/path");
   });
 
@@ -156,9 +160,9 @@ describe("useBackendEvents", () => {
     emitBackendEvent({ type: "LocationChanged", location_id: 2, old_path: "/old", new_path: "/new" });
     emitBackendEvent({ type: "ReconciliationComplete", checked: 5, missing: [] });
 
-    expect(onLocationMissing).toHaveBeenCalledTimes(1);
-    expect(onLocationChanged).toHaveBeenCalledTimes(1);
-    expect(onReconciliationComplete).toHaveBeenCalledTimes(1);
+    expect(onLocationMissing).toHaveBeenCalledOnce();
+    expect(onLocationChanged).toHaveBeenCalledOnce();
+    expect(onReconciliationComplete).toHaveBeenCalledOnce();
   });
 
   it("should clean up subscription on unmount", async () => {
@@ -166,11 +170,15 @@ describe("useBackendEvents", () => {
 
     const { unmount } = renderHook(() => useBackendEvents({ onLocationMissing }));
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
 
     unmount();
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
 
     emitBackendEvent({ type: "LocationMissing", location_id: 1, path: "/test" });
     expect(onLocationMissing).not.toHaveBeenCalled();
@@ -189,11 +197,11 @@ describe("useBackendEvents", () => {
     emitBackendEvent({ type: "LocationMissing", location_id: 1, path: "/test" });
 
     expect(onLocationMissing1).not.toHaveBeenCalled();
-    expect(onLocationMissing2).toHaveBeenCalled();
+    expect(onLocationMissing2).toHaveBeenCalledWith();
   });
 });
 
-describe("useLocations", () => {
+describe(useLocations, () => {
   const mockLocations: LocationDescriptor[] = [{
     id: 1,
     name: "Location A",
@@ -211,13 +219,13 @@ describe("useLocations", () => {
 
       const { result } = renderHook(() => useLocations());
 
-      expect(result.current.loading).toBe(true);
+      expect(result.current.loading).toBeTruthy();
 
       await waitFor(() => {
-        expect(result.current.locations).toEqual(mockLocations);
+        expect(result.current.locations).toStrictEqual(mockLocations);
       });
 
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
     });
 
     it("should handle error during initial load", async () => {
@@ -227,11 +235,11 @@ describe("useLocations", () => {
       const { result } = renderHook(() => useLocations());
 
       await waitFor(() => {
-        expect(result.current.error).toEqual(error);
+        expect(result.current.error).toStrictEqual(error);
       });
 
-      expect(result.current.locations).toEqual([]);
-      expect(result.current.loading).toBe(false);
+      expect(result.current.locations).toStrictEqual([]);
+      expect(result.current.loading).toBeFalsy();
     });
   });
 
@@ -313,14 +321,14 @@ describe("useLocations", () => {
 
       const { result } = renderHook(() => useLocations());
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
 
       await act(async () => {
         await result.current.addLocation();
       });
 
-      expect(result.current.error).toEqual(error);
-      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toStrictEqual(error);
+      expect(result.current.loading).toBeFalsy();
     });
   });
 
@@ -358,7 +366,7 @@ describe("useLocations", () => {
       });
 
       expect(invoke).toHaveBeenCalledTimes(2);
-      expect(result.current.loading).toBe(false);
+      expect(result.current.loading).toBeFalsy();
     });
   });
 
@@ -373,14 +381,14 @@ describe("useLocations", () => {
 
       const { result } = renderHook(() => useLocations());
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
 
       let validationResult: Array<[number, string]> = [];
       await act(async () => {
         validationResult = await result.current.validateLocations();
       });
 
-      expect(validationResult).toEqual(missing);
+      expect(validationResult).toStrictEqual(missing);
     });
 
     it("should reject on error", async () => {
@@ -393,9 +401,9 @@ describe("useLocations", () => {
 
       const { result } = renderHook(() => useLocations());
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
 
-      await expect(result.current.validateLocations()).rejects.toEqual(error);
+      await expect(result.current.validateLocations()).rejects.toStrictEqual(error);
     });
   });
 
@@ -412,17 +420,17 @@ describe("useLocations", () => {
 
       const { result } = renderHook(() => useLocations());
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
 
       act(() => {
         result.current.addLocation();
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result.current.loading).toBeTruthy();
 
       resolveAdd!({ type: "ok", value: mockLocations[0] });
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
     });
 
     it("should be loading during removeLocation", async () => {
@@ -437,17 +445,17 @@ describe("useLocations", () => {
 
       const { result } = renderHook(() => useLocations());
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
 
       act(() => {
         result.current.removeLocation(1);
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result.current.loading).toBeTruthy();
 
       resolveRemove!({ type: "ok", value: true });
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.loading).toBeFalsy());
     });
   });
 });

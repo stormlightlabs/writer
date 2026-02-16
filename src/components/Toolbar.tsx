@@ -1,9 +1,9 @@
-import { useState } from "react";
+import type { MouseEventHandler} from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { SaveStatus } from "../ports";
 import { CheckIcon, EyeIcon, FocusIcon, RefreshIcon, SaveIcon, SettingsIcon, SplitViewIcon } from "./icons";
 
-type SaveStatus = "Idle" | "Dirty" | "Saving" | "Saved" | "Error";
-
-type ToolbarProps = {
+export type ToolbarProps = {
   saveStatus: SaveStatus;
   isSplitView: boolean;
   isFocusMode: boolean;
@@ -18,7 +18,7 @@ type ToolbarProps = {
 
 function ToolbarButton(
   { icon, label, isActive = false, onClick, disabled = false, shortcut }: {
-    icon: React.ReactNode;
+    icon: { Component: React.ComponentType<{ size: number }>; size: number };
     label: string;
     isActive?: boolean;
     onClick: () => void;
@@ -28,28 +28,42 @@ function ToolbarButton(
 ) {
   const [showTooltip, setShowTooltip] = useState(false);
 
+  const handleMouseEnter = useCallback(() => {
+    setShowTooltip(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setShowTooltip(false);
+  }, []);
+
+  const handleMouseOver: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
+    if (!disabled && !isActive) {
+      (e.currentTarget as HTMLButtonElement).classList.add("bg-layer-hover-01", "text-text-primary");
+    }
+  }, []);
+
+  const handleMouseOut: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
+    if (!isActive) {
+      (e.currentTarget as HTMLButtonElement).classList.remove("bg-layer-hover-01", "text-text-primary");
+    }
+  }, []);
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[0.8125rem] relative transition-all duration-150 ease rounded ${
         isActive
           ? "bg-layer-accent-01 border border-border-strong text-text-primary"
           : "bg-transparent border border-transparent text-text-secondary"
       } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
-      onMouseOver={(e) => {
-        if (!disabled && !isActive) {
-          (e.currentTarget as HTMLButtonElement).classList.add("bg-layer-hover-01", "text-text-primary");
-        }
-      }}
-      onMouseOut={(e) => {
-        if (!isActive) {
-          (e.currentTarget as HTMLButtonElement).classList.remove("bg-layer-hover-01", "text-text-primary");
-        }
-      }}>
-      <span className="flex items-center">{icon}</span>
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}>
+      <span className="flex items-center">
+        <icon.Component size={icon.size} />
+      </span>
       <span>{label}</span>
 
       {showTooltip && shortcut && (
@@ -64,16 +78,21 @@ function ToolbarButton(
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   const getStatusDisplay = () => {
     switch (status) {
-      case "Saving":
+      case "Saving": {
         return { icon: <SaveIcon size={14} />, text: "Saving...", color: "text-accent-cyan" };
-      case "Saved":
+      }
+      case "Saved": {
         return { icon: <CheckIcon size={14} />, text: "Saved", color: "text-accent-green" };
-      case "Dirty":
+      }
+      case "Dirty": {
         return { icon: null, text: "Unsaved", color: "text-accent-yellow" };
-      case "Error":
+      }
+      case "Error": {
         return { icon: null, text: "Error", color: "text-support-error" };
-      default:
+      }
+      default: {
         return { icon: null, text: "Ready", color: "text-text-placeholder" };
+      }
     }
   };
 
@@ -102,12 +121,23 @@ export function Toolbar(
     onRefresh,
   }: ToolbarProps,
 ) {
+  const icons = useMemo(
+    () => ({
+      save: { Component: SaveIcon, size: 14 },
+      refresh: { Component: RefreshIcon, size: 14 },
+      splitView: { Component: SplitViewIcon, size: 14 },
+      eye: { Component: EyeIcon, size: 14 },
+      focus: { Component: FocusIcon, size: 14 },
+      settings: { Component: SettingsIcon, size: 14 },
+    }),
+    [],
+  );
+
   return (
     <div className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-4 gap-4">
-      {/* Left section - Document actions */}
       <div className="flex items-center gap-2">
         <ToolbarButton
-          icon={<SaveIcon size={14} />}
+          icon={icons.save}
           label="Save"
           onClick={onSave}
           disabled={saveStatus === "Saved" || saveStatus === "Saving"}
@@ -115,38 +145,34 @@ export function Toolbar(
 
         <SaveStatusIndicator status={saveStatus} />
 
-        {onRefresh && (
-          <ToolbarButton icon={<RefreshIcon size={14} />} label="Refresh" onClick={onRefresh} shortcut="F5" />
-        )}
+        {onRefresh && <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" />}
       </div>
 
-      {/* Center section - View modes */}
       <div className="flex items-center gap-1">
         <ToolbarButton
-          icon={<SplitViewIcon size={14} />}
+          icon={icons.splitView}
           label="Split"
           isActive={isSplitView}
           onClick={onToggleSplitView}
           shortcut="Ctrl+\\" />
 
         <ToolbarButton
-          icon={<EyeIcon size={14} />}
+          icon={icons.eye}
           label="Preview"
           isActive={isPreviewVisible}
           onClick={onTogglePreview}
           shortcut="Ctrl+P" />
 
         <ToolbarButton
-          icon={<FocusIcon size={14} />}
+          icon={icons.focus}
           label="Focus"
           isActive={isFocusMode}
           onClick={onToggleFocusMode}
-          shortcut="Ctrl+Shift+F" />
+          shortcut="Ctrl+F" />
       </div>
 
-      {/* Right section - Settings */}
       <div>
-        <ToolbarButton icon={<SettingsIcon size={14} />} label="Settings" onClick={onOpenSettings} />
+        <ToolbarButton icon={icons.settings} label="Settings" onClick={onOpenSettings} />
       </div>
     </div>
   );

@@ -1,12 +1,13 @@
 /**
- * useBackendEvents hook
+ * UseBackendEvents hook
  *
  * Subscribes to backend events and provides them to the application.
  * Handles location missing, conflict detection, and reconciliation events.
  */
 
 import { useEffect, useState } from "react";
-import { listen, Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
+import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import type { BackendEvent, LocationId } from "../ports";
 
 export interface BackendEventState {
@@ -26,20 +27,21 @@ export function useBackendEvents(): BackendEventState {
     const setupListener = async () => {
       try {
         unlisten = await listen<BackendEvent>("backend-event", (event: TauriEvent<BackendEvent>) => {
-          const payload = event.payload;
+          const {payload} = event;
           
           setEvents((prev) => [...prev, payload]);
 
           switch (payload.type) {
-            case "LocationMissing":
+            case "LocationMissing": {
               setMissingLocations((prev) => [
                 ...prev,
                 { location_id: payload.location_id, path: payload.path },
               ]);
               console.warn("Location missing:", payload.location_id, payload.path);
               break;
+            }
 
-            case "ConflictDetected":
+            case "ConflictDetected": {
               setConflicts((prev) => [
                 ...prev,
                 {
@@ -50,22 +52,27 @@ export function useBackendEvents(): BackendEventState {
               ]);
               console.warn("Conflict detected:", payload.conflict_filename);
               break;
+            }
 
-            case "ReconciliationComplete":
+            case "ReconciliationComplete": {
               console.log("Reconciliation complete:", payload.checked, "checked,", payload.missing.length, "missing");
               break;
+            }
 
-            case "LocationChanged":
+            case "LocationChanged": {
               console.log("Location changed:", payload.location_id, payload.old_path, "->", payload.new_path);
               break;
+            }
 
-            case "DocModifiedExternally":
+            case "DocModifiedExternally": {
               console.log("Document modified externally:", payload.doc_id);
               break;
+            }
 
-            case "SaveStatusChanged":
+            case "SaveStatusChanged": {
               console.log("Save status changed:", payload.doc_id, payload.status);
               break;
+            }
           }
         });
       } catch (error) {

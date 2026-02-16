@@ -8,14 +8,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { AppError, BackendEvent, Cmd, LocationDescriptor, LocationId } from "./ports";
 import {
-  AppError,
-  BackendEvent,
   backendEvents,
-  Cmd,
   locationAddViaDialog,
-  LocationDescriptor,
-  LocationId,
   locationList,
   locationRemove,
   locationValidate,
@@ -62,10 +58,10 @@ export function usePorts<T = unknown>(): UsePortsReturn<T> {
     try {
       await runCmd(cmd);
       setState((prev) => ({ ...prev, loading: false }));
-    } catch (e) {
+    } catch (error) {
       setState({
         data: null,
-        error: { code: "IO_ERROR", message: e instanceof Error ? e.message : String(e) },
+        error: { code: "IO_ERROR", message: error instanceof Error ? error.message : String(error) },
         loading: false,
       });
     }
@@ -105,15 +101,18 @@ export function useBackendEvents(options: UseBackendEventsOptions): void {
 
     const handleEvent = (event: BackendEvent) => {
       switch (event.type) {
-        case "LocationMissing":
+        case "LocationMissing": {
           optionsRef.current.onLocationMissing?.(event.location_id, event.path);
           break;
-        case "LocationChanged":
+        }
+        case "LocationChanged": {
           optionsRef.current.onLocationChanged?.(event.location_id, event.old_path, event.new_path);
           break;
-        case "ReconciliationComplete":
+        }
+        case "ReconciliationComplete": {
           optionsRef.current.onReconciliationComplete?.(event.checked, event.missing);
           break;
+        }
       }
     };
 
@@ -201,11 +200,13 @@ export function useLocations(): UseLocationsReturn {
     }));
   }, [refresh]);
 
-  const validateLocations = useCallback(async (): Promise<Array<[LocationId, string]>> => {
-    return new Promise((resolve, reject) => {
-      runCmd(locationValidate((missing) => resolve(missing), (err) => reject(err)));
-    });
-  }, []);
+  const validateLocations = useCallback(
+    async (): Promise<Array<[LocationId, string]>> =>
+      await new Promise((resolve, reject) => {
+        runCmd(locationValidate((missing) => resolve(missing), (err) => reject(err)));
+      }),
+    [],
+  );
 
   useEffect(() => {
     refresh();

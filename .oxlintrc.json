@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "react-perf", "typescript", "unicorn"],
+  "categories": { "perf": "warn", "correctness": "allow", "suspicious": "warn", "pedantic": "warn" },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "no-unescaped-entities": "off",
+    "max-lines-per-function": "off",
+    "max-lines": "off",
+    "max-params": "off",
+    "eslint-plugin-react/jsx-max-depth": "warn",
+    "require-await": "warn",
+    "unicorn/prefer-global-this": "warn",
+    "init-declarations": "off"
+  },
+  "settings": {
+    "jsx-a11y": { "polymorphicPropName": null, "components": {}, "attributes": {} },
+    "next": { "rootDir": [] },
+    "react": { "formComponents": [], "linkComponents": [], "version": null, "componentWrapperFunctions": [] },
+    "jsdoc": {
+      "ignorePrivate": false,
+      "ignoreInternal": false,
+      "ignoreReplacesDocs": true,
+      "overrideReplacesDocs": true,
+      "augmentsExtendsReplacesDocs": false,
+      "implementsReplacesDocs": false,
+      "exemptDestructuredRootsFromChecks": false,
+      "tagNamePreference": {}
+    },
+    "vitest": { "typecheck": false }
+  },
+  "env": { "builtin": true },
+  "globals": {},
+  "ignorePatterns": []
+}

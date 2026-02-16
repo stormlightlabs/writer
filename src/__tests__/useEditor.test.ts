@@ -5,9 +5,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initialEditorModel, updateEditor, useEditor } from "../hooks/useEditor";
-import { AppError } from "../ports";
+import type { AppError } from "../ports";
 
-describe("useEditor", () => {
+describe(useEditor, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -16,7 +16,7 @@ describe("useEditor", () => {
     it("should have initial model with default values", () => {
       const { result } = renderHook(() => useEditor());
 
-      expect(result.current.model).toEqual(initialEditorModel);
+      expect(result.current.model).toStrictEqual(initialEditorModel);
     });
 
     it("should have empty text initially", () => {
@@ -39,7 +39,7 @@ describe("useEditor", () => {
     });
   });
 
-  describe("EditorChanged", () => {
+  describe("editorChanged", () => {
     it("should update text and set status to Dirty when text changes", () => {
       const { result } = renderHook(() => useEditor());
 
@@ -82,7 +82,7 @@ describe("useEditor", () => {
     });
   });
 
-  describe("SaveRequested", () => {
+  describe("saveRequested", () => {
     it("should not save if no docRef is set", () => {
       const { result } = renderHook(() => useEditor());
 
@@ -93,7 +93,7 @@ describe("useEditor", () => {
       expect(result.current.model.saveStatus).toBe("Idle");
     });
 
-    it("should set status to Saving when save is requested", async () => {
+    it("should set status to Saving when save is requested", () => {
       const { result } = renderHook(() => useEditor());
 
       act(() => {
@@ -138,7 +138,7 @@ describe("useEditor", () => {
     });
   });
 
-  describe("SaveFinished", () => {
+  describe("saveFinished", () => {
     it("should set status to Saved on successful save", () => {
       const { result } = renderHook(() => useEditor());
 
@@ -159,7 +159,7 @@ describe("useEditor", () => {
       });
 
       expect(result.current.model.saveStatus).toBe("Error");
-      expect(result.current.model.error).toEqual(error);
+      expect(result.current.model.error).toStrictEqual(error);
     });
 
     it("should clear error on successful save", () => {
@@ -181,7 +181,7 @@ describe("useEditor", () => {
     });
   });
 
-  describe("DocOpened", () => {
+  describe("docOpened", () => {
     it("should update text and meta when doc is opened", () => {
       const { result } = renderHook(() => useEditor());
 
@@ -201,13 +201,13 @@ describe("useEditor", () => {
       });
 
       expect(result.current.model.text).toBe("# Test Document");
-      expect(result.current.model.docRef).toEqual({ location_id: 1, rel_path: "docs/test.md" });
+      expect(result.current.model.docRef).toStrictEqual({ location_id: 1, rel_path: "docs/test.md" });
       expect(result.current.model.saveStatus).toBe("Saved");
-      expect(result.current.model.isLoading).toBe(false);
+      expect(result.current.model.isLoading).toBeFalsy();
     });
   });
 
-  describe("CursorMoved", () => {
+  describe("cursorMoved", () => {
     it("should update cursor position", () => {
       const { result } = renderHook(() => useEditor());
 
@@ -235,7 +235,7 @@ describe("useEditor", () => {
     });
   });
 
-  describe("SelectionChanged", () => {
+  describe("selectionChanged", () => {
     it("should update selection", () => {
       const { result } = renderHook(() => useEditor());
 
@@ -269,7 +269,7 @@ describe("useEditor", () => {
         result.current.openDoc(docRef);
       });
 
-      expect(result.current.model.isLoading).toBe(true);
+      expect(result.current.model.isLoading).toBeTruthy();
     });
 
     it("should dispatch SaveRequested when saveDoc is called", () => {
@@ -294,7 +294,7 @@ describe("useEditor", () => {
   });
 });
 
-describe("updateEditor", () => {
+describe(updateEditor, () => {
   it("should return same model and None command for unknown message types", () => {
     const model = initialEditorModel;
     const [newModel, cmd] = updateEditor(model, { type: "Unknown" as any });
@@ -309,7 +309,7 @@ describe("updateEditor", () => {
 
     const [newModel, cmd] = updateEditor(model, { type: "OpenDocRequested", docRef });
 
-    expect(newModel.isLoading).toBe(true);
+    expect(newModel.isLoading).toBeTruthy();
     expect(cmd.type).toBe("Invoke");
   });
 

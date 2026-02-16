@@ -5,11 +5,7 @@
  * 16x16 viewBox, 2px stroke width, clean geometric shapes.
  */
 
-interface IconProps {
-  size?: number;
-  className?: string;
-  style?: React.CSSProperties;
-}
+type IconProps = { size?: number; className?: string; style?: React.CSSProperties };
 
 export function FolderIcon({ size = 16, className = "", style }: IconProps) {
   return (

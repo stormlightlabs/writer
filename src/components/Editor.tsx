@@ -12,11 +12,12 @@
  */
 
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { markdown } from "@codemirror/lang-markdown";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState as CMEditorState } from "@codemirror/state";
-import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
-import { lineNumbers } from "@codemirror/view";
-import { useEffect, useRef, useState } from "react";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import type { ViewUpdate } from "@codemirror/view";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { oxocarbonDark } from "../themes/oxocarbon-dark";
 import { oxocarbonLight } from "../themes/oxocarbon-light";
@@ -36,15 +37,45 @@ export type EditorProps = {
   className?: string;
 };
 
-/**
- * Debounces a function call.
- */
-function debounce(fn: (text: string) => void, delay: number): (text: string) => void {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return (text: string) => {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(text), delay);
-  };
+type EditorCallbacks = Pick<EditorProps, "onChange" | "onSave" | "onCursorMove" | "onSelectionChange">;
+
+type CreateEditorStateOptions = {
+  doc: string;
+  theme: EditorTheme;
+  disabled: boolean;
+  placeholder?: string;
+  updateListener: ReturnType<typeof EditorView.updateListener.of>;
+  onSave: () => void;
+};
+
+function createEditorState(
+  { doc, theme, disabled, placeholder, updateListener, onSave }: CreateEditorStateOptions,
+): CMEditorState {
+  const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
+
+  const saveKeymap = keymap.of([{
+    key: "Mod-s",
+    preventDefault: true,
+    run: () => {
+      onSave();
+      return true;
+    },
+  }]);
+
+  return CMEditorState.create({
+    doc,
+    extensions: [
+      lineNumbers(),
+      history(),
+      markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true }),
+      themeExtension,
+      updateListener,
+      keymap.of([...defaultKeymap, ...historyKeymap]),
+      saveKeymap,
+      EditorView.editable.of(!disabled),
+      placeholder ? EditorView.theme({ ".cm-placeholder": { color: "#888" } }) : [],
+    ],
+  });
 }
 
 /**
@@ -69,137 +100,158 @@ export function Editor(
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const callbacksRef = useRef<EditorCallbacks>({ onChange, onSave, onCursorMove, onSelectionChange });
+  const debounceMsRef = useRef(debounceMs);
+  const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const presentationRef = useRef({ theme, disabled, placeholder });
   const [isReady, setIsReady] = useState(false);
 
-  const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
+  useEffect(() => {
+    callbacksRef.current = { onChange, onSave, onCursorMove, onSelectionChange };
+  }, [onChange, onSave, onCursorMove, onSelectionChange]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    debounceMsRef.current = debounceMs;
+  }, [debounceMs]);
 
-    const debouncedOnChange = debounce((text: string) => {
-      onChange?.(text);
-    }, debounceMs);
+  const emitChange = useCallback((text: string) => {
+    if (onChangeTimeoutRef.current) {
+      clearTimeout(onChangeTimeoutRef.current);
+      onChangeTimeoutRef.current = null;
+    }
 
-    const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
+    if (debounceMsRef.current <= 0) {
+      callbacksRef.current.onChange?.(text);
+      return;
+    }
+
+    onChangeTimeoutRef.current = setTimeout(() => {
+      callbacksRef.current.onChange?.(text);
+    }, debounceMsRef.current);
+  }, []);
+
+  const createUpdateListener = useCallback(() =>
+    EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.docChanged) {
-        debouncedOnChange(update.state.doc.toString());
+        emitChange(update.state.doc.toString());
       }
 
       if (update.selectionSet) {
         const selection = update.state.selection.main;
-        const from = selection.from;
+        const { from } = selection;
         const to = selection.empty ? null : selection.to;
-        onSelectionChange?.(from, to);
+        callbacksRef.current.onSelectionChange?.(from, to);
       }
 
       if (update.selectionSet || update.docChanged) {
         const pos = update.state.selection.main.head;
         const line = update.state.doc.lineAt(pos);
         const column = pos - line.from;
-        onCursorMove?.(line.number, column);
+        callbacksRef.current.onCursorMove?.(line.number, column);
       }
-    });
+    }), [emitChange]);
 
-    const saveKeymap = keymap.of([{
-      key: "Mod-s",
-      preventDefault: true,
-      run: () => {
-        onSave?.();
-        return true;
-      },
-    }]);
+  const createView = useCallback((doc: string, selection?: CMEditorState["selection"]) => {
+    if (!containerRef.current) {
+      return null;
+    }
 
-    const customKeymap = keymap.of([...defaultKeymap, ...historyKeymap]);
-
-    const state = CMEditorState.create({
-      doc: initialText,
-      extensions: [
-        lineNumbers(),
-        history(),
-        markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true }),
-        themeExtension,
-        updateListener,
-        customKeymap,
-        saveKeymap,
-        EditorView.editable.of(!disabled),
-        placeholder ? EditorView.theme({ ".cm-placeholder": { color: "#888" } }) : [],
-      ],
+    const state = createEditorState({
+      doc,
+      theme,
+      disabled,
+      placeholder,
+      updateListener: createUpdateListener(),
+      onSave: () => callbacksRef.current.onSave?.(),
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
+
+    if (selection) {
+      view.dispatch({ selection });
+    }
+
+    return view;
+  }, [createUpdateListener, disabled, placeholder, theme]);
+
+  useEffect(() => {
+    if (viewRef.current || !containerRef.current) {
+      return;
+    }
+
+    const view = createView(initialText);
+    if (!view) {
+      return;
+    }
 
     viewRef.current = view;
     setIsReady(true);
 
     return () => {
+      if (onChangeTimeoutRef.current) {
+        clearTimeout(onChangeTimeoutRef.current);
+      }
+
       view.destroy();
       viewRef.current = null;
       setIsReady(false);
     };
-  }, [initialText, theme, disabled, placeholder, debounceMs, onChange, onSave, onCursorMove, onSelectionChange]);
+  }, [createView, initialText]);
 
   useEffect(() => {
-    if (viewRef.current) {
-      const currentText = viewRef.current.state.doc.toString();
-      viewRef.current.destroy();
+    const previousPresentation = presentationRef.current;
 
-      const debouncedOnChange = debounce((text: string) => {
-        onChange?.(text);
-      }, debounceMs);
-
-      const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
-        if (update.docChanged) {
-          debouncedOnChange(update.state.doc.toString());
-        }
-
-        if (update.selectionSet) {
-          const selection = update.state.selection.main;
-          const from = selection.from;
-          const to = selection.empty ? null : selection.to;
-          onSelectionChange?.(from, to);
-        }
-
-        if (update.selectionSet || update.docChanged) {
-          const pos = update.state.selection.main.head;
-          const line = update.state.doc.lineAt(pos);
-          const column = pos - line.from;
-          onCursorMove?.(line.number, column);
-        }
-      });
-
-      const saveKeymap = keymap.of([{
-        key: "Mod-s",
-        preventDefault: true,
-        run: () => {
-          onSave?.();
-          return true;
-        },
-      }]);
-
-      const customKeymap = keymap.of([...defaultKeymap, ...historyKeymap]);
-
-      const state = CMEditorState.create({
-        doc: currentText,
-        extensions: [
-          lineNumbers(),
-          history(),
-          markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true }),
-          themeExtension,
-          updateListener,
-          customKeymap,
-          saveKeymap,
-          EditorView.editable.of(!disabled),
-          placeholder ? EditorView.theme({ ".cm-placeholder": { color: "#888" } }) : [],
-        ],
-      });
-
-      viewRef.current = new EditorView({ state, parent: containerRef.current! });
+    if (
+      previousPresentation.theme === theme
+      && previousPresentation.disabled === disabled
+      && previousPresentation.placeholder === placeholder
+    ) {
+      return;
     }
-  }, [theme, disabled, placeholder, debounceMs, onChange, onSave, onCursorMove, onSelectionChange, themeExtension]);
 
-  const focus = () => {
+    presentationRef.current = { theme, disabled, placeholder };
+
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    const currentText = view.state.doc.toString();
+    const currentSelection = view.state.selection;
+
+    view.destroy();
+
+    const nextView = createView(currentText, currentSelection);
+    if (!nextView) {
+      viewRef.current = null;
+      return;
+    }
+
+    viewRef.current = nextView;
+  }, [createView, disabled, placeholder, theme]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    const currentText = view.state.doc.toString();
+    if (currentText === initialText) {
+      return;
+    }
+
+    view.dispatch({ changes: { from: 0, to: currentText.length, insert: initialText } });
+  }, [initialText]);
+
+  const focus = useCallback(() => {
     viewRef.current?.focus();
-  };
+  }, []);
+
+  const containerStyle: CSSProperties = useMemo(
+    () => ({ height: "100%", overflow: "hidden", fontFamily: "\"IBM Plex Mono\", \"SF Mono\", Monaco, monospace" }),
+    [],
+  );
 
   return (
     <div
@@ -207,12 +259,10 @@ export function Editor(
       className={`editor-container ${className}`}
       data-theme={theme}
       data-ready={isReady}
-      style={{ height: "100%", overflow: "hidden", fontFamily: "\"IBM Plex Mono\", \"SF Mono\", Monaco, monospace" }}
+      style={containerStyle}
       onClick={focus}
       data-testid="editor-container" />
   );
 }
 
 export default Editor;
-
-import { markdownLanguage } from "@codemirror/lang-markdown";
