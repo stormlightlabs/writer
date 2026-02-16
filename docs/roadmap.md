@@ -38,10 +38,10 @@ A stable backend API surface that the Elm-style frontend treats as "ports".
    - Implement a global event emitter for backend → frontend push events (file watcher, indexing progress). ([Tauri][4])
 3. **Frontend Elm core**
    - `Cmd` variants:
-     - `Cmd::Invoke(command, payload, onOk, onErr)`
-     - `Cmd::StartWatch(location_id)`
+      - `Cmd::Invoke(command, payload, onOk, onErr)`
+      - `Cmd::StartWatch(location_id)`
    - `Sub` variants:
-     - backend events stream → `Msg::BackendEvent(...)`
+      - backend events stream → `Msg::BackendEvent(...)`
 
 ## Document catalog + safe IO + atomic saves
 
@@ -58,7 +58,7 @@ Open/edit/save files in locations safely and predictably.
 3. **Conflict awareness**
    - Detect "conflicted copy" patterns (provider-created duplicates)
    - Treat as a new document; surface in UI as "conflict detected"
-4. **Editor autosave loop**
+4. **Editor autosave loop** (Backend ready, needs UI wiring)
    - Debounced save in Elm (`Msg::EditorChanged` → schedule save `Cmd`)
    - Save status machine: `Idle | Dirty | Saving | Saved | Error`
 
@@ -116,8 +116,8 @@ A robust text editor that cooperates with Elm state management (no "hidden state
    - `Msg::SaveRequested`
    - `Msg::SaveFinished`
    - `Msg::DocOpened`
-5. Oxocarbon Dark & Light themes
-6. Testing library tests
+5. **Oxocarbon Dark & Light themes**
+6. **Testing library tests**
 
 ## Preview renderer + scroll/selection sync (editor ↔ rendered HTML)
 
@@ -186,9 +186,11 @@ Make Markdown handling feel professional and predictable for writers.
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
 
+## References
+
 [1]: https://crates.io/crates/comrak "comrak - crates.io: Rust Package Registry"
 [2]: https://v2.tauri.app/develop/calling-rust/ "Calling Rust from the Frontend"
-[3]: https://codesandbox.io/s/react-codemirror-example-codemirror-6-markdown-auto-languages-iudnj "react-codemirror-example (codemirror 6) (Markdown auto ..."
+[3]: https://codesandbox.io/s/react-codemirror-example-codemirror-6-markdown-auto-languages-iudnj "react-codemirror-example (codemirror 6) (Markdown auto ...)"
 [4]: https://v2.tauri.app/develop/calling-frontend/ "Calling the Frontend from Rust"
 [5]: https://github.com/kivikakk/comrak "kivikakk/comrak: CommonMark + GFM compatible ..."
 [6]: https://docs.rs/comrak/latest/comrak/options/struct.Render.html "Render in comrak::options - Rust"

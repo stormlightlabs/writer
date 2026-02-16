@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { AppError, Cmd, DocContent, docOpen, DocRef, docSave, none, runCmd, SaveStatus } from "../ports";
+import { AppError, Cmd, DocContent, docOpen, DocRef, docSave, none, runCmd, SaveResult, SaveStatus } from "../ports";
 
 export interface EditorModel {
   docRef: DocRef | null;
@@ -39,7 +39,7 @@ export const initialEditorModel: EditorModel = {
 export type EditorMsg =
   | { type: "EditorChanged"; text: string }
   | { type: "SaveRequested" }
-  | { type: "SaveFinished"; success: boolean; error?: AppError }
+  | { type: "SaveFinished"; success: boolean; result?: SaveResult; error?: AppError }
   | { type: "DocOpened"; doc: DocContent }
   | { type: "OpenDocRequested"; docRef: DocRef }
   | { type: "DocOpenFinished"; success: boolean; error?: AppError }
@@ -62,9 +62,10 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
       return [
         { ...model, saveStatus: "Saving" },
         docSave(
-          model.docRef,
+          model.docRef.location_id,
+          model.docRef.rel_path,
           model.text,
-          () => ({ type: "SaveFinished", success: true }),
+          (result: SaveResult) => ({ type: "SaveFinished", success: true, result }),
           (error) => ({ type: "SaveFinished", success: false, error }),
         ),
       ];
@@ -78,8 +79,9 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
       return [
         { ...model, isLoading: true, error: null },
         docOpen(
-          msg.docRef,
-          (doc) => ({ type: "DocOpened", doc }),
+          msg.docRef.location_id,
+          msg.docRef.rel_path,
+          (doc: DocContent) => ({ type: "DocOpened", doc }),
           (error) => ({ type: "DocOpenFinished", success: false, error }),
         ),
       ];

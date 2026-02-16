@@ -23,28 +23,18 @@ import { oxocarbonLight } from "../themes/oxocarbon-light";
 
 export type EditorTheme = "dark" | "light";
 
-export interface EditorProps {
-  /** Initial text content */
+export type EditorProps = {
   initialText?: string;
-  /** Current theme */
   theme?: EditorTheme;
-  /** Whether the editor is disabled */
   disabled?: boolean;
-  /** Placeholder text when empty */
   placeholder?: string;
-  /** Debounce delay in ms for change events */
   debounceMs?: number;
-  /** Callback when text changes */
   onChange?: (text: string) => void;
-  /** Callback when save is triggered (Ctrl/Cmd+S) */
   onSave?: () => void;
-  /** Callback when cursor position changes */
   onCursorMove?: (line: number, column: number) => void;
-  /** Callback when selection changes */
   onSelectionChange?: (from: number, to: number | null) => void;
-  /** Additional CSS class */
   className?: string;
-}
+};
 
 /**
  * Debounces a function call.
@@ -58,7 +48,7 @@ function debounce(fn: (text: string) => void, delay: number): (text: string) => 
 }
 
 /**
- * CodeMirror 6 Markdown Editor component.
+ * CodeMirror Markdown Editor
  *
  * This component wraps CodeMirror in a React-friendly interface while
  * maintaining performance by avoiding full re-renders on every keystroke.

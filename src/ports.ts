@@ -45,12 +45,13 @@ export function isErr<T>(result: CommandResult<T>): result is { type: "err"; err
 
 export type LocationId = number;
 
-export type BackendEvent = { type: "LocationMissing"; location_id: LocationId; path: string } | {
-  type: "LocationChanged";
-  location_id: LocationId;
-  old_path: string;
-  new_path: string;
-} | { type: "ReconciliationComplete"; checked: number; missing: LocationId[] };
+export type BackendEvent =
+  | { type: "LocationMissing"; location_id: LocationId; path: string }
+  | { type: "LocationChanged"; location_id: LocationId; old_path: string; new_path: string }
+  | { type: "ReconciliationComplete"; checked: number; missing: LocationId[] }
+  | { type: "ConflictDetected"; location_id: LocationId; rel_path: string; conflict_filename: string }
+  | { type: "DocModifiedExternally"; doc_id: DocRef; new_mtime: string }
+  | { type: "SaveStatusChanged"; doc_id: DocRef; status: SaveStatus };
 
 export type InvokeCmd = {
   type: "Invoke";
@@ -250,17 +251,34 @@ export type EditorMsg =
   | { type: "SelectionChanged"; from: number; to: number | null };
 
 export function docList(
-  locationId: LocationId,
+  location_id: LocationId,
   onOk: (docs: DocMeta[]) => void,
   onErr: (error: AppError) => void,
 ): Cmd {
-  return invokeCmd<DocMeta[]>("doc_list", { locationId }, onOk, onErr);
+  return invokeCmd<DocMeta[]>("doc_list", { location_id }, onOk, onErr);
 }
 
-export function docOpen(docRef: DocRef, onOk: (doc: DocContent) => void, onErr: (error: AppError) => void): Cmd {
-  return invokeCmd<DocContent>("doc_open", { docRef }, onOk, onErr);
+export function docOpen(
+  locationId: LocationId,
+  relPath: string,
+  onOk: (doc: DocContent) => void,
+  onErr: (error: AppError) => void,
+): Cmd {
+  return invokeCmd<DocContent>("doc_open", { locationId, relPath }, onOk, onErr);
 }
 
-export function docSave(docRef: DocRef, text: string, onOk: () => void, onErr: (error: AppError) => void): Cmd {
-  return invokeCmd<null>("doc_save", { docRef, text }, onOk, onErr);
+export function docSave(
+  locationId: LocationId,
+  relPath: string,
+  text: string,
+  onOk: (result: SaveResult) => void,
+  onErr: (error: AppError) => void,
+): Cmd {
+  return invokeCmd<SaveResult>("doc_save", { locationId, relPath, text }, onOk, onErr);
 }
+
+export type SaveResult = {
+  success: boolean;
+  new_meta: DocMeta | null;
+  conflict_detected: boolean;
+};
