@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { LocationDescriptor } from "../../ports";
+import type { LocationDescriptor } from "../../types";
 import { type SearchFilters, type SearchHit, SearchPanel } from "../SearchPanel";
 
 type SearchOverlayProps = {

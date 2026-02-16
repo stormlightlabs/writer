@@ -11,6 +11,7 @@ import type { InvokeArgs } from "@tauri-apps/api/core";
 import { invoke } from "@tauri-apps/api/core";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
+import type { DocContent, DocMeta, DocRef, LocationDescriptor, LocationId, SaveStatus } from "./types";
 
 export type ErrorCode =
   | "NOT_FOUND"
@@ -44,8 +45,6 @@ export function isOk<T>(result: CommandResult<T>): result is { type: "ok"; value
 export function isErr<T>(result: CommandResult<T>): result is { type: "err"; error: AppError } {
   return result.type === "err";
 }
-
-export type LocationId = number;
 
 export type BackendEvent =
   | { type: "LocationMissing"; location_id: LocationId; path: string }
@@ -198,8 +197,6 @@ export class SubscriptionManager {
   }
 }
 
-export type LocationDescriptor = { id: LocationId; name: string; root_path: string; added_at: string };
-
 export function locationAddViaDialog(
   onOk: (location: LocationDescriptor) => void,
   onErr: (error: AppError) => void,
@@ -225,20 +222,6 @@ export function locationValidate(
 ): Cmd {
   return invokeCmd<Array<[LocationId, string]>>("location_validate", {}, onOk, onErr);
 }
-
-export type DocRef = { location_id: LocationId; rel_path: string };
-
-export type DocMeta = {
-  location_id: LocationId;
-  rel_path: string;
-  title: string;
-  updated_at: string;
-  word_count: number;
-};
-
-export type DocContent = { text: string; meta: DocMeta };
-
-export type SaveStatus = "Idle" | "Dirty" | "Saving" | "Saved" | "Error";
 
 export type EditorState = {
   doc_ref: DocRef | null;

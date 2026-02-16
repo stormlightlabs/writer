@@ -1,9 +1,6 @@
 import { create, type StateCreator } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { Tab } from "../components/DocumentTabs";
-import type { DocMeta, DocRef, LocationDescriptor } from "../ports";
-
-export type AppTheme = "dark" | "light";
+import type { AppTheme, DocMeta, DocRef, LocationDescriptor, Tab } from "../types";
 
 export type OpenDocumentTabResult = { tabId: string; didCreateTab: boolean };
 

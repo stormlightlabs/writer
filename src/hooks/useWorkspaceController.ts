@@ -1,13 +1,20 @@
 import { useCallback, useMemo } from "react";
-import type { Tab } from "../components/DocumentTabs";
-import { type DocRef, locationAddViaDialog, locationRemove, runCmd } from "../ports";
+import { locationAddViaDialog, locationRemove, runCmd } from "../ports";
 import { useAppStore, useTabsActions, useTabsState, useWorkspaceActions, useWorkspaceState } from "../state/appStore";
+import type { DocRef, Tab } from "../types";
 
 export type OpenDocument = (docRef: DocRef) => void;
 
 export function useWorkspaceController(openDoc: OpenDocument) {
-  const { locations, selectedLocationId, selectedDocPath, documents, isLoadingLocations, isLoadingDocuments, sidebarFilter } =
-    useWorkspaceState();
+  const {
+    locations,
+    selectedLocationId,
+    selectedDocPath,
+    documents,
+    isLoadingLocations,
+    isLoadingDocuments,
+    sidebarFilter,
+  } = useWorkspaceState();
 
   const { setSidebarFilter, setSelectedLocation, addLocation, removeLocation } = useWorkspaceActions();
   const { tabs, activeTabId } = useTabsState();
