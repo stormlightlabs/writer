@@ -51,8 +51,7 @@ pub struct DocMeta {
 }
 
 /// File encoding detection and preservation
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum Encoding {
     #[default]
     Utf8,
@@ -61,17 +60,14 @@ pub enum Encoding {
     Utf16Be,
 }
 
-
 /// Line ending style preservation
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum LineEnding {
     #[default]
     Lf,
     CrLf,
     Auto,
 }
-
 
 /// Document content with metadata for opening
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -99,18 +95,15 @@ pub enum DocSortField {
 }
 
 /// Sort order
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
 pub enum SortOrder {
     Ascending,
     #[default]
     Descending,
 }
 
-
 /// Save policy options
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
 pub enum SavePolicy {
     /// Atomic save: write to temp, fsync, rename
     #[default]
@@ -118,7 +111,6 @@ pub enum SavePolicy {
     /// In-place overwrite (not recommended for production)
     InPlace,
 }
-
 
 /// Result of a save operation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

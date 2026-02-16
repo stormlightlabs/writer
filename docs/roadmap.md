@@ -94,7 +94,7 @@ A "thorough" Markdown pipeline: deterministic HTML, structured metadata, and sou
       - Outline JSON match
       - Sourcepos presence for block nodes
 
-## Editor MVP (React): CodeMirror 6 + Markdown language + Elm integration
+## Editor (React)
 
 A robust text editor that cooperates with Elm state management (no "hidden state surprises").
 
@@ -116,6 +116,8 @@ A robust text editor that cooperates with Elm state management (no "hidden state
    - `Msg::SaveRequested`
    - `Msg::SaveFinished`
    - `Msg::DocOpened`
+5. Oxocarbon Dark & Light themes
+6. Testing library tests
 
 ## Preview renderer + scroll/selection sync (editor ↔ rendered HTML)
 

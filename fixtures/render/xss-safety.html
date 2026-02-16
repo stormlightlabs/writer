@@ -1,0 +1,6 @@
+<h1 data-sourcepos="1:1-1:10">XSS Test</h1>
+<p data-sourcepos="3:1-3:57">This tests that raw HTML is properly escaped or filtered.</p>
+<!-- raw HTML omitted -->
+<p data-sourcepos="7:1-7:32">&lt;img src=x onerror=alert('XSS')&gt;</p>
+<p data-sourcepos="9:1-9:46"><!-- raw HTML omitted -->Click me<!-- raw HTML omitted --></p>
+<!-- raw HTML omitted -->

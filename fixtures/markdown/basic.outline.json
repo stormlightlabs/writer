@@ -1,0 +1,14 @@
+{
+  "title": "Test Document",
+  "outline": [
+    { "level": 1, "text": "Test Document" },
+    { "level": 2, "text": "Section 1" },
+    { "level": 3, "text": "Subsection" },
+    { "level": 2, "text": "Section 2" }
+  ],
+  "word_count": 42,
+  "task_items": {
+    "total": 2,
+    "completed": 1
+  }
+}
