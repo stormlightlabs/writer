@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { DocMeta } from "../../ports";
+import type { DocMeta } from "../../types";
 import { FileTextIcon } from "../icons";
 import { TreeItem } from "./TreeItem";
 

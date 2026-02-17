@@ -1,5 +1,15 @@
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { resetAppStore, useAppStore } from "../state/appStore";
+import {
+  resetAppStore,
+  useAppStore,
+  useLayoutActions,
+  useLayoutState,
+  useTabsActions,
+  useTabsState,
+  useWorkspaceActions,
+  useWorkspaceState,
+} from "../state/appStore";
 
 describe("appStore", () => {
   beforeEach(() => {
@@ -72,8 +82,149 @@ describe("appStore", () => {
     useAppStore.getState().selectTab(first.tabId);
     useAppStore.getState().markActiveTabModified(true);
 
-    const {tabs} = useAppStore.getState();
+    const { tabs } = useAppStore.getState();
     expect(tabs.find((tab) => tab.id === first.tabId)?.isModified).toBeTruthy();
     expect(tabs.find((tab) => tab.id === second.tabId)?.isModified).toBeFalsy();
+  });
+
+  it("keeps selected location when locations refresh and selected id still exists", () => {
+    const store = useAppStore.getState();
+
+    store.setLocations([{ id: 1, name: "A", root_path: "/a", added_at: "2024-01-01" }, {
+      id: 2,
+      name: "B",
+      root_path: "/b",
+      added_at: "2024-01-01",
+    }]);
+    store.setSelectedLocation(2);
+
+    store.setLocations([{ id: 2, name: "B", root_path: "/b", added_at: "2024-01-01" }, {
+      id: 3,
+      name: "C",
+      root_path: "/c",
+      added_at: "2024-01-01",
+    }]);
+
+    expect(useAppStore.getState().selectedLocationId).toBe(2);
+  });
+
+  it("setSelectedLocation clears selected doc path and setSelectedDocPath restores it", () => {
+    const store = useAppStore.getState();
+
+    store.setSelectedDocPath("notes/old.md");
+    store.setSelectedLocation(5);
+    expect(useAppStore.getState().selectedDocPath).toBeUndefined();
+
+    store.setSelectedDocPath("notes/new.md");
+    expect(useAppStore.getState().selectedDocPath).toBe("notes/new.md");
+  });
+
+  it("closing an inactive tab leaves the active tab unchanged", () => {
+    const store = useAppStore.getState();
+    const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
+    const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
+
+    const closedResult = useAppStore.getState().closeTab(first.tabId);
+
+    expect(closedResult).toBeNull();
+    expect(useAppStore.getState().tabs.map((tab) => tab.id)).toStrictEqual([second.tabId]);
+    expect(useAppStore.getState().activeTabId).toBe(second.tabId);
+  });
+
+  it("closing the final active tab clears tab and selection state", () => {
+    const store = useAppStore.getState();
+    const only = store.openDocumentTab({ location_id: 1, rel_path: "only.md" }, "Only");
+
+    const nextRef = useAppStore.getState().closeTab(only.tabId);
+
+    expect(nextRef).toBeNull();
+    expect(useAppStore.getState().tabs).toStrictEqual([]);
+    expect(useAppStore.getState().activeTabId).toBeNull();
+    expect(useAppStore.getState().selectedDocPath).toBeUndefined();
+  });
+
+  it("markActiveTabModified is a no-op when no active tab exists", () => {
+    useAppStore.getState().markActiveTabModified(true);
+    expect(useAppStore.getState().tabs).toStrictEqual([]);
+  });
+
+  it("layout selector hooks expose and update layout state", () => {
+    const { result: layoutState } = renderHook(() => useLayoutState());
+    const { result: layoutActions } = renderHook(() => useLayoutActions());
+
+    expect(layoutState.current.sidebarCollapsed).toBeFalsy();
+    expect(layoutState.current.isSplitView).toBeFalsy();
+    expect(layoutState.current.isFocusMode).toBeFalsy();
+
+    act(() => {
+      layoutActions.current.toggleSidebarCollapsed();
+      layoutActions.current.setSplitView(true);
+      layoutActions.current.toggleFocusMode();
+      layoutActions.current.setPreviewVisible(false);
+      layoutActions.current.setShowSearch(true);
+    });
+
+    expect(layoutState.current.sidebarCollapsed).toBeTruthy();
+    expect(layoutState.current.isSplitView).toBeTruthy();
+    expect(layoutState.current.isFocusMode).toBeTruthy();
+    expect(layoutState.current.isPreviewVisible).toBeFalsy();
+    expect(layoutState.current.showSearch).toBeTruthy();
+    expect(layoutState.current.theme).toBe("dark");
+  });
+
+  it("workspace selector hooks expose and update workspace state", () => {
+    const { result: workspaceState } = renderHook(() => useWorkspaceState());
+    const { result: workspaceActions } = renderHook(() => useWorkspaceActions());
+
+    act(() => {
+      workspaceActions.current.setLoadingLocations(false);
+      workspaceActions.current.setSidebarFilter("draft");
+      workspaceActions.current.setDocuments([{
+        location_id: 1,
+        rel_path: "a.md",
+        title: "A",
+        updated_at: "2024-01-01T00:00:00Z",
+        word_count: 10,
+      }]);
+      workspaceActions.current.setLoadingDocuments(true);
+      workspaceActions.current.addLocation({ id: 9, name: "N", root_path: "/n", added_at: "2024-01-01" });
+      workspaceActions.current.removeLocation(9);
+    });
+
+    expect(workspaceState.current.isLoadingLocations).toBeFalsy();
+    expect(workspaceState.current.sidebarFilter).toBe("draft");
+    expect(workspaceState.current.documents).toStrictEqual([{
+      location_id: 1,
+      rel_path: "a.md",
+      title: "A",
+      updated_at: "2024-01-01T00:00:00Z",
+      word_count: 10,
+    }]);
+    expect(workspaceState.current.isLoadingDocuments).toBeTruthy();
+    expect(workspaceState.current.locations).toStrictEqual([]);
+  });
+
+  it("tabs selector hooks expose and update tab state", () => {
+    const { result: tabsState } = renderHook(() => useTabsState());
+    const { result: tabsActions } = renderHook(() => useTabsActions());
+
+    let firstTabId = "";
+    let secondTabId = "";
+
+    act(() => {
+      firstTabId = tabsActions.current.openDocumentTab({ location_id: 1, rel_path: "first.md" }, "First").tabId;
+      secondTabId = tabsActions.current.openDocumentTab({ location_id: 1, rel_path: "second.md" }, "Second").tabId;
+      tabsActions.current.selectTab(firstTabId);
+      const currentTabs = useAppStore.getState().tabs;
+      tabsActions.current.reorderTabs([{ ...currentTabs.find((tab) => tab.id === secondTabId)!, isModified: false }, {
+        ...currentTabs.find((tab) => tab.id === firstTabId)!,
+        isModified: false,
+      }]);
+    });
+
+    expect(tabsState.current.tabs).toHaveLength(2);
+    expect(tabsState.current.activeTabId).toBe(firstTabId);
+    expect(tabsState.current.tabs[0].id).toBe(secondTabId);
+    expect(tabsState.current.tabs[1].id).toBe(firstTabId);
   });
 });

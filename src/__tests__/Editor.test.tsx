@@ -96,7 +96,7 @@ describe(Editor, () => {
         fireEvent.input(content, { target: { textContent: "New text" } });
 
         await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalledWith();
+          expect(mockOnChange).toHaveBeenCalledWith("New text");
         }, { timeout: 100 });
       }
     });
@@ -113,9 +113,44 @@ describe(Editor, () => {
         expect(mockOnChange).not.toHaveBeenCalled();
 
         await waitFor(() => {
-          expect(mockOnChange).toHaveBeenCalledWith();
+          expect(mockOnChange).toHaveBeenCalledWith("Text 3");
         }, { timeout: 200 });
       }
+    });
+  });
+
+  describe("prop updates", () => {
+    it("updates editor text when initialText changes", async () => {
+      const { container, rerender } = render(<Editor initialText="First text" />);
+      expect(container.querySelector(".cm-content")).toHaveTextContent("First text");
+
+      rerender(<Editor initialText="Second text" />);
+
+      await waitFor(() => {
+        expect(container.querySelector(".cm-content")).toHaveTextContent("Second text");
+      });
+    });
+
+    it("recreates the editor view when presentation props change", () => {
+      const { container, rerender } = render(<Editor initialText="Persistent" theme="dark" />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+
+      rerender(<Editor initialText="Persistent" theme="light" />);
+      const secondEditorRoot = container.querySelector(".cm-editor");
+
+      expect(screen.getByTestId("editor-container")).toHaveAttribute("data-theme", "light");
+      expect(secondEditorRoot).toBeInTheDocument();
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
+    });
+
+    it("focuses the editor when container is clicked", async () => {
+      const { container } = render(<Editor />);
+      fireEvent.click(screen.getByTestId("editor-container"));
+
+      await waitFor(() => {
+        expect(container.querySelector(".cm-content")).toBe(document.activeElement);
+      });
     });
   });
 });

@@ -1,9 +1,9 @@
 import { useAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 import type { SearchHit } from "../components/SearchPanel";
-import type { DocMeta } from "../ports";
 import { useLayoutActions } from "../state/appStore";
 import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "../state/searchAtoms";
+import type { DocMeta } from "../types";
 
 export function useSearchController(
   documents: DocMeta[],

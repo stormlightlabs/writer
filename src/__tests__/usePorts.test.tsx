@@ -5,8 +5,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppError, LocationDescriptor } from "../ports";
+import type { AppError } from "../ports";
 import { emitBackendEvent } from "../test/setup";
+import type { LocationDescriptor } from "../types";
 import { useBackendEvents, useLocations, usePorts } from "../usePorts";
 
 describe(usePorts, () => {
@@ -197,7 +198,7 @@ describe(useBackendEvents, () => {
     emitBackendEvent({ type: "LocationMissing", location_id: 1, path: "/test" });
 
     expect(onLocationMissing1).not.toHaveBeenCalled();
-    expect(onLocationMissing2).toHaveBeenCalledWith();
+    expect(onLocationMissing2).toHaveBeenCalledWith(1, "/test");
   });
 });
 

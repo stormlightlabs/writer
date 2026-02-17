@@ -5,10 +5,11 @@
  * Handles location missing, conflict detection, and reconciliation events.
  */
 
-import { useEffect, useState } from "react";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
-import type { BackendEvent, LocationId } from "../ports";
+import { useEffect, useState } from "react";
+import type { BackendEvent } from "../ports";
+import type { LocationId } from "../types";
 
 export interface BackendEventState {
   events: BackendEvent[];
@@ -19,7 +20,9 @@ export interface BackendEventState {
 export function useBackendEvents(): BackendEventState {
   const [events, setEvents] = useState<BackendEvent[]>([]);
   const [missingLocations, setMissingLocations] = useState<Array<{ location_id: LocationId; path: string }>>([]);
-  const [conflicts, setConflicts] = useState<Array<{ location_id: LocationId; rel_path: string; conflict_filename: string }>>([]);
+  const [conflicts, setConflicts] = useState<
+    Array<{ location_id: LocationId; rel_path: string; conflict_filename: string }>
+  >([]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -27,29 +30,25 @@ export function useBackendEvents(): BackendEventState {
     const setupListener = async () => {
       try {
         unlisten = await listen<BackendEvent>("backend-event", (event: TauriEvent<BackendEvent>) => {
-          const {payload} = event;
-          
+          const { payload } = event;
+
           setEvents((prev) => [...prev, payload]);
 
           switch (payload.type) {
             case "LocationMissing": {
-              setMissingLocations((prev) => [
-                ...prev,
-                { location_id: payload.location_id, path: payload.path },
-              ]);
+              setMissingLocations((prev) => [...prev, { location_id: payload.location_id, path: payload.path }]);
               console.warn("Location missing:", payload.location_id, payload.path);
               break;
             }
 
             case "ConflictDetected": {
-              setConflicts((prev) => [
-                ...prev,
-                {
-                  location_id: payload.location_id,
-                  rel_path: payload.rel_path,
-                  conflict_filename: payload.conflict_filename,
-                },
-              ]);
+              setConflicts((
+                prev,
+              ) => [...prev, {
+                location_id: payload.location_id,
+                rel_path: payload.rel_path,
+                conflict_filename: payload.conflict_filename,
+              }]);
               console.warn("Conflict detected:", payload.conflict_filename);
               break;
             }

@@ -1,6 +1,6 @@
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
-import type { DocMeta, LocationDescriptor } from "../../ports";
+import type { DocMeta, LocationDescriptor } from "../../types";
 import { LibraryIcon } from "../icons";
 import { AddButton } from "./AddButton";
 import { EmptyLocations } from "./EmptyLocations";

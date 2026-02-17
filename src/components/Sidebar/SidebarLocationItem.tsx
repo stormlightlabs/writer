@@ -1,5 +1,5 @@
 import { MouseEventHandler, useCallback, useMemo } from "react";
-import { DocMeta, LocationDescriptor } from "../../ports";
+import { DocMeta, LocationDescriptor } from "../../types";
 import { FolderIcon, MoreVerticalIcon } from "../icons";
 import { DocumentItem } from "./DocumentItem";
 import { EmptyDocuments } from "./EmptyDocuments";

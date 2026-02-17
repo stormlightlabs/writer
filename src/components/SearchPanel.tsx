@@ -81,13 +81,13 @@ function SearchResult({ hit, onSelectResult }: { hit: SearchHit; onSelectResult:
   }
 }
 
-const RenderedLocations = (
-  { locations, filters, handleToggleLocation }: {
-    locations: Array<{ id: number; name: string }>;
-    filters: SearchFilters;
-    handleToggleLocation: (locationId: number) => void;
-  },
-) => (
+type RenderedLocationsProps = {
+  locations: Array<{ id: number; name: string }>;
+  filters: SearchFilters;
+  handleToggleLocation: (locationId: number) => void;
+};
+
+const RenderedLocations = ({ locations, filters, handleToggleLocation }: RenderedLocationsProps) => (
   <div className="flex flex-wrap gap-2">
     {locations.map((location) => (
       <FilterLocation
@@ -99,14 +99,14 @@ const RenderedLocations = (
   </div>
 );
 
-function Results(
-  { isSearching, results, query, onSelectResult }: {
-    isSearching: boolean;
-    results: SearchHit[];
-    query: string;
-    onSelectResult: (hit: SearchHit) => void;
-  },
-) {
+type ResultsProps = {
+  isSearching: boolean;
+  results: SearchHit[];
+  query: string;
+  onSelectResult: (hit: SearchHit) => void;
+};
+
+function Results({ isSearching, results, query, onSelectResult }: ResultsProps) {
   if (isSearching) {
     return <div className="flex items-center justify-center h-[200px] text-text-placeholder text-sm">Searching...</div>;
   } else if (results.length === 0) {
@@ -140,13 +140,13 @@ function Results(
   );
 }
 
-const SearchInput = (
-  { query, handleQueryChange, clearQuery }: {
-    query: string;
-    handleQueryChange: ChangeEventHandler<HTMLInputElement>;
-    clearQuery: MouseEventHandler<HTMLButtonElement>;
-  },
-) => (
+type SearchInputProps = {
+  query: string;
+  handleQueryChange: ChangeEventHandler<HTMLInputElement>;
+  clearQuery: MouseEventHandler<HTMLButtonElement>;
+};
+
+const SearchInput = ({ query, handleQueryChange, clearQuery }: SearchInputProps) => (
   <div className="flex-1 relative">
     <SearchIcon
       size={18}
@@ -168,25 +168,30 @@ const SearchInput = (
   </div>
 );
 
-function FilterLocation(
-  { location, filters, handleToggleLocation }: {
-    location: { id: number; name: string };
-    filters: SearchFilters;
-    handleToggleLocation: (locationId: number) => void;
-  },
-) {
-  const k = location.id;
+type FilterLocationProps = {
+  location: { id: number; name: string };
+  filters: SearchFilters;
+  handleToggleLocation: (locationId: number) => void;
+};
+
+function FilterLocation({ location, filters, handleToggleLocation }: FilterLocationProps) {
   const handleClick = useCallback(() => handleToggleLocation(location.id), [handleToggleLocation, location.id]);
-  return (
-    <button
-      key={k}
-      onClick={handleClick}
-      className={`px-3 py-1.5 border border-border-subtle rounded text-[0.8125rem] cursor-pointer transition-all duration-150 ${
-        filters.locations?.includes(location.id) ? "bg-accent-blue text-white" : "bg-layer-02 text-text-primary"
-      }`}>
-      {location.name}
-    </button>
-  );
+  const classes = useMemo(() => {
+    const base = [
+      "px-3 py-1.5",
+      "border border-border-subtle rounded",
+      "text-[0.8125rem] cursor-pointer transition-all duration-150",
+    ];
+
+    if (filters.locations?.includes(location.id)) {
+      base.push("bg-accent-blue text-white");
+    } else {
+      base.push("bg-layer-02 text-text-primary");
+    }
+
+    return base.join(" ");
+  }, [filters.locations]);
+  return <button onClick={handleClick} className={classes}>{location.name}</button>;
 }
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => (
@@ -203,37 +208,58 @@ const ClearAllFilters = ({ handleClearFilters }: { handleClearFilters: () => voi
   </button>
 );
 
-const ToggleButton = (
-  { toggleFilters, showFilters, activeFilterCount }: {
-    toggleFilters: MouseEventHandler<HTMLButtonElement>;
-    showFilters: boolean;
-    activeFilterCount: number;
-  },
-) => (
-  <button
-    onClick={toggleFilters}
-    className={`px-4 py-2.5 border border-border-subtle rounded-md text-sm cursor-pointer flex items-center gap-1.5 transition-all duration-150 ${
-      showFilters ? "bg-layer-accent-01" : "bg-layer-01"
-    } ${activeFilterCount > 0 ? "text-accent-blue" : "text-text-secondary"}`}>
-    Filters
-    {activeFilterCount > 0 && (
-      <span className="bg-accent-blue text-white text-xs px-1.5 py-0.5 rounded-[10px] font-semibold">
-        {activeFilterCount}
-      </span>
-    )}
-  </button>
-);
+type ToggleButtonProps = {
+  toggleFilters: MouseEventHandler<HTMLButtonElement>;
+  showFilters: boolean;
+  activeFilterCount: number;
+};
 
-const VisibleFilters = (
-  { showFilters, locations, filters, handleToggleLocation, activeFilterCount, handleClearFilters }: {
-    showFilters: boolean;
-    locations: Array<{ id: number; name: string }>;
-    filters: SearchFilters;
-    handleToggleLocation: (locationId: number) => void;
-    activeFilterCount: number;
-    handleClearFilters: () => void;
-  },
-) => {
+function ToggleButton({ toggleFilters, showFilters, activeFilterCount }: ToggleButtonProps) {
+  const classes = useMemo(() => {
+    const base = [
+      "px-4 py-2.5",
+      "border border-border-subtle rounded-md",
+      "text-sm cursor-pointer flex items-center gap-1.5 transition-all duration-150",
+    ];
+
+    if (showFilters) {
+      base.push("bg-layer-accent-01");
+    } else {
+      base.push("bg-layer-01");
+    }
+
+    if (activeFilterCount > 0) {
+      base.push("text-accent-blue");
+    } else {
+      base.push("text-text-secondary");
+    }
+
+    return base.join(" ");
+  }, [showFilters, activeFilterCount]);
+  return (
+    <button onClick={toggleFilters} className={classes}>
+      Filters
+      {activeFilterCount > 0 && (
+        <span className="bg-accent-blue text-white text-xs px-1.5 py-0.5 rounded-[10px] font-semibold">
+          {activeFilterCount}
+        </span>
+      )}
+    </button>
+  );
+}
+
+type VisibleFiltersProps = {
+  showFilters: boolean;
+  locations: Array<{ id: number; name: string }>;
+  filters: SearchFilters;
+  handleToggleLocation: (locationId: number) => void;
+  activeFilterCount: number;
+  handleClearFilters: () => void;
+};
+
+function VisibleFilters(
+  { showFilters, locations, filters, handleToggleLocation, activeFilterCount, handleClearFilters }: VisibleFiltersProps,
+) {
   if (showFilters) {
     return (
       <div className="p-4 bg-layer-01 rounded-md border border-border-subtle flex flex-col gap-4">
@@ -248,7 +274,7 @@ const VisibleFilters = (
     );
   }
   return null;
-};
+}
 
 function SearchResultsHeader(
   {

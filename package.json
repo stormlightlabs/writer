@@ -12,7 +12,9 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "check": "tsc --noEmit",
+    "format": "dprint fmt ."
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",

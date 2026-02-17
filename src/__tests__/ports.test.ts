@@ -6,16 +6,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AppError,
-  type BatchCmd,
-  type Cmd,
-  type InvokeCmd,
-  type LocationDescriptor,
-  type StartWatchCmd,
-  type StopWatchCmd,
-  SubscriptionManager,
   backendEvents,
   batch,
+  type BatchCmd,
+  type Cmd,
   err,
+  type InvokeCmd,
   invokeCmd,
   isErr,
   isOk,
@@ -23,13 +19,17 @@ import {
   locationList,
   locationRemove,
   locationValidate,
-  noSub,
   none,
+  noSub,
   ok,
   runCmd,
   startWatch,
+  type StartWatchCmd,
   stopWatch,
+  type StopWatchCmd,
+  SubscriptionManager,
 } from "../ports";
+import type { LocationDescriptor } from "../types";
 
 describe("commandResult", () => {
   describe(ok, () => {
@@ -105,7 +105,7 @@ describe("commandResult", () => {
     it("should return true for Ok results", () => {
       expect(isOk(ok("success"))).toBeTruthy();
       expect(isOk(ok(null))).toBeTruthy();
-      expect(isOk(ok())).toBeTruthy();
+      expect(isOk(ok(void 0))).toBeTruthy();
     });
 
     it("should return false for Err results", () => {
@@ -115,7 +115,7 @@ describe("commandResult", () => {
     it("should narrow type correctly", () => {
       const result = ok(42);
       if (isOk(result)) {
-        const {value} = result;
+        const { value } = result;
         expect(value).toBe(42);
       }
     });
@@ -217,7 +217,7 @@ describe("command Builders", () => {
     });
   });
 
-  describe(none, () => {
+  describe("none", () => {
     it("should create a None command", () => {
       expect(none.type).toBe("None");
     });
@@ -253,7 +253,7 @@ describe("subscription Builders", () => {
     });
   });
 
-  describe(noSub, () => {
+  describe("noSub", () => {
     it("should create a None subscription", () => {
       expect(noSub.type).toBe("None");
     });

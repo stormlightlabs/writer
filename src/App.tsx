@@ -31,7 +31,7 @@ function App() {
   }, [editorModel.saveStatus, workspace.markActiveTabModified]);
 
   const { wordCount, charCount, selectionCount } = useMemo(() => {
-    const {text} = editorModel;
+    const { text } = editorModel;
     const trimmedText = text.trim();
 
     return {

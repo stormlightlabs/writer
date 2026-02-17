@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AppError, BackendEvent, Cmd, LocationDescriptor, LocationId } from "./ports";
+import type { AppError, BackendEvent, Cmd } from "./ports";
 import {
   backendEvents,
   locationAddViaDialog,
@@ -18,8 +18,7 @@ import {
   runCmd,
   SubscriptionManager,
 } from "./ports";
-
-export type { AppError, LocationDescriptor } from "./ports";
+import { LocationDescriptor, LocationId } from "./types";
 
 interface UsePortsState<T> {
   data: T | null;

@@ -10,8 +10,9 @@
  */
 
 import { useCallback, useState } from "react";
-import type { AppError, Cmd, DocContent, DocRef, SaveResult, SaveStatus } from "../ports";
+import type { AppError, Cmd, SaveResult } from "../ports";
 import { docOpen, docSave, none, runCmd } from "../ports";
+import type { DocContent, DocRef, SaveStatus } from "../types";
 
 export interface EditorModel {
   docRef: DocRef | null;

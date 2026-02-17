@@ -1,6 +1,6 @@
 import type { MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
-import type { SaveStatus } from "../ports";
+import { SaveStatus } from "../types";
 import { CheckIcon, EyeIcon, FocusIcon, RefreshIcon, SaveIcon, SettingsIcon, SplitViewIcon } from "./icons";
 
 export type ToolbarProps = {
