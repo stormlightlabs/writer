@@ -557,7 +557,6 @@ pub fn markdown_render(
         }
         Err(e) => {
             tracing::error!("Failed to render markdown: {}", e);
-            // FIXME: There is too much error-nesting here
             Ok(CommandResult::err(AppError::new(
                 writer_core::ErrorCode::Parse,
                 format!("Failed to render markdown: {}", e),

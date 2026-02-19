@@ -153,4 +153,81 @@ describe("WorkspacePanel", () => {
 
     expect(sidebarContainer).toHaveStyle({ width: "360px" });
   });
+
+  it("renders split mode and supports resizing between editor and preview", () => {
+    const layout = {
+      sidebarCollapsed: true,
+      topBarsCollapsed: true,
+      statusBarCollapsed: true,
+      isSplitView: true,
+      isPreviewVisible: true,
+    } as const;
+    const sidebar = {
+      locations: [],
+      selectedLocationId: undefined,
+      selectedDocPath: undefined,
+      documents: [],
+      isLoading: false,
+      filterText: "",
+      onAddLocation: vi.fn(),
+      onRemoveLocation: vi.fn(),
+      onSelectLocation: vi.fn(),
+      onSelectDocument: vi.fn(),
+      onFilterChange: vi.fn(),
+    };
+    const toolbar = {
+      saveStatus: "Idle" as const,
+      isSplitView: true,
+      isFocusMode: false,
+      isPreviewVisible: true,
+      onSave: vi.fn(),
+      onToggleSplitView: vi.fn(),
+      onToggleFocusMode: vi.fn(),
+      onTogglePreview: vi.fn(),
+      onOpenSettings: vi.fn(),
+    };
+    const tabs = { tabs: [], activeTabId: null, onSelectTab: vi.fn(), onCloseTab: vi.fn(), onReorderTabs: vi.fn() };
+    const editor = {
+      initialText: "# Split",
+      theme: "dark" as const,
+      showLineNumbers: true,
+      onChange: vi.fn(),
+      onSave: vi.fn(),
+      onCursorMove: vi.fn(),
+      onSelectionChange: vi.fn(),
+    };
+    const preview = {
+      renderResult: {
+        html: "<p>Preview content</p>",
+        metadata: { title: null, outline: [], links: [], task_items: { total: 0, completed: 0 }, word_count: 2 },
+      },
+      theme: "dark" as const,
+      editorLine: 1,
+      onScrollToLine: vi.fn(),
+    };
+    const statusBar = { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 };
+
+    render(
+      <WorkspacePanel
+        layout={layout}
+        onToggleSidebar={vi.fn()}
+        sidebar={sidebar}
+        toolbar={toolbar}
+        tabs={tabs}
+        editor={editor}
+        preview={preview}
+        statusBar={statusBar} />,
+    );
+
+    const separator = screen.getByRole("separator", { name: "Resize split panes" });
+    const editorPane = screen.getByTestId("editor-container").parentElement as HTMLElement;
+    const appWindow = globalThis as unknown as Window;
+    const initialWidth = Number.parseFloat(editorPane.style.width);
+
+    fireEvent.pointerDown(separator, { clientX: initialWidth });
+    fireEvent.pointerMove(appWindow, { clientX: initialWidth + 120 });
+    fireEvent.pointerUp(appWindow);
+
+    expect(editorPane).toHaveStyle({ width: `${initialWidth + 120}px` });
+  });
 });
