@@ -100,16 +100,19 @@ function App() {
   }, []);
 
   const handleOpenSearch = useCallback(() => layoutActions.setShowSearch(true), [layoutActions]);
+  const handleShowSidebar = useCallback(() => layoutActions.setSidebarCollapsed(false), [layoutActions]);
+  const handleShowTopBars = useCallback(() => layoutActions.setTopBarsCollapsed(false), [layoutActions]);
 
   const handleExit = useCallback(() => layoutActions.setFocusMode(false), [layoutActions]);
 
   const layoutProps = useMemo(
     () => ({
       sidebarCollapsed: layoutState.sidebarCollapsed,
+      topBarsCollapsed: layoutState.topBarsCollapsed,
       isSplitView: layoutState.isSplitView,
       isPreviewVisible: layoutState.isPreviewVisible,
     }),
-    [layoutState.sidebarCollapsed, layoutState.isSplitView, layoutState.isPreviewVisible],
+    [layoutState.sidebarCollapsed, layoutState.topBarsCollapsed, layoutState.isSplitView, layoutState.isPreviewVisible],
   );
 
   const sidebarProps = useMemo(
@@ -220,6 +223,8 @@ function App() {
   const searchProps = useMemo(
     () => ({
       isVisible: layoutState.showSearch,
+      sidebarCollapsed: layoutState.sidebarCollapsed,
+      topOffset: layoutState.topBarsCollapsed ? 0 : 48,
       query: search.searchQuery,
       results: search.searchResults,
       isSearching: search.isSearching,
@@ -232,6 +237,8 @@ function App() {
     }),
     [
       layoutState.showSearch,
+      layoutState.sidebarCollapsed,
+      layoutState.topBarsCollapsed,
       search.searchQuery,
       search.searchResults,
       search.isSearching,
@@ -264,8 +271,38 @@ function App() {
   }
 
   return (
-    <div data-theme={layoutState.theme} className="h-screen flex flex-col bg-bg-primary text-text-primary font-sans">
-      <AppHeaderBar onToggleSidebar={layoutActions.toggleSidebarCollapsed} onOpenSearch={handleOpenSearch} />
+    <div
+      data-theme={layoutState.theme}
+      className="relative h-screen flex flex-col bg-bg-primary text-text-primary font-sans">
+      {(layoutState.sidebarCollapsed || layoutState.topBarsCollapsed) && (
+        <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
+          {layoutState.sidebarCollapsed && (
+            <button
+              onClick={handleShowSidebar}
+              className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
+              title="Show sidebar (Ctrl+B)">
+              Show Sidebar
+            </button>
+          )}
+          {layoutState.topBarsCollapsed && (
+            <button
+              onClick={handleShowTopBars}
+              className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
+              title="Show top bars (Ctrl+Shift+B)">
+              Show Top Bars
+            </button>
+          )}
+        </div>
+      )}
+
+      {layoutState.topBarsCollapsed
+        ? null
+        : (
+          <AppHeaderBar
+            onToggleSidebar={layoutActions.toggleSidebarCollapsed}
+            onToggleTopBars={layoutActions.toggleTopBarsCollapsed}
+            onOpenSearch={handleOpenSearch} />
+        )}
 
       <WorkspacePanel
         layout={layoutProps}

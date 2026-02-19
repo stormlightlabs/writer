@@ -281,6 +281,19 @@ describe(runCmd, () => {
       expect(onErr).not.toHaveBeenCalled();
     });
 
+    it("should call onOk for Rust-style Ok envelopes", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({ Ok: { id: 2, name: "Rust" } });
+
+      const cmd = invokeCmd<LocationDescriptor>("test", {}, onOk, onErr);
+      await runCmd(cmd);
+
+      expect(onOk).toHaveBeenCalledWith({ id: 2, name: "Rust" });
+      expect(onErr).not.toHaveBeenCalled();
+    });
+
     it("should call onErr with error on command failure", async () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
@@ -293,6 +306,22 @@ describe(runCmd, () => {
       await runCmd(cmd);
 
       expect(onErr).toHaveBeenCalledWith(mockError);
+      expect(onOk).not.toHaveBeenCalled();
+    });
+
+    it("should normalize Rust-style Err envelopes", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({ Err: { code: "PermissionDenied", message: "Denied" } });
+
+      const cmd = invokeCmd<unknown>("test", {}, onOk, onErr);
+      await runCmd(cmd);
+
+      expect(onErr).toHaveBeenCalledWith({
+        code: "PERMISSION_DENIED",
+        message: "Denied",
+      });
       expect(onOk).not.toHaveBeenCalled();
     });
 
@@ -328,6 +357,19 @@ describe(runCmd, () => {
       await runCmd(cmd);
 
       expect(invoke).toHaveBeenCalledWith("test", payload);
+    });
+
+    it("should treat raw responses as success values", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce([{ id: 1 }]);
+
+      const cmd = invokeCmd<Array<{ id: number }>>("test", {}, onOk, onErr);
+      await runCmd(cmd);
+
+      expect(onOk).toHaveBeenCalledWith([{ id: 1 }]);
+      expect(onErr).not.toHaveBeenCalled();
     });
   });
 

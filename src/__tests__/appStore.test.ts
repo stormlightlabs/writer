@@ -153,11 +153,13 @@ describe("appStore", () => {
     const { result: layoutActions } = renderHook(() => useLayoutActions());
 
     expect(layoutState.current.sidebarCollapsed).toBeFalsy();
+    expect(layoutState.current.topBarsCollapsed).toBeFalsy();
     expect(layoutState.current.isSplitView).toBeFalsy();
     expect(layoutState.current.isFocusMode).toBeFalsy();
 
     act(() => {
       layoutActions.current.toggleSidebarCollapsed();
+      layoutActions.current.toggleTopBarsCollapsed();
       layoutActions.current.setSplitView(true);
       layoutActions.current.toggleFocusMode();
       layoutActions.current.setPreviewVisible(false);
@@ -165,6 +167,7 @@ describe("appStore", () => {
     });
 
     expect(layoutState.current.sidebarCollapsed).toBeTruthy();
+    expect(layoutState.current.topBarsCollapsed).toBeTruthy();
     expect(layoutState.current.isSplitView).toBeTruthy();
     expect(layoutState.current.isFocusMode).toBeTruthy();
     expect(layoutState.current.isPreviewVisible).toBeFalsy();

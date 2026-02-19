@@ -8,6 +8,8 @@ type SearchPanelProps = {
   query: string;
   results: SearchHit[];
   isSearching: boolean;
+  sidebarCollapsed: boolean;
+  topOffset: number;
   locations: Array<{ id: number; name: string }>;
   filters: SearchFilters;
   onQueryChange: (query: string) => void;
@@ -25,6 +27,8 @@ export type SearchHit = {
   column: number;
   matches: Array<{ start: number; end: number }>;
 };
+
+type SearchResultProps = { hit: SearchHit; onSelectResult: (hit: SearchHit) => void };
 
 function HighlightedSnippet({ text, matches }: { text: string; matches: Array<{ start: number; end: number }> }) {
   if (!matches || matches.length === 0) {
@@ -67,7 +71,7 @@ function HighlightLabel({ hit }: { hit: SearchHit }) {
   );
 }
 
-function SearchResult({ hit, onSelectResult }: { hit: SearchHit; onSelectResult: (hit: SearchHit) => void }) {
+function SearchResult({ hit, onSelectResult }: SearchResultProps) {
   {
     const handleClick = useCallback(() => onSelectResult(hit), [onSelectResult, hit]);
     return (
@@ -333,8 +337,19 @@ function SearchResultsHeader(
 }
 
 export function SearchPanel(
-  { query, results, isSearching, locations, filters, onQueryChange, onFiltersChange, onSelectResult, onClose }:
-    SearchPanelProps,
+  {
+    query,
+    results,
+    isSearching,
+    sidebarCollapsed,
+    topOffset,
+    locations,
+    filters,
+    onQueryChange,
+    onFiltersChange,
+    onSelectResult,
+    onClose,
+  }: SearchPanelProps,
 ) {
   const [showFilters, setShowFilters] = useState(false);
 
@@ -367,8 +382,12 @@ export function SearchPanel(
     [filters],
   );
 
+  const containerStyle = useMemo(() => ({ top: topOffset }), [topOffset]);
+
+  const leftClass = useMemo(() => sidebarCollapsed ? "left-0" : "left-sidebar", [sidebarCollapsed]);
+
   return (
-    <div className="fixed top-[48px] left-sidebar right-0 bottom-0 bg-bg-primary z-100 flex flex-col">
+    <div className={`fixed ${leftClass} right-0 bottom-0 bg-bg-primary z-100 flex flex-col`} style={containerStyle}>
       <SearchResultsHeader
         query={query}
         isSearching={isSearching}

@@ -6,7 +6,12 @@ import { Sidebar, type SidebarProps } from "../Sidebar";
 import { StatusBar, type StatusBarProps } from "../StatusBar";
 import { Toolbar, type ToolbarProps } from "../Toolbar";
 
-export type WorkspaceLayoutProps = { sidebarCollapsed: boolean; isSplitView: boolean; isPreviewVisible: boolean };
+export type WorkspaceLayoutProps = {
+  sidebarCollapsed: boolean;
+  topBarsCollapsed: boolean;
+  isSplitView: boolean;
+  isPreviewVisible: boolean;
+};
 
 export type WorkspaceEditorProps = Pick<
   EditorProps,
@@ -42,6 +47,13 @@ const MainPanel = ({ showPreview, editor, preview, mainCls }: MainPanelProps) =>
   </div>
 );
 
+const TopBar = ({ toolbar, tabs }: Pick<WorkspacePanelProps, "toolbar" | "tabs">) => (
+  <>
+    <Toolbar {...toolbar} />
+    <DocumentTabs {...tabs} />
+  </>
+);
+
 export function WorkspacePanel({ layout, sidebar, toolbar, tabs, editor, preview, statusBar }: WorkspacePanelProps) {
   const showPreview = useMemo(() => layout.isSplitView && layout.isPreviewVisible, [
     layout.isSplitView,
@@ -54,8 +66,7 @@ export function WorkspacePanel({ layout, sidebar, toolbar, tabs, editor, preview
       {layout.sidebarCollapsed ? null : <Sidebar {...sidebar} />}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Toolbar {...toolbar} />
-        <DocumentTabs {...tabs} />
+        {layout.topBarsCollapsed ? null : <TopBar toolbar={toolbar} tabs={tabs} />}
         <MainPanel showPreview={showPreview} editor={editor} preview={preview} mainCls={mainCls} />
         <StatusBar {...statusBar} />
       </div>

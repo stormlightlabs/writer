@@ -55,6 +55,98 @@ export function isErr<T>(result: CommandResult<T>): result is { type: "err"; err
   return result.type === "err";
 }
 
+type RustCommandResult<T> = { Ok: T } | { Err: unknown };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeErrorCode(code: unknown): ErrorCode {
+  if (typeof code !== "string") {
+    return "IO_ERROR";
+  }
+
+  const normalized = code.replaceAll(/[- ]/g, "_");
+
+  switch (normalized) {
+    case "NOT_FOUND":
+    case "NotFound": {
+      return "NOT_FOUND";
+    }
+    case "PERMISSION_DENIED":
+    case "PermissionDenied": {
+      return "PERMISSION_DENIED";
+    }
+    case "INVALID_PATH":
+    case "InvalidPath": {
+      return "INVALID_PATH";
+    }
+    case "IO_ERROR":
+    case "Io":
+    case "IO": {
+      return "IO_ERROR";
+    }
+    case "PARSE_ERROR":
+    case "Parse": {
+      return "PARSE_ERROR";
+    }
+    case "INDEX_ERROR":
+    case "Index": {
+      return "INDEX_ERROR";
+    }
+    case "CONFLICT":
+    case "Conflict": {
+      return "CONFLICT";
+    }
+    default: {
+      return "IO_ERROR";
+    }
+  }
+}
+
+function normalizeAppError(error: unknown, context: string): AppError {
+  if (isRecord(error)) {
+    const normalized: AppError = {
+      code: normalizeErrorCode(error.code),
+      message: typeof error.message === "string" ? error.message : "Command failed",
+    };
+
+    if (typeof error.context === "string") {
+      normalized.context = error.context;
+    }
+
+    return normalized;
+  }
+
+  return { code: "IO_ERROR", message: error instanceof Error ? error.message : String(error), context };
+}
+
+function unwrapCommandResult<T>(
+  value: unknown,
+  command: string,
+): { ok: true; value: T } | { ok: false; error: AppError } {
+  if (isRecord(value)) {
+    if (value.type === "ok" && "value" in value) {
+      return { ok: true, value: value.value as T };
+    }
+
+    if (value.type === "err" && "error" in value) {
+      return { ok: false, error: normalizeAppError(value.error, `Command: ${command}`) };
+    }
+
+    const rustResult = value as Partial<RustCommandResult<T>>;
+    if ("Ok" in rustResult) {
+      return { ok: true, value: rustResult.Ok as T };
+    }
+
+    if ("Err" in rustResult) {
+      return { ok: false, error: normalizeAppError(rustResult.Err, `Command: ${command}`) };
+    }
+  }
+
+  return { ok: true, value: value as T };
+}
+
 export type BackendEvent =
   | { type: "LocationMissing"; location_id: LocationId; path: string }
   | { type: "LocationChanged"; location_id: LocationId; old_path: string; new_path: string }
@@ -119,11 +211,13 @@ export async function runCmd(cmd: Cmd): Promise<void> {
   switch (cmd.type) {
     case "Invoke": {
       try {
-        const result = await invoke<CommandResult<unknown>>(cmd.command, cmd.payload as InvokeArgs);
-        if (isOk(result)) {
-          cmd.onOk(result.value);
+        const result = await invoke<unknown>(cmd.command, cmd.payload as InvokeArgs);
+        const commandResult = unwrapCommandResult<unknown>(result, cmd.command);
+
+        if (commandResult.ok) {
+          cmd.onOk(commandResult.value);
         } else {
-          cmd.onErr(result.error);
+          cmd.onErr(commandResult.error);
         }
       } catch (error) {
         cmd.onErr({

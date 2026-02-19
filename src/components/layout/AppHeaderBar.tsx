@@ -1,6 +1,6 @@
-import { LibraryIcon, SearchIcon } from "../icons";
+import { ChevronDownIcon, LibraryIcon, SearchIcon } from "../icons";
 
-type AppHeaderBarProps = { onToggleSidebar: () => void; onOpenSearch: () => void };
+type AppHeaderBarProps = { onToggleSidebar: () => void; onToggleTopBars: () => void; onOpenSearch: () => void };
 
 const AppTitle = ({ onToggleSidebar }: Pick<AppHeaderBarProps, "onToggleSidebar">) => (
   <div className="flex items-center gap-3">
@@ -14,7 +14,7 @@ const AppTitle = ({ onToggleSidebar }: Pick<AppHeaderBarProps, "onToggleSidebar"
   </div>
 );
 
-const SearchRow = ({ onOpenSearch }: Pick<AppHeaderBarProps, "onOpenSearch">) => (
+const SearchRow = ({ onOpenSearch, onToggleTopBars }: Pick<AppHeaderBarProps, "onOpenSearch" | "onToggleTopBars">) => (
   <div className="flex items-center gap-2">
     <button
       onClick={onOpenSearch}
@@ -23,12 +23,20 @@ const SearchRow = ({ onOpenSearch }: Pick<AppHeaderBarProps, "onOpenSearch">) =>
       Search
       <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Ctrl+Shift+F</kbd>
     </button>
+
+    <button
+      onClick={onToggleTopBars}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer"
+      title="Hide top bars (Ctrl+Shift+B)">
+      <ChevronDownIcon size={14} />
+      Hide Bars
+    </button>
   </div>
 );
 
-export const AppHeaderBar = ({ onToggleSidebar, onOpenSearch }: AppHeaderBarProps) => (
+export const AppHeaderBar = ({ onToggleSidebar, onToggleTopBars, onOpenSearch }: AppHeaderBarProps) => (
   <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-4 shrink-0">
     <AppTitle onToggleSidebar={onToggleSidebar} />
-    <SearchRow onOpenSearch={onOpenSearch} />
+    <SearchRow onOpenSearch={onOpenSearch} onToggleTopBars={onToggleTopBars} />
   </header>
 );

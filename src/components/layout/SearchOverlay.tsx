@@ -4,6 +4,8 @@ import { type SearchFilters, type SearchHit, SearchPanel } from "../SearchPanel"
 
 type SearchOverlayProps = {
   isVisible: boolean;
+  sidebarCollapsed: boolean;
+  topOffset: number;
   query: string;
   results: SearchHit[];
   isSearching: boolean;
@@ -18,6 +20,8 @@ type SearchOverlayProps = {
 export function SearchOverlay(
   {
     isVisible,
+    sidebarCollapsed,
+    topOffset,
     query,
     results,
     isSearching,
@@ -42,6 +46,8 @@ export function SearchOverlay(
       query={query}
       results={results}
       isSearching={isSearching}
+      sidebarCollapsed={sidebarCollapsed}
+      topOffset={topOffset}
       locations={locationsToRender}
       filters={filters}
       onQueryChange={onQueryChange}

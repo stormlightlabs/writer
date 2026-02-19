@@ -12,6 +12,7 @@ function generateTabId(): string {
 
 export type LayoutState = {
   sidebarCollapsed: boolean;
+  topBarsCollapsed: boolean;
   isSplitView: boolean;
   isFocusMode: boolean;
   isPreviewVisible: boolean;
@@ -22,6 +23,8 @@ export type LayoutState = {
 export type LayoutActions = {
   setSidebarCollapsed: (value: boolean) => void;
   toggleSidebarCollapsed: () => void;
+  setTopBarsCollapsed: (value: boolean) => void;
+  toggleTopBarsCollapsed: () => void;
   setSplitView: (value: boolean) => void;
   toggleSplitView: () => void;
   setFocusMode: (value: boolean) => void;
@@ -66,38 +69,36 @@ export type TabsActions = {
 
 export type AppStore = LayoutState & LayoutActions & WorkspaceState & WorkspaceActions & TabsState & TabsActions;
 
-function getInitialLayoutState(): LayoutState {
-  return {
-    sidebarCollapsed: false,
-    isSplitView: false,
-    isFocusMode: false,
-    isPreviewVisible: true,
-    showSearch: false,
-    theme: "dark",
-  };
-}
+const getInitialLayoutState = (): LayoutState => ({
+  sidebarCollapsed: false,
+  topBarsCollapsed: false,
+  isSplitView: false,
+  isFocusMode: false,
+  isPreviewVisible: true,
+  showSearch: false,
+  theme: "dark",
+});
 
-function getInitialWorkspaceState(): WorkspaceState {
-  return {
-    locations: [],
-    isLoadingLocations: true,
-    selectedLocationId: undefined,
-    selectedDocPath: undefined,
-    documents: [],
-    isLoadingDocuments: false,
-    sidebarFilter: "",
-  };
-}
+const getInitialWorkspaceState = (): WorkspaceState => ({
+  locations: [],
+  isLoadingLocations: true,
+  selectedLocationId: undefined,
+  selectedDocPath: undefined,
+  documents: [],
+  isLoadingDocuments: false,
+  sidebarFilter: "",
+});
 
-function getInitialTabsState(): TabsState {
-  return { tabs: [], activeTabId: null };
-}
+const getInitialTabsState = (): TabsState => ({ tabs: [], activeTabId: null });
 
 const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActions> = (set) => ({
   ...getInitialLayoutState(),
 
   setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
   toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+  setTopBarsCollapsed: (value) => set({ topBarsCollapsed: value }),
+  toggleTopBarsCollapsed: () => set((state) => ({ topBarsCollapsed: !state.topBarsCollapsed })),
 
   setSplitView: (value) => set({ isSplitView: value }),
   toggleSplitView: () => set((state) => ({ isSplitView: !state.isSplitView })),
@@ -245,10 +246,11 @@ export const useAppStore = create<AppStore>()((...params) => ({
   ...createTabsSlice(...params),
 }));
 
-export function useLayoutState() {
-  return useAppStore(
+export const useLayoutState = () =>
+  useAppStore(
     useShallow((state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
+      topBarsCollapsed: state.topBarsCollapsed,
       isSplitView: state.isSplitView,
       isFocusMode: state.isFocusMode,
       isPreviewVisible: state.isPreviewVisible,
@@ -256,13 +258,14 @@ export function useLayoutState() {
       theme: state.theme,
     })),
   );
-}
 
-export function useLayoutActions() {
-  return useAppStore(
+export const useLayoutActions = () =>
+  useAppStore(
     useShallow((state) => ({
       setSidebarCollapsed: state.setSidebarCollapsed,
       toggleSidebarCollapsed: state.toggleSidebarCollapsed,
+      setTopBarsCollapsed: state.setTopBarsCollapsed,
+      toggleTopBarsCollapsed: state.toggleTopBarsCollapsed,
       setSplitView: state.setSplitView,
       toggleSplitView: state.toggleSplitView,
       setFocusMode: state.setFocusMode,
@@ -273,10 +276,9 @@ export function useLayoutActions() {
       toggleShowSearch: state.toggleShowSearch,
     })),
   );
-}
 
-export function useWorkspaceState() {
-  return useAppStore(
+export const useWorkspaceState = () =>
+  useAppStore(
     useShallow((state) => ({
       locations: state.locations,
       isLoadingLocations: state.isLoadingLocations,
@@ -287,10 +289,9 @@ export function useWorkspaceState() {
       sidebarFilter: state.sidebarFilter,
     })),
   );
-}
 
-export function useWorkspaceActions() {
-  return useAppStore(
+export const useWorkspaceActions = () =>
+  useAppStore(
     useShallow((state) => ({
       setSidebarFilter: state.setSidebarFilter,
       setLocations: state.setLocations,
@@ -303,14 +304,12 @@ export function useWorkspaceActions() {
       setLoadingDocuments: state.setLoadingDocuments,
     })),
   );
-}
 
-export function useTabsState() {
-  return useAppStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
-}
+export const useTabsState = () =>
+  useAppStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
 
-export function useTabsActions() {
-  return useAppStore(
+export const useTabsActions = () =>
+  useAppStore(
     useShallow((state) => ({
       openDocumentTab: state.openDocumentTab,
       selectTab: state.selectTab,
@@ -319,7 +318,6 @@ export function useTabsActions() {
       markActiveTabModified: state.markActiveTabModified,
     })),
   );
-}
 
 export function resetAppStore(): void {
   nextTabId = 1;
