@@ -19,6 +19,7 @@ import {
   ok,
   renderMarkdown,
   runCmd,
+  searchDocuments,
   startWatch,
   stopWatch,
   SubscriptionManager,
@@ -411,14 +412,18 @@ describe(runCmd, () => {
   });
 
   describe("watch commands", () => {
-    it("should handle StartWatch (currently no-op)", async () => {
+    it("should invoke watch_enable for StartWatch", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce({ type: "ok", value: true });
       const cmd = startWatch(123);
       await expect(runCmd(cmd)).resolves.toBeUndefined();
+      expect(invoke).toHaveBeenCalledWith("watch_enable", { locationId: 123 });
     });
 
-    it("should handle StopWatch (currently no-op)", async () => {
+    it("should invoke watch_disable for StopWatch", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce({ type: "ok", value: true });
       const cmd = stopWatch(123);
       await expect(runCmd(cmd)).resolves.toBeUndefined();
+      expect(invoke).toHaveBeenCalledWith("watch_disable", { locationId: 123 });
     });
   });
 
@@ -592,6 +597,28 @@ describe("document Commands", () => {
         relPath: "notes/today.md",
         text: "# Draft",
         profile: "GfmSafe",
+      });
+    });
+  });
+
+  describe(searchDocuments, () => {
+    it("should create command with expected payload keys", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = searchDocuments(
+        "stormlight",
+        { locations: [11], fileTypes: ["md"], dateRange: { from: "2026-02-19T00:00:00.000Z" } },
+        25,
+        onOk,
+        onErr,
+      ) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("search");
+      expect(cmd.payload).toStrictEqual({
+        query: "stormlight",
+        filters: { locations: [11], fileTypes: ["md"], dateRange: { from: "2026-02-19T00:00:00.000Z" } },
+        limit: 25,
       });
     });
   });

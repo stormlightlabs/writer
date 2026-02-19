@@ -3,7 +3,7 @@ use tauri::Manager;
 mod commands;
 use commands::{
     doc_exists, doc_list, doc_open, doc_save, location_add_via_dialog, location_list, location_remove,
-    location_validate, markdown_render, ui_layout_get, ui_layout_set,
+    location_validate, markdown_render, search, ui_layout_get, ui_layout_set, watch_disable, watch_enable,
 };
 
 pub use commands::AppState;
@@ -50,6 +50,9 @@ pub fn run() {
             doc_open,
             doc_save,
             doc_exists,
+            watch_enable,
+            watch_disable,
+            search,
             markdown_render,
             ui_layout_get,
             ui_layout_set

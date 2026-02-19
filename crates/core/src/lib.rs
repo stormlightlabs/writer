@@ -332,6 +332,42 @@ pub enum SaveStatus {
     Error,
 }
 
+/// Filters for full-text search
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct SearchFilters {
+    pub locations: Option<Vec<LocationId>>,
+    pub file_types: Option<Vec<String>>,
+    pub date_range: Option<SearchDateRange>,
+}
+
+/// Optional updated-at range filter for search
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct SearchDateRange {
+    pub from: Option<String>,
+    pub to: Option<String>,
+}
+
+/// Highlight range in a snippet
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SearchMatch {
+    pub start: usize,
+    pub end: usize,
+}
+
+/// Search hit returned by the backend
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SearchHit {
+    pub location_id: LocationId,
+    pub rel_path: String,
+    pub title: String,
+    pub snippet: String,
+    pub line: usize,
+    pub column: usize,
+    pub matches: Vec<SearchMatch>,
+}
+
 /// Normalizes a relative path and rejects any path traversal attempts
 ///
 /// This function ensures that:

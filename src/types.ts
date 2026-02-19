@@ -40,6 +40,18 @@ export type DocumentMetadata = {
 
 export type RenderResult = { html: string; metadata: DocumentMetadata };
 
+export type SearchMatch = { start: number; end: number };
+
+export type SearchHit = {
+  location_id: LocationId;
+  rel_path: string;
+  title: string;
+  snippet: string;
+  line: number;
+  column: number;
+  matches: SearchMatch[];
+};
+
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
 
 export type ErrorCode =

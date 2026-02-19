@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { logger } from "../logger";
-import { docList, locationList, runCmd } from "../ports";
+import { backendEvents, docList, locationList, runCmd, startWatch, stopWatch, SubscriptionManager } from "../ports";
 import { useWorkspaceActions, useWorkspaceState } from "../state/appStore";
 
 export function useWorkspaceSync(): void {
@@ -27,18 +27,17 @@ export function useWorkspaceSync(): void {
   }, [setLoadingLocations, setLocations]);
 
   const documentRequestRef = useRef(0);
+  const selectedLocationRef = useRef<number | null>(selectedLocationId);
 
   useEffect(() => {
-    if (!selectedLocationId) {
-      setDocuments([]);
-      setLoadingDocuments(false);
-      return;
-    }
+    selectedLocationRef.current = selectedLocationId;
+  }, [selectedLocationId]);
 
+  const loadDocuments = useCallback((locationId: number) => {
     const requestId = ++documentRequestRef.current;
 
     setLoadingDocuments(true);
-    runCmd(docList(selectedLocationId, (nextDocuments) => {
+    runCmd(docList(locationId, (nextDocuments) => {
       if (documentRequestRef.current !== requestId) {
         return;
       }
@@ -50,8 +49,55 @@ export function useWorkspaceSync(): void {
         return;
       }
 
-      logger.error("Failed to load documents", { locationId: selectedLocationId, error });
+      logger.error("Failed to load documents", { locationId, error });
       setLoadingDocuments(false);
     }));
-  }, [selectedLocationId, setDocuments, setLoadingDocuments]);
+  }, [setDocuments, setLoadingDocuments]);
+
+  useEffect(() => {
+    if (!selectedLocationId) {
+      setDocuments([]);
+      setLoadingDocuments(false);
+      return;
+    }
+
+    loadDocuments(selectedLocationId);
+  }, [selectedLocationId, loadDocuments, setDocuments, setLoadingDocuments]);
+
+  useEffect(() => {
+    if (!selectedLocationId) {
+      return;
+    }
+
+    void runCmd(startWatch(selectedLocationId));
+
+    return () => {
+      void runCmd(stopWatch(selectedLocationId));
+    };
+  }, [selectedLocationId]);
+
+  useEffect(() => {
+    const manager = new SubscriptionManager();
+    let cleanupFn: (() => void) | undefined;
+
+    manager.subscribe(backendEvents((event) => {
+      if (event.type !== "DocModifiedExternally") {
+        return;
+      }
+
+      const currentLocationId = selectedLocationRef.current;
+      if (currentLocationId && event.doc_id.location_id === currentLocationId) {
+        loadDocuments(currentLocationId);
+      }
+    })).then((cleanup) => {
+      cleanupFn = cleanup;
+    }).catch((error) => {
+      logger.error("Failed to subscribe for workspace sync events", { error });
+    });
+
+    return () => {
+      cleanupFn?.();
+      manager.cleanup();
+    };
+  }, [loadDocuments]);
 }

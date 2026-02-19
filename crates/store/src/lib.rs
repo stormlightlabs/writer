@@ -1,13 +1,16 @@
 use chrono::{DateTime, Utc};
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter, types::Value};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use writer_core::{
     AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
-    LocationDescriptor, LocationId, SavePolicy, SaveResult, SortOrder, is_conflicted_filename,
+    LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SearchMatch, SortOrder,
+    is_conflicted_filename,
 };
 
 /// Manages the SQLite database for the application
@@ -125,6 +128,24 @@ impl Store {
             [],
         )
         .map_err(|e| AppError::io(format!("Failed to create conflict index: {}", e)))?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON documents(updated_at DESC)",
+            [],
+        )
+        .map_err(|e| AppError::io(format!("Failed to create updated_at index: {}", e)))?;
+
+        conn.execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
+                location_id UNINDEXED,
+                rel_path UNINDEXED,
+                title,
+                content,
+                tokenize = 'unicode61'
+            )",
+            [],
+        )
+        .map_err(|e| AppError::io(format!("Failed to create docs_fts table: {}", e)))?;
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS app_settings (
@@ -487,12 +508,14 @@ impl Store {
         let created_at = metadata.created().ok().map(DateTime::<Utc>::from);
 
         let is_conflict = is_conflicted_filename(filename);
+        let text_content = if is_indexable_text_path(path) { std::fs::read_to_string(path).ok() } else { None };
 
-        let word_count = if filename.ends_with(".md") || filename.ends_with(".txt") {
-            std::fs::read_to_string(path).ok().map(|content| count_words(&content))
-        } else {
-            None
-        };
+        let word_count = text_content.as_ref().map(|content| count_words(content));
+        let title = text_content
+            .as_ref()
+            .and_then(|content| extract_title(content, &rel_path))
+            .or_else(|| extract_title("", &rel_path));
+        let content_hash = text_content.as_ref().map(|content| hash_text(content));
 
         Ok(DocMeta {
             id: DocId { location_id, rel_path },
@@ -500,11 +523,11 @@ impl Store {
             size_bytes,
             mtime,
             created_at,
-            content_hash: None,
+            content_hash,
             encoding: Encoding::default(),
             line_ending: LineEnding::default(),
             is_conflict,
-            title: None,
+            title,
             word_count,
         })
     }
@@ -529,9 +552,7 @@ impl Store {
         let (text, encoding) = detect_and_decode(&bytes)?;
 
         let line_ending = detect_line_ending(&text);
-
         let word_count = count_words(&text);
-
         let title = extract_title(&text, &doc_id.rel_path);
 
         let metadata =
@@ -539,10 +560,9 @@ impl Store {
         let mtime = metadata
             .modified()
             .map_err(|e| AppError::io(format!("Failed to get mtime: {}", e)))?;
+
         let mtime: DateTime<Utc> = mtime.into();
-
         let created_at = metadata.created().ok().map(DateTime::<Utc>::from);
-
         let is_conflict = is_conflicted_filename(&doc_id.rel_path.to_string_lossy());
 
         let doc_meta = DocMeta {
@@ -556,7 +576,7 @@ impl Store {
             size_bytes: metadata.len(),
             mtime,
             created_at,
-            content_hash: None,
+            content_hash: Some(hash_text(&text)),
             encoding,
             line_ending,
             is_conflict,
@@ -620,7 +640,7 @@ impl Store {
             size_bytes: metadata.len(),
             mtime,
             created_at,
-            content_hash: None,
+            content_hash: Some(hash_text(text)),
             encoding: Encoding::Utf8,
             line_ending,
             is_conflict,
@@ -629,6 +649,7 @@ impl Store {
         };
 
         self.update_doc_in_catalog(doc_id, &new_meta)?;
+        self.index_document_text(doc_id, &new_meta, text)?;
 
         tracing::info!("Saved document: {:?}", doc_id.rel_path);
 
@@ -677,16 +698,33 @@ impl Store {
 
         let rel_path_str = doc_id.rel_path.to_string_lossy().to_string();
         let mtime_str = meta.mtime.to_rfc3339();
+        let created_at_str = meta.created_at.map(|timestamp| timestamp.to_rfc3339());
         let updated_at_str = Utc::now().to_rfc3339();
 
         conn.execute(
             "INSERT INTO documents
-             (location_id, rel_path, filename, size_bytes, mtime, encoding, line_ending, is_conflict, title, word_count, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+             (
+                location_id,
+                rel_path,
+                filename,
+                size_bytes,
+                mtime,
+                created_at,
+                content_hash,
+                encoding,
+                line_ending,
+                is_conflict,
+                title,
+                word_count,
+                updated_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
              ON CONFLICT(location_id, rel_path) DO UPDATE SET
              filename = excluded.filename,
              size_bytes = excluded.size_bytes,
              mtime = excluded.mtime,
+             created_at = COALESCE(documents.created_at, excluded.created_at),
+             content_hash = excluded.content_hash,
              encoding = excluded.encoding,
              line_ending = excluded.line_ending,
              is_conflict = excluded.is_conflict,
@@ -699,6 +737,8 @@ impl Store {
                 meta.filename,
                 meta.size_bytes as i64,
                 mtime_str,
+                created_at_str,
+                meta.content_hash.clone(),
                 encoding_to_i32(meta.encoding),
                 line_ending_to_i32(meta.line_ending),
                 meta.is_conflict as i32,
@@ -706,9 +746,318 @@ impl Store {
                 meta.word_count.map(|n| n as i64),
                 updated_at_str,
             ],
-        ).map_err(|e| AppError::io(format!("Failed to update document catalog: {}", e)))?;
+        )
+        .map_err(|e| AppError::io(format!("Failed to update document catalog: {}", e)))?;
 
         Ok(())
+    }
+
+    fn index_document_text(&self, doc_id: &DocId, meta: &DocMeta, text: &str) -> Result<(), AppError> {
+        if !is_indexable_text_path(&doc_id.rel_path) {
+            self.remove_fts_entry(doc_id)?;
+            return Ok(());
+        }
+
+        let title = meta
+            .title
+            .clone()
+            .unwrap_or_else(|| extract_title(text, &doc_id.rel_path).unwrap_or_else(|| "Untitled".to_string()));
+        self.upsert_fts_entry(doc_id, &title, text)
+    }
+
+    fn upsert_fts_entry(&self, doc_id: &DocId, title: &str, content: &str) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let rel_path = doc_id.rel_path.to_string_lossy().to_string();
+
+        conn.execute(
+            "DELETE FROM docs_fts WHERE location_id = ?1 AND rel_path = ?2",
+            params![doc_id.location_id.0, rel_path],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to remove existing FTS row: {}", e)))?;
+
+        conn.execute(
+            "INSERT INTO docs_fts (location_id, rel_path, title, content) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                doc_id.location_id.0,
+                doc_id.rel_path.to_string_lossy().to_string(),
+                title,
+                content
+            ],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to insert FTS row: {}", e)))?;
+
+        Ok(())
+    }
+
+    fn remove_fts_entry(&self, doc_id: &DocId) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        conn.execute(
+            "DELETE FROM docs_fts WHERE location_id = ?1 AND rel_path = ?2",
+            params![doc_id.location_id.0, doc_id.rel_path.to_string_lossy().to_string()],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to remove FTS row: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub fn remove_document_from_index(&self, doc_id: &DocId) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let rel_path = doc_id.rel_path.to_string_lossy().to_string();
+
+        conn.execute(
+            "DELETE FROM documents WHERE location_id = ?1 AND rel_path = ?2",
+            params![doc_id.location_id.0, rel_path.clone()],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to remove document row: {}", e)))?;
+
+        conn.execute(
+            "DELETE FROM docs_fts WHERE location_id = ?1 AND rel_path = ?2",
+            params![doc_id.location_id.0, rel_path],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to remove FTS row: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub fn reindex_document(&self, doc_id: &DocId) -> Result<(), AppError> {
+        let location = self
+            .location_get(doc_id.location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", doc_id.location_id)))?;
+        let full_path = doc_id.resolve(&location.root_path);
+
+        if !full_path.exists() {
+            self.remove_document_from_index(doc_id)?;
+            return Ok(());
+        }
+
+        let filename = full_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let meta = self.read_doc_metadata(&full_path, doc_id.location_id, doc_id.rel_path.clone(), &filename)?;
+        self.update_doc_in_catalog(doc_id, &meta)?;
+
+        if is_indexable_text_path(&full_path) {
+            let text = read_file_text_with_detection(&full_path)?;
+            self.index_document_text(doc_id, &meta, &text)?;
+        } else {
+            self.remove_fts_entry(doc_id)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn reconcile_location_index(&self, location_id: LocationId) -> Result<usize, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        if !location.root_path.exists() {
+            return Ok(0);
+        }
+
+        let mut file_paths = Vec::new();
+        collect_file_paths_recursive(&location.root_path, &mut file_paths)?;
+
+        let mut seen_rel_paths = HashSet::new();
+        let mut indexed = 0usize;
+
+        for full_path in file_paths {
+            if !full_path.is_file() {
+                continue;
+            }
+
+            let rel_path = full_path
+                .strip_prefix(&location.root_path)
+                .map_err(|_| AppError::invalid_path("File path escaped location root"))?
+                .to_path_buf();
+            let doc_id = DocId::new(location_id, rel_path.clone())?;
+            let rel_path_str = rel_path.to_string_lossy().to_string();
+            seen_rel_paths.insert(rel_path_str);
+
+            let filename = rel_path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let meta = self.read_doc_metadata(&full_path, location_id, rel_path, &filename)?;
+            self.update_doc_in_catalog(&doc_id, &meta)?;
+
+            if is_indexable_text_path(&full_path) {
+                match read_file_text_with_detection(&full_path) {
+                    Ok(text) => {
+                        self.index_document_text(&doc_id, &meta, &text)?;
+                        indexed += 1;
+                    }
+                    Err(error) => {
+                        tracing::warn!("Skipping FTS index for {:?} after decode failure: {}", full_path, error);
+                        self.remove_fts_entry(&doc_id)?;
+                    }
+                }
+            } else {
+                self.remove_fts_entry(&doc_id)?;
+            }
+        }
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let mut stmt = conn
+            .prepare("SELECT rel_path FROM documents WHERE location_id = ?1")
+            .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to read catalog rows: {}", e)))?;
+        let existing = stmt
+            .query_map(params![location_id.0], |row| row.get::<_, String>(0))
+            .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to query catalog rows: {}", e)))?;
+
+        let mut stale_rel_paths = Vec::new();
+        for row in existing {
+            let rel_path = row.map_err(|e| AppError::new(ErrorCode::Index, format!("Invalid rel_path row: {}", e)))?;
+            if !seen_rel_paths.contains(&rel_path) {
+                stale_rel_paths.push(rel_path);
+            }
+        }
+        drop(stmt);
+
+        for rel_path in stale_rel_paths {
+            conn.execute(
+                "DELETE FROM documents WHERE location_id = ?1 AND rel_path = ?2",
+                params![location_id.0, rel_path.clone()],
+            )
+            .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to remove stale document row: {}", e)))?;
+            conn.execute(
+                "DELETE FROM docs_fts WHERE location_id = ?1 AND rel_path = ?2",
+                params![location_id.0, rel_path],
+            )
+            .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to remove stale FTS row: {}", e)))?;
+        }
+
+        Ok(indexed)
+    }
+
+    pub fn reconcile_indexes(&self) -> Result<usize, AppError> {
+        let locations = self.location_list()?;
+        let mut indexed = 0usize;
+
+        for location in locations {
+            indexed += self.reconcile_location_index(location.id)?;
+        }
+
+        Ok(indexed)
+    }
+
+    pub fn search(
+        &self, query: &str, filters: Option<SearchFilters>, limit: usize,
+    ) -> Result<Vec<SearchHit>, AppError> {
+        let normalized_query = query.trim();
+        if normalized_query.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let filters = filters.unwrap_or_default();
+        let SearchFilters { locations, file_types, date_range } = filters;
+        let mut sql = String::from(
+            "SELECT
+                d.location_id,
+                d.rel_path,
+                COALESCE(NULLIF(d.title, ''), d.filename, d.rel_path) AS title,
+                snippet(docs_fts, 3, '<<', '>>', ' ... ', 12) AS snippet,
+                docs_fts.content AS content
+             FROM docs_fts
+             JOIN documents d
+               ON d.location_id = CAST(docs_fts.location_id AS INTEGER)
+              AND d.rel_path = docs_fts.rel_path
+             WHERE docs_fts MATCH ?",
+        );
+
+        let mut query_params: Vec<Value> = vec![Value::from(normalized_query.to_string())];
+
+        if let Some(locations) = locations.filter(|items| !items.is_empty()) {
+            sql.push_str(" AND d.location_id IN (");
+            sql.push_str(&vec!["?"; locations.len()].join(", "));
+            sql.push(')');
+            query_params.extend(locations.into_iter().map(|id| Value::from(id.0)));
+        }
+
+        if let Some(file_types) = file_types {
+            let normalized_types = file_types
+                .into_iter()
+                .map(|extension| extension.trim().trim_start_matches('.').to_lowercase())
+                .filter(|extension| !extension.is_empty())
+                .collect::<Vec<_>>();
+
+            if !normalized_types.is_empty() {
+                let mut clauses = Vec::new();
+                for extension in normalized_types {
+                    clauses.push("LOWER(d.filename) LIKE ?".to_string());
+                    query_params.push(Value::from(format!("%.{}", extension)));
+                }
+
+                sql.push_str(" AND (");
+                sql.push_str(&clauses.join(" OR "));
+                sql.push(')');
+            }
+        }
+
+        if let Some(date_range) = date_range {
+            if let Some(from) = date_range.from.filter(|value| !value.is_empty()) {
+                sql.push_str(" AND d.updated_at >= ?");
+                query_params.push(Value::from(from));
+            }
+            if let Some(to) = date_range.to.filter(|value| !value.is_empty()) {
+                sql.push_str(" AND d.updated_at <= ?");
+                query_params.push(Value::from(to));
+            }
+        }
+
+        let bounded_limit = limit.clamp(1, 200);
+        sql.push_str(" ORDER BY bm25(docs_fts), d.mtime DESC LIMIT ?");
+        query_params.push(Value::from(bounded_limit as i64));
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let mut stmt = conn
+            .prepare(&sql)
+            .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to prepare search query: {}", e)))?;
+
+        let rows = stmt
+            .query_map(params_from_iter(query_params.iter()), |row| {
+                let location_id: i64 = row.get(0)?;
+                let rel_path: String = row.get(1)?;
+                let title: String = row.get(2)?;
+                let snippet_marked: String = row.get(3)?;
+                let full_content: String = row.get(4)?;
+                let (snippet, matches) = extract_highlight_matches(&snippet_marked);
+                let (line, column) = locate_query_position(&full_content, normalized_query);
+
+                Ok(SearchHit { location_id: LocationId(location_id), rel_path, title, snippet, line, column, matches })
+            })
+            .map_err(|e| AppError::new(ErrorCode::Index, format!("Search query failed: {}", e)))?;
+
+        let mut hits = Vec::new();
+        for row in rows {
+            let hit = row.map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to parse search hit: {}", e)))?;
+            hits.push(hit);
+        }
+
+        Ok(hits)
     }
 }
 
@@ -777,6 +1126,106 @@ fn line_ending_to_i32(le: LineEnding) -> i32 {
         LineEnding::Lf => 0,
         LineEnding::CrLf => 1,
         LineEnding::Auto => 2,
+    }
+}
+
+fn is_indexable_text_path(path: &Path) -> bool {
+    const INDEXABLE_EXTENSIONS: &[&str] = &["md", "markdown", "mdx", "txt"];
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    INDEXABLE_EXTENSIONS.contains(&extension.as_str())
+}
+
+fn hash_text(text: &str) -> String {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    format!("{:016x}", hasher.finish())
+}
+
+fn read_file_text_with_detection(path: &Path) -> Result<String, AppError> {
+    let mut file = File::open(path).map_err(|e| AppError::io(format!("Failed to open file: {}", e)))?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
+    let (text, _encoding) = detect_and_decode(&bytes)?;
+    Ok(text)
+}
+
+fn collect_file_paths_recursive(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), AppError> {
+    let entries = std::fs::read_dir(dir).map_err(|e| AppError::io(format!("Failed to read directory: {}", e)))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| AppError::io(format!("Failed to read entry: {}", e)))?;
+        let path = entry.path();
+
+        if path.is_file() {
+            files.push(path);
+        } else if path.is_dir() {
+            collect_file_paths_recursive(&path, files)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn extract_highlight_matches(snippet: &str) -> (String, Vec<SearchMatch>) {
+    let mut plain = String::new();
+    let mut matches = Vec::new();
+    let mut start_index: Option<usize> = None;
+
+    let mut i = 0usize;
+    while i < snippet.len() {
+        if snippet[i..].starts_with("<<") {
+            start_index = Some(plain.len());
+            i += 2;
+            continue;
+        }
+
+        if snippet[i..].starts_with(">>") {
+            if let Some(start) = start_index.take() {
+                matches.push(SearchMatch { start, end: plain.len() });
+            }
+            i += 2;
+            continue;
+        }
+
+        if let Some(ch) = snippet[i..].chars().next() {
+            plain.push(ch);
+            i += ch.len_utf8();
+        } else {
+            break;
+        }
+    }
+
+    (plain, matches)
+}
+
+fn locate_query_position(content: &str, query: &str) -> (usize, usize) {
+    let term = query
+        .split_whitespace()
+        .find(|token| !matches!(token.to_ascii_uppercase().as_str(), "AND" | "OR" | "NOT"))
+        .unwrap_or(query)
+        .trim_matches('"')
+        .to_lowercase();
+
+    if term.is_empty() {
+        return (1, 1);
+    }
+
+    let content_lower = content.to_lowercase();
+    if let Some(byte_index) = content_lower.find(&term) {
+        let prefix = &content[..byte_index];
+        let line = prefix.matches('\n').count() + 1;
+        let column = prefix
+            .rsplit_once('\n')
+            .map(|(_, tail)| tail.chars().count() + 1)
+            .unwrap_or_else(|| prefix.chars().count() + 1);
+        (line, column)
+    } else {
+        (1, 1)
     }
 }
 
@@ -1017,6 +1466,49 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(location_path.join("level1/level2/file.md").exists());
+    }
+
+    #[test]
+    fn test_search_returns_indexed_results() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location = store
+            .location_add("Search Location".to_string(), location_dir.path().to_path_buf())
+            .unwrap();
+
+        let doc_id = DocId::new(location.id, PathBuf::from("chapter-1.md")).unwrap();
+        store
+            .doc_save(&doc_id, "# Chapter One\nThe stormlight archives begin here.", None)
+            .unwrap();
+
+        let results = store.search("stormlight", None, 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].location_id, location.id);
+        assert_eq!(results[0].rel_path, "chapter-1.md");
+        assert!(!results[0].snippet.is_empty());
+    }
+
+    #[test]
+    fn test_reconcile_location_index_removes_deleted_docs_from_search() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location_path = location_dir.path().to_path_buf();
+        let location = store
+            .location_add("Reconcile Location".to_string(), location_path.clone())
+            .unwrap();
+
+        let full_path = location_path.join("notes.md");
+        std::fs::write(&full_path, "# Notes\nIndex me").unwrap();
+
+        let indexed = store.reconcile_location_index(location.id).unwrap();
+        assert_eq!(indexed, 1);
+        assert_eq!(store.search("Index", None, 10).unwrap().len(), 1);
+
+        std::fs::remove_file(full_path).unwrap();
+
+        let indexed_after_delete = store.reconcile_location_index(location.id).unwrap();
+        assert_eq!(indexed_after_delete, 0);
+        assert!(store.search("Index", None, 10).unwrap().is_empty());
     }
 
     #[test]

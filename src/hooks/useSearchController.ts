@@ -1,19 +1,18 @@
 import { useAtom } from "jotai";
-import { useCallback, useEffect } from "react";
-import type { SearchHit } from "../components/SearchPanel";
+import { useCallback, useEffect, useRef } from "react";
+import { logger } from "../logger";
+import { runCmd, searchDocuments, type SearchFiltersPayload } from "../ports";
 import { useLayoutActions } from "../state/appStore";
 import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "../state/searchAtoms";
-import type { DocMeta } from "../types";
+import type { SearchHit } from "../types";
 
-export function useSearchController(
-  documents: DocMeta[],
-  onSelectDocument: (locationId: number, path: string) => void,
-) {
+export function useSearchController(onSelectDocument: (locationId: number, path: string) => void) {
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
   const [searchResults, setSearchResults] = useAtom(searchResultsAtom);
   const [isSearching, setIsSearching] = useAtom(isSearchingAtom);
   const [searchFilters, setSearchFilters] = useAtom(searchFiltersAtom);
   const { setShowSearch } = useLayoutActions();
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     const normalizedQuery = searchQuery.trim();
@@ -27,30 +26,33 @@ export function useSearchController(
     setIsSearching(true);
 
     const timeoutId = globalThis.setTimeout(() => {
-      const queryLower = normalizedQuery.toLowerCase();
+      const requestId = ++requestIdRef.current;
+      const payloadFilters: SearchFiltersPayload = {
+        locations: searchFilters.locations,
+        fileTypes: searchFilters.fileTypes,
+        dateRange: searchFilters.dateRange
+          ? { from: searchFilters.dateRange.from?.toISOString(), to: searchFilters.dateRange.to?.toISOString() }
+          : undefined,
+      };
 
-      const results: SearchHit[] = documents.filter((doc) => {
-        if (!searchFilters.locations?.length) {
-          return true;
+      void runCmd(searchDocuments(normalizedQuery, payloadFilters, 50, (results: SearchHit[]) => {
+        if (requestIdRef.current !== requestId) {
+          return;
         }
-
-        return searchFilters.locations.includes(doc.location_id);
-      }).filter((doc) => doc.title.toLowerCase().includes(queryLower)).map((doc) => ({
-        location_id: doc.location_id,
-        rel_path: doc.rel_path,
-        title: doc.title,
-        snippet: `Document matching "${normalizedQuery}"`,
-        line: 1,
-        column: 1,
-        matches: [{ start: 0, end: normalizedQuery.length }],
+        setSearchResults(results);
+        setIsSearching(false);
+      }, (error) => {
+        if (requestIdRef.current !== requestId) {
+          return;
+        }
+        logger.error("Search failed", { query: normalizedQuery, error });
+        setSearchResults([]);
+        setIsSearching(false);
       }));
-
-      setSearchResults(results);
-      setIsSearching(false);
-    }, 100);
+    }, 150);
 
     return () => globalThis.clearTimeout(timeoutId);
-  }, [documents, searchFilters, searchQuery, setIsSearching, setSearchResults]);
+  }, [searchFilters, searchQuery, setIsSearching, setSearchResults]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);

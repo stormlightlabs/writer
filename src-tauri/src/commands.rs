@@ -1,11 +1,13 @@
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
 use writer_core::{
     AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
-    SaveResult,
+    SaveResult, SearchFilters, SearchHit,
 };
 use writer_md::{MarkdownEngine, MarkdownProfile, RenderResult};
 use writer_store::{Store, UiLayoutSettings};
@@ -13,11 +15,71 @@ use writer_store::{Store, UiLayoutSettings};
 /// Application state shared across commands
 pub struct AppState {
     pub store: Arc<Store>,
+    pub watchers: Mutex<HashMap<i64, RecommendedWatcher>>,
 }
 
 impl AppState {
     pub fn new(store: Store) -> Self {
-        Self { store: Arc::new(store) }
+        Self { store: Arc::new(store), watchers: Mutex::new(HashMap::new()) }
+    }
+}
+
+fn emit_doc_modified_event(app: &AppHandle, doc_id: DocId, mtime: chrono::DateTime<chrono::Utc>) {
+    let event = BackendEvent::DocModifiedExternally { doc_id, new_mtime: mtime };
+    if let Err(error) = app.emit("backend-event", event) {
+        tracing::error!("Failed to emit DocModifiedExternally event: {}", error);
+    }
+}
+
+fn handle_watcher_event(
+    app: &AppHandle, store: &Arc<Store>, location_id: LocationId, root_path: &PathBuf, event: Event,
+) {
+    let should_process = matches!(
+        event.kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    );
+
+    if !should_process {
+        return;
+    }
+
+    for path in event.paths {
+        let rel_path = match path.strip_prefix(root_path) {
+            Ok(rel_path) if !rel_path.as_os_str().is_empty() => rel_path.to_path_buf(),
+            _ => continue,
+        };
+
+        let doc_id = match DocId::new(location_id, rel_path) {
+            Ok(doc_id) => doc_id,
+            Err(error) => {
+                tracing::warn!("Ignoring watcher path that failed validation: {}", error);
+                continue;
+            }
+        };
+
+        if path.exists() && path.is_file() {
+            match store.reindex_document(&doc_id) {
+                Ok(()) => {
+                    let new_mtime = std::fs::metadata(&path)
+                        .and_then(|metadata| metadata.modified())
+                        .map(chrono::DateTime::<chrono::Utc>::from)
+                        .unwrap_or_else(|_| chrono::Utc::now());
+                    emit_doc_modified_event(app, doc_id, new_mtime);
+                }
+                Err(error) => {
+                    tracing::error!("Failed to reindex changed file {:?}: {}", path, error);
+                }
+            }
+        } else if !path.exists() {
+            match store.remove_document_from_index(&doc_id) {
+                Ok(()) => {
+                    emit_doc_modified_event(app, doc_id, chrono::Utc::now());
+                }
+                Err(error) => {
+                    tracing::error!("Failed to remove deleted file {:?} from index: {}", path, error);
+                }
+            }
+        }
     }
 }
 
@@ -47,6 +109,10 @@ pub async fn location_add_via_dialog(
 
                     if let Err(e) = app.fs_scope().allow_directory(&path_buf, true) {
                         tracing::warn!("Failed to add directory to fs scope: {}", e);
+                    }
+
+                    if let Err(error) = state.store.reconcile_location_index(descriptor.id) {
+                        tracing::warn!("Initial index build failed for location {:?}: {}", descriptor.id, error);
                     }
 
                     Ok(CommandResult::ok(descriptor))
@@ -89,6 +155,10 @@ pub fn location_list(state: State<'_, AppState>) -> Result<CommandResult<Vec<Loc
 pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {
     let id = LocationId(location_id);
     tracing::info!("Removing location: id={}", location_id);
+
+    if let Ok(mut watchers) = state.watchers.lock() {
+        watchers.remove(&location_id);
+    }
 
     match state.store.location_remove(id) {
         Ok(removed) => {
@@ -187,6 +257,11 @@ pub fn reconcile_locations(app: &AppHandle) -> Result<(), AppError> {
                 tracing::error!("Failed to emit location missing event: {}", e);
             }
         }
+    }
+
+    match state.store.reconcile_indexes() {
+        Ok(indexed) => tracing::info!("Startup index reconciliation complete: indexed_files={}", indexed),
+        Err(error) => tracing::error!("Startup index reconciliation failed: {}", error),
     }
 
     let completion_event = BackendEvent::ReconciliationComplete { checked, missing: missing.clone() };
@@ -305,6 +380,13 @@ pub fn doc_save(
                     text.len()
                 );
 
+                let new_mtime = result
+                    .new_meta
+                    .as_ref()
+                    .map(|meta| meta.mtime)
+                    .unwrap_or_else(chrono::Utc::now);
+                emit_doc_modified_event(&app, doc_id.clone(), new_mtime);
+
                 Ok(CommandResult::ok(result))
             }
             Err(e) => {
@@ -357,6 +439,88 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
                 e
             ))))
         }
+    }
+}
+
+/// Enables filesystem watching for a location and reindexes changed files.
+#[tauri::command]
+pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {
+    let location_id_wrapped = LocationId(location_id);
+
+    let location = match state.store.location_get(location_id_wrapped) {
+        Ok(Some(location)) => location,
+        Ok(None) => return Ok(CommandResult::err(AppError::not_found("Location not found"))),
+        Err(error) => return Ok(CommandResult::err(error)),
+    };
+
+    let mut watchers = match state.watchers.lock() {
+        Ok(guard) => guard,
+        Err(_) => return Ok(CommandResult::err(AppError::io("Failed to lock watchers map"))),
+    };
+
+    if watchers.contains_key(&location_id) {
+        return Ok(CommandResult::ok(false));
+    }
+
+    let root_path = location.root_path.clone();
+    let store = Arc::clone(&state.store);
+    let app_handle = app.clone();
+    let root_for_callback = root_path.clone();
+
+    let watcher_result = RecommendedWatcher::new(
+        move |result| match result {
+            Ok(event) => {
+                handle_watcher_event(&app_handle, &store, location_id_wrapped, &root_for_callback, event);
+            }
+            Err(error) => {
+                tracing::error!("Watcher error for location {}: {}", location_id, error);
+            }
+        },
+        Config::default(),
+    );
+
+    let mut watcher = match watcher_result {
+        Ok(watcher) => watcher,
+        Err(error) => {
+            return Ok(CommandResult::err(AppError::new(
+                writer_core::ErrorCode::Io,
+                format!("Failed to create watcher: {}", error),
+            )));
+        }
+    };
+
+    if let Err(error) = watcher.watch(&root_path, RecursiveMode::Recursive) {
+        return Ok(CommandResult::err(AppError::new(
+            writer_core::ErrorCode::Io,
+            format!("Failed to watch path: {}", error),
+        )));
+    }
+
+    watchers.insert(location_id, watcher);
+    Ok(CommandResult::ok(true))
+}
+
+/// Disables filesystem watching for a location.
+#[tauri::command]
+pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {
+    let mut watchers = match state.watchers.lock() {
+        Ok(guard) => guard,
+        Err(_) => return Ok(CommandResult::err(AppError::io("Failed to lock watchers map"))),
+    };
+
+    Ok(CommandResult::ok(watchers.remove(&location_id).is_some()))
+}
+
+/// Full-text search across indexed documents.
+#[tauri::command]
+pub fn search(
+    state: State<'_, AppState>, query: String, filters: Option<SearchFilters>, limit: Option<usize>,
+) -> Result<CommandResult<Vec<SearchHit>>, ()> {
+    let limit = limit.unwrap_or(50);
+
+    match state.store.search(&query, filters, limit) {
+        Ok(results) => Ok(CommandResult::ok(results)),
+        Err(error) => Ok(CommandResult::err(error)),
     }
 }
 

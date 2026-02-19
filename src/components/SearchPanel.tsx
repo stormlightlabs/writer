@@ -1,8 +1,10 @@
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
+import type { SearchHit } from "../types";
 import { FileTextIcon, SearchIcon, XIcon } from "./icons";
 
 export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
+export type { SearchHit } from "../types";
 
 type SearchPanelProps = {
   query: string;
@@ -16,16 +18,6 @@ type SearchPanelProps = {
   onFiltersChange: (filters: SearchFilters) => void;
   onSelectResult: (hit: SearchHit) => void;
   onClose: () => void;
-};
-
-export type SearchHit = {
-  location_id: number;
-  rel_path: string;
-  title: string;
-  snippet: string;
-  line: number;
-  column: number;
-  matches: Array<{ start: number; end: number }>;
 };
 
 type SearchResultProps = { hit: SearchHit; onSelectResult: (hit: SearchHit) => void };

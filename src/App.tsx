@@ -17,7 +17,7 @@ import { useLayoutActions, useLayoutState } from "./state/appStore";
 import type { DocMeta, DocRef, Tab } from "./types";
 import "./App.css";
 
-// TODO: make this recursive
+// TODO: make shared utils module
 function formatDraftDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -25,6 +25,7 @@ function formatDraftDate(date: Date): string {
   return `${year}_${month}_${day}`;
 }
 
+// TODO: make this recursive
 function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]): string {
   const usedPaths = new Set<string>();
 
@@ -67,7 +68,7 @@ function App() {
   const layoutActions = useLayoutActions();
 
   const workspace = useWorkspaceController(openDoc);
-  const search = useSearchController(workspace.documents, workspace.handleSelectDocument);
+  const search = useSearchController(workspace.handleSelectDocument);
 
   const activeTab = useMemo(() => workspace.tabs.find((tab) => tab.id === workspace.activeTabId) ?? null, [
     workspace.activeTabId,
@@ -156,15 +157,11 @@ function App() {
     editorDispatch({ type: "SelectionChanged", from, to });
   }, [editorDispatch]);
 
-  const handleOpenSettings = useCallback(() => {
-    setIsLayoutSettingsOpen((prev) => !prev);
-  }, []);
-
+  const handleOpenSettings = useCallback(() => setIsLayoutSettingsOpen((prev) => !prev), []);
   const handleOpenSearch = useCallback(() => layoutActions.setShowSearch(true), [layoutActions]);
   const handleShowSidebar = useCallback(() => layoutActions.setSidebarCollapsed(false), [layoutActions]);
   const handleShowTopBars = useCallback(() => layoutActions.setTopBarsCollapsed(false), [layoutActions]);
   const handleShowStatusBar = useCallback(() => layoutActions.setStatusBarCollapsed(false), [layoutActions]);
-
   const handleExit = useCallback(() => layoutActions.setFocusMode(false), [layoutActions]);
 
   const layoutProps = useMemo(

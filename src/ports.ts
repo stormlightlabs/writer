@@ -14,6 +14,7 @@ import type {
   MarkdownProfile,
   RenderResult,
   SaveStatus,
+  SearchHit,
 } from "./types";
 
 export type EditorState = {
@@ -75,6 +76,22 @@ type LocationPathTextParams = Parameters<(locationId: LocationId, relPath: strin
 type DocListParams<T> = [...LocationIdParams, ...LocParams<T>];
 type DocOpenParams<T> = [...LocationPathParams, ...LocParams<T>];
 type DocSaveParams<T> = [...LocationPathTextParams, ...LocParams<T>];
+type SearchParams<T> = Parameters<
+  (
+    query: string,
+    filters: SearchFiltersPayload | undefined,
+    limit: number,
+    onOk: SuccessCallback<T>,
+    onErr: ErrorCallback,
+  ) => void
+>;
+
+export type SearchDateRangePayload = { from?: string; to?: string };
+export type SearchFiltersPayload = {
+  locations?: LocationId[];
+  fileTypes?: string[];
+  dateRange?: SearchDateRangePayload;
+};
 
 export type CmdResult<T> = { type: "ok"; value: T } | { type: "err"; error: AppError };
 
@@ -191,6 +208,83 @@ function unwrapCmdResult<T>(value: unknown, command: string): { ok: true; value:
   return { ok: true, value: value as T };
 }
 
+function fallbackDocMeta(): DocMeta {
+  return { location_id: 0, rel_path: "", title: "Untitled", updated_at: new Date(0).toISOString(), word_count: 0 };
+}
+
+function normalizeDocMeta(value: unknown): DocMeta {
+  if (!isRecord(value)) {
+    return fallbackDocMeta();
+  }
+
+  const idRecord = isRecord(value.id) ? value.id : value;
+  const locationId = typeof idRecord.location_id === "number" ? idRecord.location_id : 0;
+  const relPath = typeof idRecord.rel_path === "string" ? idRecord.rel_path : "";
+  const title = typeof value.title === "string" && value.title.trim()
+    ? value.title
+    : relPath.split("/").pop() || "Untitled";
+  const updatedAt = typeof value.updated_at === "string"
+    ? value.updated_at
+    : typeof value.mtime === "string"
+    ? value.mtime
+    : new Date(0).toISOString();
+  const wordCount = typeof value.word_count === "number" ? value.word_count : 0;
+
+  return { location_id: locationId, rel_path: relPath, title, updated_at: updatedAt, word_count: wordCount };
+}
+
+function normalizeSearchHit(value: unknown): SearchHit {
+  if (!isRecord(value)) {
+    return { location_id: 0, rel_path: "", title: "Untitled", snippet: "", line: 1, column: 1, matches: [] };
+  }
+
+  return {
+    location_id: typeof value.location_id === "number" ? value.location_id : 0,
+    rel_path: typeof value.rel_path === "string" ? value.rel_path : "",
+    title: typeof value.title === "string" ? value.title : "Untitled",
+    snippet: typeof value.snippet === "string" ? value.snippet : "",
+    line: typeof value.line === "number" ? value.line : 1,
+    column: typeof value.column === "number" ? value.column : 1,
+    matches: Array.isArray(value.matches)
+      ? value.matches.filter((match): match is { start: number; end: number } =>
+        isRecord(match) && typeof match.start === "number" && typeof match.end === "number"
+      )
+      : [],
+  };
+}
+
+function normalizeCommandValue(command: string, value: unknown): unknown {
+  switch (command) {
+    case "doc_list": {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+      return value.map((doc) => normalizeDocMeta(doc));
+    }
+    case "doc_open": {
+      if (!isRecord(value)) {
+        return value;
+      }
+      return { ...value, meta: normalizeDocMeta(value.meta) };
+    }
+    case "doc_save": {
+      if (!isRecord(value)) {
+        return value;
+      }
+      return { ...value, new_meta: value.new_meta ? normalizeDocMeta(value.new_meta) : null };
+    }
+    case "search": {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+      return value.map((hit) => normalizeSearchHit(hit));
+    }
+    default: {
+      return value;
+    }
+  }
+}
+
 export function invokeCmd<T>(
   command: string,
   payload: unknown,
@@ -222,7 +316,6 @@ export const noSub: Sub = { type: "None" };
  * through the standard response envelope.
  */
 export async function runCmd(cmd: Cmd): Promise<void> {
-  // TODO: implement file watcher
   switch (cmd.type) {
     case "Invoke": {
       try {
@@ -232,7 +325,7 @@ export async function runCmd(cmd: Cmd): Promise<void> {
 
         if (commandResult.ok) {
           logger.debug("Backend command succeeded", { command: cmd.command });
-          cmd.onOk(commandResult.value);
+          cmd.onOk(normalizeCommandValue(cmd.command, commandResult.value));
         } else {
           logger.warn("Backend command returned application error", {
             command: cmd.command,
@@ -263,12 +356,28 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     }
 
     case "StartWatch": {
-      logger.warn("StartWatch not yet implemented");
+      try {
+        await invoke<unknown>("watch_enable", { locationId: cmd.locationId });
+        logger.info("Started location watcher", { locationId: cmd.locationId });
+      } catch (error) {
+        logger.error("Failed to start location watcher", {
+          locationId: cmd.locationId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
       break;
     }
 
     case "StopWatch": {
-      logger.warn("StopWatch not yet implemented");
+      try {
+        await invoke<unknown>("watch_disable", { locationId: cmd.locationId });
+        logger.info("Stopped location watcher", { locationId: cmd.locationId });
+      } catch (error) {
+        logger.error("Failed to stop location watcher", {
+          locationId: cmd.locationId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
       break;
     }
 
@@ -354,16 +463,10 @@ export function docSave(...[locationId, relPath, text, onOk, onErr]: DocSavePara
   return invokeCmd<SaveResult>("doc_save", { locationId, relPath, text }, onOk, onErr);
 }
 
-/**
- * Renders markdown text to HTML with metadata extraction
- *
- * @param locationId - The location ID of the document
- * @param relPath - The relative path of the document
- * @param text - The markdown text to render
- * @param profile - The markdown rendering profile (defaults to GfmSafe)
- * @param onOk - Callback for successful render
- * @param onErr - Callback for render errors
- */
+export function searchDocuments(...[query, filters, limit, onOk, onErr]: SearchParams<SearchHit[]>): Cmd {
+  return invokeCmd<SearchHit[]>("search", { query, filters, limit }, onOk, onErr);
+}
+
 export function renderMarkdown(
   ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownParams<RenderResult>
 ): Cmd {
