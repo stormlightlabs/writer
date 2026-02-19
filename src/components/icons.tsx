@@ -1,10 +1,3 @@
-/**
- * Icon Components
- *
- * Custom SVG icons following Carbon Design System iconography principles.
- * 16x16 viewBox, 2px stroke width, clean geometric shapes.
- */
-
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 
 const sizeClass = (size: IconSize) => {

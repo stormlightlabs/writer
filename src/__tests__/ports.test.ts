@@ -1,16 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  type AppError,
   backendEvents,
   batch,
-  type BatchCmd,
-  type Cmd,
   docList,
   docOpen,
   docSave,
   err,
-  type InvokeCmd,
   invokeCmd,
   isErr,
   isOk,
@@ -24,12 +20,11 @@ import {
   renderMarkdown,
   runCmd,
   startWatch,
-  type StartWatchCmd,
   stopWatch,
-  type StopWatchCmd,
   SubscriptionManager,
 } from "../ports";
-import type { LocationDescriptor } from "../types";
+import type { BatchCmd, Cmd, InvokeCmd, StartWatchCmd, StopWatchCmd } from "../ports";
+import type { AppError, LocationDescriptor } from "../types";
 
 describe("commandResult", () => {
   describe(ok, () => {

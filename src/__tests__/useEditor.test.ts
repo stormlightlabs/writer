@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initialEditorModel, updateEditor, useEditor } from "../hooks/useEditor";
-import type { AppError } from "../ports";
+import type { AppError } from "../types";
 
 describe(useEditor, () => {
   beforeEach(() => {

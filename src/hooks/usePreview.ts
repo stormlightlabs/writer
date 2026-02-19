@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import type { AppError, Cmd } from "../ports";
+import type { Cmd } from "../ports";
 import { none, renderMarkdown, runCmd } from "../ports";
-import type { DocRef, RenderResult } from "../types";
+import type { AppError, DocRef, RenderResult } from "../types";
 
 export type PreviewModel = {
   docRef: DocRef | null;
@@ -83,9 +83,6 @@ export function updatePreview(model: PreviewModel, msg: PreviewMsg): [PreviewMod
   }
 }
 
-/**
- * Hook for managing preview state with Elm-style architecture.
- */
 export function usePreview(): UsePreviewReturn {
   const [model, setModel] = useState<PreviewModel>(initialPreviewModel);
 

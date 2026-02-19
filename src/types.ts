@@ -39,3 +39,16 @@ export type DocumentMetadata = {
 };
 
 export type RenderResult = { html: string; metadata: DocumentMetadata };
+
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
+
+export type ErrorCode =
+  | "NOT_FOUND"
+  | "PERMISSION_DENIED"
+  | "INVALID_PATH"
+  | "IO_ERROR"
+  | "PARSE_ERROR"
+  | "INDEX_ERROR"
+  | "CONFLICT";
+
+export type AppError = { code: ErrorCode; message: string; context?: string };

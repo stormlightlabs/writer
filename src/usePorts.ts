@@ -1,14 +1,5 @@
-/**
- * React hooks for the Elm-style ports system
- *
- * Provides:
- * - usePorts: Execute commands and manage command state
- * - useBackendEvents: Subscribe to backend events
- * - useLocations: High-level hook for location management
- */
-
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AppError, BackendEvent, Cmd } from "./ports";
+import type { BackendEvent, Cmd } from "./ports";
 import {
   backendEvents,
   locationAddViaDialog,
@@ -18,34 +9,12 @@ import {
   runCmd,
   SubscriptionManager,
 } from "./ports";
-import { LocationDescriptor, LocationId } from "./types";
+import { AppError, LocationDescriptor, LocationId } from "./types";
 
-interface UsePortsState<T> {
-  data: T | null;
-  error: AppError | null;
-  loading: boolean;
-}
+type UsePortsState<T> = { data: T | null; error: AppError | null; loading: boolean };
 
-interface UsePortsReturn<T> extends UsePortsState<T> {
-  execute: (cmd: Cmd) => Promise<void>;
-  reset: () => void;
-}
+type UsePortsReturn<T> = UsePortsState<T> & { execute: (cmd: Cmd) => Promise<void>; reset: () => void };
 
-/**
- * Hook for executing commands with loading and error state management.
- *
- * Usage:
- * ```tsx
- * const { data, error, loading, execute } = usePorts<LocationDescriptor[]>();
- *
- * useEffect(() => {
- *   execute(locationList(
- *     (locations) => console.log("Got locations:", locations),
- *     (error) => console.error("Failed:", error)
- *   ));
- * }, []);
- * ```
- */
 export function usePorts<T = unknown>(): UsePortsReturn<T> {
   const [state, setState] = useState<UsePortsState<T>>({ data: null, error: null, loading: false });
 
@@ -79,17 +48,6 @@ interface UseBackendEventsOptions {
   onReconciliationComplete?: (checked: number, missing: LocationId[]) => void;
 }
 
-/**
- * Hook for subscribing to backend events.
- *
- * Usage:
- * ```tsx
- * useBackendEvents({
- *   onLocationMissing: (id, path) => console.warn(`Location ${id} missing at ${path}`),
- *   onReconciliationComplete: (checked, missing) => console.log(`Checked ${checked}, missing ${missing.length}`),
- * });
- * ```
- */
 export function useBackendEvents(options: UseBackendEventsOptions): void {
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -136,23 +94,6 @@ interface UseLocationsReturn {
   validateLocations: () => Promise<Array<[LocationId, string]>>;
 }
 
-/**
- * High-level hook for managing locations.
- *
- * Usage:
- * ```tsx
- * const { locations, loading, error, refresh, addLocation, removeLocation } = useLocations();
- *
- * return (
- *   <div>
- *     {locations.map(loc => (
- *       <div key={loc.id}>{loc.name} - {loc.root_path}</div>
- *     ))}
- *     <button onClick={addLocation}>Add Location</button>
- *   </div>
- * );
- * ```
- */
 export function useLocations(): UseLocationsReturn {
   const [locations, setLocations] = useState<LocationDescriptor[]>([]);
   const [loading, setLoading] = useState(false);

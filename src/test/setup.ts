@@ -20,6 +20,17 @@ export function clearMockListeners() {
 }
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock(
+  "@tauri-apps/plugin-log",
+  () => ({
+    attachConsole: vi.fn(async () => {}),
+    trace: vi.fn(async () => {}),
+    debug: vi.fn(async () => {}),
+    info: vi.fn(async () => {}),
+    warn: vi.fn(async () => {}),
+    error: vi.fn(async () => {}),
+  }),
+);
 
 vi.mock("@tauri-apps/api/event", () => ({
   // oxlint-disable-next-line require-await

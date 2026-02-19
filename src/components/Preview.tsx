@@ -1,24 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { RenderResult } from "../types";
 
-export interface PreviewProps {
+export type PreviewProps = {
   renderResult: RenderResult | null;
   theme: "dark" | "light";
   editorLine: number;
   onScrollToLine?: (line: number) => void;
   className?: string;
-}
+};
 
-/**
- * Preview component for rendering Markdown HTML with scroll sync support
- *
- * Renders sanitized HTML in a sandboxed container with theme-consistent
- * styling. Implements bidirectional scroll sync using data-sourcepos
- * attributes from the Markdown renderer.
- *
- * Markdown styles are defined globally in App.css using CSS custom
- * properties that respond to the data-theme attribute.
- */
 export function Preview({ renderResult, theme, editorLine, onScrollToLine, className = "" }: PreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);

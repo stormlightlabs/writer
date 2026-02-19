@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { logger } from "../logger";
 import { locationAddViaDialog, locationRemove, runCmd } from "../ports";
 import { useAppStore, useTabsActions, useTabsState, useWorkspaceActions, useWorkspaceState } from "../state/appStore";
 import type { DocRef, Tab } from "../types";
@@ -27,7 +28,7 @@ export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
     runCmd(locationAddViaDialog((location) => {
       addLocation(location);
     }, (error) => {
-      console.error("Failed to add location:", error);
+      logger.error("Failed to add location", { error });
     }));
   }, [addLocation]);
 
@@ -37,7 +38,7 @@ export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
         removeLocation(locationId);
       }
     }, (error) => {
-      console.error("Failed to remove location:", error);
+      logger.error("Failed to remove location", { locationId, error });
     }));
   }, [removeLocation]);
 

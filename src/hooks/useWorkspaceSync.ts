@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { logger } from "../logger";
 import { docList, locationList, runCmd } from "../ports";
 import { useWorkspaceActions, useWorkspaceState } from "../state/appStore";
 
@@ -20,7 +21,7 @@ export function useWorkspaceSync(): void {
       setLocations(nextLocations);
       setLoadingLocations(false);
     }, (error) => {
-      console.error("Failed to load locations:", error);
+      logger.error("Failed to load locations", { error });
       setLoadingLocations(false);
     }));
   }, [setLoadingLocations, setLocations]);
@@ -49,7 +50,7 @@ export function useWorkspaceSync(): void {
         return;
       }
 
-      console.error("Failed to load documents:", error);
+      logger.error("Failed to load documents", { locationId: selectedLocationId, error });
       setLoadingDocuments(false);
     }));
   }, [selectedLocationId, setDocuments, setLoadingDocuments]);

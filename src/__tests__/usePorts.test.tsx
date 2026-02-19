@@ -5,9 +5,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppError } from "../ports";
 import { emitBackendEvent } from "../test/setup";
-import type { LocationDescriptor } from "../types";
+import type { AppError, LocationDescriptor } from "../types";
 import { useBackendEvents, useLocations, usePorts } from "../usePorts";
 
 describe(usePorts, () => {

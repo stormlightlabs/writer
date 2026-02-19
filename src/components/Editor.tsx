@@ -1,16 +1,3 @@
-/**
- * Editor Component
- *
- * A CodeMirror 6-based Markdown editor integrated with Elm-style state management.
- *
- * Features:
- * - Markdown syntax highlighting
- * - Line and selection persistence
- * - Undo/redo support
- * - Debounced change events
- * - Oxocarbon Dark & Light themes
- */
-
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState as CMEditorState } from "@codemirror/state";
@@ -78,12 +65,6 @@ function createEditorState(
   });
 }
 
-/**
- * CodeMirror Markdown Editor
- *
- * This component wraps CodeMirror in a React-friendly interface while
- * maintaining performance by avoiding full re-renders on every keystroke.
- */
 export function Editor(
   {
     initialText = "",

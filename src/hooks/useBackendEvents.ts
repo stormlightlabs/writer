@@ -1,21 +1,15 @@
-/**
- * UseBackendEvents hook
- *
- * Subscribes to backend events and provides them to the application.
- * Handles location missing, conflict detection, and reconciliation events.
- */
-
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
+import { logger } from "../logger";
 import type { BackendEvent } from "../ports";
 import type { LocationId } from "../types";
 
-export interface BackendEventState {
+export type BackendEventState = {
   events: BackendEvent[];
   missingLocations: Array<{ location_id: LocationId; path: string }>;
   conflicts: Array<{ location_id: LocationId; rel_path: string; conflict_filename: string }>;
-}
+};
 
 export function useBackendEvents(): BackendEventState {
   const [events, setEvents] = useState<BackendEvent[]>([]);
@@ -37,10 +31,9 @@ export function useBackendEvents(): BackendEventState {
           switch (payload.type) {
             case "LocationMissing": {
               setMissingLocations((prev) => [...prev, { location_id: payload.location_id, path: payload.path }]);
-              console.warn("Location missing:", payload.location_id, payload.path);
+              logger.warn("Location missing", { locationId: payload.location_id, path: payload.path });
               break;
             }
-
             case "ConflictDetected": {
               setConflicts((
                 prev,
@@ -49,33 +42,42 @@ export function useBackendEvents(): BackendEventState {
                 rel_path: payload.rel_path,
                 conflict_filename: payload.conflict_filename,
               }]);
-              console.warn("Conflict detected:", payload.conflict_filename);
+              logger.warn("Conflict detected", {
+                locationId: payload.location_id,
+                relPath: payload.rel_path,
+                conflictFileName: payload.conflict_filename,
+              });
               break;
             }
-
             case "ReconciliationComplete": {
-              console.log("Reconciliation complete:", payload.checked, "checked,", payload.missing.length, "missing");
+              logger.info("Reconciliation complete", {
+                checked: payload.checked,
+                missingCount: payload.missing.length,
+              });
               break;
             }
-
             case "LocationChanged": {
-              console.log("Location changed:", payload.location_id, payload.old_path, "->", payload.new_path);
+              logger.info("Location changed", {
+                locationId: payload.location_id,
+                oldPath: payload.old_path,
+                newPath: payload.new_path,
+              });
               break;
             }
-
             case "DocModifiedExternally": {
-              console.log("Document modified externally:", payload.doc_id);
+              logger.info("Document modified externally", { docId: payload.doc_id });
               break;
             }
-
             case "SaveStatusChanged": {
-              console.log("Save status changed:", payload.doc_id, payload.status);
+              logger.info("Save status changed", { docId: payload.doc_id, status: payload.status });
               break;
             }
           }
         });
       } catch (error) {
-        console.error("Failed to subscribe to backend events:", error);
+        logger.error("Failed to subscribe to backend events", {
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     };
 
