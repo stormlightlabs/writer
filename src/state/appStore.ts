@@ -1,6 +1,6 @@
+import type { AppTheme, DocMeta, DocRef, EditorFontFamily, LocationDescriptor, Tab } from "$types";
 import { create, type StateCreator } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { AppTheme, DocMeta, DocRef, LocationDescriptor, Tab } from "../types";
 
 export type OpenDocumentTabResult = { tabId: string; didCreateTab: boolean };
 
@@ -15,6 +15,9 @@ export type LayoutState = {
   topBarsCollapsed: boolean;
   statusBarCollapsed: boolean;
   lineNumbersVisible: boolean;
+  syntaxHighlightingEnabled: boolean;
+  editorFontSize: number;
+  editorFontFamily: EditorFontFamily;
   isSplitView: boolean;
   isFocusMode: boolean;
   isPreviewVisible: boolean;
@@ -31,6 +34,10 @@ export type LayoutActions = {
   toggleStatusBarCollapsed: () => void;
   setLineNumbersVisible: (value: boolean) => void;
   toggleLineNumbersVisible: () => void;
+  setSyntaxHighlightingEnabled: (value: boolean) => void;
+  toggleSyntaxHighlightingEnabled: () => void;
+  setEditorFontSize: (value: number) => void;
+  setEditorFontFamily: (value: EditorFontFamily) => void;
   setSplitView: (value: boolean) => void;
   toggleSplitView: () => void;
   setFocusMode: (value: boolean) => void;
@@ -80,6 +87,9 @@ const getInitialLayoutState = (): LayoutState => ({
   topBarsCollapsed: false,
   statusBarCollapsed: false,
   lineNumbersVisible: true,
+  syntaxHighlightingEnabled: true,
+  editorFontSize: 16,
+  editorFontFamily: "IBM Plex Mono",
   isSplitView: false,
   isFocusMode: false,
   isPreviewVisible: true,
@@ -113,6 +123,13 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
 
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),
+
+  setSyntaxHighlightingEnabled: (value) => set({ syntaxHighlightingEnabled: value }),
+  toggleSyntaxHighlightingEnabled: () =>
+    set((state) => ({ syntaxHighlightingEnabled: !state.syntaxHighlightingEnabled })),
+
+  setEditorFontSize: (value) => set({ editorFontSize: Math.max(12, Math.min(24, Math.round(value))) }),
+  setEditorFontFamily: (value) => set({ editorFontFamily: value }),
 
   setSplitView: (value) =>
     set((state) => ({ isSplitView: value, isPreviewVisible: value ? true : state.isPreviewVisible })),
@@ -272,6 +289,9 @@ export const useLayoutState = () =>
       topBarsCollapsed: state.topBarsCollapsed,
       statusBarCollapsed: state.statusBarCollapsed,
       lineNumbersVisible: state.lineNumbersVisible,
+      syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
+      editorFontSize: state.editorFontSize,
+      editorFontFamily: state.editorFontFamily,
       isSplitView: state.isSplitView,
       isFocusMode: state.isFocusMode,
       isPreviewVisible: state.isPreviewVisible,
@@ -291,6 +311,10 @@ export const useLayoutActions = () =>
       toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
       setLineNumbersVisible: state.setLineNumbersVisible,
       toggleLineNumbersVisible: state.toggleLineNumbersVisible,
+      setSyntaxHighlightingEnabled: state.setSyntaxHighlightingEnabled,
+      toggleSyntaxHighlightingEnabled: state.toggleSyntaxHighlightingEnabled,
+      setEditorFontSize: state.setEditorFontSize,
+      setEditorFontFamily: state.setEditorFontFamily,
       setSplitView: state.setSplitView,
       toggleSplitView: state.toggleSplitView,
       setFocusMode: state.setFocusMode,

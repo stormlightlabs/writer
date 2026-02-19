@@ -1,10 +1,10 @@
+import { logger } from "$logger";
+import { runCmd, searchDocuments, type SearchFiltersPayload } from "$ports";
+import type { SearchHit } from "$types";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
-import { logger } from "../logger";
-import { runCmd, searchDocuments, type SearchFiltersPayload } from "../ports";
 import { useLayoutActions } from "../state/appStore";
 import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "../state/searchAtoms";
-import type { SearchHit } from "../types";
 
 export function useSearchController(onSelectDocument: (locationId: number, path: string) => void) {
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);

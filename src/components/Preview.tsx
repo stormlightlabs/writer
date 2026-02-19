@@ -1,5 +1,5 @@
+import type { RenderResult } from "$types";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { RenderResult } from "../types";
 
 export type PreviewProps = {
   renderResult: RenderResult | null;

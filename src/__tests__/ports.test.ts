@@ -1,6 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { logger } from "../logger";
+import { logger } from "$logger";
 import {
   backendEvents,
   batch,
@@ -26,9 +24,11 @@ import {
   SubscriptionManager,
   uiLayoutGet,
   uiLayoutSet,
-} from "../ports";
-import type { BatchCmd, Cmd, InvokeCmd, StartWatchCmd, StopWatchCmd } from "../ports";
-import type { AppError, LocationDescriptor } from "../types";
+} from "$ports";
+import type { BatchCmd, Cmd, InvokeCmd, StartWatchCmd, StopWatchCmd } from "$ports";
+import type { AppError, LocationDescriptor } from "$types";
+import { invoke } from "@tauri-apps/api/core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("commandResult", () => {
   describe(ok, () => {
@@ -641,7 +641,15 @@ describe("ui layout Commands", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
       const cmd = uiLayoutSet(
-        { sidebar_collapsed: true, top_bars_collapsed: false, status_bar_collapsed: true, line_numbers_visible: false },
+        {
+          sidebar_collapsed: true,
+          top_bars_collapsed: false,
+          status_bar_collapsed: true,
+          line_numbers_visible: false,
+          syntax_highlighting_enabled: false,
+          editor_font_size: 18,
+          editor_font_family: "Monaspace Neon",
+        },
         onOk,
         onErr,
       ) as InvokeCmd;
@@ -654,6 +662,9 @@ describe("ui layout Commands", () => {
           top_bars_collapsed: false,
           status_bar_collapsed: true,
           line_numbers_visible: false,
+          syntax_highlighting_enabled: false,
+          editor_font_size: 18,
+          editor_font_family: "Monaspace Neon",
         },
       });
     });

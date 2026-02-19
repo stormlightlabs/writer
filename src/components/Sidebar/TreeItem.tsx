@@ -1,6 +1,6 @@
+import { ChevronRightIcon, IconProps, type IconSize } from "$icons";
 import type { CSSProperties, MouseEventHandler } from "react";
 import { useCallback, useMemo } from "react";
-import { ChevronRightIcon, IconProps, type IconSize } from "../icons";
 
 type TreeItemProps = {
   icon: { Component: (props: IconProps) => React.ReactNode; size: IconSize };

@@ -1,3 +1,4 @@
+import type { EditorFontFamily } from "$types";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState as CMEditorState } from "@codemirror/state";
@@ -16,6 +17,9 @@ export type EditorProps = {
   theme?: EditorTheme;
   disabled?: boolean;
   showLineNumbers?: boolean;
+  syntaxHighlightingEnabled?: boolean;
+  fontSize?: number;
+  fontFamily?: EditorFontFamily;
   placeholder?: string;
   debounceMs?: number;
   onChange?: (text: string) => void;
@@ -32,13 +36,27 @@ type CreateEditorStateOptions = {
   theme: EditorTheme;
   disabled: boolean;
   showLineNumbers: boolean;
+  syntaxHighlightingEnabled: boolean;
   placeholder?: string;
   updateListener: ReturnType<typeof EditorView.updateListener.of>;
   onSave: () => void;
 };
 
+const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
+  "IBM Plex Mono": "\"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
+  "IBM Plex Sans Variable":
+    "\"IBM Plex Sans Variable\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+  "IBM Plex Serif": "\"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
+  "Monaspace Argon": "\"Monaspace Argon\", \"IBM Plex Mono\", monospace",
+  "Monaspace Krypton": "\"Monaspace Krypton\", \"IBM Plex Mono\", monospace",
+  "Monaspace Neon": "\"Monaspace Neon\", \"IBM Plex Mono\", monospace",
+  "Monaspace Radon": "\"Monaspace Radon\", \"IBM Plex Mono\", monospace",
+  "Monaspace Xenon": "\"Monaspace Xenon\", \"IBM Plex Mono\", monospace",
+};
+
 function createEditorState(
-  { doc, theme, disabled, showLineNumbers, placeholder, updateListener, onSave }: CreateEditorStateOptions,
+  { doc, theme, disabled, showLineNumbers, syntaxHighlightingEnabled, placeholder, updateListener, onSave }:
+    CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
 
@@ -56,7 +74,7 @@ function createEditorState(
     extensions: [
       ...(showLineNumbers ? [lineNumbers()] : []),
       history(),
-      markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true }),
+      ...(syntaxHighlightingEnabled ? [markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true })] : []),
       themeExtension,
       updateListener,
       keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -73,6 +91,9 @@ export function Editor(
     theme = "dark",
     disabled = false,
     showLineNumbers = true,
+    syntaxHighlightingEnabled = true,
+    fontSize = 16,
+    fontFamily = "IBM Plex Mono",
     placeholder,
     debounceMs = 500,
     onChange,
@@ -88,7 +109,7 @@ export function Editor(
   const debounceMsRef = useRef(debounceMs);
   const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialTextRef = useRef(initialText);
-  const presentationRef = useRef({ theme, disabled, showLineNumbers, placeholder });
+  const presentationRef = useRef({ theme, disabled, showLineNumbers, syntaxHighlightingEnabled, placeholder });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -147,6 +168,7 @@ export function Editor(
       theme: currentPresentation.theme,
       disabled: currentPresentation.disabled,
       showLineNumbers: currentPresentation.showLineNumbers,
+      syntaxHighlightingEnabled: currentPresentation.syntaxHighlightingEnabled,
       placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
       onSave: () => callbacksRef.current.onSave?.(),
@@ -192,12 +214,13 @@ export function Editor(
       previousPresentation.theme === theme
       && previousPresentation.disabled === disabled
       && previousPresentation.showLineNumbers === showLineNumbers
+      && previousPresentation.syntaxHighlightingEnabled === syntaxHighlightingEnabled
       && previousPresentation.placeholder === placeholder
     ) {
       return;
     }
 
-    presentationRef.current = { theme, disabled, showLineNumbers, placeholder };
+    presentationRef.current = { theme, disabled, showLineNumbers, syntaxHighlightingEnabled, placeholder };
 
     const view = viewRef.current;
     if (!view) {
@@ -216,7 +239,7 @@ export function Editor(
     }
 
     viewRef.current = nextView;
-  }, [createView, disabled, placeholder, showLineNumbers, theme]);
+  }, [createView, disabled, placeholder, showLineNumbers, syntaxHighlightingEnabled, theme]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -237,8 +260,13 @@ export function Editor(
   }, []);
 
   const containerStyle: CSSProperties = useMemo(
-    () => ({ height: "100%", overflow: "hidden", fontFamily: "\"IBM Plex Mono\", \"SF Mono\", Monaco, monospace" }),
-    [],
+    () => ({
+      height: "100%",
+      overflow: "hidden",
+      ["--editor-font-family" as string]: EDITOR_FONT_FAMILY_MAP[fontFamily],
+      ["--editor-font-size" as string]: `${Math.max(12, Math.min(24, Math.round(fontSize)))}px`,
+    }),
+    [fontFamily, fontSize],
   );
 
   return (

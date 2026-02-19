@@ -182,6 +182,11 @@ body,
     height: 100%;
 }
 
+.editor-container .cm-editor {
+    font-family: var(--editor-font-family, var(--font-mono));
+    font-size: var(--editor-font-size, 16px);
+}
+
 .editor-container .cm-scroller {
     overflow: auto;
 }

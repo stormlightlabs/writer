@@ -1,5 +1,5 @@
+import { TrashIcon } from "$icons";
 import type { MouseEventHandler } from "react";
-import { TrashIcon } from "../icons";
 
 export function RemoveButton(
   { isMenuOpen, handleRemoveClick, handleMouseEnter, handleMouseLeave }: {

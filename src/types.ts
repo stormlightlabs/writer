@@ -4,6 +4,16 @@ export type LineEnding = "LF" | "CRLF" | "CR";
 
 export type AppTheme = "dark" | "light";
 
+export type EditorFontFamily =
+  | "IBM Plex Mono"
+  | "IBM Plex Sans Variable"
+  | "IBM Plex Serif"
+  | "Monaspace Argon"
+  | "Monaspace Krypton"
+  | "Monaspace Neon"
+  | "Monaspace Radon"
+  | "Monaspace Xenon";
+
 export type MarkdownProfile = "StrictCommonMark" | "GfmSafe";
 
 export type PanelMode = "editor" | "preview" | "split";

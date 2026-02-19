@@ -43,6 +43,13 @@ describe(Editor, () => {
       const { container } = render(<Editor showLineNumbers={false} />);
       expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
     });
+
+    it("should apply custom font family and size variables", () => {
+      render(<Editor fontFamily="IBM Plex Sans Variable" fontSize={19} />);
+      const container = screen.getByTestId("editor-container");
+      expect(container).toHaveStyle("--editor-font-family: \"IBM Plex Sans Variable\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif");
+      expect(container).toHaveStyle("--editor-font-size: 19px");
+    });
   });
 
   describe("initial content", () => {
@@ -173,6 +180,17 @@ describe(Editor, () => {
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
       expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
+    });
+
+    it("recreates the editor view when syntax highlighting mode changes", () => {
+      const { container, rerender } = render(<Editor initialText="# Heading" syntaxHighlightingEnabled />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+      rerender(<Editor initialText="# Heading" syntaxHighlightingEnabled={false} />);
+
+      const secondEditorRoot = container.querySelector(".cm-editor");
+      expect(secondEditorRoot).toBeInTheDocument();
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(container.querySelector(".cm-content")).toHaveTextContent("# Heading");
     });
 
     it("focuses the editor when container is clicked", async () => {

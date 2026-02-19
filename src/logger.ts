@@ -1,5 +1,5 @@
+import { LogLevel } from "$types";
 import { attachConsole, debug, error, info, trace, warn } from "@tauri-apps/plugin-log";
-import { LogLevel } from "./types";
 
 type LogContext = Record<string, unknown>;
 

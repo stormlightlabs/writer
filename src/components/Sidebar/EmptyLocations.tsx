@@ -1,4 +1,4 @@
-import { LibraryIcon } from "../icons";
+import { LibraryIcon } from "$icons";
 
 export const EmptyLocations = ({ onAddLocation }: { onAddLocation: () => void }) => (
   <div className="px-4 py-6 text-center text-text-placeholder text-[0.8125rem]">

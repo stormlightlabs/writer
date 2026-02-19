@@ -1,9 +1,9 @@
+import { logger } from "$logger";
+import type { BackendEvent } from "$ports";
+import type { LocationId } from "$types";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
-import { logger } from "../logger";
-import type { BackendEvent } from "../ports";
-import type { LocationId } from "../types";
 
 export type BackendEventState = {
   events: BackendEvent[];

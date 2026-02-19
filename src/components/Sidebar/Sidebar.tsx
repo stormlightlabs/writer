@@ -1,7 +1,7 @@
+import { CollapseIcon, LibraryIcon } from "$icons";
+import type { DocMeta, LocationDescriptor } from "$types";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
-import type { DocMeta, LocationDescriptor } from "../../types";
-import { CollapseIcon, LibraryIcon } from "../icons";
 import { AddButton } from "./AddButton";
 import { EmptyLocations } from "./EmptyLocations";
 import { SearchInput } from "./SearchInput";

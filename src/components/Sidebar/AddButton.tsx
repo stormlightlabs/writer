@@ -1,5 +1,5 @@
+import { PlusIcon } from "$icons";
 import type { MouseEventHandler } from "react";
-import { PlusIcon } from "../icons";
 
 export const AddButton = (
   { onAddLocation, handleMouseEnter, handleMouseLeave }: {

@@ -1,6 +1,6 @@
+import { PanelMode } from "$types";
 import { type PointerEventHandler, useCallback, useMemo } from "react";
 import { useResizable } from "../../hooks/useResizable";
-import { PanelMode } from "../../types";
 import { DocumentTabs, type DocumentTabsProps } from "../DocumentTabs";
 import { Editor, type EditorProps } from "../Editor";
 import { Preview, type PreviewProps } from "../Preview";
@@ -16,7 +16,17 @@ export type WorkspaceLayoutProps = {
   isPreviewVisible: boolean;
 };
 
-type K = "initialText" | "theme" | "showLineNumbers" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
+type K =
+  | "initialText"
+  | "theme"
+  | "showLineNumbers"
+  | "syntaxHighlightingEnabled"
+  | "fontSize"
+  | "fontFamily"
+  | "onChange"
+  | "onSave"
+  | "onCursorMove"
+  | "onSelectionChange";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
 type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
@@ -73,13 +83,17 @@ const MainPanel = (
 
   return (
     <div className="flex-1 min-h-0 flex overflow-hidden">
-      {panelMode === "editor" ? (
-        <div className="flex min-h-0 min-w-0 flex-col w-full">
-          <Editor {...editor} />
-        </div>
-      ) : null}
+      {panelMode === "editor"
+        ? (
+          <div className="flex min-h-0 min-w-0 flex-col w-full">
+            <Editor {...editor} />
+          </div>
+        )
+        : null}
 
-      {panelMode === "preview" ? <Preview className="min-h-0 min-w-0 flex-1 w-full bg-bg-primary" {...preview} /> : null}
+      {panelMode === "preview"
+        ? <Preview className="min-h-0 min-w-0 flex-1 w-full bg-bg-primary" {...preview} />
+        : null}
     </div>
   );
 };

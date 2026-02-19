@@ -1,4 +1,4 @@
-import { ChevronDownIcon, LibraryIcon, SearchIcon } from "../icons";
+import { ChevronDownIcon, LibraryIcon, SearchIcon } from "$icons";
 
 type AppHeaderBarProps = {
   onToggleSidebar: () => void;

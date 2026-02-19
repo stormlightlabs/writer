@@ -1,7 +1,7 @@
+import type { Cmd } from "$ports";
+import { none, renderMarkdown, runCmd } from "$ports";
+import type { AppError, DocRef, RenderResult } from "$types";
 import { useCallback, useState } from "react";
-import type { Cmd } from "../ports";
-import { none, renderMarkdown, runCmd } from "../ports";
-import type { AppError, DocRef, RenderResult } from "../types";
 
 export type PreviewModel = {
   docRef: DocRef | null;

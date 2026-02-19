@@ -1,5 +1,6 @@
-import { useCallback } from "react";
-import { XIcon } from "../icons";
+import { XIcon } from "$icons";
+import type { EditorFontFamily } from "$types";
+import { type ChangeEvent, useCallback } from "react";
 
 type LayoutSettingsPanelProps = {
   isVisible: boolean;
@@ -7,10 +8,16 @@ type LayoutSettingsPanelProps = {
   topBarsCollapsed: boolean;
   statusBarCollapsed: boolean;
   lineNumbersVisible: boolean;
+  syntaxHighlightingEnabled: boolean;
+  editorFontSize: number;
+  editorFontFamily: EditorFontFamily;
   onSetSidebarCollapsed: (value: boolean) => void;
   onSetTopBarsCollapsed: (value: boolean) => void;
   onSetStatusBarCollapsed: (value: boolean) => void;
   onSetLineNumbersVisible: (value: boolean) => void;
+  onSetSyntaxHighlightingEnabled: (value: boolean) => void;
+  onSetEditorFontSize: (value: number) => void;
+  onSetEditorFontFamily: (value: EditorFontFamily) => void;
   onClose: () => void;
 };
 
@@ -62,6 +69,60 @@ const SettingsHeader = ({ onClose }: { onClose: () => void }) => (
   </div>
 );
 
+const EDITOR_FONT_OPTIONS: Array<{ label: string; value: EditorFontFamily }> = [
+  { label: "IBM Plex Mono", value: "IBM Plex Mono" },
+  { label: "IBM Plex Sans Variable", value: "IBM Plex Sans Variable" },
+  { label: "IBM Plex Serif", value: "IBM Plex Serif" },
+  { label: "Monaspace Argon", value: "Monaspace Argon" },
+  { label: "Monaspace Krypton", value: "Monaspace Krypton" },
+  { label: "Monaspace Neon", value: "Monaspace Neon" },
+  { label: "Monaspace Radon", value: "Monaspace Radon" },
+  { label: "Monaspace Xenon", value: "Monaspace Xenon" },
+];
+
+type FontFamilyRowProps = {
+  fontFamily: EditorFontFamily;
+  handleFontChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+};
+
+const FontFamilyRow = ({ fontFamily, handleFontChange }: FontFamilyRowProps) => (
+  <div className="py-2.5">
+    <label className="m-0 text-[0.8125rem] text-text-primary block mb-1.5" htmlFor="editor-font-family">
+      Editor Font
+    </label>
+    <select
+      id="editor-font-family"
+      value={fontFamily}
+      onChange={handleFontChange}
+      className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
+      {EDITOR_FONT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  </div>
+);
+
+const FontSizeRow = (
+  { fontSize, handleFontSizeChange }: {
+    fontSize: number;
+    handleFontSizeChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  },
+) => (
+  <div className="py-2.5">
+    <div className="flex items-center justify-between gap-4 mb-1.5">
+      <label className="m-0 text-[0.8125rem] text-text-primary" htmlFor="editor-font-size">Editor Size</label>
+      <span className="text-xs text-text-secondary">{fontSize}px</span>
+    </div>
+    <input
+      id="editor-font-size"
+      type="range"
+      min={12}
+      max={24}
+      step={1}
+      value={fontSize}
+      onChange={handleFontSizeChange}
+      className="w-full accent-accent-cyan cursor-pointer" />
+  </div>
+);
+
 export function LayoutSettingsPanel(
   {
     isVisible,
@@ -69,10 +130,16 @@ export function LayoutSettingsPanel(
     topBarsCollapsed,
     statusBarCollapsed,
     lineNumbersVisible,
+    syntaxHighlightingEnabled,
+    editorFontSize,
+    editorFontFamily,
     onSetSidebarCollapsed,
     onSetTopBarsCollapsed,
     onSetStatusBarCollapsed,
     onSetLineNumbersVisible,
+    onSetSyntaxHighlightingEnabled,
+    onSetEditorFontSize,
+    onSetEditorFontFamily,
     onClose,
   }: LayoutSettingsPanelProps,
 ) {
@@ -91,6 +158,18 @@ export function LayoutSettingsPanel(
   const toggleLineNumbers = useCallback(() => {
     onSetLineNumbersVisible(!lineNumbersVisible);
   }, [lineNumbersVisible, onSetLineNumbersVisible]);
+
+  const toggleSyntaxHighlighting = useCallback(() => {
+    onSetSyntaxHighlightingEnabled(!syntaxHighlightingEnabled);
+  }, [onSetSyntaxHighlightingEnabled, syntaxHighlightingEnabled]);
+
+  const handleFontSizeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onSetEditorFontSize(Number(event.target.value));
+  }, [onSetEditorFontSize]);
+
+  const handleFontFamilyChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    onSetEditorFontFamily(event.target.value as EditorFontFamily);
+  }, [onSetEditorFontFamily]);
 
   if (isVisible) {
     return (
@@ -123,6 +202,13 @@ export function LayoutSettingsPanel(
             description="Show or hide line numbers in the editor gutter."
             isVisible={lineNumbersVisible}
             onToggle={toggleLineNumbers} />
+          <ToggleRow
+            label="Syntax Highlighting"
+            description="Enable Markdown syntax colors and token styling."
+            isVisible={syntaxHighlightingEnabled}
+            onToggle={toggleSyntaxHighlighting} />
+          <FontFamilyRow fontFamily={editorFontFamily} handleFontChange={handleFontFamilyChange} />
+          <FontSizeRow fontSize={editorFontSize} handleFontSizeChange={handleFontSizeChange} />
         </section>
       </div>
     );

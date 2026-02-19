@@ -1,4 +1,4 @@
-import type { DocMeta, LineEnding } from "../types";
+import type { DocMeta, LineEnding } from "$types";
 
 export type StatusBarProps = {
   docMeta?: DocMeta | null;

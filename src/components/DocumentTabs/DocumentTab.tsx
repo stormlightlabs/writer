@@ -1,6 +1,6 @@
+import { DocumentIcon } from "$icons";
+import { Tab } from "$types";
 import { DragEventHandler, MouseEventHandler, useCallback, useMemo } from "react";
-import { Tab } from "../../types";
-import { DocumentIcon } from "../icons";
 import { CloseTabButton } from "./CloseTabButton";
 
 type DocumentTabProps = {

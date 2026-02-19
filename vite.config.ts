@@ -18,6 +18,16 @@ const test: ViteUserConfig["test"] = {
 
 const host = process.env.TAURI_DEV_HOST;
 
+// TODO: aliases here and in tsconfig.json
+// - $hooks
+// - $state
+// - $ports
+// - $state
+// - $utils
+// - $types
+// - $logger
+// - $components
+// - $icons
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   clearScreen: false,
@@ -29,4 +39,12 @@ export default defineConfig({
     watch: { ignored: ["**/src-tauri/**"] },
   },
   test,
+  resolve: {
+    alias: {
+      "$ports": "./src/ports.ts",
+      "$types": "./src/types.ts",
+      "$logger": "./src/logger.ts",
+      "$icons": "./src/components/icons.tsx",
+    },
+  },
 });

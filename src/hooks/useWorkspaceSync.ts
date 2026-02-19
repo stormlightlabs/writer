@@ -1,6 +1,6 @@
+import { logger } from "$logger";
+import { backendEvents, docList, locationList, runCmd, startWatch, stopWatch, SubscriptionManager } from "$ports";
 import { useCallback, useEffect, useRef } from "react";
-import { logger } from "../logger";
-import { backendEvents, docList, locationList, runCmd, startWatch, stopWatch, SubscriptionManager } from "../ports";
 import { useWorkspaceActions, useWorkspaceState } from "../state/appStore";
 
 export function useWorkspaceSync(): void {

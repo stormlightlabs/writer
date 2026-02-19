@@ -1,5 +1,5 @@
+import type { Tab } from "$types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Tab } from "../../types";
 import { DocumentTab } from "./DocumentTab";
 
 export type DocumentTabsProps = {

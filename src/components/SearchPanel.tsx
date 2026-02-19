@@ -1,10 +1,10 @@
+import { FileTextIcon, SearchIcon, XIcon } from "$icons";
+import type { SearchHit } from "$types";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
-import type { SearchHit } from "../types";
-import { FileTextIcon, SearchIcon, XIcon } from "./icons";
 
 export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
-export type { SearchHit } from "../types";
+export type { SearchHit } from "$types";
 
 type SearchPanelProps = {
   query: string;

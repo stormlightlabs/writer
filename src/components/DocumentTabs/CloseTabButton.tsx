@@ -1,5 +1,5 @@
+import { XIcon } from "$icons";
 import { MouseEventHandler } from "react";
-import { XIcon } from "../icons";
 
 export const CloseTabButton = (
   { handleCloseTabClick }: { handleCloseTabClick: MouseEventHandler<HTMLButtonElement> },

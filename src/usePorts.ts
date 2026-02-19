@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { BackendEvent, Cmd } from "./ports";
+import type { BackendEvent, Cmd } from "$ports";
 import {
   backendEvents,
   locationAddViaDialog,
@@ -8,8 +7,9 @@ import {
   locationValidate,
   runCmd,
   SubscriptionManager,
-} from "./ports";
-import { AppError, LocationDescriptor, LocationId } from "./types";
+} from "$ports";
+import { AppError, LocationDescriptor, LocationId } from "$types";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type UsePortsState<T> = { data: T | null; error: AppError | null; loading: boolean };
 

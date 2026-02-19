@@ -14,7 +14,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": "./src",
+    "paths": {
+      "$ports": ["./ports.ts"],
+      "$types": ["./types.ts"],
+      "$logger": ["./logger.ts"],
+      "$icons": ["./components/icons.tsx"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

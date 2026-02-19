@@ -1,8 +1,8 @@
+import { logger } from "$logger";
+import { locationAddViaDialog, locationRemove, runCmd } from "$ports";
+import type { DocRef, Tab } from "$types";
 import { useCallback, useMemo } from "react";
-import { logger } from "../logger";
-import { locationAddViaDialog, locationRemove, runCmd } from "../ports";
 import { useAppStore, useTabsActions, useTabsState, useWorkspaceActions, useWorkspaceState } from "../state/appStore";
-import type { DocRef, Tab } from "../types";
 
 export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
   const {

@@ -1,7 +1,7 @@
+import type { Cmd, SaveResult } from "$ports";
+import { docOpen, docSave, none, runCmd } from "$ports";
+import type { AppError, DocContent, DocRef, SaveStatus } from "$types";
 import { useCallback, useState } from "react";
-import type { Cmd, SaveResult } from "../ports";
-import { docOpen, docSave, none, runCmd } from "../ports";
-import type { AppError, DocContent, DocRef, SaveStatus } from "../types";
 
 export type EditorModel = {
   docRef: DocRef | null;

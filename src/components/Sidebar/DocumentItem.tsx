@@ -1,6 +1,6 @@
+import { FileTextIcon } from "$icons";
+import type { DocMeta } from "$types";
 import { useCallback, useMemo } from "react";
-import type { DocMeta } from "../../types";
-import { FileTextIcon } from "../icons";
 import { TreeItem } from "./TreeItem";
 
 export function DocumentItem(

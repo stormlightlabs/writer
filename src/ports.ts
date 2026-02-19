@@ -1,13 +1,10 @@
-import type { InvokeArgs } from "@tauri-apps/api/core";
-import { invoke } from "@tauri-apps/api/core";
-import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
-import { listen } from "@tauri-apps/api/event";
-import { logger } from "./logger";
+import { logger } from "$logger";
 import type {
   AppError,
   DocContent,
   DocMeta,
   DocRef,
+  EditorFontFamily,
   ErrorCode,
   LocationDescriptor,
   LocationId,
@@ -15,7 +12,11 @@ import type {
   RenderResult,
   SaveStatus,
   SearchHit,
-} from "./types";
+} from "$types";
+import type { InvokeArgs } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 
 export type EditorState = {
   doc_ref: DocRef | null;
@@ -37,8 +38,15 @@ export type EditorMsg =
 
 export type SaveResult = { success: boolean; new_meta: DocMeta | null; conflict_detected: boolean };
 
-type K = "sidebar_collapsed" | "top_bars_collapsed" | "status_bar_collapsed" | "line_numbers_visible";
-export type UiLayoutSettings = Record<K, boolean>;
+export type UiLayoutSettings = {
+  sidebar_collapsed: boolean;
+  top_bars_collapsed: boolean;
+  status_bar_collapsed: boolean;
+  line_numbers_visible: boolean;
+  syntax_highlighting_enabled: boolean;
+  editor_font_size: number;
+  editor_font_family: EditorFontFamily;
+};
 
 type RenderMarkdownParams<T> = [...LocationPathTextParams, profile: MarkdownProfile | undefined, ...LocParams<T>];
 type UiLayoutSetParams<T> = Parameters<

@@ -1,3 +1,6 @@
+import { logger } from "$logger";
+import { runCmd, uiLayoutGet, uiLayoutSet } from "$ports";
+import type { DocMeta, DocRef, Tab } from "$types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
@@ -12,11 +15,16 @@ import { usePreview } from "./hooks/usePreview";
 import { useSearchController } from "./hooks/useSearchController";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
-import { runCmd, uiLayoutGet, uiLayoutSet } from "./ports";
 import { useLayoutActions, useLayoutState } from "./state/appStore";
-import type { DocMeta, DocRef, Tab } from "./types";
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource/ibm-plex-mono";
+import "@fontsource/ibm-plex-serif";
+import "@fontsource/monaspace-argon";
+import "@fontsource/monaspace-krypton";
+import "@fontsource/monaspace-neon";
+import "@fontsource/monaspace-radon";
+import "@fontsource/monaspace-xenon";
 import "./App.css";
-import { logger } from "./logger";
 
 // TODO: make shared utils module
 function formatDraftDate(date: Date): string {
@@ -249,6 +257,9 @@ function App() {
       initialText: editorModel.text,
       theme: layoutState.theme,
       showLineNumbers: layoutState.lineNumbersVisible,
+      syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
+      fontSize: layoutState.editorFontSize,
+      fontFamily: layoutState.editorFontFamily,
       onChange: handleEditorChange,
       onSave: handleSave,
       onCursorMove: handleCursorMove,
@@ -258,6 +269,9 @@ function App() {
       editorModel.text,
       layoutState.theme,
       layoutState.lineNumbersVisible,
+      layoutState.syntaxHighlightingEnabled,
+      layoutState.editorFontSize,
+      layoutState.editorFontFamily,
       handleEditorChange,
       handleSave,
       handleCursorMove,
@@ -328,10 +342,16 @@ function App() {
       topBarsCollapsed: layoutState.topBarsCollapsed,
       statusBarCollapsed: layoutState.statusBarCollapsed,
       lineNumbersVisible: layoutState.lineNumbersVisible,
+      syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
+      editorFontSize: layoutState.editorFontSize,
+      editorFontFamily: layoutState.editorFontFamily,
       onSetSidebarCollapsed: layoutActions.setSidebarCollapsed,
       onSetTopBarsCollapsed: layoutActions.setTopBarsCollapsed,
       onSetStatusBarCollapsed: layoutActions.setStatusBarCollapsed,
       onSetLineNumbersVisible: layoutActions.setLineNumbersVisible,
+      onSetSyntaxHighlightingEnabled: layoutActions.setSyntaxHighlightingEnabled,
+      onSetEditorFontSize: layoutActions.setEditorFontSize,
+      onSetEditorFontFamily: layoutActions.setEditorFontFamily,
       onClose: handleSettingsClose,
     }),
     [
@@ -340,10 +360,16 @@ function App() {
       layoutState.topBarsCollapsed,
       layoutState.statusBarCollapsed,
       layoutState.lineNumbersVisible,
+      layoutState.syntaxHighlightingEnabled,
+      layoutState.editorFontSize,
+      layoutState.editorFontFamily,
       layoutActions.setSidebarCollapsed,
       layoutActions.setTopBarsCollapsed,
       layoutActions.setStatusBarCollapsed,
       layoutActions.setLineNumbersVisible,
+      layoutActions.setSyntaxHighlightingEnabled,
+      layoutActions.setEditorFontSize,
+      layoutActions.setEditorFontFamily,
       handleSettingsClose,
     ],
   );
@@ -359,6 +385,9 @@ function App() {
       charCount: charCount,
       selectionCount: selectionCount,
       lineNumbersVisible: layoutState.lineNumbersVisible,
+      syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
+      editorFontSize: layoutState.editorFontSize,
+      editorFontFamily: layoutState.editorFontFamily,
       statusBarCollapsed: layoutState.statusBarCollapsed,
       onExit: handleExit,
       onEditorChange: handleEditorChange,
@@ -376,6 +405,9 @@ function App() {
       charCount,
       selectionCount,
       layoutState.lineNumbersVisible,
+      layoutState.syntaxHighlightingEnabled,
+      layoutState.editorFontSize,
+      layoutState.editorFontFamily,
       layoutState.statusBarCollapsed,
       handleExit,
       handleEditorChange,
@@ -419,6 +451,9 @@ function App() {
       layoutActions.setTopBarsCollapsed(settings.top_bars_collapsed);
       layoutActions.setStatusBarCollapsed(settings.status_bar_collapsed);
       layoutActions.setLineNumbersVisible(settings.line_numbers_visible);
+      layoutActions.setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
+      layoutActions.setEditorFontSize(settings.editor_font_size);
+      layoutActions.setEditorFontFamily(settings.editor_font_family);
       setLayoutSettingsHydrated(true);
     }, () => {
       if (!isCancelled) {
@@ -443,6 +478,9 @@ function App() {
           top_bars_collapsed: layoutState.topBarsCollapsed,
           status_bar_collapsed: layoutState.statusBarCollapsed,
           line_numbers_visible: layoutState.lineNumbersVisible,
+          syntax_highlighting_enabled: layoutState.syntaxHighlightingEnabled,
+          editor_font_size: layoutState.editorFontSize,
+          editor_font_family: layoutState.editorFontFamily,
         },
         () => {},
         () => {},
@@ -454,6 +492,9 @@ function App() {
     layoutState.topBarsCollapsed,
     layoutState.statusBarCollapsed,
     layoutState.lineNumbersVisible,
+    layoutState.syntaxHighlightingEnabled,
+    layoutState.editorFontSize,
+    layoutState.editorFontFamily,
   ]);
 
   const appHeaderBarProps = useMemo(
