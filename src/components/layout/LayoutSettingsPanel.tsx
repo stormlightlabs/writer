@@ -109,8 +109,8 @@ export function LayoutSettingsPanel(
             isVisible={!sidebarCollapsed}
             onToggle={toggleSidebar} />
           <ToggleRow
-            label="Top Bars"
-            description="Show or hide the header, toolbar, and tabs."
+            label="Tab Bar"
+            description="Show or hide the document tabs."
             isVisible={!topBarsCollapsed}
             onToggle={toggleTopBars} />
           <ToggleRow

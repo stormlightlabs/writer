@@ -1,7 +1,7 @@
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
 import type { DocMeta, LocationDescriptor } from "../../types";
-import { LibraryIcon } from "../icons";
+import { CollapseIcon, LibraryIcon } from "../icons";
 import { AddButton } from "./AddButton";
 import { EmptyLocations } from "./EmptyLocations";
 import { SearchInput } from "./SearchInput";
@@ -21,7 +21,35 @@ export type SidebarProps = {
   onSelectDocument: (locationId: number, path: string) => void;
   filterText?: string;
   onFilterChange?: (text: string) => void;
+  onToggleCollapse?: () => void;
 };
+
+type SidebarActionsProps = {
+  onAddLocation: () => void;
+  handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
+  handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
+  onToggleCollapse?: () => void;
+};
+
+const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
+  <button
+    type="button"
+    onClick={onToggleCollapse}
+    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer hover:text-text-primary"
+    title="Hide sidebar (Ctrl+B)">
+    <CollapseIcon size="sm" />
+    Hide
+  </button>
+);
+
+const SidebarActions = (
+  { onAddLocation, handleMouseEnter, handleMouseLeave, onToggleCollapse }: SidebarActionsProps,
+) => (
+  <div className="flex items-center gap-2">
+    <AddButton onAddLocation={onAddLocation} handleMouseEnter={handleMouseEnter} handleMouseLeave={handleMouseLeave} />
+    {onToggleCollapse ? <HideSidebarButton onToggleCollapse={onToggleCollapse} /> : null}
+  </div>
+);
 
 export function Sidebar(
   {
@@ -37,6 +65,7 @@ export function Sidebar(
     onSelectDocument,
     filterText = "",
     onFilterChange,
+    onToggleCollapse,
   }: SidebarProps,
 ) {
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
@@ -79,7 +108,7 @@ export function Sidebar(
 
   if (isCollapsed) {
     return (
-      <aside className="w-12 bg-layer-01 border-r border-border-subtle flex flex-col items-center pt-4 shrink-0">
+      <aside className="w-full bg-layer-01 border-r border-border-subtle flex flex-col items-center pt-4 shrink-0">
         <button
           className="w-8 h-8 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded"
           title="Library">
@@ -90,13 +119,14 @@ export function Sidebar(
   }
 
   return (
-    <aside className="w-sidebar bg-layer-01 border-r border-border-subtle flex flex-col shrink-0 overflow-hidden">
+    <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">
       <div className="p-4 border-b border-border-subtle flex items-center justify-between">
         <Title isLoading={isLoading} />
-        <AddButton
+        <SidebarActions
           onAddLocation={onAddLocation}
           handleMouseEnter={handleMouseEnter}
-          handleMouseLeave={handleMouseLeave} />
+          handleMouseLeave={handleMouseLeave}
+          onToggleCollapse={onToggleCollapse} />
       </div>
       <SearchInput filterText={filterText} handleInputChange={handleInputChange} />
       <div className="flex-1 overflow-y-auto pt-2 pb-2">

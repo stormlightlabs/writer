@@ -2,6 +2,23 @@ export type SaveStatus = "Idle" | "Dirty" | "Saving" | "Saved" | "Error";
 
 export type LineEnding = "LF" | "CRLF" | "CR";
 
+export type AppTheme = "dark" | "light";
+
+export type MarkdownProfile = "StrictCommonMark" | "GfmSafe";
+
+export type PanelMode = "editor" | "preview" | "split";
+
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
+
+export type ErrorCode =
+  | "NOT_FOUND"
+  | "PERMISSION_DENIED"
+  | "INVALID_PATH"
+  | "IO_ERROR"
+  | "PARSE_ERROR"
+  | "INDEX_ERROR"
+  | "CONFLICT";
+
 export type LocationId = number;
 
 export type DocRef = { location_id: LocationId; rel_path: string };
@@ -19,10 +36,6 @@ export type DocMeta = {
 export type DocContent = { text: string; meta: DocMeta };
 
 export type LocationDescriptor = { id: LocationId; name: string; root_path: string; added_at: string };
-
-export type AppTheme = "dark" | "light";
-
-export type MarkdownProfile = "StrictCommonMark" | "GfmSafe";
 
 export type Heading = { level: number; text: string; anchor: string | null };
 
@@ -51,16 +64,5 @@ export type SearchHit = {
   column: number;
   matches: SearchMatch[];
 };
-
-export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
-
-export type ErrorCode =
-  | "NOT_FOUND"
-  | "PERMISSION_DENIED"
-  | "INVALID_PATH"
-  | "IO_ERROR"
-  | "PARSE_ERROR"
-  | "INDEX_ERROR"
-  | "CONFLICT";
 
 export type AppError = { code: ErrorCode; message: string; context?: string };

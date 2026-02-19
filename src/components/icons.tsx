@@ -126,3 +126,15 @@ export const DocumentIcon = ({ size = "md", className = "", style }: IconProps) 
     <i className="i-ri-file-2-line-2" />
   </span>
 );
+
+export const CollapseIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-menu-fold-fill" />
+  </span>
+);
+
+export const ExpandIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-menu-fold-2-fill" />
+  </span>
+);

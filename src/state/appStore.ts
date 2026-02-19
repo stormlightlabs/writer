@@ -26,7 +26,7 @@ export type LayoutActions = {
   setSidebarCollapsed: (value: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setTopBarsCollapsed: (value: boolean) => void;
-  toggleTopBarsCollapsed: () => void;
+  toggleTabBarCollapsed: () => void;
   setStatusBarCollapsed: (value: boolean) => void;
   toggleStatusBarCollapsed: () => void;
   setLineNumbersVisible: (value: boolean) => void;
@@ -106,7 +106,7 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
   toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
   setTopBarsCollapsed: (value) => set({ topBarsCollapsed: value }),
-  toggleTopBarsCollapsed: () => set((state) => ({ topBarsCollapsed: !state.topBarsCollapsed })),
+  toggleTabBarCollapsed: () => set((state) => ({ topBarsCollapsed: !state.topBarsCollapsed })),
 
   setStatusBarCollapsed: (value) => set({ statusBarCollapsed: value }),
   toggleStatusBarCollapsed: () => set((state) => ({ statusBarCollapsed: !state.statusBarCollapsed })),
@@ -286,7 +286,7 @@ export const useLayoutActions = () =>
       setSidebarCollapsed: state.setSidebarCollapsed,
       toggleSidebarCollapsed: state.toggleSidebarCollapsed,
       setTopBarsCollapsed: state.setTopBarsCollapsed,
-      toggleTopBarsCollapsed: state.toggleTopBarsCollapsed,
+      toggleTabBarCollapsed: state.toggleTabBarCollapsed,
       setStatusBarCollapsed: state.setStatusBarCollapsed,
       toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
       setLineNumbersVisible: state.setLineNumbersVisible,

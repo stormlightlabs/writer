@@ -10,7 +10,7 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
   const [searchResults, setSearchResults] = useAtom(searchResultsAtom);
   const [isSearching, setIsSearching] = useAtom(isSearchingAtom);
-  const [searchFilters, setSearchFilters] = useAtom(searchFiltersAtom);
+  const [filters, setFilters] = useAtom(searchFiltersAtom);
   const { setShowSearch } = useLayoutActions();
   const requestIdRef = useRef(0);
 
@@ -27,12 +27,14 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
 
     const timeoutId = globalThis.setTimeout(() => {
       const requestId = ++requestIdRef.current;
+      const dateRange = filters.dateRange
+        ? { from: filters.dateRange.from?.toISOString(), to: filters.dateRange.to?.toISOString() }
+        : undefined;
+
       const payloadFilters: SearchFiltersPayload = {
-        locations: searchFilters.locations,
-        fileTypes: searchFilters.fileTypes,
-        dateRange: searchFilters.dateRange
-          ? { from: searchFilters.dateRange.from?.toISOString(), to: searchFilters.dateRange.to?.toISOString() }
-          : undefined,
+        locations: filters.locations,
+        fileTypes: filters.fileTypes,
+        dateRange,
       };
 
       void runCmd(searchDocuments(normalizedQuery, payloadFilters, 50, (results: SearchHit[]) => {
@@ -52,7 +54,7 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
     }, 150);
 
     return () => globalThis.clearTimeout(timeoutId);
-  }, [searchFilters, searchQuery, setIsSearching, setSearchResults]);
+  }, [filters, searchQuery, setIsSearching, setSearchResults]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -63,13 +65,5 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
     setShowSearch(false);
   }, [onSelectDocument, setShowSearch]);
 
-  return {
-    searchQuery,
-    searchResults,
-    isSearching,
-    searchFilters,
-    setSearchFilters,
-    handleSearch,
-    handleSelectSearchResult,
-  };
+  return { searchQuery, searchResults, isSearching, filters, setFilters, handleSearch, handleSelectSearchResult };
 }

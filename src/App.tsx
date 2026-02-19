@@ -76,7 +76,6 @@ function App() {
 
   const layoutState = useLayoutState();
   const layoutActions = useLayoutActions();
-
   const workspace = useWorkspaceController(openDoc);
   const search = useSearchController(workspace.handleSelectDocument);
 
@@ -149,9 +148,13 @@ function App() {
   const handleOpenSettings = useCallback(() => setIsLayoutSettingsOpen((prev) => !prev), []);
   const handleOpenSearch = useCallback(() => layoutActions.setShowSearch(true), [layoutActions]);
   const handleShowSidebar = useCallback(() => layoutActions.setSidebarCollapsed(false), [layoutActions]);
-  const handleShowTopBars = useCallback(() => layoutActions.setTopBarsCollapsed(false), [layoutActions]);
   const handleShowStatusBar = useCallback(() => layoutActions.setStatusBarCollapsed(false), [layoutActions]);
   const handleExit = useCallback(() => layoutActions.setFocusMode(false), [layoutActions]);
+
+  const showToggleControls = useMemo(() => layoutState.sidebarCollapsed || layoutState.statusBarCollapsed, [
+    layoutState.sidebarCollapsed,
+    layoutState.statusBarCollapsed,
+  ]);
 
   const layoutProps = useMemo(
     () => ({
@@ -288,28 +291,27 @@ function App() {
     () => ({
       isVisible: layoutState.showSearch,
       sidebarCollapsed: layoutState.sidebarCollapsed,
-      topOffset: layoutState.topBarsCollapsed ? 0 : 48,
+      topOffset: 48,
       query: search.searchQuery,
       results: search.searchResults,
       isSearching: search.isSearching,
       locations: workspace.locations,
-      filters: search.searchFilters,
+      filters: search.filters,
       onQueryChange: search.handleSearch,
-      onFiltersChange: search.setSearchFilters,
+      onFiltersChange: search.setFilters,
       onSelectResult: search.handleSelectSearchResult,
       onClose: () => layoutActions.setShowSearch(false),
     }),
     [
       layoutState.showSearch,
       layoutState.sidebarCollapsed,
-      layoutState.topBarsCollapsed,
       search.searchQuery,
       search.searchResults,
       search.isSearching,
       workspace.locations,
-      search.searchFilters,
+      search.filters,
       search.handleSearch,
-      search.setSearchFilters,
+      search.setFilters,
       search.handleSelectSearchResult,
       layoutActions.setShowSearch,
     ],
@@ -454,6 +456,30 @@ function App() {
     layoutState.lineNumbersVisible,
   ]);
 
+  const appHeaderBarProps = useMemo(
+    () => ({
+      onToggleSidebar: layoutActions.toggleSidebarCollapsed,
+      onToggleTabBar: layoutActions.toggleTabBarCollapsed,
+      onOpenSearch: handleOpenSearch,
+      tabBarCollapsed: layoutState.topBarsCollapsed,
+    }),
+    [layoutActions, handleOpenSearch, layoutState.topBarsCollapsed],
+  );
+
+  const workspacePanelProps = useMemo(
+    () => ({
+      layout: layoutProps,
+      onToggleSidebar: layoutActions.toggleSidebarCollapsed,
+      sidebar: sidebarProps,
+      toolbar: toolbarProps,
+      tabs: tabProps,
+      editor: editorProps,
+      preview: previewProps,
+      statusBar: statusBarProps,
+    }),
+    [layoutProps, layoutActions, sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps],
+  );
+
   useEffect(() => {
     if (!isLayoutSettingsOpen) {
       return;
@@ -477,13 +503,10 @@ function App() {
     <div
       data-theme={layoutState.theme}
       className="relative h-screen overflow-hidden flex flex-col bg-bg-primary text-text-primary font-sans">
-      {(layoutState.sidebarCollapsed || layoutState.topBarsCollapsed || layoutState.statusBarCollapsed) && (
+      {showToggleControls && (
         <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
           {layoutState.sidebarCollapsed && (
             <ShowButton clickHandler={handleShowSidebar} title="Show sidebar (Ctrl+B)" label="Show Sidebar" />
-          )}
-          {layoutState.topBarsCollapsed && (
-            <ShowButton clickHandler={handleShowTopBars} title="Show top bars (Ctrl+Shift+B)" label="Show Top Bars" />
           )}
           {layoutState.statusBarCollapsed && (
             <ShowButton clickHandler={handleShowStatusBar} title="Show status bar" label="Show Status Bar" />
@@ -491,21 +514,8 @@ function App() {
         </div>
       )}
 
-      {!layoutState.topBarsCollapsed && (
-        <AppHeaderBar
-          onToggleSidebar={layoutActions.toggleSidebarCollapsed}
-          onToggleTopBars={layoutActions.toggleTopBarsCollapsed}
-          onOpenSearch={handleOpenSearch} />
-      )}
-
-      <WorkspacePanel
-        layout={layoutProps}
-        sidebar={sidebarProps}
-        toolbar={toolbarProps}
-        tabs={tabProps}
-        editor={editorProps}
-        preview={previewProps}
-        statusBar={statusBarProps} />
+      <AppHeaderBar {...appHeaderBarProps} />
+      <WorkspacePanel {...workspacePanelProps} />
       <LayoutSettingsPanel {...settingsPanelProps} />
       <SearchOverlay {...searchProps} />
       <BackendAlerts missingLocations={missingLocations} conflicts={conflicts} />

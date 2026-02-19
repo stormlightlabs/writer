@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLayoutActions } from "../state/appStore";
 
 export function useLayoutHotkeys(): void {
-  const { toggleFocusMode, toggleShowSearch, toggleSidebarCollapsed, toggleTopBarsCollapsed, toggleSplitView } =
+  const { toggleFocusMode, toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed, toggleSplitView } =
     useLayoutActions();
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function useLayoutHotkeys(): void {
 
       if (hasMod && event.shiftKey && lowerKey === "b") {
         event.preventDefault();
-        toggleTopBarsCollapsed();
+        toggleTabBarCollapsed();
       }
 
       if (hasMod && !event.shiftKey && lowerKey === "b") {
@@ -38,5 +38,5 @@ export function useLayoutHotkeys(): void {
 
     globalThis.addEventListener("keydown", handleKeyDown);
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
-  }, [toggleFocusMode, toggleShowSearch, toggleSidebarCollapsed, toggleTopBarsCollapsed, toggleSplitView]);
+  }, [toggleFocusMode, toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed, toggleSplitView]);
 }

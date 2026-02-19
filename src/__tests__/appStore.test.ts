@@ -29,7 +29,6 @@ describe("appStore", () => {
 
   it("opens and reuses document tabs", () => {
     const state = useAppStore.getState();
-
     const firstOpen = state.openDocumentTab({ location_id: 1, rel_path: "notes/a.md" }, "A");
     const secondOpen = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "notes/a.md" }, "A");
 
@@ -41,14 +40,12 @@ describe("appStore", () => {
 
   it("closing the active tab activates an adjacent tab", () => {
     const store = useAppStore.getState();
-
     const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
     const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
 
     useAppStore.getState().selectTab(first.tabId);
 
     const nextDocRef = useAppStore.getState().closeTab(first.tabId);
-
     expect(nextDocRef).toStrictEqual({ location_id: 1, rel_path: "b.md" });
     expect(useAppStore.getState().activeTabId).toBe(second.tabId);
     expect(useAppStore.getState().tabs).toHaveLength(1);
@@ -75,7 +72,6 @@ describe("appStore", () => {
 
   it("marks only the active tab as modified", () => {
     const store = useAppStore.getState();
-
     const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
     const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
 
@@ -123,7 +119,6 @@ describe("appStore", () => {
     const store = useAppStore.getState();
     const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
     const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
-
     const closedResult = useAppStore.getState().closeTab(first.tabId);
 
     expect(closedResult).toBeNull();
@@ -161,7 +156,7 @@ describe("appStore", () => {
 
     act(() => {
       layoutActions.current.toggleSidebarCollapsed();
-      layoutActions.current.toggleTopBarsCollapsed();
+      layoutActions.current.toggleTabBarCollapsed();
       layoutActions.current.toggleStatusBarCollapsed();
       layoutActions.current.toggleLineNumbersVisible();
       layoutActions.current.setSplitView(true);
