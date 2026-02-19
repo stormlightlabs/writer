@@ -7,6 +7,7 @@ import { WorkspacePanel } from "./components/layout/WorkspacePanel";
 import { useBackendEvents } from "./hooks/useBackendEvents";
 import { useEditor } from "./hooks/useEditor";
 import { useLayoutHotkeys } from "./hooks/useLayoutHotkeys";
+import { usePreview } from "./hooks/usePreview";
 import { useSearchController } from "./hooks/useSearchController";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
@@ -15,6 +16,7 @@ import "./App.css";
 
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
+  const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const { missingLocations, conflicts } = useBackendEvents();
 
   useWorkspaceSync();
@@ -26,9 +28,10 @@ function App() {
   const workspace = useWorkspaceController(openDoc);
   const search = useSearchController(workspace.documents, workspace.handleSelectDocument);
 
-  useEffect(() => {
-    workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
-  }, [editorModel.saveStatus, workspace.markActiveTabModified]);
+  const activeTab = useMemo(() => workspace.tabs.find((tab) => tab.id === workspace.activeTabId) ?? null, [
+    workspace.activeTabId,
+    workspace.tabs,
+  ]);
 
   const { wordCount, charCount, selectionCount } = useMemo(() => {
     const { text } = editorModel;
@@ -43,10 +46,27 @@ function App() {
     };
   }, [editorModel.selectionFrom, editorModel.selectionTo, editorModel.text]);
 
-  const activeTab = useMemo(() => workspace.tabs.find((tab) => tab.id === workspace.activeTabId) ?? null, [
-    workspace.activeTabId,
-    workspace.tabs,
-  ]);
+  useEffect(() => {
+    workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
+  }, [editorModel.saveStatus, workspace.markActiveTabModified]);
+
+  useEffect(() => {
+    if (activeTab) {
+      setPreviewDoc(activeTab.docRef);
+    } else {
+      setPreviewDoc(null);
+    }
+  }, [activeTab, setPreviewDoc]);
+
+  useEffect(() => {
+    if (!activeTab) return;
+
+    const timeoutId = setTimeout(() => {
+      renderPreview(activeTab.docRef, editorModel.text);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [activeTab, editorModel.text, renderPreview]);
 
   const activeDocMeta = useMemo(
     () =>
@@ -68,7 +88,8 @@ function App() {
 
   const handleCursorMove = useCallback((line: number, column: number) => {
     editorDispatch({ type: "CursorMoved", line, column });
-  }, [editorDispatch]);
+    syncPreviewLine(line);
+  }, [editorDispatch, syncPreviewLine]);
 
   const handleSelectionChange = useCallback((from: number, to: number | null) => {
     editorDispatch({ type: "SelectionChanged", from, to });
@@ -186,6 +207,16 @@ function App() {
     [activeDocMeta, editorModel.cursorLine, editorModel.cursorColumn, wordCount, charCount, selectionCount],
   );
 
+  const previewProps = useMemo(
+    () => ({
+      renderResult: previewModel.renderResult,
+      theme: layoutState.theme,
+      editorLine: editorModel.cursorLine,
+      onScrollToLine: syncPreviewLine,
+    }),
+    [previewModel.renderResult, layoutState.theme, editorModel.cursorLine, syncPreviewLine],
+  );
+
   const searchProps = useMemo(
     () => ({
       isVisible: layoutState.showSearch,
@@ -242,6 +273,7 @@ function App() {
         toolbar={toolbarProps}
         tabs={tabProps}
         editor={editorProps}
+        preview={previewProps}
         statusBar={statusBarProps} />
       <SearchOverlay {...searchProps} />
       <BackendAlerts missingLocations={missingLocations} conflicts={conflicts} />

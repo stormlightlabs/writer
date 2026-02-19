@@ -177,3 +177,120 @@
 [data-theme="light"] *::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Markdown Preview Styles */
+.preview-content {
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.preview-content :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--color-text-primary);
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.preview-content h1 {
+  font-size: 2em;
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 0.3em;
+}
+
+.preview-content h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 0.3em;
+}
+
+.preview-content h3 {
+  font-size: 1.25em;
+}
+
+.preview-content p {
+  margin: 0 0 1em 0;
+}
+
+.preview-content a {
+  color: var(--color-link-primary);
+  text-decoration: none;
+}
+
+.preview-content a:hover {
+  text-decoration: underline;
+}
+
+.preview-content code {
+  background: var(--color-layer-01);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.preview-content pre {
+  background: var(--color-layer-01);
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0 0 1em 0;
+}
+
+.preview-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.preview-content blockquote {
+  border-left: 4px solid var(--color-border-subtle);
+  margin: 0 0 1em 0;
+  padding: 0 1em;
+  color: var(--color-text-secondary);
+}
+
+.preview-content :is(ul, ol) {
+  margin: 0 0 1em 0;
+  padding-left: 2em;
+}
+
+.preview-content li {
+  margin: 0.25em 0;
+}
+
+.preview-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em 0;
+}
+
+.preview-content :is(th, td) {
+  border: 1px solid var(--color-border-subtle);
+  padding: 0.5em;
+  text-align: left;
+}
+
+.preview-content th {
+  background: var(--color-layer-01);
+  font-weight: 600;
+}
+
+.preview-content hr {
+  border: none;
+  border-top: 1px solid var(--color-border-subtle);
+  margin: 1.5em 0;
+}
+
+.preview-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.preview-content del {
+  text-decoration: line-through;
+}
+
+.preview-content input[type="checkbox"] {
+  margin-right: 0.5em;
+}

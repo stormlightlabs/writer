@@ -119,7 +119,7 @@ A robust text editor that cooperates with Elm state management (no "hidden state
 5. **Oxocarbon Dark & Light themes**
 6. **Testing library tests**
 
-## Preview renderer + scroll/selection sync (editor ↔ rendered HTML)
+## Preview renderer + scroll/selection sync
 
 High-quality Markdown rendering with predictable safety and a stable sync model.
 
@@ -137,9 +137,9 @@ High-quality Markdown rendering with predictable safety and a stable sync model.
       - preview scroll → nearest sourcepos line
    - Implement coarse sync first (block-level), refine later. ([Docs.rs][6])
 
-## Indexing + search (SQLite FTS), driven by watcher + reconciliation
+## Indexing + search (SQLite FTS)
 
-Fast global search across locations with correct incremental updates.
+Fast global search across locations with correct incremental updates (watcher + reconciliation).
 
 ### Tasks
 

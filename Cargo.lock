@@ -5619,6 +5619,7 @@ dependencies = [
  "tauri-plugin-store",
  "tracing",
  "writer-core",
+ "writer-md",
  "writer-store",
 ]
 

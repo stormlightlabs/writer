@@ -3,7 +3,7 @@ use tauri::Manager;
 mod commands;
 use commands::{
     doc_exists, doc_list, doc_open, doc_save, location_add_via_dialog, location_list, location_remove,
-    location_validate,
+    location_validate, markdown_render,
 };
 
 pub use commands::AppState;
@@ -41,7 +41,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             location_add_via_dialog,
             location_list,
             location_remove,
@@ -49,13 +48,9 @@ pub fn run() {
             doc_list,
             doc_open,
             doc_save,
-            doc_exists
+            doc_exists,
+            markdown_render
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
 }

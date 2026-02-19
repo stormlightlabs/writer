@@ -7,6 +7,7 @@ use writer_core::{
     AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
     SaveResult,
 };
+use writer_md::{MarkdownEngine, MarkdownProfile, RenderResult};
 use writer_store::Store;
 
 /// Application state shared across commands
@@ -329,6 +330,48 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
                 "Invalid path: {}",
                 e
             ))))
+        }
+    }
+}
+
+/// Renders markdown text to HTML with metadata extraction
+///
+/// This command takes document reference, text content, and a rendering profile,
+/// returning HTML with source position attributes for editor-preview sync.
+#[tauri::command]
+pub fn markdown_render(
+    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
+) -> Result<CommandResult<RenderResult>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!(
+        "Rendering markdown: location={:?}, path={:?}, profile={:?}, text_len={}",
+        location_id,
+        rel_path,
+        profile,
+        text.len()
+    );
+
+    let engine = MarkdownEngine::new();
+    let profile = profile.unwrap_or_default();
+
+    match engine.render(&text, profile) {
+        Ok(result) => {
+            tracing::debug!(
+                "Markdown rendered successfully: html_len={}, outline_items={}",
+                result.html.len(),
+                result.metadata.outline.len()
+            );
+            Ok(CommandResult::ok(result))
+        }
+        Err(e) => {
+            tracing::error!("Failed to render markdown: {}", e);
+            // FIXME: There is too much error-nesting here
+            Ok(CommandResult::err(AppError::new(
+                writer_core::ErrorCode::Parse,
+                format!("Failed to render markdown: {}", e),
+            )))
         }
     }
 }

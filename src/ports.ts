@@ -11,7 +11,16 @@ import type { InvokeArgs } from "@tauri-apps/api/core";
 import { invoke } from "@tauri-apps/api/core";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
-import type { DocContent, DocMeta, DocRef, LocationDescriptor, LocationId, SaveStatus } from "./types";
+import type {
+  DocContent,
+  DocMeta,
+  DocRef,
+  LocationDescriptor,
+  LocationId,
+  MarkdownProfile,
+  RenderResult,
+  SaveStatus,
+} from "./types";
 
 export type ErrorCode =
   | "NOT_FOUND"
@@ -269,3 +278,24 @@ export function docSave(
 }
 
 export type SaveResult = { success: boolean; new_meta: DocMeta | null; conflict_detected: boolean };
+
+/**
+ * Renders markdown text to HTML with metadata extraction
+ *
+ * @param locationId - The location ID of the document
+ * @param relPath - The relative path of the document
+ * @param text - The markdown text to render
+ * @param profile - The markdown rendering profile (defaults to GfmSafe)
+ * @param onOk - Callback for successful render
+ * @param onErr - Callback for render errors
+ */
+export function renderMarkdown(
+  locationId: LocationId,
+  relPath: string,
+  text: string,
+  profile: MarkdownProfile | undefined,
+  onOk: (result: RenderResult) => void,
+  onErr: (error: AppError) => void,
+): Cmd {
+  return invokeCmd<RenderResult>("markdown_render", { locationId, relPath, text, profile }, onOk, onErr);
+}
