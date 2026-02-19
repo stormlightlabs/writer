@@ -97,6 +97,10 @@ export type CmdResult<T> = { type: "ok"; value: T } | { type: "err"; error: AppE
 
 type RustCommandResult<T> = { Ok: T } | { Err: unknown };
 
+export type BackendEventsSub = { type: "BackendEvents"; onEvent: (event: BackendEvent) => void };
+export type NoneSub = { type: "None" };
+export type Sub = BackendEventsSub | NoneSub;
+
 export const ok = <T>(value: T): CmdResult<T> => ({ type: "ok", value });
 
 export const err = <T>(error: AppError): CmdResult<T> => ({ type: "err", error });
@@ -301,9 +305,6 @@ export const stopWatch = (locationId: LocationId): Cmd => ({ type: "StopWatch", 
 export const batch = (commands: Cmd[]): Cmd => ({ type: "Batch", commands });
 
 export const none: Cmd = { type: "None" };
-export type BackendEventsSub = { type: "BackendEvents"; onEvent: (event: BackendEvent) => void };
-export type NoneSub = { type: "None" };
-export type Sub = BackendEventsSub | NoneSub;
 
 export function backendEvents(onEvent: (event: BackendEvent) => void): Sub {
   return { type: "BackendEvents", onEvent };
@@ -386,7 +387,6 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     }
 
     default: {
-      console.warn("Unknown command type:", cmd);
       logger.warn("Unknown command type", { cmd });
     }
   }
@@ -419,7 +419,6 @@ export class SubscriptionManager {
       }
 
       default: {
-        console.warn("Unknown subscription type:", sub);
         logger.warn("Unknown subscription type", { sub });
         return () => {};
       }

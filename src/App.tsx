@@ -16,6 +16,7 @@ import { runCmd, uiLayoutGet, uiLayoutSet } from "./ports";
 import { useLayoutActions, useLayoutState } from "./state/appStore";
 import type { DocMeta, DocRef, Tab } from "./types";
 import "./App.css";
+import { logger } from "./logger";
 
 // TODO: make shared utils module
 function formatDraftDate(date: Date): string {
@@ -54,6 +55,15 @@ function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]
 
 const getDraftTitle = (relPath: string): string => relPath.split("/").pop() || "Untitled";
 
+const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; title: string; label: string }) => (
+  <button
+    onClick={clickHandler}
+    className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
+    title={title}>
+    {label}
+  </button>
+);
+
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
@@ -88,45 +98,24 @@ function App() {
     };
   }, [editorModel.selectionFrom, editorModel.selectionTo, editorModel.text]);
 
-  useEffect(() => {
-    workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
-  }, [editorModel.saveStatus, workspace.markActiveTabModified]);
-
-  useEffect(() => {
-    if (activeTab) {
-      setPreviewDoc(activeTab.docRef);
-    } else {
-      setPreviewDoc(null);
+  const activeDocMeta = useMemo(() => {
+    if (!activeTab) {
+      return null;
     }
-  }, [activeTab, setPreviewDoc]);
 
-  useEffect(() => {
-    if (!activeTab) return;
-
-    const timeoutId = setTimeout(() => {
-      renderPreview(activeTab.docRef, editorModel.text);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [activeTab, editorModel.text, renderPreview]);
-
-  const activeDocMeta = useMemo(
-    () =>
-      activeTab
-        ? workspace.documents.find((doc) =>
-          doc.location_id === activeTab.docRef.location_id && doc.rel_path === activeTab.docRef.rel_path
-        ) ?? null
-        : null,
-    [activeTab, workspace.documents],
-  );
+    const activeDoc = workspace.documents.find((doc) =>
+      doc.location_id === activeTab.docRef.location_id && doc.rel_path === activeTab.docRef.rel_path
+    );
+    return activeDoc ?? null;
+  }, [activeTab, workspace.documents]);
 
   const handleSave = useCallback(() => {
-    if (!editorModel.docRef) {
-      if (!workspace.selectedLocationId) {
-        console.warn("Cannot save draft without a selected location.");
-        return;
-      }
+    if (!editorModel.docRef && !workspace.selectedLocationId) {
+      logger.warn("Cannot save draft without a selected location.");
+      return;
+    }
 
+    if (!editorModel.docRef && workspace.selectedLocationId) {
       const relPath = buildDraftRelPath(workspace.selectedLocationId, workspace.documents, workspace.tabs);
       const draftRef: DocRef = { location_id: workspace.selectedLocationId, rel_path: relPath };
 
@@ -227,10 +216,10 @@ function App() {
       layoutState.isSplitView,
       layoutState.isFocusMode,
       layoutState.isPreviewVisible,
-      handleSave,
       layoutActions.toggleSplitView,
       layoutActions.toggleFocusMode,
       layoutActions.togglePreviewVisible,
+      handleSave,
       handleOpenSettings,
     ],
   );
@@ -330,6 +319,92 @@ function App() {
     setIsLayoutSettingsOpen(false);
   }, []);
 
+  const settingsPanelProps = useMemo(
+    () => ({
+      isVisible: isLayoutSettingsOpen,
+      sidebarCollapsed: layoutState.sidebarCollapsed,
+      topBarsCollapsed: layoutState.topBarsCollapsed,
+      statusBarCollapsed: layoutState.statusBarCollapsed,
+      lineNumbersVisible: layoutState.lineNumbersVisible,
+      onSetSidebarCollapsed: layoutActions.setSidebarCollapsed,
+      onSetTopBarsCollapsed: layoutActions.setTopBarsCollapsed,
+      onSetStatusBarCollapsed: layoutActions.setStatusBarCollapsed,
+      onSetLineNumbersVisible: layoutActions.setLineNumbersVisible,
+      onClose: handleSettingsClose,
+    }),
+    [
+      isLayoutSettingsOpen,
+      layoutState.sidebarCollapsed,
+      layoutState.topBarsCollapsed,
+      layoutState.statusBarCollapsed,
+      layoutState.lineNumbersVisible,
+      layoutActions.setSidebarCollapsed,
+      layoutActions.setTopBarsCollapsed,
+      layoutActions.setStatusBarCollapsed,
+      layoutActions.setLineNumbersVisible,
+      handleSettingsClose,
+    ],
+  );
+
+  const focusModePanelProps = useMemo(
+    () => ({
+      theme: layoutState.theme,
+      text: editorModel.text,
+      docMeta: activeDocMeta,
+      cursorLine: editorModel.cursorLine,
+      cursorColumn: editorModel.cursorColumn,
+      wordCount: wordCount,
+      charCount: charCount,
+      selectionCount: selectionCount,
+      lineNumbersVisible: layoutState.lineNumbersVisible,
+      statusBarCollapsed: layoutState.statusBarCollapsed,
+      onExit: handleExit,
+      onEditorChange: handleEditorChange,
+      onSave: handleSave,
+      onCursorMove: handleCursorMove,
+      onSelectionChange: handleSelectionChange,
+    }),
+    [
+      layoutState.theme,
+      editorModel.text,
+      activeDocMeta,
+      editorModel.cursorLine,
+      editorModel.cursorColumn,
+      wordCount,
+      charCount,
+      selectionCount,
+      layoutState.lineNumbersVisible,
+      layoutState.statusBarCollapsed,
+      handleExit,
+      handleEditorChange,
+      handleSave,
+      handleCursorMove,
+      handleSelectionChange,
+    ],
+  );
+
+  useEffect(() => {
+    workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
+  }, [editorModel.saveStatus, workspace.markActiveTabModified]);
+
+  useEffect(() => {
+    if (activeTab) {
+      setPreviewDoc(activeTab.docRef);
+    } else {
+      setPreviewDoc(null);
+    }
+  }, [activeTab, setPreviewDoc]);
+
+  useEffect(() => {
+    if (!activeTab) return;
+
+    const timeoutId = setTimeout(() => {
+      renderPreview(activeTab.docRef, editorModel.text);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [activeTab, editorModel.text, renderPreview]);
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -395,67 +470,33 @@ function App() {
   }, [isLayoutSettingsOpen]);
 
   if (layoutState.isFocusMode) {
-    return (
-      <FocusModePanel
-        theme={layoutState.theme}
-        text={editorModel.text}
-        docMeta={activeDocMeta}
-        cursorLine={editorModel.cursorLine}
-        cursorColumn={editorModel.cursorColumn}
-        wordCount={wordCount}
-        charCount={charCount}
-        selectionCount={selectionCount}
-        lineNumbersVisible={layoutState.lineNumbersVisible}
-        statusBarCollapsed={layoutState.statusBarCollapsed}
-        onExit={handleExit}
-        onEditorChange={handleEditorChange}
-        onSave={handleSave}
-        onCursorMove={handleCursorMove}
-        onSelectionChange={handleSelectionChange} />
-    );
+    return <FocusModePanel {...focusModePanelProps} />;
   }
 
   return (
     <div
       data-theme={layoutState.theme}
-      className="relative h-screen flex flex-col bg-bg-primary text-text-primary font-sans">
+      className="relative h-screen overflow-hidden flex flex-col bg-bg-primary text-text-primary font-sans">
       {(layoutState.sidebarCollapsed || layoutState.topBarsCollapsed || layoutState.statusBarCollapsed) && (
         <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
           {layoutState.sidebarCollapsed && (
-            <button
-              onClick={handleShowSidebar}
-              className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
-              title="Show sidebar (Ctrl+B)">
-              Show Sidebar
-            </button>
+            <ShowButton clickHandler={handleShowSidebar} title="Show sidebar (Ctrl+B)" label="Show Sidebar" />
           )}
           {layoutState.topBarsCollapsed && (
-            <button
-              onClick={handleShowTopBars}
-              className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
-              title="Show top bars (Ctrl+Shift+B)">
-              Show Top Bars
-            </button>
+            <ShowButton clickHandler={handleShowTopBars} title="Show top bars (Ctrl+Shift+B)" label="Show Top Bars" />
           )}
           {layoutState.statusBarCollapsed && (
-            <button
-              onClick={handleShowStatusBar}
-              className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
-              title="Show status bar">
-              Show Status Bar
-            </button>
+            <ShowButton clickHandler={handleShowStatusBar} title="Show status bar" label="Show Status Bar" />
           )}
         </div>
       )}
 
-      {layoutState.topBarsCollapsed
-        ? null
-        : (
-          <AppHeaderBar
-            onToggleSidebar={layoutActions.toggleSidebarCollapsed}
-            onToggleTopBars={layoutActions.toggleTopBarsCollapsed}
-            onOpenSearch={handleOpenSearch} />
-        )}
+      {!layoutState.topBarsCollapsed && (
+        <AppHeaderBar
+          onToggleSidebar={layoutActions.toggleSidebarCollapsed}
+          onToggleTopBars={layoutActions.toggleTopBarsCollapsed}
+          onOpenSearch={handleOpenSearch} />
+      )}
 
       <WorkspacePanel
         layout={layoutProps}
@@ -465,17 +506,7 @@ function App() {
         editor={editorProps}
         preview={previewProps}
         statusBar={statusBarProps} />
-      <LayoutSettingsPanel
-        isVisible={isLayoutSettingsOpen}
-        sidebarCollapsed={layoutState.sidebarCollapsed}
-        topBarsCollapsed={layoutState.topBarsCollapsed}
-        statusBarCollapsed={layoutState.statusBarCollapsed}
-        lineNumbersVisible={layoutState.lineNumbersVisible}
-        onSetSidebarCollapsed={layoutActions.setSidebarCollapsed}
-        onSetTopBarsCollapsed={layoutActions.setTopBarsCollapsed}
-        onSetStatusBarCollapsed={layoutActions.setStatusBarCollapsed}
-        onSetLineNumbersVisible={layoutActions.setLineNumbersVisible}
-        onClose={handleSettingsClose} />
+      <LayoutSettingsPanel {...settingsPanelProps} />
       <SearchOverlay {...searchProps} />
       <BackendAlerts missingLocations={missingLocations} conflicts={conflicts} />
     </div>

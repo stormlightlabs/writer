@@ -1,5 +1,6 @@
 import { DragEventHandler, MouseEventHandler, useCallback, useMemo } from "react";
 import { Tab } from "../../types";
+import { DocumentIcon } from "../icons";
 import { CloseTabButton } from "./CloseTabButton";
 
 type DocumentTabProps = {
@@ -121,6 +122,7 @@ export const DocumentTab = (
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
       {tab.isModified && <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan shrink-0" />}
+      <DocumentIcon />
       <span className={titleClasses} title={`${tab.title}${tab.isModified ? " (modified)" : ""}`}>{tab.title}</span>
       <CloseTabButton handleCloseTabClick={handleCloseTabClick} />
     </div>

@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initialEditorModel, updateEditor, useEditor } from "../hooks/useEditor";
@@ -6,6 +7,7 @@ import type { AppError } from "../types";
 describe(useEditor, () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(invoke).mockImplementation(() => new Promise(() => {}));
   });
 
   describe("initial state", () => {

@@ -114,8 +114,13 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),
 
-  setSplitView: (value) => set({ isSplitView: value }),
-  toggleSplitView: () => set((state) => ({ isSplitView: !state.isSplitView })),
+  setSplitView: (value) =>
+    set((state) => ({ isSplitView: value, isPreviewVisible: value ? true : state.isPreviewVisible })),
+  toggleSplitView: () =>
+    set((state) => ({
+      isSplitView: !state.isSplitView,
+      isPreviewVisible: state.isSplitView ? state.isPreviewVisible : true,
+    })),
 
   setFocusMode: (value) => set({ isFocusMode: value }),
   toggleFocusMode: () => set((state) => ({ isFocusMode: !state.isFocusMode })),

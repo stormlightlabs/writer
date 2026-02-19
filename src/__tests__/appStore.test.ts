@@ -181,6 +181,19 @@ describe("appStore", () => {
     expect(layoutState.current.theme).toBe("dark");
   });
 
+  it("enabling split view forces preview visible", () => {
+    const { result: layoutState } = renderHook(() => useLayoutState());
+    const { result: layoutActions } = renderHook(() => useLayoutActions());
+
+    act(() => {
+      layoutActions.current.setPreviewVisible(false);
+      layoutActions.current.toggleSplitView();
+    });
+
+    expect(layoutState.current.isSplitView).toBeTruthy();
+    expect(layoutState.current.isPreviewVisible).toBeTruthy();
+  });
+
   it("workspace selector hooks expose and update workspace state", () => {
     const { result: workspaceState } = renderHook(() => useWorkspaceState());
     const { result: workspaceActions } = renderHook(() => useWorkspaceActions());

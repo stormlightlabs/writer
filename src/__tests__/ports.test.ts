@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "../logger";
 import {
   backendEvents,
   batch,
@@ -436,13 +437,12 @@ describe(runCmd, () => {
 
   describe("unknown command type", () => {
     it("should warn on unknown command type", async () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
       const unknownCmd = { type: "Unknown" } as unknown as Cmd;
 
       await runCmd(unknownCmd);
 
-      expect(warnSpy).toHaveBeenCalledWith("Unknown command type:", unknownCmd);
-      warnSpy.mockRestore();
+      expect(warnSpy).toHaveBeenCalledWith("Unknown command type", { cmd: unknownCmd });
     });
   });
 });
@@ -469,13 +469,12 @@ describe(SubscriptionManager, () => {
     });
 
     it("should warn on unknown subscription type", async () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
       const unknownSub = { type: "Unknown" } as unknown as Parameters<typeof manager.subscribe>[0];
 
       await manager.subscribe(unknownSub);
 
-      expect(warnSpy).toHaveBeenCalledWith("Unknown subscription type:", unknownSub);
-      warnSpy.mockRestore();
+      expect(warnSpy).toHaveBeenCalledWith("Unknown subscription type", { sub: unknownSub });
     });
   });
 

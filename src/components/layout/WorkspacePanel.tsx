@@ -31,19 +31,26 @@ export type WorkspacePanelProps = {
 };
 
 type MainPanelProps = {
-  mainCls: string;
-  showPreview: boolean;
+  panelMode: "editor" | "preview" | "split";
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
 };
 
-const MainPanel = ({ showPreview, editor, preview, mainCls }: MainPanelProps) => (
-  <div className="flex-1 flex overflow-hidden">
-    <div className={mainCls}>
-      <Editor {...editor} />
-    </div>
+const MainPanel = ({ panelMode, editor, preview }: MainPanelProps) => (
+  <div className="flex-1 min-h-0 flex overflow-hidden">
+    {(panelMode === "editor" || panelMode === "split") && (
+      <div className={`flex min-h-0 min-w-0 flex-col ${panelMode === "split" ? "flex-1 w-1/2" : "w-full"}`}>
+        <Editor {...editor} />
+      </div>
+    )}
 
-    {showPreview && <Preview className="flex-1 w-1/2 min-w-0 border-l border-border-subtle bg-layer-01" {...preview} />}
+    {(panelMode === "preview" || panelMode === "split") && (
+      <Preview
+        className={`min-h-0 min-w-0 flex-1 ${
+          panelMode === "split" ? "w-1/2 border-l border-border-subtle" : "w-full"
+        } bg-bg-primary`}
+        {...preview} />
+    )}
   </div>
 );
 
@@ -54,20 +61,31 @@ const TopBar = ({ toolbar, tabs }: Pick<WorkspacePanelProps, "toolbar" | "tabs">
   </>
 );
 
+function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): MainPanelProps["panelMode"] {
+  if (isSplitView && isPreviewVisible) {
+    return "split";
+  }
+
+  if (isPreviewVisible) {
+    return "preview";
+  }
+
+  return "editor";
+}
+
 export function WorkspacePanel({ layout, sidebar, toolbar, tabs, editor, preview, statusBar }: WorkspacePanelProps) {
-  const showPreview = useMemo(() => layout.isSplitView && layout.isPreviewVisible, [
+  const panelMode = useMemo(() => getPanelMode(layout.isSplitView, layout.isPreviewVisible), [
     layout.isSplitView,
     layout.isPreviewVisible,
   ]);
-  const mainCls = useMemo(() => `flex flex-col min-w-0 ${showPreview ? "flex-1 w-1/2" : "w-full"}`, [showPreview]);
 
   return (
-    <div className="flex flex-1 overflow-x-hidden overflow-y-visible">
+    <div className="flex flex-1 min-h-0 overflow-hidden">
       {layout.sidebarCollapsed ? null : <Sidebar {...sidebar} />}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {layout.topBarsCollapsed ? null : <TopBar toolbar={toolbar} tabs={tabs} />}
-        <MainPanel showPreview={showPreview} editor={editor} preview={preview} mainCls={mainCls} />
+        <MainPanel panelMode={panelMode} editor={editor} preview={preview} />
         {layout.statusBarCollapsed ? null : <StatusBar {...statusBar} />}
       </div>
     </div>

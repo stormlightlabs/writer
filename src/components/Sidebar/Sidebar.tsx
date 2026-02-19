@@ -120,7 +120,7 @@ export function Sidebar(
           )))}
       </div>
 
-      <div className="px-4 py-3 border-t border-border-subtle text-xs text-text-placeholder flex items-center justify-between">
+      <div className="px-4 py-2 border-t border-border-subtle text-xs text-text-placeholder flex items-center justify-between">
         <span>{locations.length} location{locations.length === 1 ? "" : "s"}</span>
         <span>{selectedLocationId ? `${documents.length} document${documents.length === 1 ? "" : "s"}` : ""}</span>
       </div>

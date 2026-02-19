@@ -120,3 +120,9 @@ export const RefreshIcon = ({ size = "md", className = "", style }: IconProps) =
     <i className="i-ri-refresh-line" />
   </span>
 );
+
+export const DocumentIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-file-2-line-2" />
+  </span>
+);

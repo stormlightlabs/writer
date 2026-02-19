@@ -34,17 +34,15 @@ export type PreviewMsg =
   | { type: "SyncFromEditor"; line: number }
   | { type: "DocChanged"; docRef: DocRef | null };
 
+function isPreviewMsg(value: unknown): value is PreviewMsg {
+  return typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
+}
+
 export function updatePreview(model: PreviewModel, msg: PreviewMsg): [PreviewModel, Cmd] {
   switch (msg.type) {
     case "RenderRequested": {
-      if (
-        !model.docRef || model.docRef.location_id !== msg.docRef.location_id
-        || model.docRef.rel_path !== msg.docRef.rel_path
-      ) {
-        return [model, none];
-      }
       return [
-        { ...model, isLoading: true, error: null },
+        { ...model, docRef: msg.docRef, isLoading: true, error: null },
         renderMarkdown(
           msg.docRef.location_id,
           msg.docRef.rel_path,
@@ -90,7 +88,26 @@ export function usePreview(): UsePreviewReturn {
     setModel((prevModel) => {
       const [newModel, cmd] = updatePreview(prevModel, msg);
       if (cmd.type !== "None") {
-        runCmd(cmd);
+        if (cmd.type === "Invoke") {
+          const wrappedCmd: Cmd = {
+            ...cmd,
+            onOk: (value) => {
+              const nextMsg = cmd.onOk(value);
+              if (isPreviewMsg(nextMsg)) {
+                dispatch(nextMsg);
+              }
+            },
+            onErr: (error) => {
+              const nextMsg = cmd.onErr(error);
+              if (isPreviewMsg(nextMsg)) {
+                dispatch(nextMsg);
+              }
+            },
+          };
+          runCmd(wrappedCmd);
+        } else {
+          runCmd(cmd);
+        }
       }
       return newModel;
     });
