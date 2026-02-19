@@ -22,7 +22,7 @@ type FocusModePanelProps = {
 const FocusHeader = ({ onExit }: { onExit: () => void }) => (
   <div className="px-6 py-4 flex items-center justify-between">
     <h1 className="m-0 text-sm font-medium text-text-secondary flex items-center gap-2">
-      <FocusIcon size={16} />
+      <FocusIcon size="md" />
       Focus Mode
     </h1>
     <button

@@ -3,7 +3,7 @@ import type { AppError, Cmd, SaveResult } from "../ports";
 import { docOpen, docSave, none, runCmd } from "../ports";
 import type { DocContent, DocRef, SaveStatus } from "../types";
 
-export interface EditorModel {
+export type EditorModel = {
   docRef: DocRef | null;
   text: string;
   saveStatus: SaveStatus;
@@ -13,7 +13,7 @@ export interface EditorModel {
   selectionTo: number | null;
   isLoading: boolean;
   error: AppError | null;
-}
+};
 
 export const initialEditorModel: EditorModel = {
   docRef: null,
@@ -37,6 +37,10 @@ export type EditorMsg =
   | { type: "DocOpenFinished"; success: boolean; error?: AppError }
   | { type: "CursorMoved"; line: number; column: number }
   | { type: "SelectionChanged"; from: number; to: number | null };
+
+function isEditorMsg(value: unknown): value is EditorMsg {
+  return typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
+}
 
 export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, Cmd] {
   switch (msg.type) {
@@ -126,7 +130,26 @@ export function useEditor(): UseEditorReturn {
     setModel((prevModel) => {
       const [newModel, cmd] = updateEditor(prevModel, msg);
       if (cmd.type !== "None") {
-        runCmd(cmd);
+        if (cmd.type === "Invoke") {
+          const wrappedCmd: Cmd = {
+            ...cmd,
+            onOk: (value) => {
+              const nextMsg = cmd.onOk(value);
+              if (isEditorMsg(nextMsg)) {
+                dispatch(nextMsg);
+              }
+            },
+            onErr: (error) => {
+              const nextMsg = cmd.onErr(error);
+              if (isEditorMsg(nextMsg)) {
+                dispatch(nextMsg);
+              }
+            },
+          };
+          runCmd(wrappedCmd);
+        } else {
+          runCmd(cmd);
+        }
       }
       return newModel;
     });

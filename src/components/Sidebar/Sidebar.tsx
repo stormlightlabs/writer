@@ -83,7 +83,7 @@ export function Sidebar(
         <button
           className="w-8 h-8 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded"
           title="Library">
-          <LibraryIcon size={20} />
+          <LibraryIcon size="lg" />
         </button>
       </aside>
     );

@@ -16,6 +16,13 @@ import type { DocMeta, DocRef, Tab } from "./types";
 import "./App.css";
 
 // TODO: make this recursive
+function formatDraftDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}_${month}_${day}`;
+}
+
 function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]): string {
   const usedPaths = new Set<string>();
 
@@ -31,9 +38,10 @@ function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]
     }
   }
 
-  let suffix = 1;
+  const base = `untitled_${formatDraftDate(new Date())}`;
+  let suffix = 0;
   while (true) {
-    const fileName = suffix === 1 ? "Untitled.md" : `Untitled ${suffix}.md`;
+    const fileName = suffix === 0 ? `${base}.md` : `${base}_${suffix}.md`;
     if (!usedPaths.has(fileName.toLowerCase())) {
       return fileName;
     }

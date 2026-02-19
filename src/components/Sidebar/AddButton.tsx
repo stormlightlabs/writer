@@ -14,6 +14,6 @@ export const AddButton = (
     onMouseEnter={handleMouseEnter}
     onMouseLeave={handleMouseLeave}
     title="Add Location">
-    <PlusIcon size={16} />
+    <PlusIcon size="md" />
   </button>
 );

@@ -17,7 +17,7 @@ export function RemoveButton(
           className="w-full px-3 py-2 flex items-center gap-2 bg-transparent border-none text-support-error text-[0.8125rem] cursor-pointer text-left rounded"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}>
-          <TrashIcon size={14} />
+          <TrashIcon size="sm" />
           Remove
         </button>
       </div>

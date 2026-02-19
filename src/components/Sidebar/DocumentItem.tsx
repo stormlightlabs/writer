@@ -12,7 +12,7 @@ export function DocumentItem(
     id: number;
   },
 ) {
-  const fileTextIcon = useMemo(() => ({ Component: FileTextIcon, size: 14 }), []);
+  const fileTextIcon = useMemo(() => ({ Component: FileTextIcon, size: "sm" as const }), []);
   const handleClick = useCallback(() => onSelectDocument(id, doc.rel_path), [id, onSelectDocument]);
   return (
     <TreeItem

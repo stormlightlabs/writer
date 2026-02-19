@@ -64,14 +64,14 @@ export function SidebarLocationItem(
     onToggle(location.id);
   }, [location.id, onToggle]);
 
-  const folderIcon = useMemo(() => ({ Component: FolderIcon, size: 16 }), []);
+  const folderIcon = useMemo(() => ({ Component: FolderIcon, size: "md" as const }), []);
 
   const LocationActions = useCallback(() => (
     <div className="relative">
       <button
         onClick={handleMenuClick}
         className="location-actions-btn w-5 h-5 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-        <MoreVerticalIcon size={14} />
+        <MoreVerticalIcon size="sm" />
       </button>
       <RemoveButton
         isMenuOpen={isMenuOpen}

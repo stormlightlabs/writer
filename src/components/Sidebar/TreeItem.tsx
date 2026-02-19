@@ -1,9 +1,9 @@
 import type { CSSProperties, MouseEventHandler } from "react";
 import { useCallback, useMemo } from "react";
-import { ChevronRightIcon } from "../icons";
+import { ChevronRightIcon, IconProps, type IconSize } from "../icons";
 
 type TreeItemProps = {
-  icon: { Component: (props: { size: number }) => React.ReactNode; size: number };
+  icon: { Component: (props: IconProps) => React.ReactNode; size: IconSize };
   label: string;
   isSelected?: boolean;
   isExpanded?: boolean;
@@ -86,7 +86,7 @@ export function TreeItem(
             onClick={handleButtonClick}
             className="bg-transparent border-none p-0.5 cursor-pointer text-icon-secondary flex items-center justify-center rounded transition-transform duration-150"
             style={buttonStyle}>
-            <ChevronRightIcon size={12} />
+            <ChevronRightIcon size="xs" />
           </button>
         )
         : <span className="w-5" />}

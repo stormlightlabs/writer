@@ -63,7 +63,7 @@ function HighlightedSnippet({ text, matches }: { text: string; matches: Array<{ 
 function HighlightLabel({ hit }: { hit: SearchHit }) {
   return (
     <div className="flex items-center gap-2 mb-1">
-      <FileTextIcon size={14} className="text-icon-secondary" />
+      <FileTextIcon size="sm" className="text-icon-secondary" />
       <span className="text-sm font-medium text-text-primary">{hit.title}</span>
       <span className="text-text-placeholder text-xs" />
       <span className="text-xs text-text-secondary">Line {hit.line}</span>
@@ -119,14 +119,14 @@ function Results({ isSearching, results, query, onSelectResult }: ResultsProps) 
         {query
           ? (
             <>
-              <SearchIcon size={48} className="mb-4 opacity-30" />
+              <SearchIcon size="2xl" className="mb-4 opacity-30" />
               <p className="m-0 text-sm">No results found</p>
               <p className="mt-2 text-[0.8125rem] opacity-70">Try adjusting your search or filters</p>
             </>
           )
           : (
             <>
-              <SearchIcon size={48} className="mb-4 opacity-30" />
+              <SearchIcon size="2xl" className="mb-4 opacity-30" />
               <p className="m-0 text-sm">Start typing to search</p>
               <p className="mt-2 text-[0.8125rem] opacity-70">Search across all your documents</p>
             </>
@@ -153,7 +153,7 @@ type SearchInputProps = {
 const SearchInput = ({ query, handleQueryChange, clearQuery }: SearchInputProps) => (
   <div className="flex-1 relative">
     <SearchIcon
-      size={18}
+      size="xl"
       className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-secondary pointer-events-none" />
     <input
       type="text"
@@ -166,7 +166,7 @@ const SearchInput = ({ query, handleQueryChange, clearQuery }: SearchInputProps)
       <button
         onClick={clearQuery}
         className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
-        <XIcon size={14} />
+        <XIcon size="sm" />
       </button>
     )}
   </div>
@@ -200,7 +200,7 @@ function FilterLocation({ location, filters, handleToggleLocation }: FilterLocat
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => (
   <button onClick={onClose} className="p-2.5 bg-transparent border-none text-icon-secondary cursor-pointer rounded-md">
-    <XIcon size={18} />
+    <XIcon size="xl" />
   </button>
 );
 

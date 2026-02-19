@@ -8,7 +8,7 @@ const AppTitle = ({ onToggleSidebar }: Pick<AppHeaderBarProps, "onToggleSidebar"
       onClick={onToggleSidebar}
       className="w-8 h-8 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded"
       title="Toggle sidebar (Ctrl+B)">
-      <LibraryIcon size={18} />
+      <LibraryIcon size="lg" />
     </button>
     <h1 className="m-0 text-[0.9375rem] font-semibold text-text-primary">Writer</h1>
   </div>
@@ -19,7 +19,7 @@ const SearchRow = ({ onOpenSearch, onToggleTopBars }: Pick<AppHeaderBarProps, "o
     <button
       onClick={onOpenSearch}
       className="flex items-center gap-1.5 px-3 py-1.5 bg-field-01 border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer">
-      <SearchIcon size={14} />
+      <SearchIcon size="sm" />
       Search
       <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Ctrl+Shift+F</kbd>
     </button>
@@ -28,7 +28,7 @@ const SearchRow = ({ onOpenSearch, onToggleTopBars }: Pick<AppHeaderBarProps, "o
       onClick={onToggleTopBars}
       className="flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer"
       title="Hide top bars (Ctrl+Shift+B)">
-      <ChevronDownIcon size={14} />
+      <ChevronDownIcon size="sm" />
       Hide Bars
     </button>
   </div>

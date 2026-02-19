@@ -8,7 +8,7 @@ export const SearchInput = (
 ) => (
   <div className="px-4 py-3 border-b border-border-subtle">
     <div className="relative flex items-center">
-      <SearchIcon size={14} className="filter-search-icon absolute left-2.5 text-icon-secondary pointer-events-none" />
+      <SearchIcon size="sm" className="filter-search-icon absolute left-2.5 text-icon-secondary pointer-events-none" />
       <input
         type="text"
         placeholder="Filter documents..."

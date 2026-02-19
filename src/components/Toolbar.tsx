@@ -1,7 +1,18 @@
 import type { MouseEventHandler } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { SaveStatus } from "../types";
-import { CheckIcon, EyeIcon, FocusIcon, RefreshIcon, SaveIcon, SettingsIcon, SplitViewIcon } from "./icons";
+import {
+  CheckIcon,
+  EyeIcon,
+  FocusIcon,
+  IconProps,
+  type IconSize,
+  RefreshIcon,
+  SaveIcon,
+  SettingsIcon,
+  SplitViewIcon,
+} from "./icons";
+import { Tooltip } from "./Tooltip";
 
 export type ToolbarProps = {
   saveStatus: SaveStatus;
@@ -18,7 +29,7 @@ export type ToolbarProps = {
 
 function ToolbarButton(
   { icon, label, isActive = false, onClick, disabled = false, shortcut }: {
-    icon: { Component: React.ComponentType<{ size: number }>; size: number };
+    icon: { Component: React.ComponentType<IconProps>; size: IconSize };
     label: string;
     isActive?: boolean;
     onClick: () => void;
@@ -27,6 +38,7 @@ function ToolbarButton(
   },
 ) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const handleMouseEnter = useCallback(() => {
     setShowTooltip(true);
@@ -49,39 +61,35 @@ function ToolbarButton(
   }, []);
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[0.8125rem] relative transition-all duration-150 ease rounded ${
-        isActive
-          ? "bg-layer-accent-01 border border-border-strong text-text-primary"
-          : "bg-transparent border border-transparent text-text-secondary"
-      } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}>
-      <span className="flex items-center">
+    <>
+      <button
+        ref={buttonRef}
+        onClick={onClick}
+        disabled={disabled}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[0.8125rem] relative transition-all duration-150 ease rounded ${
+          isActive
+            ? "bg-layer-accent-01 border border-border-strong text-text-primary"
+            : "bg-transparent border border-transparent text-text-secondary"
+        } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+        onMouseOver={handleMouseOver}
+        onMouseOut={handleMouseOut}>
         <icon.Component size={icon.size} />
-      </span>
-      <span>{label}</span>
-
-      {showTooltip && shortcut && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-layer-02 border border-border-subtle rounded text-xs text-text-secondary whitespace-nowrap z-1100 shadow-lg">
-          {shortcut}
-        </div>
-      )}
-    </button>
+        <span>{label}</span>
+      </button>
+      {shortcut ? <Tooltip anchorRef={buttonRef} visible={showTooltip}>{shortcut}</Tooltip> : null}
+    </>
   );
 }
 
 const getStatusDisplay = (status: SaveStatus) => {
   switch (status) {
     case "Saving": {
-      return { icon: <SaveIcon size={14} />, text: "Saving...", color: "text-accent-cyan" };
+      return { icon: <SaveIcon size="sm" />, text: "Saving...", color: "text-accent-cyan" };
     }
     case "Saved": {
-      return { icon: <CheckIcon size={14} />, text: "Saved", color: "text-accent-green" };
+      return { icon: <CheckIcon size="sm" />, text: "Saved", color: "text-accent-green" };
     }
     case "Dirty": {
       return { icon: null, text: "Unsaved", color: "text-accent-yellow" };
@@ -121,14 +129,14 @@ export function Toolbar(
     onRefresh,
   }: ToolbarProps,
 ) {
-  const icons = useMemo(
+  const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
-      save: { Component: SaveIcon, size: 14 },
-      refresh: { Component: RefreshIcon, size: 14 },
-      splitView: { Component: SplitViewIcon, size: 14 },
-      eye: { Component: EyeIcon, size: 14 },
-      focus: { Component: FocusIcon, size: 14 },
-      settings: { Component: SettingsIcon, size: 14 },
+      save: { Component: SaveIcon, size: "sm" },
+      refresh: { Component: RefreshIcon, size: "sm" },
+      splitView: { Component: SplitViewIcon, size: "sm" },
+      eye: { Component: EyeIcon, size: "sm" },
+      focus: { Component: FocusIcon, size: "sm" },
+      settings: { Component: SettingsIcon, size: "sm" },
     }),
     [],
   );
