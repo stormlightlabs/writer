@@ -13,12 +13,11 @@ export type WorkspaceLayoutProps = {
   isPreviewVisible: boolean;
 };
 
-export type WorkspaceEditorProps = Pick<
-  EditorProps,
-  "initialText" | "theme" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange"
->;
+type K = "initialText" | "theme" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
+export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
-export type WorkspacePreviewProps = Pick<PreviewProps, "renderResult" | "theme" | "editorLine" | "onScrollToLine">;
+type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
+export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
 export type WorkspacePanelProps = {
   layout: WorkspaceLayoutProps;
@@ -62,7 +61,7 @@ export function WorkspacePanel({ layout, sidebar, toolbar, tabs, editor, preview
   const mainCls = useMemo(() => `flex flex-col min-w-0 ${showPreview ? "flex-1 w-1/2" : "w-full"}`, [showPreview]);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-1 overflow-x-hidden overflow-y-visible">
       {layout.sidebarCollapsed ? null : <Sidebar {...sidebar} />}
 
       <div className="flex-1 flex flex-col min-w-0">

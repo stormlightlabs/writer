@@ -1,7 +1,3 @@
-/**
- * Tests for useEditor hook
- */
-
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initialEditorModel, updateEditor, useEditor } from "../hooks/useEditor";
@@ -134,6 +130,21 @@ describe(useEditor, () => {
         result.current.dispatch({ type: "SaveRequested" });
       });
 
+      expect(result.current.model.saveStatus).toBe("Saving");
+    });
+
+    it("should save after a draft doc is initialized", () => {
+      const { result } = renderHook(() => useEditor());
+
+      act(() => {
+        result.current.dispatch({ type: "DraftDocInitialized", docRef: { location_id: 3, rel_path: "Untitled.md" } });
+      });
+
+      act(() => {
+        result.current.dispatch({ type: "SaveRequested" });
+      });
+
+      expect(result.current.model.docRef).toStrictEqual({ location_id: 3, rel_path: "Untitled.md" });
       expect(result.current.model.saveStatus).toBe("Saving");
     });
   });
@@ -320,5 +331,18 @@ describe(updateEditor, () => {
 
     expect(newModel.saveStatus).toBe("Saving");
     expect(cmd.type).toBe("Invoke");
+  });
+
+  it("should initialize a draft doc reference", () => {
+    const model = { ...initialEditorModel, text: "Draft content" };
+
+    const [newModel, cmd] = updateEditor(model, {
+      type: "DraftDocInitialized",
+      docRef: { location_id: 2, rel_path: "Untitled.md" },
+    });
+
+    expect(newModel.docRef).toStrictEqual({ location_id: 2, rel_path: "Untitled.md" });
+    expect(newModel.saveStatus).toBe("Dirty");
+    expect(cmd.type).toBe("None");
   });
 });

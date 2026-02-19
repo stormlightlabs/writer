@@ -1,12 +1,3 @@
-/**
- * Core types for the Elm-style architecture
- *
- * This module defines the foundation of our ports system:
- * - Commands (Cmd): Effects that the runtime executes
- * - Subscriptions (Sub): Event sources that feed messages back into the system
- * - Messages (Msg): Events that flow through the update loop
- */
-
 import type { InvokeArgs } from "@tauri-apps/api/core";
 import { invoke } from "@tauri-apps/api/core";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
@@ -345,11 +336,11 @@ export type EditorMsg =
   | { type: "SelectionChanged"; from: number; to: number | null };
 
 export function docList(
-  location_id: LocationId,
+  locationId: LocationId,
   onOk: (docs: DocMeta[]) => void,
   onErr: (error: AppError) => void,
 ): Cmd {
-  return invokeCmd<DocMeta[]>("doc_list", { location_id }, onOk, onErr);
+  return invokeCmd<DocMeta[]>("doc_list", { locationId }, onOk, onErr);
 }
 
 export function docOpen(

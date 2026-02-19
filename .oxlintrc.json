@@ -11,7 +11,8 @@
     "eslint-plugin-react/jsx-max-depth": "warn",
     "require-await": "warn",
     "unicorn/prefer-global-this": "warn",
-    "init-declarations": "off"
+    "init-declarations": "off",
+    "no-warning-comments": "off"
   },
   "settings": {
     "jsx-a11y": { "polymorphicPropName": null, "components": {}, "attributes": {} },

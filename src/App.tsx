@@ -12,7 +12,36 @@ import { useSearchController } from "./hooks/useSearchController";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
 import { useLayoutActions, useLayoutState } from "./state/appStore";
+import type { DocMeta, DocRef, Tab } from "./types";
 import "./App.css";
+
+// TODO: make this recursive
+function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]): string {
+  const usedPaths = new Set<string>();
+
+  for (const doc of documents) {
+    if (doc.location_id === locationId) {
+      usedPaths.add(doc.rel_path.toLowerCase());
+    }
+  }
+
+  for (const tab of tabs) {
+    if (tab.docRef.location_id === locationId) {
+      usedPaths.add(tab.docRef.rel_path.toLowerCase());
+    }
+  }
+
+  let suffix = 1;
+  while (true) {
+    const fileName = suffix === 1 ? "Untitled.md" : `Untitled ${suffix}.md`;
+    if (!usedPaths.has(fileName.toLowerCase())) {
+      return fileName;
+    }
+    suffix += 1;
+  }
+}
+
+const getDraftTitle = (relPath: string): string => relPath.split("/").pop() || "Untitled";
 
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
@@ -79,8 +108,28 @@ function App() {
   );
 
   const handleSave = useCallback(() => {
+    if (!editorModel.docRef) {
+      if (!workspace.selectedLocationId) {
+        console.warn("Cannot save draft without a selected location.");
+        return;
+      }
+
+      const relPath = buildDraftRelPath(workspace.selectedLocationId, workspace.documents, workspace.tabs);
+      const draftRef: DocRef = { location_id: workspace.selectedLocationId, rel_path: relPath };
+
+      workspace.handleCreateDraftTab(draftRef, getDraftTitle(relPath));
+      editorDispatch({ type: "DraftDocInitialized", docRef: draftRef });
+    }
+
     editorDispatch({ type: "SaveRequested" });
-  }, [editorDispatch]);
+  }, [
+    editorDispatch,
+    editorModel.docRef,
+    workspace.documents,
+    workspace.handleCreateDraftTab,
+    workspace.selectedLocationId,
+    workspace.tabs,
+  ]);
 
   const handleEditorChange = useCallback((text: string) => {
     editorDispatch({ type: "EditorChanged", text });

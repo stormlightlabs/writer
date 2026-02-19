@@ -1,7 +1,3 @@
-/**
- * Tests for ports.ts - Core Elm-style architecture
- */
-
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,6 +6,9 @@ import {
   batch,
   type BatchCmd,
   type Cmd,
+  docList,
+  docOpen,
+  docSave,
   err,
   type InvokeCmd,
   invokeCmd,
@@ -22,6 +21,7 @@ import {
   none,
   noSub,
   ok,
+  renderMarkdown,
   runCmd,
   startWatch,
   type StartWatchCmd,
@@ -318,10 +318,7 @@ describe(runCmd, () => {
       const cmd = invokeCmd<unknown>("test", {}, onOk, onErr);
       await runCmd(cmd);
 
-      expect(onErr).toHaveBeenCalledWith({
-        code: "PERMISSION_DENIED",
-        message: "Denied",
-      });
+      expect(onErr).toHaveBeenCalledWith({ code: "PERMISSION_DENIED", message: "Denied" });
       expect(onOk).not.toHaveBeenCalled();
     });
 
@@ -544,6 +541,61 @@ describe("location Commands", () => {
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("location_validate");
       expect(cmd.payload).toStrictEqual({});
+    });
+  });
+});
+
+describe("document Commands", () => {
+  describe(docList, () => {
+    it("should create command with camelCase locationId payload key", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = docList(7, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("doc_list");
+      expect(cmd.payload).toStrictEqual({ locationId: 7 });
+    });
+  });
+
+  describe(docOpen, () => {
+    it("should create command with expected payload keys", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = docOpen(11, "notes/today.md", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("doc_open");
+      expect(cmd.payload).toStrictEqual({ locationId: 11, relPath: "notes/today.md" });
+    });
+  });
+
+  describe(docSave, () => {
+    it("should create command with expected payload keys", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = docSave(11, "notes/today.md", "# Draft", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("doc_save");
+      expect(cmd.payload).toStrictEqual({ locationId: 11, relPath: "notes/today.md", text: "# Draft" });
+    });
+  });
+
+  describe(renderMarkdown, () => {
+    it("should create command with expected payload keys", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = renderMarkdown(11, "notes/today.md", "# Draft", "GfmSafe", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("markdown_render");
+      expect(cmd.payload).toStrictEqual({
+        locationId: 11,
+        relPath: "notes/today.md",
+        text: "# Draft",
+        profile: "GfmSafe",
+      });
     });
   });
 });

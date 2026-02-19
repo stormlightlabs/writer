@@ -67,7 +67,7 @@ function ToolbarButton(
       <span>{label}</span>
 
       {showTooltip && shortcut && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-layer-02 border border-border-subtle rounded text-xs text-text-secondary whitespace-nowrap z-100 shadow-lg">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-layer-02 border border-border-subtle rounded text-xs text-text-secondary whitespace-nowrap z-1100 shadow-lg">
           {shortcut}
         </div>
       )}

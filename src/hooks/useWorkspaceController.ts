@@ -3,9 +3,7 @@ import { locationAddViaDialog, locationRemove, runCmd } from "../ports";
 import { useAppStore, useTabsActions, useTabsState, useWorkspaceActions, useWorkspaceState } from "../state/appStore";
 import type { DocRef, Tab } from "../types";
 
-export type OpenDocument = (docRef: DocRef) => void;
-
-export function useWorkspaceController(openDoc: OpenDocument) {
+export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
   const {
     locations,
     selectedLocationId,
@@ -79,6 +77,10 @@ export function useWorkspaceController(openDoc: OpenDocument) {
     reorderTabs(newTabs);
   }, [reorderTabs]);
 
+  const handleCreateDraftTab = useCallback((docRef: DocRef, title: string) => {
+    openDocumentTab(docRef, title);
+  }, [openDocumentTab]);
+
   return {
     locations,
     documents,
@@ -98,5 +100,6 @@ export function useWorkspaceController(openDoc: OpenDocument) {
     handleSelectTab,
     handleCloseTab,
     handleReorderTabs,
+    handleCreateDraftTab,
   };
 }

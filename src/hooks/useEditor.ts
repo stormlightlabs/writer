@@ -1,14 +1,3 @@
-/**
- * UseEditor hook
- *
- * Provides Elm-style state management for the Editor component.
- *
- * Features:
- * - Manages editor state (text, save status, cursor position)
- * - Handles debounced save requests
- * - Integrates with the ports system for backend communication
- */
-
 import { useCallback, useState } from "react";
 import type { AppError, Cmd, SaveResult } from "../ports";
 import { docOpen, docSave, none, runCmd } from "../ports";
@@ -42,6 +31,7 @@ export type EditorMsg =
   | { type: "EditorChanged"; text: string }
   | { type: "SaveRequested" }
   | { type: "SaveFinished"; success: boolean; result?: SaveResult; error?: AppError }
+  | { type: "DraftDocInitialized"; docRef: DocRef }
   | { type: "DocOpened"; doc: DocContent }
   | { type: "OpenDocRequested"; docRef: DocRef }
   | { type: "DocOpenFinished"; success: boolean; error?: AppError }
@@ -75,6 +65,10 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
 
     case "SaveFinished": {
       return [{ ...model, saveStatus: msg.success ? "Saved" : "Error", error: msg.error ?? null }, none];
+    }
+
+    case "DraftDocInitialized": {
+      return [{ ...model, docRef: msg.docRef, saveStatus: "Dirty", error: null }, none];
     }
 
     case "OpenDocRequested": {
@@ -125,9 +119,6 @@ export interface UseEditorReturn {
   saveDoc: () => void;
 }
 
-/**
- * Hook for managing editor state with Elm-style architecture.
- */
 export function useEditor(): UseEditorReturn {
   const [model, setModel] = useState<EditorModel>(initialEditorModel);
 
