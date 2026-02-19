@@ -9,11 +9,12 @@ import { Toolbar, type ToolbarProps } from "../Toolbar";
 export type WorkspaceLayoutProps = {
   sidebarCollapsed: boolean;
   topBarsCollapsed: boolean;
+  statusBarCollapsed: boolean;
   isSplitView: boolean;
   isPreviewVisible: boolean;
 };
 
-type K = "initialText" | "theme" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
+type K = "initialText" | "theme" | "showLineNumbers" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
 type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
@@ -67,7 +68,7 @@ export function WorkspacePanel({ layout, sidebar, toolbar, tabs, editor, preview
       <div className="flex-1 flex flex-col min-w-0">
         {layout.topBarsCollapsed ? null : <TopBar toolbar={toolbar} tabs={tabs} />}
         <MainPanel showPreview={showPreview} editor={editor} preview={preview} mainCls={mainCls} />
-        <StatusBar {...statusBar} />
+        {layout.statusBarCollapsed ? null : <StatusBar {...statusBar} />}
       </div>
     </div>
   );

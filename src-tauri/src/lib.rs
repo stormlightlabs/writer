@@ -3,7 +3,7 @@ use tauri::Manager;
 mod commands;
 use commands::{
     doc_exists, doc_list, doc_open, doc_save, location_add_via_dialog, location_list, location_remove,
-    location_validate, markdown_render,
+    location_validate, markdown_render, ui_layout_get, ui_layout_set,
 };
 
 pub use commands::AppState;
@@ -50,7 +50,9 @@ pub fn run() {
             doc_open,
             doc_save,
             doc_exists,
-            markdown_render
+            markdown_render,
+            ui_layout_get,
+            ui_layout_set
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,7 +8,7 @@ use writer_core::{
     SaveResult,
 };
 use writer_md::{MarkdownEngine, MarkdownProfile, RenderResult};
-use writer_store::Store;
+use writer_store::{Store, UiLayoutSettings};
 
 /// Application state shared across commands
 pub struct AppState {
@@ -128,6 +128,32 @@ pub fn location_validate(state: State<'_, AppState>) -> Result<CommandResult<Vec
         }
         Err(e) => {
             tracing::error!("Failed to validate locations: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn ui_layout_get(state: State<'_, AppState>) -> Result<CommandResult<UiLayoutSettings>, ()> {
+    tracing::debug!("Loading persisted UI layout settings");
+
+    match state.store.ui_layout_get() {
+        Ok(settings) => Ok(CommandResult::ok(settings)),
+        Err(e) => {
+            tracing::error!("Failed to load UI layout settings: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Persisting UI layout settings");
+
+    match state.store.ui_layout_set(&settings) {
+        Ok(()) => Ok(CommandResult::ok(true)),
+        Err(e) => {
+            tracing::error!("Failed to persist UI layout settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }

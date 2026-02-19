@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -13,6 +14,32 @@ use writer_core::{
 pub struct Store {
     conn: Arc<Mutex<Connection>>,
 }
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UiLayoutSettings {
+    pub sidebar_collapsed: bool,
+    pub top_bars_collapsed: bool,
+    pub status_bar_collapsed: bool,
+    #[serde(default = "default_true")]
+    pub line_numbers_visible: bool,
+}
+
+impl Default for UiLayoutSettings {
+    fn default() -> Self {
+        Self {
+            sidebar_collapsed: false,
+            top_bars_collapsed: false,
+            status_bar_collapsed: false,
+            line_numbers_visible: true,
+        }
+    }
+}
+
+const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 
 impl Store {
     /// Opens or creates the store at the given path
@@ -99,7 +126,70 @@ impl Store {
         )
         .map_err(|e| AppError::io(format!("Failed to create conflict index: {}", e)))?;
 
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| AppError::io(format!("Failed to create app_settings table: {}", e)))?;
+
         tracing::debug!("Database schema initialized");
+        Ok(())
+    }
+
+    pub fn ui_layout_get(&self) -> Result<UiLayoutSettings, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let maybe_value = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?1",
+                params![UI_LAYOUT_SETTINGS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| AppError::io(format!("Failed to query UI layout settings: {}", e)))?;
+
+        match maybe_value {
+            Some(value) => serde_json::from_str::<UiLayoutSettings>(&value).map_err(|e| {
+                AppError::new(
+                    ErrorCode::Parse,
+                    format!("Failed to parse persisted UI layout settings: {}", e),
+                )
+            }),
+            None => Ok(UiLayoutSettings::default()),
+        }
+    }
+
+    pub fn ui_layout_set(&self, settings: &UiLayoutSettings) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let settings_json = serde_json::to_string(settings).map_err(|e| {
+            AppError::new(
+                ErrorCode::Parse,
+                format!("Failed to serialize UI layout settings: {}", e),
+            )
+        })?;
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET
+             value = excluded.value,
+             updated_at = excluded.updated_at",
+            params![UI_LAYOUT_SETTINGS_KEY, settings_json, updated_at],
+        )
+        .map_err(|e| AppError::io(format!("Failed to persist UI layout settings: {}", e)))?;
+
         Ok(())
     }
 
@@ -981,5 +1071,52 @@ mod tests {
         let path = Path::new("my_document.md");
         let title = extract_title(text, path);
         assert_eq!(title, Some("my_document".to_string()));
+    }
+
+    #[test]
+    fn test_ui_layout_settings_defaults() {
+        let (store, _temp) = create_test_store();
+        let settings = store.ui_layout_get().unwrap();
+
+        assert_eq!(settings, UiLayoutSettings::default());
+    }
+
+    #[test]
+    fn test_ui_layout_settings_round_trip() {
+        let (store, _temp) = create_test_store();
+        let settings = UiLayoutSettings {
+            sidebar_collapsed: true,
+            top_bars_collapsed: false,
+            status_bar_collapsed: true,
+            line_numbers_visible: false,
+        };
+
+        store.ui_layout_set(&settings).unwrap();
+        let loaded = store.ui_layout_get().unwrap();
+
+        assert_eq!(loaded, settings);
+    }
+
+    #[test]
+    fn test_ui_layout_settings_backfills_line_numbers_visibility() {
+        let (store, _temp) = create_test_store();
+        let conn = store
+            .conn
+            .lock()
+            .expect("expected to lock database connection for test");
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![
+                UI_LAYOUT_SETTINGS_KEY,
+                "{\"sidebar_collapsed\":true,\"top_bars_collapsed\":false,\"status_bar_collapsed\":false}",
+                Utc::now().to_rfc3339(),
+            ],
+        )
+        .unwrap();
+        drop(conn);
+
+        let loaded = store.ui_layout_get().unwrap();
+        assert!(loaded.line_numbers_visible);
     }
 }

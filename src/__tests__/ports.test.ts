@@ -22,6 +22,8 @@ import {
   startWatch,
   stopWatch,
   SubscriptionManager,
+  uiLayoutGet,
+  uiLayoutSet,
 } from "../ports";
 import type { BatchCmd, Cmd, InvokeCmd, StartWatchCmd, StopWatchCmd } from "../ports";
 import type { AppError, LocationDescriptor } from "../types";
@@ -590,6 +592,43 @@ describe("document Commands", () => {
         relPath: "notes/today.md",
         text: "# Draft",
         profile: "GfmSafe",
+      });
+    });
+  });
+});
+
+describe("ui layout Commands", () => {
+  describe(uiLayoutGet, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = uiLayoutGet(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("ui_layout_get");
+      expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe(uiLayoutSet, () => {
+    it("should create command with settings payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = uiLayoutSet(
+        { sidebar_collapsed: true, top_bars_collapsed: false, status_bar_collapsed: true, line_numbers_visible: false },
+        onOk,
+        onErr,
+      ) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("ui_layout_set");
+      expect(cmd.payload).toStrictEqual({
+        settings: {
+          sidebar_collapsed: true,
+          top_bars_collapsed: false,
+          status_bar_collapsed: true,
+          line_numbers_visible: false,
+        },
       });
     });
   });

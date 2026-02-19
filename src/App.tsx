@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
 import { FocusModePanel } from "./components/layout/FocusModePanel";
+import { LayoutSettingsPanel } from "./components/layout/LayoutSettingsPanel";
 import { SearchOverlay } from "./components/layout/SearchOverlay";
 import { WorkspacePanel } from "./components/layout/WorkspacePanel";
 import { useBackendEvents } from "./hooks/useBackendEvents";
@@ -11,6 +12,7 @@ import { usePreview } from "./hooks/usePreview";
 import { useSearchController } from "./hooks/useSearchController";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
+import { runCmd, uiLayoutGet, uiLayoutSet } from "./ports";
 import { useLayoutActions, useLayoutState } from "./state/appStore";
 import type { DocMeta, DocRef, Tab } from "./types";
 import "./App.css";
@@ -55,6 +57,8 @@ function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const { missingLocations, conflicts } = useBackendEvents();
+  const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
+  const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
 
   useWorkspaceSync();
   useLayoutHotkeys();
@@ -153,12 +157,13 @@ function App() {
   }, [editorDispatch]);
 
   const handleOpenSettings = useCallback(() => {
-    console.log("Open settings");
+    setIsLayoutSettingsOpen((prev) => !prev);
   }, []);
 
   const handleOpenSearch = useCallback(() => layoutActions.setShowSearch(true), [layoutActions]);
   const handleShowSidebar = useCallback(() => layoutActions.setSidebarCollapsed(false), [layoutActions]);
   const handleShowTopBars = useCallback(() => layoutActions.setTopBarsCollapsed(false), [layoutActions]);
+  const handleShowStatusBar = useCallback(() => layoutActions.setStatusBarCollapsed(false), [layoutActions]);
 
   const handleExit = useCallback(() => layoutActions.setFocusMode(false), [layoutActions]);
 
@@ -166,10 +171,17 @@ function App() {
     () => ({
       sidebarCollapsed: layoutState.sidebarCollapsed,
       topBarsCollapsed: layoutState.topBarsCollapsed,
+      statusBarCollapsed: layoutState.statusBarCollapsed,
       isSplitView: layoutState.isSplitView,
       isPreviewVisible: layoutState.isPreviewVisible,
     }),
-    [layoutState.sidebarCollapsed, layoutState.topBarsCollapsed, layoutState.isSplitView, layoutState.isPreviewVisible],
+    [
+      layoutState.sidebarCollapsed,
+      layoutState.topBarsCollapsed,
+      layoutState.statusBarCollapsed,
+      layoutState.isSplitView,
+      layoutState.isPreviewVisible,
+    ],
   );
 
   const sidebarProps = useMemo(
@@ -247,12 +259,21 @@ function App() {
     () => ({
       initialText: editorModel.text,
       theme: layoutState.theme,
+      showLineNumbers: layoutState.lineNumbersVisible,
       onChange: handleEditorChange,
       onSave: handleSave,
       onCursorMove: handleCursorMove,
       onSelectionChange: handleSelectionChange,
     }),
-    [editorModel.text, layoutState.theme, handleEditorChange, handleSave, handleCursorMove, handleSelectionChange],
+    [
+      editorModel.text,
+      layoutState.theme,
+      layoutState.lineNumbersVisible,
+      handleEditorChange,
+      handleSave,
+      handleCursorMove,
+      handleSelectionChange,
+    ],
   );
 
   const statusBarProps = useMemo(
@@ -308,6 +329,74 @@ function App() {
     ],
   );
 
+  const handleSettingsClose = useCallback(() => {
+    setIsLayoutSettingsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    void runCmd(uiLayoutGet((settings) => {
+      if (isCancelled) {
+        return;
+      }
+
+      layoutActions.setSidebarCollapsed(settings.sidebar_collapsed);
+      layoutActions.setTopBarsCollapsed(settings.top_bars_collapsed);
+      layoutActions.setStatusBarCollapsed(settings.status_bar_collapsed);
+      layoutActions.setLineNumbersVisible(settings.line_numbers_visible);
+      setLayoutSettingsHydrated(true);
+    }, () => {
+      if (!isCancelled) {
+        setLayoutSettingsHydrated(true);
+      }
+    }));
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [layoutActions]);
+
+  useEffect(() => {
+    if (!layoutSettingsHydrated) {
+      return;
+    }
+
+    void runCmd(
+      uiLayoutSet(
+        {
+          sidebar_collapsed: layoutState.sidebarCollapsed,
+          top_bars_collapsed: layoutState.topBarsCollapsed,
+          status_bar_collapsed: layoutState.statusBarCollapsed,
+          line_numbers_visible: layoutState.lineNumbersVisible,
+        },
+        () => {},
+        () => {},
+      ),
+    );
+  }, [
+    layoutSettingsHydrated,
+    layoutState.sidebarCollapsed,
+    layoutState.topBarsCollapsed,
+    layoutState.statusBarCollapsed,
+    layoutState.lineNumbersVisible,
+  ]);
+
+  useEffect(() => {
+    if (!isLayoutSettingsOpen) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsLayoutSettingsOpen(false);
+      }
+    };
+
+    globalThis.addEventListener("keydown", closeOnEscape);
+    return () => globalThis.removeEventListener("keydown", closeOnEscape);
+  }, [isLayoutSettingsOpen]);
+
   if (layoutState.isFocusMode) {
     return (
       <FocusModePanel
@@ -319,6 +408,8 @@ function App() {
         wordCount={wordCount}
         charCount={charCount}
         selectionCount={selectionCount}
+        lineNumbersVisible={layoutState.lineNumbersVisible}
+        statusBarCollapsed={layoutState.statusBarCollapsed}
         onExit={handleExit}
         onEditorChange={handleEditorChange}
         onSave={handleSave}
@@ -331,7 +422,7 @@ function App() {
     <div
       data-theme={layoutState.theme}
       className="relative h-screen flex flex-col bg-bg-primary text-text-primary font-sans">
-      {(layoutState.sidebarCollapsed || layoutState.topBarsCollapsed) && (
+      {(layoutState.sidebarCollapsed || layoutState.topBarsCollapsed || layoutState.statusBarCollapsed) && (
         <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
           {layoutState.sidebarCollapsed && (
             <button
@@ -347,6 +438,14 @@ function App() {
               className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
               title="Show top bars (Ctrl+Shift+B)">
               Show Top Bars
+            </button>
+          )}
+          {layoutState.statusBarCollapsed && (
+            <button
+              onClick={handleShowStatusBar}
+              className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
+              title="Show status bar">
+              Show Status Bar
             </button>
           )}
         </div>
@@ -369,6 +468,17 @@ function App() {
         editor={editorProps}
         preview={previewProps}
         statusBar={statusBarProps} />
+      <LayoutSettingsPanel
+        isVisible={isLayoutSettingsOpen}
+        sidebarCollapsed={layoutState.sidebarCollapsed}
+        topBarsCollapsed={layoutState.topBarsCollapsed}
+        statusBarCollapsed={layoutState.statusBarCollapsed}
+        lineNumbersVisible={layoutState.lineNumbersVisible}
+        onSetSidebarCollapsed={layoutActions.setSidebarCollapsed}
+        onSetTopBarsCollapsed={layoutActions.setTopBarsCollapsed}
+        onSetStatusBarCollapsed={layoutActions.setStatusBarCollapsed}
+        onSetLineNumbersVisible={layoutActions.setLineNumbersVisible}
+        onClose={handleSettingsClose} />
       <SearchOverlay {...searchProps} />
       <BackendAlerts missingLocations={missingLocations} conflicts={conflicts} />
     </div>

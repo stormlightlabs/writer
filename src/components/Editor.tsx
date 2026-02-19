@@ -15,6 +15,7 @@ export type EditorProps = {
   initialText?: string;
   theme?: EditorTheme;
   disabled?: boolean;
+  showLineNumbers?: boolean;
   placeholder?: string;
   debounceMs?: number;
   onChange?: (text: string) => void;
@@ -30,13 +31,14 @@ type CreateEditorStateOptions = {
   doc: string;
   theme: EditorTheme;
   disabled: boolean;
+  showLineNumbers: boolean;
   placeholder?: string;
   updateListener: ReturnType<typeof EditorView.updateListener.of>;
   onSave: () => void;
 };
 
 function createEditorState(
-  { doc, theme, disabled, placeholder, updateListener, onSave }: CreateEditorStateOptions,
+  { doc, theme, disabled, showLineNumbers, placeholder, updateListener, onSave }: CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
 
@@ -52,7 +54,7 @@ function createEditorState(
   return CMEditorState.create({
     doc,
     extensions: [
-      lineNumbers(),
+      ...(showLineNumbers ? [lineNumbers()] : []),
       history(),
       markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true }),
       themeExtension,
@@ -70,6 +72,7 @@ export function Editor(
     initialText = "",
     theme = "dark",
     disabled = false,
+    showLineNumbers = true,
     placeholder,
     debounceMs = 500,
     onChange,
@@ -84,7 +87,8 @@ export function Editor(
   const callbacksRef = useRef<EditorCallbacks>({ onChange, onSave, onCursorMove, onSelectionChange });
   const debounceMsRef = useRef(debounceMs);
   const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const presentationRef = useRef({ theme, disabled, placeholder });
+  const initialTextRef = useRef(initialText);
+  const presentationRef = useRef({ theme, disabled, showLineNumbers, placeholder });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -137,11 +141,13 @@ export function Editor(
       return null;
     }
 
+    const currentPresentation = presentationRef.current;
     const state = createEditorState({
       doc,
-      theme,
-      disabled,
-      placeholder,
+      theme: currentPresentation.theme,
+      disabled: currentPresentation.disabled,
+      showLineNumbers: currentPresentation.showLineNumbers,
+      placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
       onSave: () => callbacksRef.current.onSave?.(),
     });
@@ -153,14 +159,14 @@ export function Editor(
     }
 
     return view;
-  }, [createUpdateListener, disabled, placeholder, theme]);
+  }, [createUpdateListener]);
 
   useEffect(() => {
     if (viewRef.current || !containerRef.current) {
       return;
     }
 
-    const view = createView(initialText);
+    const view = createView(initialTextRef.current);
     if (!view) {
       return;
     }
@@ -177,7 +183,7 @@ export function Editor(
       viewRef.current = null;
       setIsReady(false);
     };
-  }, [createView, initialText]);
+  }, [createView]);
 
   useEffect(() => {
     const previousPresentation = presentationRef.current;
@@ -185,12 +191,13 @@ export function Editor(
     if (
       previousPresentation.theme === theme
       && previousPresentation.disabled === disabled
+      && previousPresentation.showLineNumbers === showLineNumbers
       && previousPresentation.placeholder === placeholder
     ) {
       return;
     }
 
-    presentationRef.current = { theme, disabled, placeholder };
+    presentationRef.current = { theme, disabled, showLineNumbers, placeholder };
 
     const view = viewRef.current;
     if (!view) {
@@ -209,7 +216,7 @@ export function Editor(
     }
 
     viewRef.current = nextView;
-  }, [createView, disabled, placeholder, theme]);
+  }, [createView, disabled, placeholder, showLineNumbers, theme]);
 
   useEffect(() => {
     const view = viewRef.current;

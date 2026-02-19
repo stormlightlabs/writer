@@ -33,6 +33,16 @@ describe(Editor, () => {
       const container = screen.getByTestId("editor-container");
       expect(container).toHaveAttribute("data-ready", "true");
     });
+
+    it("should render line numbers by default", () => {
+      const { container } = render(<Editor />);
+      expect(container.querySelector(".cm-lineNumbers")).toBeInTheDocument();
+    });
+
+    it("should hide line numbers when disabled via prop", () => {
+      const { container } = render(<Editor showLineNumbers={false} />);
+      expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
+    });
   });
 
   describe("initial content", () => {
@@ -127,6 +137,19 @@ describe(Editor, () => {
       });
     });
 
+    it("keeps the editor view instance when only text changes", async () => {
+      const { container, rerender } = render(<Editor initialText="First text" />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+
+      rerender(<Editor initialText="Second text" />);
+
+      await waitFor(() => {
+        expect(container.querySelector(".cm-content")).toHaveTextContent("Second text");
+      });
+
+      expect(container.querySelector(".cm-editor")).toBe(firstEditorRoot);
+    });
+
     it("recreates the editor view when presentation props change", () => {
       const { container, rerender } = render(<Editor initialText="Persistent" theme="dark" />);
       const firstEditorRoot = container.querySelector(".cm-editor");
@@ -137,6 +160,18 @@ describe(Editor, () => {
       expect(screen.getByTestId("editor-container")).toHaveAttribute("data-theme", "light");
       expect(secondEditorRoot).toBeInTheDocument();
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
+    });
+
+    it("recreates the editor view when line number visibility changes", () => {
+      const { container, rerender } = render(<Editor initialText="Persistent" showLineNumbers />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+      rerender(<Editor initialText="Persistent" showLineNumbers={false} />);
+
+      const secondEditorRoot = container.querySelector(".cm-editor");
+      expect(secondEditorRoot).toBeInTheDocument();
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
     });
 

@@ -154,12 +154,16 @@ describe("appStore", () => {
 
     expect(layoutState.current.sidebarCollapsed).toBeFalsy();
     expect(layoutState.current.topBarsCollapsed).toBeFalsy();
+    expect(layoutState.current.statusBarCollapsed).toBeFalsy();
+    expect(layoutState.current.lineNumbersVisible).toBeTruthy();
     expect(layoutState.current.isSplitView).toBeFalsy();
     expect(layoutState.current.isFocusMode).toBeFalsy();
 
     act(() => {
       layoutActions.current.toggleSidebarCollapsed();
       layoutActions.current.toggleTopBarsCollapsed();
+      layoutActions.current.toggleStatusBarCollapsed();
+      layoutActions.current.toggleLineNumbersVisible();
       layoutActions.current.setSplitView(true);
       layoutActions.current.toggleFocusMode();
       layoutActions.current.setPreviewVisible(false);
@@ -168,6 +172,8 @@ describe("appStore", () => {
 
     expect(layoutState.current.sidebarCollapsed).toBeTruthy();
     expect(layoutState.current.topBarsCollapsed).toBeTruthy();
+    expect(layoutState.current.statusBarCollapsed).toBeTruthy();
+    expect(layoutState.current.lineNumbersVisible).toBeFalsy();
     expect(layoutState.current.isSplitView).toBeTruthy();
     expect(layoutState.current.isFocusMode).toBeTruthy();
     expect(layoutState.current.isPreviewVisible).toBeFalsy();

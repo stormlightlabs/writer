@@ -12,6 +12,8 @@ type FocusModePanelProps = {
   wordCount: number;
   charCount: number;
   selectionCount?: number;
+  lineNumbersVisible: boolean;
+  statusBarCollapsed: boolean;
   onExit: () => void;
   onEditorChange: (text: string) => void;
   onSave: () => void;
@@ -43,6 +45,8 @@ export const FocusModePanel = (
     wordCount,
     charCount,
     selectionCount,
+    lineNumbersVisible,
+    statusBarCollapsed,
     onExit,
     onEditorChange,
     onSave,
@@ -57,18 +61,23 @@ export const FocusModePanel = (
       <Editor
         initialText={text}
         theme={theme}
+        showLineNumbers={lineNumbersVisible}
         onChange={onEditorChange}
         onSave={onSave}
         onCursorMove={onCursorMove}
         onSelectionChange={onSelectionChange} />
     </div>
 
-    <StatusBar
-      docMeta={docMeta}
-      cursorLine={cursorLine}
-      cursorColumn={cursorColumn}
-      wordCount={wordCount}
-      charCount={charCount}
-      selectionCount={selectionCount} />
+    {statusBarCollapsed
+      ? null
+      : (
+        <StatusBar
+          docMeta={docMeta}
+          cursorLine={cursorLine}
+          cursorColumn={cursorColumn}
+          wordCount={wordCount}
+          charCount={charCount}
+          selectionCount={selectionCount} />
+      )}
   </div>
 );

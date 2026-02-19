@@ -13,6 +13,8 @@ function generateTabId(): string {
 export type LayoutState = {
   sidebarCollapsed: boolean;
   topBarsCollapsed: boolean;
+  statusBarCollapsed: boolean;
+  lineNumbersVisible: boolean;
   isSplitView: boolean;
   isFocusMode: boolean;
   isPreviewVisible: boolean;
@@ -25,6 +27,10 @@ export type LayoutActions = {
   toggleSidebarCollapsed: () => void;
   setTopBarsCollapsed: (value: boolean) => void;
   toggleTopBarsCollapsed: () => void;
+  setStatusBarCollapsed: (value: boolean) => void;
+  toggleStatusBarCollapsed: () => void;
+  setLineNumbersVisible: (value: boolean) => void;
+  toggleLineNumbersVisible: () => void;
   setSplitView: (value: boolean) => void;
   toggleSplitView: () => void;
   setFocusMode: (value: boolean) => void;
@@ -72,6 +78,8 @@ export type AppStore = LayoutState & LayoutActions & WorkspaceState & WorkspaceA
 const getInitialLayoutState = (): LayoutState => ({
   sidebarCollapsed: false,
   topBarsCollapsed: false,
+  statusBarCollapsed: false,
+  lineNumbersVisible: true,
   isSplitView: false,
   isFocusMode: false,
   isPreviewVisible: true,
@@ -99,6 +107,12 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
 
   setTopBarsCollapsed: (value) => set({ topBarsCollapsed: value }),
   toggleTopBarsCollapsed: () => set((state) => ({ topBarsCollapsed: !state.topBarsCollapsed })),
+
+  setStatusBarCollapsed: (value) => set({ statusBarCollapsed: value }),
+  toggleStatusBarCollapsed: () => set((state) => ({ statusBarCollapsed: !state.statusBarCollapsed })),
+
+  setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
+  toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),
 
   setSplitView: (value) => set({ isSplitView: value }),
   toggleSplitView: () => set((state) => ({ isSplitView: !state.isSplitView })),
@@ -251,6 +265,8 @@ export const useLayoutState = () =>
     useShallow((state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
       topBarsCollapsed: state.topBarsCollapsed,
+      statusBarCollapsed: state.statusBarCollapsed,
+      lineNumbersVisible: state.lineNumbersVisible,
       isSplitView: state.isSplitView,
       isFocusMode: state.isFocusMode,
       isPreviewVisible: state.isPreviewVisible,
@@ -266,6 +282,10 @@ export const useLayoutActions = () =>
       toggleSidebarCollapsed: state.toggleSidebarCollapsed,
       setTopBarsCollapsed: state.setTopBarsCollapsed,
       toggleTopBarsCollapsed: state.toggleTopBarsCollapsed,
+      setStatusBarCollapsed: state.setStatusBarCollapsed,
+      toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
+      setLineNumbersVisible: state.setLineNumbersVisible,
+      toggleLineNumbersVisible: state.toggleLineNumbersVisible,
       setSplitView: state.setSplitView,
       toggleSplitView: state.toggleSplitView,
       setFocusMode: state.setFocusMode,

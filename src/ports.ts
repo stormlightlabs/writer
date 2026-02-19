@@ -36,7 +36,13 @@ export type EditorMsg =
 
 export type SaveResult = { success: boolean; new_meta: DocMeta | null; conflict_detected: boolean };
 
+type K = "sidebar_collapsed" | "top_bars_collapsed" | "status_bar_collapsed" | "line_numbers_visible";
+export type UiLayoutSettings = Record<K, boolean>;
+
 type RenderMarkdownParams<T> = [...LocationPathTextParams, profile: MarkdownProfile | undefined, ...LocParams<T>];
+type UiLayoutSetParams<T> = Parameters<
+  (settings: UiLayoutSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
 
 export type BackendEvent =
   | { type: "LocationMissing"; location_id: LocationId; path: string }
@@ -362,4 +368,12 @@ export function renderMarkdown(
   ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownParams<RenderResult>
 ): Cmd {
   return invokeCmd<RenderResult>("markdown_render", { locationId, relPath, text, profile }, onOk, onErr);
+}
+
+export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd {
+  return invokeCmd<UiLayoutSettings>("ui_layout_get", {}, onOk, onErr);
+}
+
+export function uiLayoutSet(...[settings, onOk, onErr]: UiLayoutSetParams<boolean>): Cmd {
+  return invokeCmd<boolean>("ui_layout_set", { settings }, onOk, onErr);
 }
