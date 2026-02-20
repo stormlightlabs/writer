@@ -11,7 +11,9 @@ const mockListeners = new Map<string, Set<EventHandler>>();
 export function emitBackendEvent(event: unknown) {
   const listeners = mockListeners.get("backend-event");
   if (listeners) {
-    listeners.forEach((listener) => listener({ payload: event }));
+    for (const listener of listeners) {
+      listener({ payload: event });
+    }
   }
 }
 

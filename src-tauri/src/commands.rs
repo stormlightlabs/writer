@@ -9,7 +9,7 @@ use writer_core::{
     AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
     SaveResult, SearchFilters, SearchHit,
 };
-use writer_md::{MarkdownEngine, MarkdownProfile, RenderResult};
+use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult};
 use writer_store::{Store, UiLayoutSettings};
 
 /// Application state shared across commands
@@ -560,6 +560,47 @@ pub fn markdown_render(
             Ok(CommandResult::err(AppError::new(
                 writer_core::ErrorCode::Parse,
                 format!("Failed to render markdown: {}", e),
+            )))
+        }
+    }
+}
+
+/// Renders markdown text to a PDF-compatible AST
+///
+/// This command takes document text and returns a structured AST
+/// suitable for rendering to PDF on the frontend with @react-pdf/renderer.
+#[tauri::command]
+pub fn markdown_render_for_pdf(
+    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
+) -> Result<CommandResult<PdfRenderResult>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!(
+        "Rendering markdown for PDF: location={:?}, path={:?}, profile={:?}, text_len={}",
+        location_id,
+        rel_path,
+        profile,
+        text.len()
+    );
+
+    let engine = MarkdownEngine::new();
+    let profile = profile.unwrap_or(MarkdownProfile::Extended);
+
+    match engine.render_for_pdf(&text, profile) {
+        Ok(result) => {
+            tracing::debug!(
+                "Markdown rendered for PDF successfully: nodes={}, word_count={}",
+                result.nodes.len(),
+                result.word_count
+            );
+            Ok(CommandResult::ok(result))
+        }
+        Err(e) => {
+            tracing::error!("Failed to render markdown for PDF: {}", e);
+            Ok(CommandResult::err(AppError::new(
+                writer_core::ErrorCode::Parse,
+                format!("Failed to render markdown for PDF: {}", e),
             )))
         }
     }

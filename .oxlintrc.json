@@ -12,7 +12,8 @@
     "require-await": "warn",
     "unicorn/prefer-global-this": "warn",
     "init-declarations": "off",
-    "no-warning-comments": "off"
+    "no-warning-comments": "off",
+    "unicorn/no-array-for-each": "warn"
   },
   "settings": {
     "jsx-a11y": { "polymorphicPropName": null, "components": {}, "attributes": {} },

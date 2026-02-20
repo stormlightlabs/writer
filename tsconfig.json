@@ -20,7 +20,9 @@
       "$ports": ["./ports.ts"],
       "$types": ["./types.ts"],
       "$logger": ["./logger.ts"],
-      "$icons": ["./components/icons.tsx"]
+      "$icons": ["./components/icons.tsx"],
+      "$pdf/*": ["./pdf/*"],
+      "$components/*": ["./components/*"]
     }
   },
   "include": ["src"],

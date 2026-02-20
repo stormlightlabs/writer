@@ -1,6 +1,7 @@
+import { type SearchFilters, SearchPanel } from "$components/SearchPanel";
 import type { LocationDescriptor } from "$types";
+import type { SearchHit } from "$types";
 import { useMemo } from "react";
-import { type SearchFilters, type SearchHit, SearchPanel } from "../SearchPanel";
 
 type SearchOverlayProps = {
   isVisible: boolean;

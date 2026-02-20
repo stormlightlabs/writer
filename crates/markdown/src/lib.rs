@@ -880,6 +880,175 @@ impl Default for MarkdownEngine {
     }
 }
 
+/// PDF node types for structured PDF export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum PdfNode {
+    /// Heading with level and content
+    Heading { level: u8, content: String },
+    /// Paragraph text
+    Paragraph { content: String },
+    /// Code block with optional language
+    Code { content: String, language: Option<String> },
+    /// List with items and ordering flag
+    List { items: Vec<PdfNode>, ordered: bool },
+    /// Blockquote content
+    Blockquote { content: String },
+    /// Footnote with id and content
+    Footnote { id: String, content: String },
+}
+
+/// Result of rendering Markdown for PDF export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PdfRenderResult {
+    /// The PDF AST nodes
+    pub nodes: Vec<PdfNode>,
+    /// Document title from metadata
+    pub title: Option<String>,
+    /// Word count
+    pub word_count: usize,
+}
+
+/// A list item for PDF export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PdfListItem {
+    /// Content of the list item (typically a paragraph)
+    pub content: String,
+}
+
+impl MarkdownEngine {
+    /// Renders Markdown text to a PDF-compatible AST
+    ///
+    /// Parses the markdown and transforms it into a structured format
+    /// suitable for rendering to PDF on the frontend.
+    pub fn render_for_pdf(&self, text: &str, profile: MarkdownProfile) -> Result<PdfRenderResult, MarkdownError> {
+        let arena = Arena::new();
+        let options = profile.to_options();
+
+        let (body_text, front_matter) = if profile.supports_front_matter() {
+            Self::extract_front_matter(text)
+        } else {
+            (text, FrontMatter::default())
+        };
+
+        let root = parse_document(&arena, body_text, &options);
+
+        let mut metadata = DocumentMetadata {
+            title: None,
+            outline: Vec::new(),
+            links: Vec::new(),
+            task_items: TaskStats::default(),
+            word_count: 0,
+            front_matter,
+        };
+
+        Self::extract_metadata_from_node(&root, &mut metadata, &mut true);
+
+        if let Some(title) = metadata.front_matter.fields.get("title") {
+            metadata.title = Some(title.clone());
+        }
+
+        metadata.word_count = Self::estimate_word_count(body_text);
+
+        let nodes = Self::transform_to_pdf_nodes(root);
+
+        Ok(PdfRenderResult { nodes, title: metadata.title, word_count: metadata.word_count })
+    }
+
+    /// Transforms a Comrak AST node into PDF nodes
+    fn transform_to_pdf_nodes<'a>(node: &'a comrak::nodes::AstNode<'a>) -> Vec<PdfNode> {
+        use comrak::nodes::NodeValue;
+
+        let mut nodes = Vec::new();
+
+        for child in node.children() {
+            match &child.data.borrow().value {
+                NodeValue::Document => nodes.extend(Self::transform_to_pdf_nodes(child)),
+                NodeValue::Heading(heading) => {
+                    let content = Self::extract_text_content(child);
+                    nodes.push(PdfNode::Heading { level: heading.level, content });
+                }
+                NodeValue::Paragraph => {
+                    let content = Self::extract_text_content(child);
+                    if !content.is_empty() {
+                        nodes.push(PdfNode::Paragraph { content });
+                    }
+                }
+                NodeValue::CodeBlock(code_block) => {
+                    let content = code_block.literal.clone();
+                    let language = if code_block.info.is_empty() { None } else { Some(code_block.info.clone()) };
+                    nodes.push(PdfNode::Code { content, language });
+                }
+                NodeValue::List(list) => {
+                    let items = Self::transform_list_items(child, list.list_type == comrak::nodes::ListType::Ordered);
+                    if !items.is_empty() {
+                        nodes
+                            .push(PdfNode::List { items, ordered: list.list_type == comrak::nodes::ListType::Ordered });
+                    }
+                }
+                NodeValue::BlockQuote => {
+                    let content = Self::extract_text_content(child);
+                    nodes.push(PdfNode::Blockquote { content });
+                }
+                NodeValue::FootnoteDefinition(footnote) => {
+                    let content = Self::extract_text_content(child);
+                    nodes.push(PdfNode::Footnote { id: footnote.name.clone(), content });
+                }
+                _ => nodes.extend(Self::transform_to_pdf_nodes(child)),
+            }
+        }
+
+        nodes
+    }
+
+    /// Transforms list items from a list node
+    fn transform_list_items<'a>(list_node: &'a comrak::nodes::AstNode<'a>, _ordered: bool) -> Vec<PdfNode> {
+        let mut items = Vec::new();
+
+        for child in list_node.children() {
+            match &child.data.borrow().value {
+                comrak::nodes::NodeValue::Item(_) => {
+                    let content = Self::extract_text_content(child);
+                    if !content.is_empty() {
+                        items.push(PdfNode::Paragraph { content });
+                    }
+                }
+                _ => items.extend(Self::transform_list_items(child, _ordered)),
+            }
+        }
+
+        items
+    }
+
+    /// Extracts plain text content from a node and its children
+    fn extract_text_content<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
+        use comrak::nodes::NodeValue;
+
+        let mut text = String::new();
+
+        for child in node.children() {
+            match &child.data.borrow().value {
+                NodeValue::Text(t) => text.push_str(t),
+                NodeValue::SoftBreak | NodeValue::LineBreak => text.push(' '),
+                NodeValue::Code(code) => text.push_str(&code.literal),
+                NodeValue::Emph | NodeValue::Strong => text.push_str(&Self::extract_text_content(child)),
+                NodeValue::Link(link) => {
+                    let link_text = Self::extract_text_content(child);
+                    if link_text.is_empty() {
+                        text.push_str(&link.url);
+                    } else {
+                        text.push_str(&link_text);
+                    }
+                }
+                NodeValue::Strikethrough => text.push_str(&Self::extract_text_content(child)),
+                _ => text.push_str(&Self::extract_text_content(child)),
+            }
+        }
+
+        text.trim().to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

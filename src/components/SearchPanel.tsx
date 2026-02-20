@@ -4,7 +4,6 @@ import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
 
 export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
-export type { SearchHit } from "$types";
 
 type SearchPanelProps = {
   query: string;
@@ -30,7 +29,7 @@ function HighlightedSnippet({ text, matches }: { text: string; matches: Array<{ 
   const parts: React.ReactNode[] = [];
   let lastEnd = 0;
 
-  matches.forEach((match, index) => {
+  for (const [index, match] of matches.entries()) {
     const matchKey = `text-${index}`;
     const markKey = `mark-${index}`;
 
@@ -43,7 +42,7 @@ function HighlightedSnippet({ text, matches }: { text: string; matches: Array<{ 
       </mark>,
     );
     lastEnd = match.end;
-  });
+  }
 
   if (lastEnd < text.length) {
     parts.push(<span key="text-end">{text.slice(lastEnd)}</span>);

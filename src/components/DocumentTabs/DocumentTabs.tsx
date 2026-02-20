@@ -76,7 +76,9 @@ export function DocumentTabs({ tabs, activeTabId, onSelectTab, onCloseTab, onReo
   }, [contextMenu]);
 
   const closeAll = useCallback(() => {
-    tabs.forEach((t) => onCloseTab(t.id));
+    for (const t of tabs) {
+      onCloseTab(t.id);
+    }
     setContextMenu(null);
   }, [tabs]);
 

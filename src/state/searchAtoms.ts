@@ -1,5 +1,6 @@
+import type { SearchFilters } from "$components/SearchPanel";
+import type { SearchHit } from "$types";
 import { atom } from "jotai";
-import type { SearchFilters, SearchHit } from "../components/SearchPanel";
 
 export const searchQueryAtom = atom("");
 export const searchResultsAtom = atom<SearchHit[]>([]);

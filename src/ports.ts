@@ -1,4 +1,5 @@
 import { logger } from "$logger";
+import type { PdfRenderResult } from "$pdf/types";
 import type {
   AppError,
   DocContent,
@@ -108,6 +109,8 @@ type RustCommandResult<T> = { Ok: T } | { Err: unknown };
 export type BackendEventsSub = { type: "BackendEvents"; onEvent: (event: BackendEvent) => void };
 export type NoneSub = { type: "None" };
 export type Sub = BackendEventsSub | NoneSub;
+
+type RenderMarkdownForPdfParams<T> = [...LocationPathTextParams, profile: MarkdownProfile | undefined, ...LocParams<T>];
 
 export const ok = <T>(value: T): CmdResult<T> => ({ type: "ok", value });
 
@@ -478,6 +481,12 @@ export function renderMarkdown(
   ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownParams<RenderResult>
 ): Cmd {
   return invokeCmd<RenderResult>("markdown_render", { locationId, relPath, text, profile }, onOk, onErr);
+}
+
+export function renderMarkdownForPdf(
+  ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownForPdfParams<PdfRenderResult>
+): Cmd {
+  return invokeCmd<PdfRenderResult>("markdown_render_for_pdf", { locationId, relPath, text, profile }, onOk, onErr);
 }
 
 export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd {

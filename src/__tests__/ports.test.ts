@@ -81,14 +81,14 @@ describe("commandResult", () => {
         "CONFLICT",
       ] as const;
 
-      codes.forEach((code) => {
+      for (const code of codes) {
         const error: AppError = { code, message: "test error" };
         const result = err(error);
         expect(isErr(result)).toBeTruthy();
         if (isErr(result)) {
           expect(result.error.code).toBe(code);
         }
-      });
+      }
     });
 
     it("should include context when provided", () => {
@@ -244,9 +244,9 @@ describe("subscription Builders", () => {
         new_path: "/new",
       }, { type: "ReconciliationComplete", checked: 5, missing: [1, 2, 3] }];
 
-      events.forEach((event) => {
+      for (const event of events) {
         (sub as Extract<typeof sub, { type: "BackendEvents" }>).onEvent(event as Parameters<typeof handler>[0]);
-      });
+      }
 
       expect(handler).toHaveBeenCalledTimes(3);
     });

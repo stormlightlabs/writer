@@ -45,6 +45,8 @@ export default defineConfig({
       "$types": "./src/types.ts",
       "$logger": "./src/logger.ts",
       "$icons": "./src/components/icons.tsx",
+      "$pdf": "./src/pdf",
+      "$components": "./src/components",
     },
   },
 });
