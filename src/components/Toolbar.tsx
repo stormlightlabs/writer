@@ -185,7 +185,7 @@ export function Toolbar(
           shortcut="Ctrl+F" />
       </div>
 
-      <div>
+      <div className="flex items-center gap-1 shrink-0">
         {onExportPdf && (
           <ToolbarButton
             icon={icons.export}

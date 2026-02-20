@@ -39,3 +39,34 @@ export type FontName =
   | "Monaspace Neon"
   | "Monaspace Radon"
   | "Monaspace Xenon";
+
+export type FontPayloadFormat = "woff" | "ttf" | "otf";
+
+export type PdfFontSourceDescriptor = { file: string; src: string; fontWeight?: FontWeight; fontStyle?: FontStyle };
+
+export type PdfFontResolution = {
+  fontName: FontName;
+  strategy: FontStrategy;
+  family: string;
+  sources: PdfFontSourceDescriptor[];
+};
+
+export type FontWeight =
+  | number
+  | "thin"
+  | "ultralight"
+  | "light"
+  | "normal"
+  | "medium"
+  | "semibold"
+  | "bold"
+  | "ultrabold"
+  | "heavy";
+
+export type FontStyle = "normal" | "italic";
+
+export type FontStrategy = "custom" | "builtin";
+
+export type FontFile = { file: string; fontWeight?: FontWeight; fontStyle?: FontStyle };
+
+export type FontConfig = { family: string; files: FontFile[] };

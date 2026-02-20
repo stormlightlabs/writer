@@ -17,6 +17,7 @@ export type EditorProps = {
   theme?: EditorTheme;
   disabled?: boolean;
   showLineNumbers?: boolean;
+  textWrappingEnabled?: boolean;
   syntaxHighlightingEnabled?: boolean;
   fontSize?: number;
   fontFamily?: EditorFontFamily;
@@ -36,6 +37,7 @@ type CreateEditorStateOptions = {
   theme: EditorTheme;
   disabled: boolean;
   showLineNumbers: boolean;
+  textWrappingEnabled: boolean;
   syntaxHighlightingEnabled: boolean;
   placeholder?: string;
   updateListener: ReturnType<typeof EditorView.updateListener.of>;
@@ -55,8 +57,17 @@ const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
 };
 
 function createEditorState(
-  { doc, theme, disabled, showLineNumbers, syntaxHighlightingEnabled, placeholder, updateListener, onSave }:
-    CreateEditorStateOptions,
+  {
+    doc,
+    theme,
+    disabled,
+    showLineNumbers,
+    textWrappingEnabled,
+    syntaxHighlightingEnabled,
+    placeholder,
+    updateListener,
+    onSave,
+  }: CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
 
@@ -73,6 +84,7 @@ function createEditorState(
     doc,
     extensions: [
       ...(showLineNumbers ? [lineNumbers()] : []),
+      ...(textWrappingEnabled ? [EditorView.lineWrapping] : []),
       history(),
       ...(syntaxHighlightingEnabled ? [markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true })] : []),
       themeExtension,
@@ -91,6 +103,7 @@ export function Editor(
     theme = "dark",
     disabled = false,
     showLineNumbers = true,
+    textWrappingEnabled = true,
     syntaxHighlightingEnabled = true,
     fontSize = 16,
     fontFamily = "IBM Plex Mono",
@@ -109,7 +122,14 @@ export function Editor(
   const debounceMsRef = useRef(debounceMs);
   const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialTextRef = useRef(initialText);
-  const presentationRef = useRef({ theme, disabled, showLineNumbers, syntaxHighlightingEnabled, placeholder });
+  const presentationRef = useRef({
+    theme,
+    disabled,
+    showLineNumbers,
+    textWrappingEnabled,
+    syntaxHighlightingEnabled,
+    placeholder,
+  });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -168,6 +188,7 @@ export function Editor(
       theme: currentPresentation.theme,
       disabled: currentPresentation.disabled,
       showLineNumbers: currentPresentation.showLineNumbers,
+      textWrappingEnabled: currentPresentation.textWrappingEnabled,
       syntaxHighlightingEnabled: currentPresentation.syntaxHighlightingEnabled,
       placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
@@ -214,13 +235,21 @@ export function Editor(
       previousPresentation.theme === theme
       && previousPresentation.disabled === disabled
       && previousPresentation.showLineNumbers === showLineNumbers
+      && previousPresentation.textWrappingEnabled === textWrappingEnabled
       && previousPresentation.syntaxHighlightingEnabled === syntaxHighlightingEnabled
       && previousPresentation.placeholder === placeholder
     ) {
       return;
     }
 
-    presentationRef.current = { theme, disabled, showLineNumbers, syntaxHighlightingEnabled, placeholder };
+    presentationRef.current = {
+      theme,
+      disabled,
+      showLineNumbers,
+      textWrappingEnabled,
+      syntaxHighlightingEnabled,
+      placeholder,
+    };
 
     const view = viewRef.current;
     if (!view) {
@@ -239,7 +268,7 @@ export function Editor(
     }
 
     viewRef.current = nextView;
-  }, [createView, disabled, placeholder, showLineNumbers, syntaxHighlightingEnabled, theme]);
+  }, [createView, disabled, placeholder, showLineNumbers, textWrappingEnabled, syntaxHighlightingEnabled, theme]);
 
   useEffect(() => {
     const view = viewRef.current;

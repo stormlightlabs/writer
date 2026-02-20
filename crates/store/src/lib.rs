@@ -38,6 +38,8 @@ pub struct UiLayoutSettings {
     #[serde(default = "default_true")]
     pub line_numbers_visible: bool,
     #[serde(default = "default_true")]
+    pub text_wrapping_enabled: bool,
+    #[serde(default = "default_true")]
     pub syntax_highlighting_enabled: bool,
     #[serde(default = "default_editor_font_size")]
     pub editor_font_size: u16,
@@ -52,6 +54,7 @@ impl Default for UiLayoutSettings {
             top_bars_collapsed: false,
             status_bar_collapsed: false,
             line_numbers_visible: true,
+            text_wrapping_enabled: true,
             syntax_highlighting_enabled: true,
             editor_font_size: default_editor_font_size(),
             editor_font_family: default_editor_font_family(),
@@ -1598,6 +1601,7 @@ mod tests {
             top_bars_collapsed: false,
             status_bar_collapsed: true,
             line_numbers_visible: false,
+            text_wrapping_enabled: false,
             syntax_highlighting_enabled: false,
             editor_font_size: 18,
             editor_font_family: "Monaspace Neon".to_string(),
@@ -1630,6 +1634,7 @@ mod tests {
 
         let loaded = store.ui_layout_get().unwrap();
         assert!(loaded.line_numbers_visible);
+        assert!(loaded.text_wrapping_enabled);
         assert!(loaded.syntax_highlighting_enabled);
         assert_eq!(loaded.editor_font_size, 16);
         assert_eq!(loaded.editor_font_family, "IBM Plex Mono");

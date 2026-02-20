@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@egoist/tailwindcss-icons";
+@plugin "@tailwindcss/forms";
 
 @theme {
     --font-sans:

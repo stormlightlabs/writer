@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import type { ViteUserConfig } from "vitest/config";
 
@@ -17,6 +18,7 @@ const test: ViteUserConfig["test"] = {
 };
 
 const host = process.env.TAURI_DEV_HOST;
+const resolveFromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 // TODO: aliases here and in tsconfig.json
 // - $hooks
@@ -41,12 +43,12 @@ export default defineConfig({
   test,
   resolve: {
     alias: {
-      "$ports": "./src/ports.ts",
-      "$types": "./src/types.ts",
-      "$logger": "./src/logger.ts",
-      "$icons": "./src/components/icons.tsx",
-      "$pdf": "./src/pdf",
-      "$components": "./src/components",
+      "$ports": resolveFromRoot("./src/ports.ts"),
+      "$types": resolveFromRoot("./src/types.ts"),
+      "$logger": resolveFromRoot("./src/logger.ts"),
+      "$icons": resolveFromRoot("./src/components/icons.tsx"),
+      "$pdf": resolveFromRoot("./src/pdf"),
+      "$components": resolveFromRoot("./src/components"),
     },
   },
 });

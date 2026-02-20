@@ -4,6 +4,9 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { useCallback, useMemo } from "react";
 
 type TStyleSheet = ReturnType<typeof createStyles>;
+const PDF_TEXT_COLOR = "#161616";
+const PDF_MUTED_TEXT_COLOR = "#525252";
+const PDF_PAGE_BACKGROUND = "#ffffff";
 
 const toPdfPageSize = (size: PageSize): PageSize => {
   if (typeof size === "string") {
@@ -39,27 +42,37 @@ const createStyles = (
       paddingBottom: options.margins.bottom,
       paddingLeft: options.margins.left,
       fontFamily: bodyFont,
+      color: PDF_TEXT_COLOR,
+      backgroundColor: PDF_PAGE_BACKGROUND,
     },
     header: { marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "#e0e0e0", paddingBottom: 8 },
-    footer: { fontSize: baseFontSize - 3, color: "#666", textAlign: "center" },
+    footer: { fontSize: baseFontSize - 3, color: PDF_MUTED_TEXT_COLOR, textAlign: "center" },
     content: { flexGrow: 1 },
-    title: { fontSize: 24, marginBottom: 20, fontWeight: "bold" },
-    heading1: { fontSize: 20, marginTop: 20, marginBottom: 10, fontWeight: "bold" },
-    heading2: { fontSize: 16, marginTop: 15, marginBottom: 8, fontWeight: "bold" },
-    heading3: { fontSize: 14, marginTop: 12, marginBottom: 6, fontWeight: "bold" },
-    paragraph: { fontSize: baseFontSize, lineHeight, marginBottom: 10 },
+    title: { fontSize: 24, marginBottom: 20, fontWeight: "bold", color: PDF_TEXT_COLOR },
+    heading1: { fontSize: 20, marginTop: 20, marginBottom: 10, fontWeight: "bold", color: PDF_TEXT_COLOR },
+    heading2: { fontSize: 16, marginTop: 15, marginBottom: 8, fontWeight: "bold", color: PDF_TEXT_COLOR },
+    heading3: { fontSize: 14, marginTop: 12, marginBottom: 6, fontWeight: "bold", color: PDF_TEXT_COLOR },
+    paragraph: { fontSize: baseFontSize, lineHeight, marginBottom: 10, color: PDF_TEXT_COLOR },
     code: {
       fontFamily: codeFont,
       fontSize: baseFontSize - 2,
       backgroundColor: "#f4f4f4",
+      color: PDF_TEXT_COLOR,
       padding: 8,
       marginBottom: 10,
     },
     list: { marginLeft: 20, marginBottom: 10 },
-    listItem: { fontSize: baseFontSize, lineHeight, marginBottom: 4 },
+    listItem: { fontSize: baseFontSize, lineHeight, marginBottom: 4, color: PDF_TEXT_COLOR },
     blockquote: { marginLeft: 20, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: "#ddd", marginBottom: 10 },
-    blockquoteText: { fontSize: baseFontSize, lineHeight, fontStyle: "italic", color: "#666" },
-    footnote: { fontSize: baseFontSize - 2, marginTop: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#ddd" },
+    blockquoteText: { fontSize: baseFontSize, lineHeight, fontStyle: "italic", color: PDF_MUTED_TEXT_COLOR },
+    footnote: {
+      fontSize: baseFontSize - 2,
+      marginTop: 20,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: "#ddd",
+      color: PDF_MUTED_TEXT_COLOR,
+    },
   });
 
 type DocumentNodeProps = { node: MarkdownNode; styles: TStyleSheet };
@@ -110,6 +123,7 @@ type MarkdownPdfDocumentProps = {
   title?: string;
   options: PdfExportOptions;
   editorFontFamily: FontName;
+  useBuiltinFonts?: boolean;
 };
 
 const DocumentTitle = (
@@ -144,9 +158,12 @@ const DocumentFooter = (
   },
 ) => <Text style={styles.footer} fixed render={renderer} />;
 
-export const MarkdownPdfDocument = ({ nodes, title, options, editorFontFamily }: MarkdownPdfDocumentProps) => {
-  const bodyFont = getPdfFontFamily(editorFontFamily);
-  const codeFont = getCodeFontFamily();
+export const MarkdownPdfDocument = (
+  { nodes, title, options, editorFontFamily, useBuiltinFonts = false }: MarkdownPdfDocumentProps,
+) => {
+  const fontStrategy = useBuiltinFonts ? "builtin" : "custom";
+  const bodyFont = getPdfFontFamily(editorFontFamily, fontStrategy);
+  const codeFont = getCodeFontFamily(fontStrategy);
   const styles = createStyles(bodyFont, codeFont, options, options.fontSize, options.lineHeight);
   const renderPageNumber = useCallback(
     ({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}`,

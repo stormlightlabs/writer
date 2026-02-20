@@ -15,6 +15,7 @@ export type LayoutState = {
   topBarsCollapsed: boolean;
   statusBarCollapsed: boolean;
   lineNumbersVisible: boolean;
+  textWrappingEnabled: boolean;
   syntaxHighlightingEnabled: boolean;
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
@@ -34,6 +35,8 @@ export type LayoutActions = {
   toggleStatusBarCollapsed: () => void;
   setLineNumbersVisible: (value: boolean) => void;
   toggleLineNumbersVisible: () => void;
+  setTextWrappingEnabled: (value: boolean) => void;
+  toggleTextWrappingEnabled: () => void;
   setSyntaxHighlightingEnabled: (value: boolean) => void;
   toggleSyntaxHighlightingEnabled: () => void;
   setEditorFontSize: (value: number) => void;
@@ -87,6 +90,7 @@ const getInitialLayoutState = (): LayoutState => ({
   topBarsCollapsed: false,
   statusBarCollapsed: false,
   lineNumbersVisible: true,
+  textWrappingEnabled: true,
   syntaxHighlightingEnabled: true,
   editorFontSize: 16,
   editorFontFamily: "IBM Plex Mono",
@@ -123,6 +127,9 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
 
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),
+
+  setTextWrappingEnabled: (value) => set({ textWrappingEnabled: value }),
+  toggleTextWrappingEnabled: () => set((state) => ({ textWrappingEnabled: !state.textWrappingEnabled })),
 
   setSyntaxHighlightingEnabled: (value) => set({ syntaxHighlightingEnabled: value }),
   toggleSyntaxHighlightingEnabled: () =>
@@ -289,6 +296,7 @@ export const useLayoutState = () =>
       topBarsCollapsed: state.topBarsCollapsed,
       statusBarCollapsed: state.statusBarCollapsed,
       lineNumbersVisible: state.lineNumbersVisible,
+      textWrappingEnabled: state.textWrappingEnabled,
       syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
       editorFontSize: state.editorFontSize,
       editorFontFamily: state.editorFontFamily,
@@ -311,6 +319,8 @@ export const useLayoutActions = () =>
       toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
       setLineNumbersVisible: state.setLineNumbersVisible,
       toggleLineNumbersVisible: state.toggleLineNumbersVisible,
+      setTextWrappingEnabled: state.setTextWrappingEnabled,
+      toggleTextWrappingEnabled: state.toggleTextWrappingEnabled,
       setSyntaxHighlightingEnabled: state.setSyntaxHighlightingEnabled,
       toggleSyntaxHighlightingEnabled: state.toggleSyntaxHighlightingEnabled,
       setEditorFontSize: state.setEditorFontSize,

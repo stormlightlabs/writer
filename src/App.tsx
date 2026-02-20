@@ -309,6 +309,7 @@ function App() {
       initialText: editorModel.text,
       theme: layoutState.theme,
       showLineNumbers: layoutState.lineNumbersVisible,
+      textWrappingEnabled: layoutState.textWrappingEnabled,
       syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
       fontSize: layoutState.editorFontSize,
       fontFamily: layoutState.editorFontFamily,
@@ -321,6 +322,7 @@ function App() {
       editorModel.text,
       layoutState.theme,
       layoutState.lineNumbersVisible,
+      layoutState.textWrappingEnabled,
       layoutState.syntaxHighlightingEnabled,
       layoutState.editorFontSize,
       layoutState.editorFontFamily,
@@ -394,6 +396,7 @@ function App() {
       topBarsCollapsed: layoutState.topBarsCollapsed,
       statusBarCollapsed: layoutState.statusBarCollapsed,
       lineNumbersVisible: layoutState.lineNumbersVisible,
+      textWrappingEnabled: layoutState.textWrappingEnabled,
       syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
       editorFontSize: layoutState.editorFontSize,
       editorFontFamily: layoutState.editorFontFamily,
@@ -401,6 +404,7 @@ function App() {
       onSetTopBarsCollapsed: layoutActions.setTopBarsCollapsed,
       onSetStatusBarCollapsed: layoutActions.setStatusBarCollapsed,
       onSetLineNumbersVisible: layoutActions.setLineNumbersVisible,
+      onSetTextWrappingEnabled: layoutActions.setTextWrappingEnabled,
       onSetSyntaxHighlightingEnabled: layoutActions.setSyntaxHighlightingEnabled,
       onSetEditorFontSize: layoutActions.setEditorFontSize,
       onSetEditorFontFamily: layoutActions.setEditorFontFamily,
@@ -412,6 +416,7 @@ function App() {
       layoutState.topBarsCollapsed,
       layoutState.statusBarCollapsed,
       layoutState.lineNumbersVisible,
+      layoutState.textWrappingEnabled,
       layoutState.syntaxHighlightingEnabled,
       layoutState.editorFontSize,
       layoutState.editorFontFamily,
@@ -419,6 +424,7 @@ function App() {
       layoutActions.setTopBarsCollapsed,
       layoutActions.setStatusBarCollapsed,
       layoutActions.setLineNumbersVisible,
+      layoutActions.setTextWrappingEnabled,
       layoutActions.setSyntaxHighlightingEnabled,
       layoutActions.setEditorFontSize,
       layoutActions.setEditorFontFamily,
@@ -437,6 +443,7 @@ function App() {
       charCount: charCount,
       selectionCount: selectionCount,
       lineNumbersVisible: layoutState.lineNumbersVisible,
+      textWrappingEnabled: layoutState.textWrappingEnabled,
       syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
       editorFontSize: layoutState.editorFontSize,
       editorFontFamily: layoutState.editorFontFamily,
@@ -457,6 +464,7 @@ function App() {
       charCount,
       selectionCount,
       layoutState.lineNumbersVisible,
+      layoutState.textWrappingEnabled,
       layoutState.syntaxHighlightingEnabled,
       layoutState.editorFontSize,
       layoutState.editorFontFamily,
@@ -503,6 +511,7 @@ function App() {
       layoutActions.setTopBarsCollapsed(settings.top_bars_collapsed);
       layoutActions.setStatusBarCollapsed(settings.status_bar_collapsed);
       layoutActions.setLineNumbersVisible(settings.line_numbers_visible);
+      layoutActions.setTextWrappingEnabled(settings.text_wrapping_enabled);
       layoutActions.setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
       layoutActions.setEditorFontSize(settings.editor_font_size);
       layoutActions.setEditorFontFamily(settings.editor_font_family);
@@ -530,6 +539,7 @@ function App() {
           top_bars_collapsed: layoutState.topBarsCollapsed,
           status_bar_collapsed: layoutState.statusBarCollapsed,
           line_numbers_visible: layoutState.lineNumbersVisible,
+          text_wrapping_enabled: layoutState.textWrappingEnabled,
           syntax_highlighting_enabled: layoutState.syntaxHighlightingEnabled,
           editor_font_size: layoutState.editorFontSize,
           editor_font_family: layoutState.editorFontFamily,
@@ -544,6 +554,7 @@ function App() {
     layoutState.topBarsCollapsed,
     layoutState.statusBarCollapsed,
     layoutState.lineNumbersVisible,
+    layoutState.textWrappingEnabled,
     layoutState.syntaxHighlightingEnabled,
     layoutState.editorFontSize,
     layoutState.editorFontFamily,

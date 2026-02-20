@@ -151,6 +151,7 @@ describe("appStore", () => {
     expect(layoutState.current.topBarsCollapsed).toBeFalsy();
     expect(layoutState.current.statusBarCollapsed).toBeFalsy();
     expect(layoutState.current.lineNumbersVisible).toBeTruthy();
+    expect(layoutState.current.textWrappingEnabled).toBeTruthy();
     expect(layoutState.current.syntaxHighlightingEnabled).toBeTruthy();
     expect(layoutState.current.editorFontSize).toBe(16);
     expect(layoutState.current.editorFontFamily).toBe("IBM Plex Mono");
@@ -162,6 +163,7 @@ describe("appStore", () => {
       layoutActions.current.toggleTabBarCollapsed();
       layoutActions.current.toggleStatusBarCollapsed();
       layoutActions.current.toggleLineNumbersVisible();
+      layoutActions.current.toggleTextWrappingEnabled();
       layoutActions.current.toggleSyntaxHighlightingEnabled();
       layoutActions.current.setEditorFontSize(20);
       layoutActions.current.setEditorFontFamily("Monaspace Neon");
@@ -175,6 +177,7 @@ describe("appStore", () => {
     expect(layoutState.current.topBarsCollapsed).toBeTruthy();
     expect(layoutState.current.statusBarCollapsed).toBeTruthy();
     expect(layoutState.current.lineNumbersVisible).toBeFalsy();
+    expect(layoutState.current.textWrappingEnabled).toBeFalsy();
     expect(layoutState.current.syntaxHighlightingEnabled).toBeFalsy();
     expect(layoutState.current.editorFontSize).toBe(20);
     expect(layoutState.current.editorFontFamily).toBe("Monaspace Neon");

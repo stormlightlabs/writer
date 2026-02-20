@@ -13,6 +13,7 @@ type FocusModePanelProps = {
   charCount: number;
   selectionCount?: number;
   lineNumbersVisible: boolean;
+  textWrappingEnabled: boolean;
   syntaxHighlightingEnabled: boolean;
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
@@ -49,6 +50,7 @@ export const FocusModePanel = (
     charCount,
     selectionCount,
     lineNumbersVisible,
+    textWrappingEnabled,
     syntaxHighlightingEnabled,
     editorFontSize,
     editorFontFamily,
@@ -68,6 +70,7 @@ export const FocusModePanel = (
         initialText={text}
         theme={theme}
         showLineNumbers={lineNumbersVisible}
+        textWrappingEnabled={textWrappingEnabled}
         syntaxHighlightingEnabled={syntaxHighlightingEnabled}
         fontSize={editorFontSize}
         fontFamily={editorFontFamily}

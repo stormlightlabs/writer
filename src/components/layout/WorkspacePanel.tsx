@@ -20,6 +20,7 @@ type K =
   | "initialText"
   | "theme"
   | "showLineNumbers"
+  | "textWrappingEnabled"
   | "syntaxHighlightingEnabled"
   | "fontSize"
   | "fontFamily"

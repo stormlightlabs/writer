@@ -44,6 +44,16 @@ describe(Editor, () => {
       expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
     });
 
+    it("should enable text wrapping by default", () => {
+      const { container } = render(<Editor />);
+      expect(container.querySelector(".cm-lineWrapping")).toBeInTheDocument();
+    });
+
+    it("should disable text wrapping when disabled via prop", () => {
+      const { container } = render(<Editor textWrappingEnabled={false} />);
+      expect(container.querySelector(".cm-lineWrapping")).not.toBeInTheDocument();
+    });
+
     it("should apply custom font family and size variables", () => {
       render(<Editor fontFamily="IBM Plex Sans Variable" fontSize={19} />);
       const container = screen.getByTestId("editor-container");
@@ -181,6 +191,18 @@ describe(Editor, () => {
       expect(secondEditorRoot).toBeInTheDocument();
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
       expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
+      expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
+    });
+
+    it("recreates the editor view when text wrapping changes", () => {
+      const { container, rerender } = render(<Editor initialText="Persistent" textWrappingEnabled />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+      rerender(<Editor initialText="Persistent" textWrappingEnabled={false} />);
+
+      const secondEditorRoot = container.querySelector(".cm-editor");
+      expect(secondEditorRoot).toBeInTheDocument();
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(container.querySelector(".cm-lineWrapping")).not.toBeInTheDocument();
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
     });
 

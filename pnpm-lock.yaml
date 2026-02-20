@@ -38,6 +38,9 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.2.7
         version: 5.2.7
+      '@fontsource/ibm-plex-sans':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@fontsource/ibm-plex-serif':
         specifier: ^5.2.7
         version: 5.2.7
@@ -108,6 +111,9 @@ importers:
       '@iconify-json/ri':
         specifier: ^1.2.10
         version: 1.2.10
+      '@tailwindcss/forms':
+        specifier: ^0.5.11
+        version: 0.5.11(tailwindcss@4.1.18)
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.10.0
@@ -561,6 +567,9 @@ packages:
   '@fontsource/ibm-plex-mono@5.2.7':
     resolution: {integrity: sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w==}
 
+  '@fontsource/ibm-plex-sans@5.2.8':
+    resolution: {integrity: sha512-eztSXjDhPhcpxNIiGTgMebdLP9qS4rWkysuE1V7c+DjOR0qiezaiDaTwQE7bTnG5HxAY/8M43XKDvs3cYq6ZYQ==}
+
   '@fontsource/ibm-plex-serif@5.2.7':
     resolution: {integrity: sha512-04owmc2OQQ/DAMjXjEMJc+7V4dBVmR01aIFOg4cuqS8pQ4HbvtlYs/u6+O0vCt21EMx5M/azIbgx43iKyisEOA==}
 
@@ -918,6 +927,11 @@ packages:
 
   '@swc/helpers@0.5.18':
     resolution: {integrity: sha512-TXTnIcNJQEKwThMMqBXsZ4VGAza6bvN4pa41Rkqoio6QBKMvo+5lexeTMScGCIxtzgQJzElcvIltani+adC5PQ==}
+
+  '@tailwindcss/forms@0.5.11':
+    resolution: {integrity: sha512-h9wegbZDPurxG22xZSoWtdzc41/OlNEUQERNqI/0fOwa2aVlWGu7C35E/x6LDyD3lgtztFSSjKZyuVM0hxhbgA==}
+    peerDependencies:
+      tailwindcss: '>=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1'
 
   '@tailwindcss/node@4.1.18':
     resolution: {integrity: sha512-DoR7U1P7iYhw16qJ49fgXUlry1t4CpXeErJHnQ44JgTSKMaZUdf17cfn5mHchfJ4KRBZRFA/Coo+MUF5+gOaCQ==}
@@ -1627,6 +1641,10 @@ packages:
   min-indent@1.0.1:
     resolution: {integrity: sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==}
     engines: {node: '>=4'}
+
+  mini-svg-data-uri@1.4.4:
+    resolution: {integrity: sha512-r9deDe9p5FJUPZAk3A59wGH7Ii9YrjjWw0jmw/liSbHl2CHiyXj6FcDXDu2K3TjVAXqiJdaw3xxwlZZr9E6nHg==}
+    hasBin: true
 
   mlly@1.8.0:
     resolution: {integrity: sha512-l8D9ODSRWLe2KHJSifWGwBqpTZXIXTeo8mlKjY+E2HAakaTeNpqAyBZ8GSqLzHgw4XmHmC8whvpjJNMbFZN7/g==}
@@ -2409,6 +2427,8 @@ snapshots:
 
   '@fontsource/ibm-plex-mono@5.2.7': {}
 
+  '@fontsource/ibm-plex-sans@5.2.8': {}
+
   '@fontsource/ibm-plex-serif@5.2.7': {}
 
   '@fontsource/monaspace-argon@5.2.5': {}
@@ -2727,6 +2747,11 @@ snapshots:
   '@swc/helpers@0.5.18':
     dependencies:
       tslib: 2.8.1
+
+  '@tailwindcss/forms@0.5.11(tailwindcss@4.1.18)':
+    dependencies:
+      mini-svg-data-uri: 1.4.4
+      tailwindcss: 4.1.18
 
   '@tailwindcss/node@4.1.18':
     dependencies:
@@ -3398,6 +3423,8 @@ snapshots:
   media-engine@1.0.3: {}
 
   min-indent@1.0.1: {}
+
+  mini-svg-data-uri@1.4.4: {}
 
   mlly@1.8.0:
     dependencies:

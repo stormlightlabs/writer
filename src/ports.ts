@@ -44,6 +44,7 @@ export type UiLayoutSettings = {
   top_bars_collapsed: boolean;
   status_bar_collapsed: boolean;
   line_numbers_visible: boolean;
+  text_wrapping_enabled: boolean;
   syntax_highlighting_enabled: boolean;
   editor_font_size: number;
   editor_font_family: EditorFontFamily;

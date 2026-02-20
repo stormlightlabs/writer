@@ -8,6 +8,7 @@ type LayoutSettingsPanelProps = {
   topBarsCollapsed: boolean;
   statusBarCollapsed: boolean;
   lineNumbersVisible: boolean;
+  textWrappingEnabled: boolean;
   syntaxHighlightingEnabled: boolean;
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
@@ -15,6 +16,7 @@ type LayoutSettingsPanelProps = {
   onSetTopBarsCollapsed: (value: boolean) => void;
   onSetStatusBarCollapsed: (value: boolean) => void;
   onSetLineNumbersVisible: (value: boolean) => void;
+  onSetTextWrappingEnabled: (value: boolean) => void;
   onSetSyntaxHighlightingEnabled: (value: boolean) => void;
   onSetEditorFontSize: (value: number) => void;
   onSetEditorFontFamily: (value: EditorFontFamily) => void;
@@ -130,6 +132,7 @@ export function LayoutSettingsPanel(
     topBarsCollapsed,
     statusBarCollapsed,
     lineNumbersVisible,
+    textWrappingEnabled,
     syntaxHighlightingEnabled,
     editorFontSize,
     editorFontFamily,
@@ -137,6 +140,7 @@ export function LayoutSettingsPanel(
     onSetTopBarsCollapsed,
     onSetStatusBarCollapsed,
     onSetLineNumbersVisible,
+    onSetTextWrappingEnabled,
     onSetSyntaxHighlightingEnabled,
     onSetEditorFontSize,
     onSetEditorFontFamily,
@@ -158,6 +162,10 @@ export function LayoutSettingsPanel(
   const toggleLineNumbers = useCallback(() => {
     onSetLineNumbersVisible(!lineNumbersVisible);
   }, [lineNumbersVisible, onSetLineNumbersVisible]);
+
+  const toggleTextWrapping = useCallback(() => {
+    onSetTextWrappingEnabled(!textWrappingEnabled);
+  }, [onSetTextWrappingEnabled, textWrappingEnabled]);
 
   const toggleSyntaxHighlighting = useCallback(() => {
     onSetSyntaxHighlightingEnabled(!syntaxHighlightingEnabled);
@@ -202,6 +210,11 @@ export function LayoutSettingsPanel(
             description="Show or hide line numbers in the editor gutter."
             isVisible={lineNumbersVisible}
             onToggle={toggleLineNumbers} />
+          <ToggleRow
+            label="Text Wrapping"
+            description="Wrap long lines in the editor instead of horizontal scrolling."
+            isVisible={textWrappingEnabled}
+            onToggle={toggleTextWrapping} />
           <ToggleRow
             label="Syntax Highlighting"
             description="Enable Markdown syntax colors and token styling."
