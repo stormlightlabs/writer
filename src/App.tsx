@@ -1,5 +1,6 @@
 import { logger } from "$logger";
-import { runCmd, uiLayoutGet, uiLayoutSet } from "$ports";
+import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { renderMarkdownForPdf, runCmd, uiLayoutGet, uiLayoutSet } from "$ports";
 import type { DocMeta, DocRef, Tab } from "$types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
@@ -8,9 +9,11 @@ import { FocusModePanel } from "./components/layout/FocusModePanel";
 import { LayoutSettingsPanel } from "./components/layout/LayoutSettingsPanel";
 import { SearchOverlay } from "./components/layout/SearchOverlay";
 import { WorkspacePanel } from "./components/layout/WorkspacePanel";
+import { PdfExportDialog } from "./components/pdf/ExportDialog/ExportDialog";
 import { useBackendEvents } from "./hooks/useBackendEvents";
 import { useEditor } from "./hooks/useEditor";
 import { useLayoutHotkeys } from "./hooks/useLayoutHotkeys";
+import { usePdfExport } from "./hooks/usePdfExport";
 import { usePreview } from "./hooks/usePreview";
 import { useSearchController } from "./hooks/useSearchController";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
@@ -75,8 +78,10 @@ const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; 
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
+  const { state: pdfExportState, exportPdf, reset: resetPdfExport } = usePdfExport();
   const { missingLocations, conflicts } = useBackendEvents();
   const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
+  const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
 
   useWorkspaceSync();
@@ -154,10 +159,51 @@ function App() {
   }, [editorDispatch]);
 
   const handleOpenSettings = useCallback(() => setIsLayoutSettingsOpen((prev) => !prev), []);
+
+  const handleOpenPdfExport = useCallback(() => {
+    if (!activeTab) {
+      logger.warn("Cannot export PDF without an active document.");
+      return;
+    }
+
+    resetPdfExport();
+    setIsPdfExportDialogOpen(true);
+  }, [activeTab, resetPdfExport]);
+
   const handleOpenSearch = useCallback(() => layoutActions.setShowSearch(true), [layoutActions]);
   const handleShowSidebar = useCallback(() => layoutActions.setSidebarCollapsed(false), [layoutActions]);
   const handleShowStatusBar = useCallback(() => layoutActions.setStatusBarCollapsed(false), [layoutActions]);
   const handleExit = useCallback(() => layoutActions.setFocusMode(false), [layoutActions]);
+
+  const handleCancelPdfExport = useCallback(() => {
+    setIsPdfExportDialogOpen(false);
+    resetPdfExport();
+  }, [resetPdfExport]);
+
+  const handleExportPdf = useCallback(async (options: PdfExportOptions) => {
+    if (!activeTab) {
+      logger.warn("Cannot export PDF without an active document.");
+      return;
+    }
+
+    const docRef = activeTab.docRef;
+
+    try {
+      const renderResult = await new Promise<PdfRenderResult>((resolve, reject) => {
+        void runCmd(
+          renderMarkdownForPdf(docRef.location_id, docRef.rel_path, editorModel.text, void 0, resolve, reject),
+        );
+      });
+
+      const didExport = await exportPdf(renderResult, options, layoutState.editorFontFamily);
+      if (didExport) {
+        setIsPdfExportDialogOpen(false);
+        resetPdfExport();
+      }
+    } catch (error) {
+      logger.error("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) });
+    }
+  }, [activeTab, editorModel.text, exportPdf, layoutState.editorFontFamily, resetPdfExport]);
 
   const showToggleControls = useMemo(() => layoutState.sidebarCollapsed || layoutState.statusBarCollapsed, [
     layoutState.sidebarCollapsed,
@@ -220,6 +266,9 @@ function App() {
       onToggleSplitView: layoutActions.toggleSplitView,
       onToggleFocusMode: layoutActions.toggleFocusMode,
       onTogglePreview: layoutActions.togglePreviewVisible,
+      onExportPdf: handleOpenPdfExport,
+      isExportingPdf: pdfExportState.isExporting,
+      isPdfExportDisabled: !activeTab,
       onOpenSettings: handleOpenSettings,
     }),
     [
@@ -230,6 +279,9 @@ function App() {
       layoutActions.toggleSplitView,
       layoutActions.toggleFocusMode,
       layoutActions.togglePreviewVisible,
+      handleOpenPdfExport,
+      pdfExportState.isExporting,
+      activeTab,
       handleSave,
       handleOpenSettings,
     ],
@@ -558,6 +610,13 @@ function App() {
       <AppHeaderBar {...appHeaderBarProps} />
       <WorkspacePanel {...workspacePanelProps} />
       <LayoutSettingsPanel {...settingsPanelProps} />
+      <PdfExportDialog
+        isOpen={isPdfExportDialogOpen}
+        title={activeDocMeta?.title}
+        isExporting={pdfExportState.isExporting}
+        errorMessage={pdfExportState.error}
+        onExport={handleExportPdf}
+        onCancel={handleCancelPdfExport} />
       <SearchOverlay {...searchProps} />
       <BackendAlerts missingLocations={missingLocations} conflicts={conflicts} />
     </div>

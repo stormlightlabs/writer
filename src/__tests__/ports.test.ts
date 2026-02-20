@@ -17,6 +17,7 @@ import {
   noSub,
   ok,
   renderMarkdown,
+  renderMarkdownForPdf,
   runCmd,
   searchDocuments,
   startWatch,
@@ -591,6 +592,23 @@ describe("document Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("markdown_render");
+      expect(cmd.payload).toStrictEqual({
+        locationId: 11,
+        relPath: "notes/today.md",
+        text: "# Draft",
+        profile: "GfmSafe",
+      });
+    });
+  });
+
+  describe(renderMarkdownForPdf, () => {
+    it("should create command with expected payload keys", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = renderMarkdownForPdf(11, "notes/today.md", "# Draft", "GfmSafe", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("markdown_render_for_pdf");
       expect(cmd.payload).toStrictEqual({
         locationId: 11,
         relPath: "notes/today.md",

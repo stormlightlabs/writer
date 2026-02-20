@@ -47,7 +47,9 @@ describe(Editor, () => {
     it("should apply custom font family and size variables", () => {
       render(<Editor fontFamily="IBM Plex Sans Variable" fontSize={19} />);
       const container = screen.getByTestId("editor-container");
-      expect(container).toHaveStyle("--editor-font-family: \"IBM Plex Sans Variable\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif");
+      expect(container).toHaveStyle(
+        "--editor-font-family: \"IBM Plex Sans Variable\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+      );
       expect(container).toHaveStyle("--editor-font-size: 19px");
     });
   });

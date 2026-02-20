@@ -1128,6 +1128,47 @@ mod tests {
     }
 
     #[test]
+    fn test_render_for_pdf_extracts_title_and_nodes() {
+        let engine = MarkdownEngine::new();
+        let markdown = "---\ntitle: Export Title\n---\n\n# Heading\n\nParagraph text.";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert_eq!(result.title, Some("Export Title".to_string()));
+        assert!(result.word_count > 0);
+        assert!(
+            result
+                .nodes
+                .iter()
+                .any(|node| matches!(node, PdfNode::Heading { level: 1, content } if content == "Heading"))
+        );
+        assert!(
+            result
+                .nodes
+                .iter()
+                .any(|node| matches!(node, PdfNode::Paragraph { content } if content == "Paragraph text."))
+        );
+    }
+
+    #[test]
+    fn test_render_for_pdf_handles_lists() {
+        let engine = MarkdownEngine::new();
+        let markdown = "- One\n- Two";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        let list = result.nodes.iter().find_map(|node| match node {
+            PdfNode::List { items, ordered } => Some((items, ordered)),
+            _ => None,
+        });
+
+        assert!(list.is_some());
+        let (items, ordered) = list.unwrap();
+        assert!(!ordered);
+        assert_eq!(items.len(), 2);
+        assert!(matches!(items[0], PdfNode::Paragraph { ref content } if content == "One"));
+        assert!(matches!(items[1], PdfNode::Paragraph { ref content } if content == "Two"));
+    }
+
+    #[test]
     fn test_strikethrough() {
         let engine = MarkdownEngine::new();
         let markdown = "~~deleted~~";

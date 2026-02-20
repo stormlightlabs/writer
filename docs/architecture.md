@@ -46,16 +46,13 @@ The app **never requires** content to live in an app-private container.
 All app-owned derived data lives in the app's application data directory (e.g., `AppData`/`Application Support` equivalent), not inside user content roots.
 
 - `app.db` (SQLite)
-
     - Search index via **FTS** (FTS5 recommended)
     - Document catalog (path, file hash/mtime, size, encoding)
     - Tag index (derived from frontmatter or inline syntax)
     - "Recent documents", pin list, writing sessions stats
 - `settings.json` (small, human-readable)
-
     - UI preferences, editor settings, enabled locations list
 - `workspace.json`
-
     - Window layout, last open doc, sidebar state, etc.
 
 > Tauri provides an official **Store plugin** for persisting small state to a file (async), which is appropriate for `settings/workspace` class data. ([Tauri][tauri-store])
@@ -160,7 +157,6 @@ Store in SQLite:
 ## Permissions & Security Model (Tauri v2)
 
 - Use Tauri **capabilities** to enable only:
-
     - dialog open/save
     - fs read/write/rename/mkdir/watch (scoped)
 - Leverage fs plugin scoping (glob-based) and prevent parent traversal. ([Tauri][tauri-fs])

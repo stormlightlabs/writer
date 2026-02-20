@@ -6,7 +6,9 @@ export type CustomPageSize = { width: number; height: number };
 
 export type PageSize = StandardPageSize | CustomPageSize;
 
-export type Margins = { top: number; right: number; bottom: number; left: number };
+export type MarginSide = "top" | "right" | "bottom" | "left";
+
+export type Margins = Record<MarginSide, number>;
 
 export type PdfExportOptions = {
   pageSize: PageSize;
@@ -26,7 +28,7 @@ export type MarkdownNode =
   | { type: "blockquote"; content: string }
   | { type: "footnote"; id: string; content: string };
 
-export type PdfRenderResult = { nodes: MarkdownNode[]; title?: string; wordCount: number };
+export type PdfRenderResult = { nodes: MarkdownNode[]; title?: string; word_count: number };
 
 export type FontName =
   | "IBM Plex Mono"

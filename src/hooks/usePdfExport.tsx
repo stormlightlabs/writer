@@ -1,5 +1,6 @@
 import { MarkdownPdfDocument } from "$components/pdf/MarkdownPdfDocument";
-import type { FontName, PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import type { EditorFontFamily } from "$types";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
@@ -7,7 +8,12 @@ import { useCallback, useState } from "react";
 
 export type PdfExportState = { isExporting: boolean; error: string | null };
 
-type ExportFn = (result: PdfRenderResult, options: PdfExportOptions, editorFontFamily: string) => Promise<void>;
+type ExportFn = (
+  result: PdfRenderResult,
+  options: PdfExportOptions,
+  editorFontFamily: EditorFontFamily,
+) => Promise<boolean>;
+
 export type UsePdfExportReturn = { state: PdfExportState; exportPdf: ExportFn; reset: () => void };
 
 const initialState: PdfExportState = { isExporting: false, error: null };
@@ -16,7 +22,7 @@ export function usePdfExport(): UsePdfExportReturn {
   const [state, setState] = useState<PdfExportState>(initialState);
 
   const exportPdf = useCallback(
-    async (result: PdfRenderResult, options: PdfExportOptions, editorFontFamily: string) => {
+    async (result: PdfRenderResult, options: PdfExportOptions, editorFontFamily: EditorFontFamily) => {
       setState({ isExporting: true, error: null });
 
       try {
@@ -25,7 +31,7 @@ export function usePdfExport(): UsePdfExportReturn {
             nodes={result.nodes}
             title={result.title}
             options={options}
-            editorFontFamily={editorFontFamily as FontName} />,
+            editorFontFamily={editorFontFamily} />,
         ).toBlob();
 
         const arrayBuffer = await blob.arrayBuffer();
@@ -35,15 +41,17 @@ export function usePdfExport(): UsePdfExportReturn {
 
         if (!filePath) {
           setState({ isExporting: false, error: null });
-          return;
+          return false;
         }
 
         await writeFile(filePath, uint8Array);
 
         setState({ isExporting: false, error: null });
+        return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to export PDF";
         setState({ isExporting: false, error: errorMessage });
+        throw err;
       }
     },
     [],

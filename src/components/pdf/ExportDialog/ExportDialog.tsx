@@ -1,5 +1,5 @@
 import { DEFAULT_OPTIONS } from "$pdf/constants";
-import type { PdfExportOptions, StandardPageSize } from "$pdf/types";
+import type { MarginSide, PdfExportOptions, StandardPageSize } from "$pdf/types";
 import { useCallback, useState } from "react";
 import { PdfExportDialogFooter } from "./ExportFooter";
 import { PdfExportDialogHeader } from "./ExportHeader";
@@ -8,7 +8,9 @@ import { PdfExportDialogOptions } from "./ExportOptions";
 export type PdfExportDialogProps = {
   isOpen: boolean;
   title?: string;
-  onExport: (options: PdfExportOptions) => void;
+  isExporting?: boolean;
+  errorMessage?: string | null;
+  onExport: (options: PdfExportOptions) => Promise<void>;
   onCancel: () => void;
 };
 
@@ -20,7 +22,9 @@ const PdfTitle = ({ title }: { title?: string }) => (title
   )
   : null);
 
-export function PdfExportDialog({ isOpen, title, onExport, onCancel }: PdfExportDialogProps) {
+export function PdfExportDialog(
+  { isOpen, title, isExporting = false, errorMessage, onExport, onCancel }: PdfExportDialogProps,
+) {
   const [options, setOptions] = useState<PdfExportOptions>(DEFAULT_OPTIONS);
 
   const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -38,8 +42,21 @@ export function PdfExportDialog({ isOpen, title, onExport, onCancel }: PdfExport
     setOptions((prev) => ({ ...prev, fontSize }));
   }, []);
 
-  const handleExportClick = useCallback(() => {
-    onExport(options);
+  const handleMarginChange = useCallback((side: MarginSide, value: number) => {
+    const margin = Number.isNaN(value) ? 0 : value;
+    setOptions((prev) => ({ ...prev, margins: { ...prev.margins, [side]: margin } }));
+  }, []);
+
+  const handleIncludeHeaderChange = useCallback((value: boolean) => {
+    setOptions((prev) => ({ ...prev, includeHeader: value }));
+  }, []);
+
+  const handleIncludeFooterChange = useCallback((value: boolean) => {
+    setOptions((prev) => ({ ...prev, includeFooter: value }));
+  }, []);
+
+  const handleExportClick = useCallback(async () => {
+    await onExport(options);
   }, [onExport, options]);
 
   if (isOpen) {
@@ -48,12 +65,19 @@ export function PdfExportDialog({ isOpen, title, onExport, onCancel }: PdfExport
         <div className="w-full max-w-md bg-layer-01 rounded-lg shadow-xl border border-border-subtle p-6">
           <PdfExportDialogHeader handleCancel={onCancel} />
           <PdfTitle title={title} />
+          {errorMessage ? <p className="text-sm text-support-error mb-4">{errorMessage}</p> : null}
           <PdfExportDialogOptions
             options={options}
             handlePageSizeChange={handlePageSizeChange}
             handleOrientationChange={handleOrientationChange}
-            handleFontSizeChange={handleFontSizeChange} />
-          <PdfExportDialogFooter handleCancel={onCancel} handleExportClick={handleExportClick} />
+            handleFontSizeChange={handleFontSizeChange}
+            handleMarginChange={handleMarginChange}
+            handleIncludeHeaderChange={handleIncludeHeaderChange}
+            handleIncludeFooterChange={handleIncludeFooterChange} />
+          <PdfExportDialogFooter
+            handleCancel={onCancel}
+            handleExportClick={handleExportClick}
+            isExporting={isExporting} />
         </div>
       </div>
     );

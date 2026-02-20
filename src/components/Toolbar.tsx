@@ -1,5 +1,6 @@
 import {
   CheckIcon,
+  DocumentIcon,
   EyeIcon,
   FocusIcon,
   IconProps,
@@ -24,6 +25,9 @@ export type ToolbarProps = {
   onToggleFocusMode: () => void;
   onTogglePreview: () => void;
   onOpenSettings: () => void;
+  onExportPdf?: () => void;
+  isExportingPdf?: boolean;
+  isPdfExportDisabled?: boolean;
   onRefresh?: () => void;
 };
 
@@ -86,30 +90,30 @@ function ToolbarButton(
 const getStatusDisplay = (status: SaveStatus) => {
   switch (status) {
     case "Saving": {
-      return { icon: <SaveIcon size="sm" />, text: "Saving...", color: "text-accent-cyan" };
+      return { Icon: SaveIcon, text: "Saving...", color: "text-accent-cyan" };
     }
     case "Saved": {
-      return { icon: <CheckIcon size="sm" />, text: "Saved", color: "text-accent-green" };
+      return { Icon: CheckIcon, text: "Saved", color: "text-accent-green" };
     }
     case "Dirty": {
-      return { icon: null, text: "Unsaved", color: "text-accent-yellow" };
+      return { Icon: null, text: "Unsaved", color: "text-accent-yellow" };
     }
     case "Error": {
-      return { icon: null, text: "Error", color: "text-support-error" };
+      return { Icon: null, text: "Error", color: "text-support-error" };
     }
     default: {
-      return { icon: null, text: "Ready", color: "text-text-placeholder" };
+      return { Icon: null, text: "Ready", color: "text-text-placeholder" };
     }
   }
 };
 
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
-  const { icon, text, color } = getStatusDisplay(status);
+  const { Icon, text, color } = getStatusDisplay(status);
 
   return (
     <div
       className={`flex items-center gap-1.5 text-xs ${color} px-2 py-1 bg-layer-01 rounded border border-border-subtle`}>
-      {icon && <span className="flex">{icon}</span>}
+      {Icon && <Icon size="sm" />}
       <span>{text}</span>
     </div>
   );
@@ -126,6 +130,9 @@ export function Toolbar(
     onToggleFocusMode,
     onTogglePreview,
     onOpenSettings,
+    onExportPdf,
+    isExportingPdf = false,
+    isPdfExportDisabled = false,
     onRefresh,
   }: ToolbarProps,
 ) {
@@ -136,6 +143,7 @@ export function Toolbar(
       splitView: { Component: SplitViewIcon, size: "sm" },
       eye: { Component: EyeIcon, size: "sm" },
       focus: { Component: FocusIcon, size: "sm" },
+      export: { Component: DocumentIcon, size: "sm" },
       settings: { Component: SettingsIcon, size: "sm" },
     }),
     [],
@@ -150,9 +158,7 @@ export function Toolbar(
           onClick={onSave}
           disabled={saveStatus === "Saved" || saveStatus === "Saving"}
           shortcut="Ctrl+S" />
-
         <SaveStatusIndicator status={saveStatus} />
-
         {onRefresh && <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" />}
       </div>
 
@@ -180,6 +186,13 @@ export function Toolbar(
       </div>
 
       <div>
+        {onExportPdf && (
+          <ToolbarButton
+            icon={icons.export}
+            label={isExportingPdf ? "Exporting" : "Export PDF"}
+            onClick={onExportPdf}
+            disabled={isExportingPdf || isPdfExportDisabled} />
+        )}
         <ToolbarButton icon={icons.settings} label="Settings" onClick={onOpenSettings} />
       </div>
     </div>
