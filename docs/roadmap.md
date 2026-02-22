@@ -1,176 +1,116 @@
 # Roadmap
 
-## Location system + permissions + persisted access
+## Focus mode enhancements (typewriter scrolling + sentence dimming)
 
-Users add folders ("locations"), and access persists across restarts—without granting broad filesystem access.
-
-- Use **Tauri capabilities** to scope permissions and limit plugin access. ([Tauri][2])
-- "Add location" via **folder picker** (dialog plugin), then persist the granted scope (persisted-scope plugin recommended). ([CodeSandbox][3])
+Evolve the existing Focus toggle into a writing environment. This should be the default mode.
 
 ### Tasks
 
-1. **Domain model**
-   - `LocationId`, `LocationDescriptor { id, name, root_path, added_at }`
-   - `DocRef { location_id, rel_path }`
-2. **Rust commands**
-   - `location_add_via_dialog() -> LocationDescriptor`
-   - `location_list() -> Vec<LocationDescriptor>`
-   - `location_remove(LocationId)`
-3. **Scope enforcement**
-   - Canonicalize + reject path traversal
-   - All doc ops require `DocRef`, never arbitrary absolute paths
-4. **Reconcile on startup**
-   - Validate roots still exist
-   - Emit events for missing/changed locations
+1. **Typewriter scrolling**
+   - Keep the active line vertically centered in the viewport at all times
+   - CodeMirror extension that overrides scroll behavior on cursor movement
+   - Respect user preference toggle (on/off), persist via settings
+2. **Sentence-level dimming**
+   - Dim all text except the current sentence being edited
+   - Use CodeMirror decorations to apply reduced-opacity styling to non-active sentences
+   - Sentence boundary detection (period/question mark/exclamation + whitespace)
+3. **Paragraph-level dimming** (alternative mode)
+   - Same approach, but scope is the current paragraph instead of sentence
+   - Expose a three-way toggle: Off / Sentence / Paragraph
+4. **Visual polish**
+   - Smooth opacity transitions when moving between sentences/paragraphs
+   - Ensure dimming interacts correctly with existing Oxocarbon themes (dark + light)
 
-## Rust command layer "ports" + event channel
+## Writer's syntax highlighting (parts of speech)
 
-A stable backend API surface that the Elm-style frontend treats as "ports".
-
-### Tasks
-
-1. **Command contract design**
-   - Standard response envelope:
-        - `Ok(T)` / `Err(AppError { code, message, context })`
-   - Error codes: `NotFound`, `PermissionDenied`, `InvalidPath`, `Io`, `Parse`, `Index`, `Conflict`
-2. **Tauri command + event plumbing**
-   - Implement command handlers (`#[tauri::command]`)
-   - Implement a global event emitter for backend → frontend push events (file watcher, indexing progress). ([Tauri][4])
-3. **Frontend Elm core**
-   - `Cmd` variants:
-      - `Cmd::Invoke(command, payload, onOk, onErr)`
-      - `Cmd::StartWatch(location_id)`
-   - `Sub` variants:
-      - backend events stream → `Msg::BackendEvent(...)`
-
-## Document catalog + safe IO + atomic saves
-
-Open/edit/save files in locations safely and predictably.
+Color text by grammatical role to help writers spot weak phrasing during editing.
 
 ### Tasks
 
-1. **Doc catalog layer**
-   - `doc_list(location_id, options) -> Vec<DocMeta>`
-   - `doc_open(doc_ref) -> { text, meta }`
-2. **Atomic write implementation**
-   - Write temp → fsync (where possible) → rename/replace
-   - Preserve encoding + line endings policy
-3. **Conflict awareness**
-   - Detect "conflicted copy" patterns (provider-created duplicates)
-   - Treat as a new document; surface in UI as "conflict detected"
-4. **Editor autosave loop** (Backend ready, needs UI wiring)
-   - Debounced save in Elm (`Msg::EditorChanged` → schedule save `Cmd`)
-   - Save status machine: `Idle | Dirty | Saving | Saved | Error`
+1. **NLP tokenizer integration**
+   - Evaluate lightweight browser-side NLP libraries (compromise, wink-nlp) for POS tagging
+   - Alternatively, implement Rust-side tagging via `nlprule`
+2. **POS decoration layer**
+   - Map POS tags → color tokens:
+     - Nouns → Red, Verbs → Blue, Adjectives → Brown, Adverbs → Purple, Conjunctions → Green
+   - Apply as CodeMirror view decorations (marks), re-computed on text change (debounced)
+3. **Toggle + settings**
+   - Add to settings panel
+   - POS coloring is a "metadata view" — never affects export or preview output
+4. **Performance guardrails**
+   - Tag only the visible viewport + buffer zone, not the entire document
+   - Cache POS results per paragraph; invalidate on edit
 
-## Markdown engine (Rust)
+## Style check (fillers, redundancies, clichés)
 
-A "thorough" Markdown pipeline: deterministic HTML, structured metadata, and source mapping support.
-
-### Engine choice
-
-- **Comrak** for CommonMark + GitHub Flavored Markdown support and configurable extensions. ([Crates.io][1])
+Real-time prose polish that flags weak patterns without altering the source text.
 
 ### Tasks
 
-1. **Define Markdown profiles**
-   - `MarkdownProfile::StrictCommonMark`
-   - `MarkdownProfile::GfmSafe` (tables/tasklists/strikethrough/autolinks; disallow unsafe raw HTML)
-   - Future: `WikiLinks`, `FrontMatter`, `Math`, etc. (Comrak supports many as extensions). ([GitHub][5])
-2. **Rendering safety**
-   - Default: `render.unsafe = false`
-   - Treat raw HTML as untrusted; if you ever enable "unsafe" rendering, require sanitization / CSP strategy (explicit opt-in). ([Crates.io][1])
-3. **Source position mapping**
-   - Enable `render.sourcepos` to include source position attributes in HTML output (useful for editor↔preview sync). ([Docs.rs][6])
-4. **Metadata extraction**
-   - Extract:
-      - title (first H1)
-      - headings outline (H1–H6)
-      - link refs
-      - task items count
-      - word count estimate
-5. **Golden tests**
-   - For each fixture:
-      - Markdown → HTML exact match
-      - Outline JSON match
-      - Sourcepos presence for block nodes
+1. **Pattern engine**
+   - Curate dictionaries:
+     - Fillers (e.g. "basically", "actually", "just", "really")
+     - Redundancies (e.g. "absolutely essential", "end result")
+     - Clichés (e.g. "at the end of the day", "think outside the box")
+   - Match via trie against document text
+2. **Virtual strikethrough decorations**
+   - Render flagged spans with a CSS strikethrough in the editor (CodeMirror decoration)
+   - Non-destructive: decorations are editor-only, not part of the Markdown AST
+3. **Diagnostics panel**
+   - Show categorized list of flagged items with line references
+   - Click-to-navigate from panel to editor location
+4. **User customization**
+   - Allow adding/removing patterns from each dictionary
+   - Persist custom dictionaries in settings/store
 
-## Editor (React)
+## Content blocks (transclusion)
 
-A robust text editor that cooperates with Elm state management (no "hidden state surprises").
+Allow embedding external Markdown files, images, and CSV data into a master document using `/filename` syntax.
 
 ### Tasks
 
-1. **Editor engine**
-   - Use CodeMirror 6 with Markdown language support (`@codemirror/lang-markdown`). ([GitHub][7])
-2. **React integration**
-   - Wrap CodeMirror in a controlled-ish component:
-   - Avoid full "controlled text value" on every keystroke (perf)
-   - Instead: editor is the local text buffer, but emits patches / debounced full text into Elm `Model`
-3. **Editing features (MVP)**
-   - line/selection persistence
-   - undo/redo
-   - markdown syntax highlighting
-   - basic keymap
-4. **Elm event design**
-   - `Msg::EditorChanged(delta|text)`
-   - `Msg::SaveRequested`
-   - `Msg::SaveFinished`
-   - `Msg::DocOpened`
-5. **Oxocarbon Dark & Light themes**
-6. **Testing library tests**
+1. **Syntax definition**
+   - `/path/to/file.md` on its own line = transclude that file's rendered content
+   - `/path/to/image.png` = embed image
+   - `/path/to/data.csv` = render as Markdown table
+   - Resolve paths relative to the current document's directory, scoped within its location
+2. **Rust expansion command**
+   - `content_block_expand(doc_ref, block_ref) -> ExpandedBlock { kind, content }`
+   - Recursion guard: cap depth, detect cycles
+3. **Editor integration**
+   - CodeMirror decoration: render content blocks inline as collapsed/expandable previews
+   - Syntax highlighting for the `/filename` token
+4. **Preview + export**
+   - Expand content blocks during `markdown_render` for preview
+   - Expand during PDF/HTML export so final output is self-contained
+5. **CSV → table rendering**
+   - Parse CSV, emit GFM table Markdown, feed into Comrak pipeline
 
-## Preview renderer + scroll/selection sync
+## Library enhancements (hashtags, smart folders, favorites)
 
-High-quality Markdown rendering with predictable safety and a stable sync model.
+Improve file organization
 
 ### Tasks
 
-1. **Backend preview command**
-   - `markdown_render(doc_ref, text, profile) -> { html, outline, diagnostics }`
-   - Cache rendered HTML by `(doc_id, content_hash, profile)`
-2. **Frontend preview**
-   - Render HTML in a sandboxed container (no inline scripts)
-   - Apply CSS theme consistent with editor
-3. **Sync strategy**
-   - Use `data-sourcepos` (from Comrak sourcepos) to map:
-      - editor cursor line → preview anchor
-      - preview scroll → nearest sourcepos line
-   - Implement coarse sync first (block-level), refine later. ([Docs.rs][6])
-
-## Indexing + search (SQLite FTS)
-
-Fast global search across locations with correct incremental updates (watcher + reconciliation).
-
-### Tasks
-
-1. **SQLite schema**
-   - `docs(location_id, rel_path, mtime, size, hash, title, updated_at, …)`
-   - `docs_fts(content, tokenize=...)`
-2. **Index update pipeline**
-   - On save: update FTS row
-   - On watcher event: queue reindex for changed file
-   - On startup: reconcile catalog vs filesystem (drift repair)
-3. **Search API**
-   - `search(query, filters, limit) -> SearchHit[]` with snippets
-
-## Markdown "thoroughness" upgrades (extensions, diagnostics, export)
-
-Make Markdown handling feel professional and predictable for writers.
-
-### Tasks
-
-1. **Front matter**
-   - Parse YAML/TOML front matter (Comrak supports front matter extension; decide format). ([GitHub][5])
-2. **Footnotes, definition lists, tables**
-   - Enable and test; ensure preview styles cover them. ([GitHub][5])
-3. **Diagnostics**
-   - Lint-like warnings:
-      - duplicate heading IDs
-      - malformed links
-      - mixed line endings
-4. **Export**
-   - HTML export (direct from Rust renderer)
-   - PDF export
+1. **Hashtag extraction**
+   - Scan document text for `#tag` patterns (exclude Markdown headings)
+   - Store extracted tags in the SQLite index (`doc_tags` table)
+   - Re-index tags on save and on watcher events
+2. **Task list extraction**
+   - Scan document for `- [ ]` patterns
+   - Store extracted tasks in the SQLite index (`doc_tasks` table)
+   - Re-index tasks on save and on watcher events
+3. **Smart folders**
+   - Predefined filter rules: tag match, date range, word-count threshold, location
+   - `smart_folder_list() -> Vec<SmartFolder>`, `smart_folder_query(id) -> Vec<DocMeta>`
+   - UI: render smart folders in the sidebar above/below locations
+4. **Favorites**
+   - Toggle-favorite on any document (`doc_set_favorite(doc_ref, bool)`)
+   - Persist in SQLite; surface a "Favorites" virtual folder in the sidebar
+5. **Sidebar UI updates**
+   - New sections for Smart Folders and Favorites
+   - Badge counts on each smart folder / favorites section
+   - Drag-and-drop reorder for smart folders
 
 ## Hardening
 
@@ -185,13 +125,3 @@ Make Markdown handling feel professional and predictable for writers.
 3. **Recovery**
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
-
-## References
-
-[1]: https://crates.io/crates/comrak "comrak - crates.io: Rust Package Registry"
-[2]: https://v2.tauri.app/develop/calling-rust/ "Calling Rust from the Frontend"
-[3]: https://codesandbox.io/s/react-codemirror-example-codemirror-6-markdown-auto-languages-iudnj "react-codemirror-example (codemirror 6) (Markdown auto ...)"
-[4]: https://v2.tauri.app/develop/calling-frontend/ "Calling the Frontend from Rust"
-[5]: https://github.com/kivikakk/comrak "kivikakk/comrak: CommonMark + GFM compatible ..."
-[6]: https://docs.rs/comrak/latest/comrak/options/struct.Render.html "Render in comrak::options - Rust"
-[7]: https://github.com/codemirror/lang-markdown "Markdown language support for the CodeMirror code editor"
