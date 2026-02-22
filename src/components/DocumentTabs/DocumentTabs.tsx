@@ -62,7 +62,7 @@ export function DocumentTabs({ tabs, activeTabId, onSelectTab, onCloseTab, onReo
       onCloseTab(contextMenu.tabId);
       setContextMenu(null);
     }
-  }, [contextMenu]);
+  }, [contextMenu, onCloseTab]);
 
   const closeOthers = useCallback(() => {
     if (contextMenu) {
@@ -73,14 +73,14 @@ export function DocumentTabs({ tabs, activeTabId, onSelectTab, onCloseTab, onReo
       }
       setContextMenu(null);
     }
-  }, [contextMenu]);
+  }, [contextMenu, onCloseTab, tabs]);
 
   const closeAll = useCallback(() => {
     for (const t of tabs) {
       onCloseTab(t.id);
     }
     setContextMenu(null);
-  }, [tabs]);
+  }, [tabs, onCloseTab]);
 
   const contextMenuStyle = useMemo(() => contextMenu ? ({ left: contextMenu.x, top: contextMenu.y }) : {}, [
     contextMenu,

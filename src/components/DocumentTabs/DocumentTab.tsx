@@ -34,23 +34,23 @@ export const DocumentTab = (
   const isDragOver = tab.id === dragOverTab;
   const onDragStart: DragEventHandler<HTMLDivElement> = useCallback((e) => {
     handleDragStart(e, tab.id);
-  }, [tab.id]);
+  }, [tab.id, handleDragStart]);
 
   const onDragOver: DragEventHandler<HTMLDivElement> = useCallback((e) => {
     handleDragOver(e, tab.id);
-  }, [tab.id]);
+  }, [tab.id, handleDragOver]);
 
   const onDrop: DragEventHandler<HTMLDivElement> = useCallback((e) => {
     handleDrop(e, tab.id);
-  }, [tab.id]);
+  }, [tab.id, handleDrop]);
 
   const onContextMenu: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
     handleContextMenu(e, tab.id);
-  }, [tab.id]);
+  }, [tab.id, handleContextMenu]);
 
   const onClick: MouseEventHandler<HTMLDivElement> = useCallback(() => {
     onSelectTab(tab.id);
-  }, [tab.id]);
+  }, [tab.id, onSelectTab]);
 
   const handleMouseEnter: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
     if (!isActive) {
@@ -67,7 +67,7 @@ export const DocumentTab = (
   const handleCloseTabClick: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
     e.stopPropagation();
     onCloseTab(tab.id);
-  }, [tab.id]);
+  }, [tab.id, onCloseTab]);
 
   const classes = useMemo(() => {
     const base = [

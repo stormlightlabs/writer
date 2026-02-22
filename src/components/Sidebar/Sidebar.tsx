@@ -104,7 +104,7 @@ export function Sidebar(
 
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = useCallback((e) => {
     onFilterChange?.(e.currentTarget.value);
-  }, []);
+  }, [onFilterChange]);
 
   if (isCollapsed) {
     return (

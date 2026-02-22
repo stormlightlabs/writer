@@ -1,7 +1,8 @@
 import { MarkdownPdfDocument } from "$components/pdf/MarkdownPdfDocument";
 import { logger } from "$logger";
-import { describePdfFont, ensurePdfFontRegistered, type FontStrategy } from "$pdf/fonts";
-import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { serializeError } from "$pdf/errors";
+import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
+import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import type { EditorFontFamily } from "$types";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -19,39 +20,6 @@ type ExportFn = (
 export type UsePdfExportReturn = { state: PdfExportState; exportPdf: ExportFn; reset: () => void };
 
 const initialState: PdfExportState = { isExporting: false, error: null };
-
-type SerializedError = {
-  name: string;
-  message: string;
-  stack?: string;
-  code?: string;
-  details?: unknown;
-  cause?: SerializedError;
-};
-
-const serializeError = (error: unknown, depth = 0): SerializedError => {
-  if (depth > 4) {
-    return { name: "TruncatedError", message: "Error cause chain exceeded depth limit" };
-  }
-
-  if (error instanceof Error) {
-    const withFields = error as Error & { code?: string; details?: unknown; cause?: unknown };
-    const serialized: SerializedError = { name: error.name, message: error.message, stack: error.stack };
-
-    if (withFields.code) {
-      serialized.code = withFields.code;
-    }
-    if (withFields.details) {
-      serialized.details = withFields.details;
-    }
-    if (withFields.cause) {
-      serialized.cause = serializeError(withFields.cause, depth + 1);
-    }
-    return serialized;
-  }
-
-  return { name: "UnknownError", message: String(error) };
-};
 
 const runtimeContext = () => ({
   href: globalThis.location?.href ?? null,

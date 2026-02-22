@@ -13,7 +13,8 @@
     "unicorn/prefer-global-this": "warn",
     "init-declarations": "off",
     "no-warning-comments": "off",
-    "unicorn/no-array-for-each": "warn"
+    "unicorn/no-array-for-each": "warn",
+    "react/exhaustive-deps": "warn"
   },
   "settings": {
     "jsx-a11y": { "polymorphicPropName": null, "components": {}, "attributes": {} },

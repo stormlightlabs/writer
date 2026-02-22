@@ -185,7 +185,7 @@ function FilterLocation({ location, filters, handleToggleLocation }: FilterLocat
     }
 
     return base.join(" ");
-  }, [filters.locations]);
+  }, [filters.locations, location.id]);
   return <button onClick={handleClick} className={classes}>{location.name}</button>;
 }
 

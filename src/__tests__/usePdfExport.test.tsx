@@ -2,57 +2,51 @@ import { logger } from "$logger";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { PdfRenderResult } from "$pdf/types";
+import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-import { pdf } from "@react-pdf/renderer";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePdfExport } from "../hooks/usePdfExport";
 
-vi.mock("$components/pdf/MarkdownPdfDocument", () => ({
-  MarkdownPdfDocument: () => null,
-}));
+vi.mock("$components/pdf/MarkdownPdfDocument", () => ({ MarkdownPdfDocument: () => null }));
 
-vi.mock("$logger", () => ({
-  logger: {
-    init: vi.fn(),
-    trace: vi.fn(),
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+vi.mock(
+  "$logger",
+  () => ({ logger: { init: vi.fn(), trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }),
+);
 
-vi.mock("$pdf/fonts", () => ({
-  ensurePdfFontRegistered: vi.fn(),
-  describePdfFont: vi.fn((fontName: string, strategy: string) => ({
-    fontName,
-    strategy,
-    family: `${fontName}-${strategy}`,
-    sources: strategy === "custom" ? [{ file: "font.woff", src: "/fonts/font.woff", fontWeight: "normal" }] : [],
-  })),
-}));
+vi.mock(
+  "$pdf/fonts",
+  () => ({
+    ensurePdfFontRegistered: vi.fn(),
+    describePdfFont: vi.fn((fontName: string, strategy: string) => ({
+      fontName,
+      strategy,
+      family: `${fontName}-${strategy}`,
+      sources: strategy === "custom" ? [{ file: "font.woff", src: "/fonts/font.woff", fontWeight: "normal" }] : [],
+    })),
+  }),
+);
 
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  save: vi.fn(),
-}));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
 
-vi.mock("@tauri-apps/plugin-fs", () => ({
-  writeFile: vi.fn(),
-}));
+vi.mock("@tauri-apps/plugin-fs", () => ({ writeFile: vi.fn() }));
 
 const toBlobMock = vi.fn();
 
-vi.mock("@react-pdf/renderer", () => ({
-  Font: { register: vi.fn() },
-  Document: "Document",
-  Page: "Page",
-  Text: "Text",
-  View: "View",
-  StyleSheet: { create: (styles: unknown) => styles },
-  pdf: vi.fn(() => ({ toBlob: toBlobMock })),
-}));
+vi.mock(
+  "@react-pdf/renderer",
+  () => ({
+    Font: { register: vi.fn() },
+    Document: "Document",
+    Page: "Page",
+    Text: "Text",
+    View: "View",
+    StyleSheet: { create: (styles: unknown) => styles },
+    pdf: vi.fn(() => ({ toBlob: toBlobMock })),
+  }),
+);
 
 const renderResult: PdfRenderResult = {
   title: "Doc",
@@ -67,9 +61,9 @@ describe(usePdfExport, () => {
   });
 
   it("retries with built-in fonts on any custom render failure", async () => {
-    toBlobMock
-      .mockRejectedValueOnce(new Error("Custom font failure without known substrings"))
-      .mockResolvedValueOnce(new Blob(["pdf-bytes"], { type: "application/pdf" }));
+    toBlobMock.mockRejectedValueOnce(new Error("Custom font failure without known substrings")).mockResolvedValueOnce(
+      new Blob(["pdf-bytes"], { type: "application/pdf" }),
+    );
     vi.mocked(save).mockResolvedValue("/tmp/output.pdf");
 
     const { result } = renderHook(() => usePdfExport());

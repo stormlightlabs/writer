@@ -56,13 +56,13 @@ function ToolbarButton(
     if (!disabled && !isActive) {
       (e.currentTarget as HTMLButtonElement).classList.add("bg-layer-hover-01", "text-text-primary");
     }
-  }, []);
+  }, [isActive, disabled]);
 
   const handleMouseOut: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
     if (!isActive) {
       (e.currentTarget as HTMLButtonElement).classList.remove("bg-layer-hover-01", "text-text-primary");
     }
-  }, []);
+  }, [isActive]);
 
   return (
     <>

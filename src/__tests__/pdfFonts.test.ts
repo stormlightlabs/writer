@@ -2,19 +2,16 @@ import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import { Font } from "@react-pdf/renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@react-pdf/renderer", () => ({
-  Font: {
-    register: vi.fn(),
-    load: vi.fn(async () => {}),
-  },
-}));
+vi.mock("@react-pdf/renderer", () => ({ Font: { register: vi.fn(), load: vi.fn(async () => {}) } }));
 
 describe("pdf fonts", () => {
+  // oxlint-disable-next-line require-await
   const fetchMock = vi.fn(async () =>
     new Response(new Uint8Array([0x00, 0x01, 0x00, 0x00, 0x00, 0x00]), {
       status: 200,
       headers: { "content-type": "font/ttf" },
-    }));
+    })
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,16 +55,8 @@ describe("pdf fonts", () => {
     expect(description.family).toBe("MonaspaceXenon");
     expect(description.sources).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          file: "monaspace-xenon-400-italic.otf",
-          fontStyle: "italic",
-          fontWeight: "normal",
-        }),
-        expect.objectContaining({
-          file: "monaspace-xenon-700-italic.otf",
-          fontStyle: "italic",
-          fontWeight: "bold",
-        }),
+        expect.objectContaining({ file: "monaspace-xenon-400-italic.otf", fontStyle: "italic", fontWeight: "normal" }),
+        expect.objectContaining({ file: "monaspace-xenon-700-italic.otf", fontStyle: "italic", fontWeight: "bold" }),
       ]),
     );
   });

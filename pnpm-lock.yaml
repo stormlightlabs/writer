@@ -35,30 +35,6 @@ importers:
       '@fontsource-variable/ibm-plex-sans':
         specifier: ^5.2.8
         version: 5.2.8
-      '@fontsource/ibm-plex-mono':
-        specifier: ^5.2.7
-        version: 5.2.7
-      '@fontsource/ibm-plex-sans':
-        specifier: ^5.2.8
-        version: 5.2.8
-      '@fontsource/ibm-plex-serif':
-        specifier: ^5.2.7
-        version: 5.2.7
-      '@fontsource/monaspace-argon':
-        specifier: ^5.2.5
-        version: 5.2.5
-      '@fontsource/monaspace-krypton':
-        specifier: ^5.2.5
-        version: 5.2.5
-      '@fontsource/monaspace-neon':
-        specifier: ^5.2.5
-        version: 5.2.5
-      '@fontsource/monaspace-radon':
-        specifier: ^5.2.5
-        version: 5.2.5
-      '@fontsource/monaspace-xenon':
-        specifier: ^5.2.5
-        version: 5.2.5
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
@@ -563,30 +539,6 @@ packages:
 
   '@fontsource-variable/ibm-plex-sans@5.2.8':
     resolution: {integrity: sha512-n5PF2iFa0CZT0QYTPzxvZ39opC9LnU0zdoRccoADbs+Dtsd+lbXOZF7RNuIPHcQX1dKjF63sxnRImQIB5eD0Ag==}
-
-  '@fontsource/ibm-plex-mono@5.2.7':
-    resolution: {integrity: sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w==}
-
-  '@fontsource/ibm-plex-sans@5.2.8':
-    resolution: {integrity: sha512-eztSXjDhPhcpxNIiGTgMebdLP9qS4rWkysuE1V7c+DjOR0qiezaiDaTwQE7bTnG5HxAY/8M43XKDvs3cYq6ZYQ==}
-
-  '@fontsource/ibm-plex-serif@5.2.7':
-    resolution: {integrity: sha512-04owmc2OQQ/DAMjXjEMJc+7V4dBVmR01aIFOg4cuqS8pQ4HbvtlYs/u6+O0vCt21EMx5M/azIbgx43iKyisEOA==}
-
-  '@fontsource/monaspace-argon@5.2.5':
-    resolution: {integrity: sha512-EJ+jq1Smm3BB+8RK/gwB1uzjrSKdycZkKm8OZGCYvqJiTChKcGe7b2lmj0PmQbb/+lAEdCBIAcFLlPaWhtRANA==}
-
-  '@fontsource/monaspace-krypton@5.2.5':
-    resolution: {integrity: sha512-dOWSb0DtSMfjbptckxTme2FKNfRkFtmTuNRQ86sBki/CanR4ajSrE+GuJoCm9Kl3352CvafoRt2fDo8FU+Gz4A==}
-
-  '@fontsource/monaspace-neon@5.2.5':
-    resolution: {integrity: sha512-TjSSuHC37DroyhP5YCKRCAxdUb3In/uqHzqqW/8Ul+JWilz37d8lr8jFeapnbD3QdYXgiQoU2Rf/CmTdyl06DA==}
-
-  '@fontsource/monaspace-radon@5.2.5':
-    resolution: {integrity: sha512-mG6ltrFW5BYmcoRvVIKboCORZu8BeGg6h5zV5rnwEmFcjv8Bltua3KOj6aOxWbrR4PYnKyR17lNqSsjR8kx4bQ==}
-
-  '@fontsource/monaspace-xenon@5.2.5':
-    resolution: {integrity: sha512-k10RCF5nek9ee/rKSALaeYgOcJjjvzxxGkIlPwkSAoasjrsEeVKOSJ6ii1dMXOZwL9ZtW3p56Dxhgaw0Gtwvaw==}
 
   '@iconify-json/ri@1.2.10':
     resolution: {integrity: sha512-WWMhoncVVM+Xmu9T5fgu2lhYRrKTEWhKk3Com0KiM111EeEsRLiASjpsFKnC/SrB6covhUp95r2mH8tGxhgd5Q==}
@@ -2424,22 +2376,6 @@ snapshots:
   '@exodus/bytes@1.14.1': {}
 
   '@fontsource-variable/ibm-plex-sans@5.2.8': {}
-
-  '@fontsource/ibm-plex-mono@5.2.7': {}
-
-  '@fontsource/ibm-plex-sans@5.2.8': {}
-
-  '@fontsource/ibm-plex-serif@5.2.7': {}
-
-  '@fontsource/monaspace-argon@5.2.5': {}
-
-  '@fontsource/monaspace-krypton@5.2.5': {}
-
-  '@fontsource/monaspace-neon@5.2.5': {}
-
-  '@fontsource/monaspace-radon@5.2.5': {}
-
-  '@fontsource/monaspace-xenon@5.2.5': {}
 
   '@iconify-json/ri@1.2.10':
     dependencies:

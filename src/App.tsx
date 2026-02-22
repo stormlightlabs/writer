@@ -20,13 +20,6 @@ import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
 import { useLayoutActions, useLayoutState } from "./state/appStore";
 import "@fontsource-variable/ibm-plex-sans";
-import "@fontsource/ibm-plex-mono";
-import "@fontsource/ibm-plex-serif";
-import "@fontsource/monaspace-argon";
-import "@fontsource/monaspace-krypton";
-import "@fontsource/monaspace-neon";
-import "@fontsource/monaspace-radon";
-import "@fontsource/monaspace-xenon";
 import "./App.css";
 
 // TODO: make shared utils module
@@ -136,14 +129,7 @@ function App() {
     }
 
     editorDispatch({ type: "SaveRequested" });
-  }, [
-    editorDispatch,
-    editorModel.docRef,
-    workspace.documents,
-    workspace.handleCreateDraftTab,
-    workspace.selectedLocationId,
-    workspace.tabs,
-  ]);
+  }, [editorDispatch, editorModel.docRef, workspace]);
 
   const handleEditorChange = useCallback((text: string) => {
     editorDispatch({ type: "EditorChanged", text });
@@ -381,7 +367,7 @@ function App() {
       search.handleSearch,
       search.setFilters,
       search.handleSelectSearchResult,
-      layoutActions.setShowSearch,
+      layoutActions,
     ],
   );
 
@@ -479,7 +465,7 @@ function App() {
 
   useEffect(() => {
     workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
-  }, [editorModel.saveStatus, workspace.markActiveTabModified]);
+  }, [editorModel.saveStatus, workspace]);
 
   useEffect(() => {
     if (activeTab) {

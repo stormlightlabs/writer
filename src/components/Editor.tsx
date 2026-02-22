@@ -1,4 +1,4 @@
-import type { EditorFontFamily } from "$types";
+import type { AppTheme, EditorFontFamily } from "$types";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState as CMEditorState } from "@codemirror/state";
@@ -10,7 +10,7 @@ import type { CSSProperties } from "react";
 import { oxocarbonDark } from "../themes/oxocarbon-dark";
 import { oxocarbonLight } from "../themes/oxocarbon-light";
 
-export type EditorTheme = "dark" | "light";
+export type EditorTheme = AppTheme;
 
 export type EditorProps = {
   initialText?: string;
@@ -45,15 +45,15 @@ type CreateEditorStateOptions = {
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
-  "IBM Plex Mono": "\"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
+  "IBM Plex Mono": "\"Writer IBM Plex Mono\", \"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
   "IBM Plex Sans Variable":
-    "\"IBM Plex Sans Variable\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
-  "IBM Plex Serif": "\"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
-  "Monaspace Argon": "\"Monaspace Argon\", \"IBM Plex Mono\", monospace",
-  "Monaspace Krypton": "\"Monaspace Krypton\", \"IBM Plex Mono\", monospace",
-  "Monaspace Neon": "\"Monaspace Neon\", \"IBM Plex Mono\", monospace",
-  "Monaspace Radon": "\"Monaspace Radon\", \"IBM Plex Mono\", monospace",
-  "Monaspace Xenon": "\"Monaspace Xenon\", \"IBM Plex Mono\", monospace",
+    "\"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+  "IBM Plex Serif": "\"Writer IBM Plex Serif\", \"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
+  "Monaspace Argon": "\"Writer Monaspace Argon\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Krypton": "\"Writer Monaspace Krypton\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Neon": "\"Writer Monaspace Neon\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Radon": "\"Writer Monaspace Radon\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Xenon": "\"Writer Monaspace Xenon\", \"Writer IBM Plex Mono\", monospace",
 };
 
 function createEditorState(

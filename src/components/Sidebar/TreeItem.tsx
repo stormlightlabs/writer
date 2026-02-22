@@ -33,18 +33,18 @@ export function TreeItem(
     if (!isSelected) {
       (e.currentTarget as HTMLDivElement).classList.add("bg-layer-hover-01");
     }
-  }, []);
+  }, [isSelected]);
 
   const handleMouseLeave: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
     if (!isSelected) {
       (e.currentTarget as HTMLDivElement).classList.remove("bg-layer-hover-01");
     }
-  }, []);
+  }, [isSelected]);
 
   const handleButtonClick: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
     e.stopPropagation();
     onToggle?.();
-  }, []);
+  }, [onToggle]);
 
   const containerStyle: CSSProperties = useMemo(
     () => ({ paddingLeft: `${paddingLeft}px`, paddingRight: "8px", paddingTop: "6px", paddingBottom: "6px" }),

@@ -1,9 +1,9 @@
-import type { RenderResult } from "$types";
+import type { AppTheme, RenderResult } from "$types";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export type PreviewProps = {
   renderResult: RenderResult | null;
-  theme: "dark" | "light";
+  theme: AppTheme;
   editorLine: number;
   onScrollToLine?: (line: number) => void;
   className?: string;

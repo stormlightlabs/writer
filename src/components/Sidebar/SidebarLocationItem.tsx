@@ -40,7 +40,7 @@ export function SidebarLocationItem(
   const handleRemoveClick = useCallback(() => {
     onRemove(location.id);
     setShowLocationMenu(null);
-  }, [location.id, setShowLocationMenu]);
+  }, [location.id, onRemove, setShowLocationMenu]);
 
   const handleMenuClick = useCallback(() => {
     setShowLocationMenu(location.id);

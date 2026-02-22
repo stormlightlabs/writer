@@ -13,7 +13,7 @@ export function DocumentItem(
   },
 ) {
   const fileTextIcon = useMemo(() => ({ Component: FileTextIcon, size: "sm" as const }), []);
-  const handleClick = useCallback(() => onSelectDocument(id, doc.rel_path), [id, onSelectDocument]);
+  const handleClick = useCallback(() => onSelectDocument(id, doc.rel_path), [id, onSelectDocument, doc.rel_path]);
   return (
     <TreeItem
       key={doc.rel_path}
