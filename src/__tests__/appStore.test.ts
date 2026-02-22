@@ -256,4 +256,35 @@ describe("appStore", () => {
     expect(tabsState.current.tabs[0].id).toBe(secondTabId);
     expect(tabsState.current.tabs[1].id).toBe(firstTabId);
   });
+
+  it("should update typewriter scrolling setting", () => {
+    const { result } = renderHook(() => useAppStore());
+
+    act(() => {
+      result.current.setTypewriterScrollingEnabled(false);
+    });
+
+    expect(result.current.focusModeSettings.typewriterScrollingEnabled).toBe(false);
+  });
+
+  it("should update focus dimming mode", () => {
+    const { result } = renderHook(() => useAppStore());
+
+    act(() => {
+      result.current.setFocusDimmingMode("paragraph");
+    });
+
+    expect(result.current.focusModeSettings.dimmingMode).toBe("paragraph");
+  });
+
+  it("should toggle typewriter scrolling", () => {
+    const { result } = renderHook(() => useAppStore());
+    const initialValue = result.current.focusModeSettings.typewriterScrollingEnabled;
+
+    act(() => {
+      result.current.toggleTypewriterScrolling();
+    });
+
+    expect(result.current.focusModeSettings.typewriterScrollingEnabled).toBe(!initialValue);
+  });
 });

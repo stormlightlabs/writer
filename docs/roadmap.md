@@ -28,8 +28,7 @@ Color text by grammatical role to help writers spot weak phrasing during editing
 ### Tasks
 
 1. **NLP tokenizer integration**
-   - Evaluate lightweight browser-side NLP libraries (compromise, wink-nlp) for POS tagging
-   - Alternatively, implement Rust-side tagging via `nlprule`
+   - Use wink-nlp (TS)
 2. **POS decoration layer**
    - Map POS tags → color tokens:
      - Nouns → Red, Verbs → Blue, Adjectives → Brown, Adverbs → Purple, Conjunctions → Green

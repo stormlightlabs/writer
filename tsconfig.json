@@ -21,8 +21,10 @@
       "$types": ["./types.ts"],
       "$logger": ["./logger.ts"],
       "$icons": ["./components/icons.tsx"],
+      "$editor/*": ["./editor/*"],
       "$pdf/*": ["./pdf/*"],
-      "$components/*": ["./components/*"]
+      "$components/*": ["./components/*"],
+      "$themes/*": ["./themes/*"]
     }
   },
   "include": ["src"],

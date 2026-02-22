@@ -1,5 +1,5 @@
 import { XIcon } from "$icons";
-import type { EditorFontFamily } from "$types";
+import type { EditorFontFamily, FocusDimmingMode, FocusModeSettings } from "$types";
 import { type ChangeEvent, useCallback } from "react";
 
 type LayoutSettingsPanelProps = {
@@ -12,6 +12,7 @@ type LayoutSettingsPanelProps = {
   syntaxHighlightingEnabled: boolean;
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
+  focusModeSettings: FocusModeSettings;
   onSetSidebarCollapsed: (value: boolean) => void;
   onSetTopBarsCollapsed: (value: boolean) => void;
   onSetStatusBarCollapsed: (value: boolean) => void;
@@ -20,6 +21,8 @@ type LayoutSettingsPanelProps = {
   onSetSyntaxHighlightingEnabled: (value: boolean) => void;
   onSetEditorFontSize: (value: number) => void;
   onSetEditorFontFamily: (value: EditorFontFamily) => void;
+  onSetTypewriterScrollingEnabled: (enabled: boolean) => void;
+  onSetFocusDimmingMode: (mode: FocusDimmingMode) => void;
   onClose: () => void;
 };
 
@@ -82,36 +85,28 @@ const EDITOR_FONT_OPTIONS: Array<{ label: string; value: EditorFontFamily }> = [
   { label: "Monaspace Xenon", value: "Monaspace Xenon" },
 ];
 
-type FontFamilyRowProps = {
-  fontFamily: EditorFontFamily;
-  handleFontChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-};
+type FontFamilyRowProps = { value: EditorFontFamily; setter: (event: ChangeEvent<HTMLSelectElement>) => void };
 
-const FontFamilyRow = ({ fontFamily, handleFontChange }: FontFamilyRowProps) => (
+const FontFamilyRow = ({ value, setter }: FontFamilyRowProps) => (
   <div className="py-2.5">
     <label className="m-0 text-[0.8125rem] text-text-primary block mb-1.5" htmlFor="editor-font-family">
       Editor Font
     </label>
     <select
       id="editor-font-family"
-      value={fontFamily}
-      onChange={handleFontChange}
+      value={value}
+      onChange={setter}
       className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
       {EDITOR_FONT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
   </div>
 );
 
-const FontSizeRow = (
-  { fontSize, handleFontSizeChange }: {
-    fontSize: number;
-    handleFontSizeChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  },
-) => (
+const FontSizeRow = ({ value, setter }: { value: number; setter: (event: ChangeEvent<HTMLInputElement>) => void }) => (
   <div className="py-2.5">
     <div className="flex items-center justify-between gap-4 mb-1.5">
       <label className="m-0 text-[0.8125rem] text-text-primary" htmlFor="editor-font-size">Editor Size</label>
-      <span className="text-xs text-text-secondary">{fontSize}px</span>
+      <span className="text-xs text-text-secondary">{value}px</span>
     </div>
     <input
       id="editor-font-size"
@@ -119,11 +114,37 @@ const FontSizeRow = (
       min={12}
       max={24}
       step={1}
-      value={fontSize}
-      onChange={handleFontSizeChange}
+      value={value}
+      onChange={setter}
       className="w-full accent-accent-cyan cursor-pointer" />
   </div>
 );
+
+type DimmingModeRowProps = { value: FocusDimmingMode; setter: (dimmingMode: FocusDimmingMode) => void };
+
+function DimmingModeRow({ value, setter }: DimmingModeRowProps) {
+  const handleDimmingModeChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    setter(event.target.value as FocusDimmingMode);
+  }, [setter]);
+
+  const options = [{ value: "off", label: "Off" }, { value: "sentence", label: "Current Sentence" }, {
+    value: "paragraph",
+    label: "Current Paragraph",
+  }];
+
+  return (
+    <div className="py-2.5">
+      <label className="m-0 text-[0.8125rem] text-text-primary block mb-1.5">Text Dimming</label>
+      <select
+        value={value}
+        onChange={handleDimmingModeChange}
+        className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      <p className="m-0 text-xs text-text-secondary mt-1">Dim all text except the active region.</p>
+    </div>
+  );
+}
 
 export function LayoutSettingsPanel(
   {
@@ -136,6 +157,7 @@ export function LayoutSettingsPanel(
     syntaxHighlightingEnabled,
     editorFontSize,
     editorFontFamily,
+    focusModeSettings,
     onSetSidebarCollapsed,
     onSetTopBarsCollapsed,
     onSetStatusBarCollapsed,
@@ -144,6 +166,8 @@ export function LayoutSettingsPanel(
     onSetSyntaxHighlightingEnabled,
     onSetEditorFontSize,
     onSetEditorFontFamily,
+    onSetTypewriterScrollingEnabled,
+    onSetFocusDimmingMode,
     onClose,
   }: LayoutSettingsPanelProps,
 ) {
@@ -220,8 +244,19 @@ export function LayoutSettingsPanel(
             description="Enable Markdown syntax colors and token styling."
             isVisible={syntaxHighlightingEnabled}
             onToggle={toggleSyntaxHighlighting} />
-          <FontFamilyRow fontFamily={editorFontFamily} handleFontChange={handleFontFamilyChange} />
-          <FontSizeRow fontSize={editorFontSize} handleFontSizeChange={handleFontSizeChange} />
+          <FontFamilyRow value={editorFontFamily} setter={handleFontFamilyChange} />
+          <FontSizeRow value={editorFontSize} setter={handleFontSizeChange} />
+
+          <div className="border-t border-border-subtle my-3" />
+          <p className="m-0 text-xs text-text-secondary mb-2">Focus Mode</p>
+
+          <ToggleRow
+            label="Typewriter Scrolling"
+            description="Keep the active line centered in the viewport."
+            isVisible={focusModeSettings.typewriterScrollingEnabled}
+            onToggle={onSetTypewriterScrollingEnabled} />
+
+          <DimmingModeRow value={focusModeSettings.dimmingMode} setter={onSetFocusDimmingMode} />
         </section>
       </div>
     );

@@ -1,7 +1,7 @@
+import { Editor, type EditorTheme } from "$components/Editor";
+import { StatusBar } from "$components/StatusBar";
 import { FocusIcon } from "$icons";
-import type { DocMeta, EditorFontFamily } from "$types";
-import { Editor, type EditorTheme } from "../Editor";
-import { StatusBar } from "../StatusBar";
+import type { DocMeta, EditorFontFamily, FocusModeSettings } from "$types";
 
 type FocusModePanelProps = {
   theme: EditorTheme;
@@ -18,6 +18,7 @@ type FocusModePanelProps = {
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
   statusBarCollapsed: boolean;
+  focusModeSettings: FocusModeSettings;
   onExit: () => void;
   onEditorChange: (text: string) => void;
   onSave: () => void;
@@ -55,6 +56,7 @@ export const FocusModePanel = (
     editorFontSize,
     editorFontFamily,
     statusBarCollapsed,
+    focusModeSettings,
     onExit,
     onEditorChange,
     onSave,
@@ -74,6 +76,8 @@ export const FocusModePanel = (
         syntaxHighlightingEnabled={syntaxHighlightingEnabled}
         fontSize={editorFontSize}
         fontFamily={editorFontFamily}
+        typewriterScrollingEnabled={focusModeSettings.typewriterScrollingEnabled}
+        focusDimmingMode={focusModeSettings.dimmingMode}
         onChange={onEditorChange}
         onSave={onSave}
         onCursorMove={onCursorMove}

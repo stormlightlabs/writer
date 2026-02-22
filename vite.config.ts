@@ -20,16 +20,6 @@ const test: ViteUserConfig["test"] = {
 const host = process.env.TAURI_DEV_HOST;
 const resolveFromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
-// TODO: aliases here and in tsconfig.json
-// - $hooks
-// - $state
-// - $ports
-// - $state
-// - $utils
-// - $types
-// - $logger
-// - $components
-// - $icons
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   clearScreen: false,
@@ -49,6 +39,8 @@ export default defineConfig({
       "$icons": resolveFromRoot("./src/components/icons.tsx"),
       "$pdf": resolveFromRoot("./src/pdf"),
       "$components": resolveFromRoot("./src/components"),
+      "$editor": resolveFromRoot("./src/editor"),
+      "$themes": resolveFromRoot("./src/themes"),
     },
   },
 });

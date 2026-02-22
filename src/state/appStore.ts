@@ -1,4 +1,13 @@
-import type { AppTheme, DocMeta, DocRef, EditorFontFamily, LocationDescriptor, Tab } from "$types";
+import type {
+  AppTheme,
+  DocMeta,
+  DocRef,
+  EditorFontFamily,
+  FocusDimmingMode,
+  FocusModeSettings,
+  LocationDescriptor,
+  Tab,
+} from "$types";
 import { create, type StateCreator } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 
@@ -24,6 +33,7 @@ export type LayoutState = {
   isPreviewVisible: boolean;
   showSearch: boolean;
   theme: AppTheme;
+  focusModeSettings: FocusModeSettings;
 };
 
 export type LayoutActions = {
@@ -45,6 +55,10 @@ export type LayoutActions = {
   toggleSplitView: () => void;
   setFocusMode: (value: boolean) => void;
   toggleFocusMode: () => void;
+  setFocusModeSettings: (settings: FocusModeSettings) => void;
+  setTypewriterScrollingEnabled: (enabled: boolean) => void;
+  setFocusDimmingMode: (mode: FocusDimmingMode) => void;
+  toggleTypewriterScrolling: () => void;
   setPreviewVisible: (value: boolean) => void;
   togglePreviewVisible: () => void;
   setShowSearch: (value: boolean) => void;
@@ -99,6 +113,7 @@ const getInitialLayoutState = (): LayoutState => ({
   isPreviewVisible: true,
   showSearch: false,
   theme: "dark",
+  focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
 });
 
 const getInitialWorkspaceState = (): WorkspaceState => ({
@@ -148,6 +163,19 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
 
   setFocusMode: (value) => set({ isFocusMode: value }),
   toggleFocusMode: () => set((state) => ({ isFocusMode: !state.isFocusMode })),
+
+  setFocusModeSettings: (settings) => set({ focusModeSettings: settings }),
+  setTypewriterScrollingEnabled: (enabled) =>
+    set((state) => ({ focusModeSettings: { ...state.focusModeSettings, typewriterScrollingEnabled: enabled } })),
+  setFocusDimmingMode: (mode) =>
+    set((state) => ({ focusModeSettings: { ...state.focusModeSettings, dimmingMode: mode } })),
+  toggleTypewriterScrolling: () =>
+    set((state) => ({
+      focusModeSettings: {
+        ...state.focusModeSettings,
+        typewriterScrollingEnabled: !state.focusModeSettings.typewriterScrollingEnabled,
+      },
+    })),
 
   setPreviewVisible: (value) => set({ isPreviewVisible: value }),
   togglePreviewVisible: () => set((state) => ({ isPreviewVisible: !state.isPreviewVisible })),
@@ -305,6 +333,7 @@ export const useLayoutState = () =>
       isPreviewVisible: state.isPreviewVisible,
       showSearch: state.showSearch,
       theme: state.theme,
+      focusModeSettings: state.focusModeSettings,
     })),
   );
 
@@ -329,6 +358,10 @@ export const useLayoutActions = () =>
       toggleSplitView: state.toggleSplitView,
       setFocusMode: state.setFocusMode,
       toggleFocusMode: state.toggleFocusMode,
+      setFocusModeSettings: state.setFocusModeSettings,
+      setTypewriterScrollingEnabled: state.setTypewriterScrollingEnabled,
+      setFocusDimmingMode: state.setFocusDimmingMode,
+      toggleTypewriterScrolling: state.toggleTypewriterScrolling,
       setPreviewVisible: state.setPreviewVisible,
       togglePreviewVisible: state.togglePreviewVisible,
       setShowSearch: state.setShowSearch,

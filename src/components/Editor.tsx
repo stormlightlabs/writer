@@ -1,4 +1,8 @@
-import type { AppTheme, EditorFontFamily } from "$types";
+import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
+import { typewriterScroll } from "$editor/typewriter-scroll";
+import { oxocarbonDark } from "$themes/oxocarbon-dark";
+import { oxocarbonLight } from "$themes/oxocarbon-light";
+import type { AppTheme, EditorFontFamily, FocusDimmingMode } from "$types";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState as CMEditorState } from "@codemirror/state";
@@ -6,9 +10,6 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import type { ViewUpdate } from "@codemirror/view";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-
-import { oxocarbonDark } from "../themes/oxocarbon-dark";
-import { oxocarbonLight } from "../themes/oxocarbon-light";
 
 export type EditorTheme = AppTheme;
 
@@ -23,6 +24,8 @@ export type EditorProps = {
   fontFamily?: EditorFontFamily;
   placeholder?: string;
   debounceMs?: number;
+  typewriterScrollingEnabled?: boolean;
+  focusDimmingMode?: FocusDimmingMode;
   onChange?: (text: string) => void;
   onSave?: () => void;
   onCursorMove?: (line: number, column: number) => void;
@@ -42,6 +45,8 @@ type CreateEditorStateOptions = {
   placeholder?: string;
   updateListener: ReturnType<typeof EditorView.updateListener.of>;
   onSave: () => void;
+  typewriterScrollingEnabled: boolean;
+  focusDimmingMode: FocusDimmingMode;
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
@@ -67,6 +72,8 @@ function createEditorState(
     placeholder,
     updateListener,
     onSave,
+    typewriterScrollingEnabled,
+    focusDimmingMode,
   }: CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
@@ -93,6 +100,8 @@ function createEditorState(
       saveKeymap,
       EditorView.editable.of(!disabled),
       placeholder ? EditorView.theme({ ".cm-placeholder": { color: "#888" } }) : [],
+      ...(typewriterScrollingEnabled ? [typewriterScroll()] : []),
+      ...(focusDimmingMode === "off" ? [] : [focusDimming(focusDimmingMode), focusDimmingTheme]),
     ],
   });
 }
@@ -109,6 +118,8 @@ export function Editor(
     fontFamily = "IBM Plex Mono",
     placeholder,
     debounceMs = 500,
+    typewriterScrollingEnabled = false,
+    focusDimmingMode = "off",
     onChange,
     onSave,
     onCursorMove,
@@ -129,6 +140,8 @@ export function Editor(
     textWrappingEnabled,
     syntaxHighlightingEnabled,
     placeholder,
+    typewriterScrollingEnabled,
+    focusDimmingMode,
   });
   const [isReady, setIsReady] = useState(false);
 
@@ -193,6 +206,8 @@ export function Editor(
       placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
       onSave: () => callbacksRef.current.onSave?.(),
+      typewriterScrollingEnabled: currentPresentation.typewriterScrollingEnabled,
+      focusDimmingMode: currentPresentation.focusDimmingMode,
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
@@ -238,6 +253,8 @@ export function Editor(
       && previousPresentation.textWrappingEnabled === textWrappingEnabled
       && previousPresentation.syntaxHighlightingEnabled === syntaxHighlightingEnabled
       && previousPresentation.placeholder === placeholder
+      && previousPresentation.typewriterScrollingEnabled === typewriterScrollingEnabled
+      && previousPresentation.focusDimmingMode === focusDimmingMode
     ) {
       return;
     }
@@ -249,6 +266,8 @@ export function Editor(
       textWrappingEnabled,
       syntaxHighlightingEnabled,
       placeholder,
+      typewriterScrollingEnabled,
+      focusDimmingMode,
     };
 
     const view = viewRef.current;
@@ -268,7 +287,17 @@ export function Editor(
     }
 
     viewRef.current = nextView;
-  }, [createView, disabled, placeholder, showLineNumbers, textWrappingEnabled, syntaxHighlightingEnabled, theme]);
+  }, [
+    createView,
+    disabled,
+    placeholder,
+    showLineNumbers,
+    textWrappingEnabled,
+    syntaxHighlightingEnabled,
+    theme,
+    typewriterScrollingEnabled,
+    focusDimmingMode,
+  ]);
 
   useEffect(() => {
     const view = viewRef.current;

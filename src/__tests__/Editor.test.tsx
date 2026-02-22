@@ -225,5 +225,38 @@ describe(Editor, () => {
         expect(container.querySelector(".cm-content")).toBe(document.activeElement);
       });
     });
+
+    it("should apply typewriter scrolling when enabled", () => {
+      const { container } = render(<Editor typewriterScrollingEnabled={true} />);
+      expect(container.querySelector(".cm-editor")).toBeInTheDocument();
+    });
+
+    it("should apply focus dimming in sentence mode", () => {
+      const { container } = render(<Editor focusDimmingMode="sentence" />);
+      expect(container.querySelector(".cm-editor")).toBeInTheDocument();
+    });
+
+    it("should apply focus dimming in paragraph mode", () => {
+      const { container } = render(<Editor focusDimmingMode="paragraph" />);
+      expect(container.querySelector(".cm-editor")).toBeInTheDocument();
+    });
+
+    it("should recreate editor when typewriterScrollingEnabled changes", () => {
+      const { container, rerender } = render(<Editor typewriterScrollingEnabled={false} />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+
+      rerender(<Editor typewriterScrollingEnabled={true} />);
+      const secondEditorRoot = container.querySelector(".cm-editor");
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+    });
+
+    it("should recreate editor when focusDimmingMode changes", () => {
+      const { container, rerender } = render(<Editor focusDimmingMode="off" />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+
+      rerender(<Editor focusDimmingMode="sentence" />);
+      const secondEditorRoot = container.querySelector(".cm-editor");
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+    });
   });
 });
