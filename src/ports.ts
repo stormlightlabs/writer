@@ -1,3 +1,4 @@
+import { PatternCategory } from "$editor/pattern-matcher";
 import { logger } from "$logger";
 import type { PdfRenderResult } from "$pdf/types";
 import type {
@@ -48,6 +49,16 @@ export type UiLayoutSettings = {
   syntax_highlighting_enabled: boolean;
   editor_font_size: number;
   editor_font_family: EditorFontFamily;
+};
+
+export type StyleCheckPattern = { text: string; category: PatternCategory; replacement?: string };
+
+export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };
+
+export type PersistedStyleCheckSettings = {
+  enabled: boolean;
+  categories: StyleCheckCategorySettings;
+  custom_patterns: StyleCheckPattern[];
 };
 
 type RenderMarkdownParams<T> = [...LocationPathTextParams, profile: MarkdownProfile | undefined, ...LocParams<T>];
@@ -496,4 +507,16 @@ export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd 
 
 export function uiLayoutSet(...[settings, onOk, onErr]: UiLayoutSetParams<boolean>): Cmd {
   return invokeCmd<boolean>("ui_layout_set", { settings }, onOk, onErr);
+}
+
+type StyleCheckSetParams<T> = Parameters<
+  (settings: PersistedStyleCheckSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export function styleCheckGet(...[onOk, onErr]: LocParams<PersistedStyleCheckSettings>): Cmd {
+  return invokeCmd<PersistedStyleCheckSettings>("style_check_get", {}, onOk, onErr);
+}
+
+export function styleCheckSet(...[settings, onOk, onErr]: StyleCheckSetParams<boolean>): Cmd {
+  return invokeCmd<boolean>("style_check_set", { settings }, onOk, onErr);
 }

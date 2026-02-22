@@ -1,6 +1,6 @@
 import { logger } from "$logger";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
-import { renderMarkdownForPdf, runCmd, uiLayoutGet, uiLayoutSet } from "$ports";
+import { renderMarkdownForPdf, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
 import type { DocMeta, DocRef, Tab } from "$types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
@@ -21,6 +21,7 @@ import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
 import { useLayoutActions, useLayoutState } from "./state/appStore";
 import "@fontsource-variable/ibm-plex-sans";
 import "./App.css";
+import { PatternCategory } from "$editor/pattern-matcher";
 
 // TODO: make shared utils module
 function formatDraftDate(date: Date): string {
@@ -276,6 +277,7 @@ function App() {
       fontSize: layoutState.editorFontSize,
       fontFamily: layoutState.editorFontFamily,
       posHighlightingEnabled: layoutState.posHighlightingEnabled,
+      styleCheckSettings: layoutState.styleCheckSettings,
       onChange: handleEditorChange,
       onSave: handleSave,
       onCursorMove: handleCursorMove,
@@ -352,6 +354,14 @@ function App() {
       onSetFocusDimmingMode: layoutActions.setFocusDimmingMode,
       posHighlightingEnabled: layoutState.posHighlightingEnabled,
       onSetPosHighlightingEnabled: layoutActions.setPosHighlightingEnabled,
+      styleCheckSettings: layoutState.styleCheckSettings,
+      onSetStyleCheckEnabled: (enabled: boolean) =>
+        layoutActions.setStyleCheckSettings({ ...layoutState.styleCheckSettings, enabled }),
+      onSetStyleCheckCategory: (category: PatternCategory, enabled: boolean) =>
+        layoutActions.setStyleCheckCategory(category, enabled),
+      onAddCustomPattern: (pattern: { text: string; category: PatternCategory; replacement?: string }) =>
+        layoutActions.addCustomPattern(pattern),
+      onRemoveCustomPattern: (index: number) => layoutActions.removeCustomPattern(index),
       onClose: handleSettingsClose,
     }),
     [isLayoutSettingsOpen, layoutState, layoutActions, handleSettingsClose],
@@ -443,6 +453,18 @@ function App() {
       }
     }));
 
+    void runCmd(styleCheckGet((settings) => {
+      if (isCancelled) {
+        return;
+      }
+
+      layoutActions.setStyleCheckSettings({
+        enabled: settings.enabled,
+        categories: settings.categories,
+        customPatterns: settings.custom_patterns,
+      });
+    }, () => {}));
+
     return () => {
       isCancelled = true;
     };
@@ -479,6 +501,29 @@ function App() {
     layoutState.syntaxHighlightingEnabled,
     layoutState.editorFontSize,
     layoutState.editorFontFamily,
+  ]);
+
+  useEffect(() => {
+    if (!layoutSettingsHydrated) {
+      return;
+    }
+
+    void runCmd(
+      styleCheckSet(
+        {
+          enabled: layoutState.styleCheckSettings.enabled,
+          categories: layoutState.styleCheckSettings.categories,
+          custom_patterns: layoutState.styleCheckSettings.customPatterns,
+        },
+        () => {},
+        () => {},
+      ),
+    );
+  }, [
+    layoutSettingsHydrated,
+    layoutState.styleCheckSettings.enabled,
+    layoutState.styleCheckSettings.categories,
+    layoutState.styleCheckSettings.customPatterns,
   ]);
 
   const appHeaderBarProps = useMemo(

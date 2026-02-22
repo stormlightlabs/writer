@@ -3,8 +3,8 @@ use tauri::Manager;
 mod commands;
 use commands::{
     doc_exists, doc_list, doc_open, doc_save, location_add_via_dialog, location_list, location_remove,
-    location_validate, markdown_render, markdown_render_for_pdf, search, ui_layout_get, ui_layout_set, watch_disable,
-    watch_enable,
+    location_validate, markdown_render, markdown_render_for_pdf, search, style_check_get, style_check_set,
+    ui_layout_get, ui_layout_set, watch_disable, watch_enable,
 };
 
 pub use commands::AppState;
@@ -61,7 +61,9 @@ pub fn run() {
             markdown_render,
             markdown_render_for_pdf,
             ui_layout_get,
-            ui_layout_set
+            ui_layout_set,
+            style_check_get,
+            style_check_set
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

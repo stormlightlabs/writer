@@ -3,66 +3,36 @@ use rusqlite::{Connection, OptionalExtension, params, params_from_iter, types::V
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
-use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use writer_core::{
     AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
-    LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SearchMatch, SortOrder,
+    LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
     is_conflicted_filename,
 };
+
+mod file_utils;
+mod settings;
+mod text_utils;
+
+pub use settings::StyleCheckSettings;
+pub use settings::UiLayoutSettings;
+
+const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
+const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StyleCheckPattern {
+    pub text: String,
+    pub category: String,
+    pub replacement: Option<String>,
+}
 
 /// Manages the SQLite database for the application
 pub struct Store {
     conn: Arc<Mutex<Connection>>,
 }
-
-fn default_true() -> bool {
-    true
-}
-
-fn default_editor_font_size() -> u16 {
-    16
-}
-
-fn default_editor_font_family() -> String {
-    "IBM Plex Mono".to_string()
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct UiLayoutSettings {
-    pub sidebar_collapsed: bool,
-    pub top_bars_collapsed: bool,
-    pub status_bar_collapsed: bool,
-    #[serde(default = "default_true")]
-    pub line_numbers_visible: bool,
-    #[serde(default = "default_true")]
-    pub text_wrapping_enabled: bool,
-    #[serde(default = "default_true")]
-    pub syntax_highlighting_enabled: bool,
-    #[serde(default = "default_editor_font_size")]
-    pub editor_font_size: u16,
-    #[serde(default = "default_editor_font_family")]
-    pub editor_font_family: String,
-}
-
-impl Default for UiLayoutSettings {
-    fn default() -> Self {
-        Self {
-            sidebar_collapsed: false,
-            top_bars_collapsed: false,
-            status_bar_collapsed: false,
-            line_numbers_visible: true,
-            text_wrapping_enabled: true,
-            syntax_highlighting_enabled: true,
-            editor_font_size: default_editor_font_size(),
-            editor_font_family: default_editor_font_family(),
-        }
-    }
-}
-
-const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 
 impl Store {
     /// Opens or creates the store at the given path
@@ -230,6 +200,59 @@ impl Store {
             params![UI_LAYOUT_SETTINGS_KEY, settings_json, updated_at],
         )
         .map_err(|e| AppError::io(format!("Failed to persist UI layout settings: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub fn style_check_get(&self) -> Result<StyleCheckSettings, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let maybe_value = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?1",
+                params![STYLE_CHECK_SETTINGS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| AppError::io(format!("Failed to query style check settings: {}", e)))?;
+
+        match maybe_value {
+            Some(value) => serde_json::from_str::<StyleCheckSettings>(&value).map_err(|e| {
+                AppError::new(
+                    ErrorCode::Parse,
+                    format!("Failed to parse persisted style check settings: {}", e),
+                )
+            }),
+            None => Ok(StyleCheckSettings::default()),
+        }
+    }
+
+    pub fn style_check_set(&self, settings: &StyleCheckSettings) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let settings_json = serde_json::to_string(settings).map_err(|e| {
+            AppError::new(
+                ErrorCode::Parse,
+                format!("Failed to serialize style check settings: {}", e),
+            )
+        })?;
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET
+             value = excluded.value,
+             updated_at = excluded.updated_at",
+            params![STYLE_CHECK_SETTINGS_KEY, settings_json, updated_at],
+        )
+        .map_err(|e| AppError::io(format!("Failed to persist style check settings: {}", e)))?;
 
         Ok(())
     }
@@ -528,14 +551,15 @@ impl Store {
         let created_at = metadata.created().ok().map(DateTime::<Utc>::from);
 
         let is_conflict = is_conflicted_filename(filename);
-        let text_content = if is_indexable_text_path(path) { std::fs::read_to_string(path).ok() } else { None };
+        let text_content =
+            if file_utils::is_indexable_text_path(path) { std::fs::read_to_string(path).ok() } else { None };
 
-        let word_count = text_content.as_ref().map(|content| count_words(content));
+        let word_count = text_content.as_ref().map(|content| text_utils::count_words(content));
         let title = text_content
             .as_ref()
-            .and_then(|content| extract_title(content, &rel_path))
-            .or_else(|| extract_title("", &rel_path));
-        let content_hash = text_content.as_ref().map(|content| hash_text(content));
+            .and_then(|content| text_utils::extract_title(content, &rel_path))
+            .or_else(|| text_utils::extract_title("", &rel_path));
+        let content_hash = text_content.as_ref().map(|content| text_utils::hash_text(content));
 
         Ok(DocMeta {
             id: DocId { location_id, rel_path },
@@ -569,11 +593,11 @@ impl Store {
         file.read_to_end(&mut bytes)
             .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
 
-        let (text, encoding) = detect_and_decode(&bytes)?;
+        let (text, encoding) = text_utils::detect_and_decode(&bytes)?;
 
-        let line_ending = detect_line_ending(&text);
-        let word_count = count_words(&text);
-        let title = extract_title(&text, &doc_id.rel_path);
+        let line_ending = LineEnding::detect(&text);
+        let word_count = text_utils::count_words(&text);
+        let title = text_utils::extract_title(&text, &doc_id.rel_path);
 
         let metadata =
             std::fs::metadata(&full_path).map_err(|e| AppError::io(format!("Failed to read metadata: {}", e)))?;
@@ -596,7 +620,7 @@ impl Store {
             size_bytes: metadata.len(),
             mtime,
             created_at,
-            content_hash: Some(hash_text(&text)),
+            content_hash: Some(text_utils::hash_text(&text)),
             encoding,
             line_ending,
             is_conflict,
@@ -645,9 +669,9 @@ impl Store {
 
         let created_at = metadata.created().ok().map(DateTime::<Utc>::from);
 
-        let line_ending = detect_line_ending(text);
-        let word_count = count_words(text);
-        let title = extract_title(text, &doc_id.rel_path);
+        let line_ending = LineEnding::detect(text);
+        let word_count = text_utils::count_words(text);
+        let title = text_utils::extract_title(text, &doc_id.rel_path);
 
         let new_meta = DocMeta {
             id: doc_id.clone(),
@@ -660,7 +684,7 @@ impl Store {
             size_bytes: metadata.len(),
             mtime,
             created_at,
-            content_hash: Some(hash_text(text)),
+            content_hash: Some(text_utils::hash_text(text)),
             encoding: Encoding::Utf8,
             line_ending,
             is_conflict,
@@ -720,6 +744,8 @@ impl Store {
         let mtime_str = meta.mtime.to_rfc3339();
         let created_at_str = meta.created_at.map(|timestamp| timestamp.to_rfc3339());
         let updated_at_str = Utc::now().to_rfc3339();
+        let encoding: i32 = meta.encoding.into();
+        let line_ending: i32 = meta.line_ending.into();
 
         conn.execute(
             "INSERT INTO documents
@@ -759,8 +785,8 @@ impl Store {
                 mtime_str,
                 created_at_str,
                 meta.content_hash.clone(),
-                encoding_to_i32(meta.encoding),
-                line_ending_to_i32(meta.line_ending),
+                encoding,
+                line_ending,
                 meta.is_conflict as i32,
                 meta.title,
                 meta.word_count.map(|n| n as i64),
@@ -773,15 +799,14 @@ impl Store {
     }
 
     fn index_document_text(&self, doc_id: &DocId, meta: &DocMeta, text: &str) -> Result<(), AppError> {
-        if !is_indexable_text_path(&doc_id.rel_path) {
+        if !file_utils::is_indexable_text_path(&doc_id.rel_path) {
             self.remove_fts_entry(doc_id)?;
             return Ok(());
         }
 
-        let title = meta
-            .title
-            .clone()
-            .unwrap_or_else(|| extract_title(text, &doc_id.rel_path).unwrap_or_else(|| "Untitled".to_string()));
+        let title = meta.title.clone().unwrap_or_else(|| {
+            text_utils::extract_title(text, &doc_id.rel_path).unwrap_or_else(|| "Untitled".to_string())
+        });
         self.upsert_fts_entry(doc_id, &title, text)
     }
 
@@ -870,8 +895,8 @@ impl Store {
         let meta = self.read_doc_metadata(&full_path, doc_id.location_id, doc_id.rel_path.clone(), &filename)?;
         self.update_doc_in_catalog(doc_id, &meta)?;
 
-        if is_indexable_text_path(&full_path) {
-            let text = read_file_text_with_detection(&full_path)?;
+        if file_utils::is_indexable_text_path(&full_path) {
+            let text = file_utils::read_file_text_with_detection(&full_path)?;
             self.index_document_text(doc_id, &meta, &text)?;
         } else {
             self.remove_fts_entry(doc_id)?;
@@ -890,7 +915,7 @@ impl Store {
         }
 
         let mut file_paths = Vec::new();
-        collect_file_paths_recursive(&location.root_path, &mut file_paths)?;
+        file_utils::collect_file_paths_recursive(&location.root_path, &mut file_paths)?;
 
         let mut seen_rel_paths = HashSet::new();
         let mut indexed = 0usize;
@@ -916,8 +941,8 @@ impl Store {
             let meta = self.read_doc_metadata(&full_path, location_id, rel_path, &filename)?;
             self.update_doc_in_catalog(&doc_id, &meta)?;
 
-            if is_indexable_text_path(&full_path) {
-                match read_file_text_with_detection(&full_path) {
+            if file_utils::is_indexable_text_path(&full_path) {
+                match file_utils::read_file_text_with_detection(&full_path) {
                     Ok(text) => {
                         self.index_document_text(&doc_id, &meta, &text)?;
                         indexed += 1;
@@ -1064,8 +1089,8 @@ impl Store {
                 let title: String = row.get(2)?;
                 let snippet_marked: String = row.get(3)?;
                 let full_content: String = row.get(4)?;
-                let (snippet, matches) = extract_highlight_matches(&snippet_marked);
-                let (line, column) = locate_query_position(&full_content, normalized_query);
+                let (snippet, matches) = text_utils::extract_highlight_matches(&snippet_marked);
+                let (line, column) = text_utils::locate_query_position(&full_content, normalized_query);
 
                 Ok(SearchHit { location_id: LocationId(location_id), rel_path, title, snippet, line, column, matches })
             })
@@ -1078,174 +1103,6 @@ impl Store {
         }
 
         Ok(hits)
-    }
-}
-
-/// Detects encoding from byte BOM and decodes to string
-fn detect_and_decode(bytes: &[u8]) -> Result<(String, Encoding), AppError> {
-    if bytes.starts_with(&[0xef, 0xbb, 0xbf]) {
-        let text = String::from_utf8_lossy(&bytes[3..]).into_owned();
-        Ok((text, Encoding::Utf8WithBom))
-    } else if bytes.starts_with(&[0xff, 0xfe]) {
-        let u16_vec: Vec<u16> = bytes[2..]
-            .chunks_exact(2)
-            .map(|c| u16::from_le_bytes([c[0], c[1]]))
-            .collect();
-        let text = String::from_utf16(&u16_vec).map_err(|e| AppError::io(format!("Invalid UTF-16 LE: {}", e)))?;
-        Ok((text, Encoding::Utf16Le))
-    } else if bytes.starts_with(&[0xfe, 0xff]) {
-        let u16_vec: Vec<u16> = bytes[2..]
-            .chunks_exact(2)
-            .map(|c| u16::from_be_bytes([c[0], c[1]]))
-            .collect();
-        let text = String::from_utf16(&u16_vec).map_err(|e| AppError::io(format!("Invalid UTF-16 BE: {}", e)))?;
-        Ok((text, Encoding::Utf16Be))
-    } else {
-        let text = String::from_utf8_lossy(bytes).into_owned();
-        Ok((text, Encoding::Utf8))
-    }
-}
-
-/// Detects line ending style from text content
-fn detect_line_ending(text: &str) -> LineEnding {
-    let crlf_count = text.matches("\r\n").count();
-    let lf_count = text.matches('\n').count() - crlf_count;
-    if crlf_count > lf_count { LineEnding::CrLf } else { LineEnding::Lf }
-}
-
-/// Counts words in text (simple whitespace-based)
-fn count_words(text: &str) -> usize {
-    text.split_whitespace().count()
-}
-
-/// Extracts title from markdown (first H1) or filename
-fn extract_title(text: &str, rel_path: &Path) -> Option<String> {
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if let Some(title) = trimmed.strip_prefix("# ") {
-            return Some(title.trim().to_string());
-        }
-    }
-
-    rel_path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string())
-}
-
-/// Converts Encoding to i32 for database storage
-fn encoding_to_i32(enc: Encoding) -> i32 {
-    match enc {
-        Encoding::Utf8 => 0,
-        Encoding::Utf8WithBom => 1,
-        Encoding::Utf16Le => 2,
-        Encoding::Utf16Be => 3,
-    }
-}
-
-/// Converts LineEnding to i32 for database storage
-fn line_ending_to_i32(le: LineEnding) -> i32 {
-    match le {
-        LineEnding::Lf => 0,
-        LineEnding::CrLf => 1,
-        LineEnding::Auto => 2,
-    }
-}
-
-fn is_indexable_text_path(path: &Path) -> bool {
-    const INDEXABLE_EXTENSIONS: &[&str] = &["md", "markdown", "mdx", "txt"];
-    let extension = path
-        .extension()
-        .and_then(|value| value.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    INDEXABLE_EXTENSIONS.contains(&extension.as_str())
-}
-
-fn hash_text(text: &str) -> String {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    text.hash(&mut hasher);
-    format!("{:016x}", hasher.finish())
-}
-
-fn read_file_text_with_detection(path: &Path) -> Result<String, AppError> {
-    let mut file = File::open(path).map_err(|e| AppError::io(format!("Failed to open file: {}", e)))?;
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes)
-        .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
-    let (text, _encoding) = detect_and_decode(&bytes)?;
-    Ok(text)
-}
-
-fn collect_file_paths_recursive(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), AppError> {
-    let entries = std::fs::read_dir(dir).map_err(|e| AppError::io(format!("Failed to read directory: {}", e)))?;
-
-    for entry in entries {
-        let entry = entry.map_err(|e| AppError::io(format!("Failed to read entry: {}", e)))?;
-        let path = entry.path();
-
-        if path.is_file() {
-            files.push(path);
-        } else if path.is_dir() {
-            collect_file_paths_recursive(&path, files)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn extract_highlight_matches(snippet: &str) -> (String, Vec<SearchMatch>) {
-    let mut plain = String::new();
-    let mut matches = Vec::new();
-    let mut start_index: Option<usize> = None;
-
-    let mut i = 0usize;
-    while i < snippet.len() {
-        if snippet[i..].starts_with("<<") {
-            start_index = Some(plain.len());
-            i += 2;
-            continue;
-        }
-
-        if snippet[i..].starts_with(">>") {
-            if let Some(start) = start_index.take() {
-                matches.push(SearchMatch { start, end: plain.len() });
-            }
-            i += 2;
-            continue;
-        }
-
-        if let Some(ch) = snippet[i..].chars().next() {
-            plain.push(ch);
-            i += ch.len_utf8();
-        } else {
-            break;
-        }
-    }
-
-    (plain, matches)
-}
-
-fn locate_query_position(content: &str, query: &str) -> (usize, usize) {
-    let term = query
-        .split_whitespace()
-        .find(|token| !matches!(token.to_ascii_uppercase().as_str(), "AND" | "OR" | "NOT"))
-        .unwrap_or(query)
-        .trim_matches('"')
-        .to_lowercase();
-
-    if term.is_empty() {
-        return (1, 1);
-    }
-
-    let content_lower = content.to_lowercase();
-    if let Some(byte_index) = content_lower.find(&term) {
-        let prefix = &content[..byte_index];
-        let line = prefix.matches('\n').count() + 1;
-        let column = prefix
-            .rsplit_once('\n')
-            .map(|(_, tail)| tail.chars().count() + 1)
-            .unwrap_or_else(|| prefix.chars().count() + 1);
-        (line, column)
-    } else {
-        (1, 1)
     }
 }
 
@@ -1534,7 +1391,7 @@ mod tests {
     #[test]
     fn test_detect_encoding_utf8() {
         let bytes = b"Hello, World!";
-        let (text, enc) = detect_and_decode(bytes).unwrap();
+        let (text, enc) = text_utils::detect_and_decode(bytes).unwrap();
         assert_eq!(text, "Hello, World!");
         assert!(matches!(enc, Encoding::Utf8));
     }
@@ -1542,47 +1399,25 @@ mod tests {
     #[test]
     fn test_detect_encoding_utf8_bom() {
         let bytes = vec![0xef, 0xbb, 0xbf, b'H', b'i'];
-        let (text, enc) = detect_and_decode(&bytes).unwrap();
+        let (text, enc) = text_utils::detect_and_decode(&bytes).unwrap();
         assert_eq!(text, "Hi");
         assert!(matches!(enc, Encoding::Utf8WithBom));
     }
 
     #[test]
+    /// TODO: move to core
     fn test_detect_line_ending_lf() {
         let text = "line1\nline2\nline3";
-        let le = detect_line_ending(text);
+        let le = LineEnding::detect(text);
         assert!(matches!(le, LineEnding::Lf));
     }
 
     #[test]
+    /// TODO: move to core
     fn test_detect_line_ending_crlf() {
         let text = "line1\r\nline2\r\nline3";
-        let le = detect_line_ending(text);
+        let le = LineEnding::detect(text);
         assert!(matches!(le, LineEnding::CrLf));
-    }
-
-    #[test]
-    fn test_count_words() {
-        assert_eq!(count_words("Hello world"), 2);
-        assert_eq!(count_words("One two three four"), 4);
-        assert_eq!(count_words(""), 0);
-        assert_eq!(count_words("  multiple   spaces  "), 2);
-    }
-
-    #[test]
-    fn test_extract_title_from_heading() {
-        let text = "# My Title\n\nSome content";
-        let path = Path::new("file.md");
-        let title = extract_title(text, path);
-        assert_eq!(title, Some("My Title".to_string()));
-    }
-
-    #[test]
-    fn test_extract_title_from_filename() {
-        let text = "No heading here";
-        let path = Path::new("my_document.md");
-        let title = extract_title(text, path);
-        assert_eq!(title, Some("my_document".to_string()));
     }
 
     #[test]

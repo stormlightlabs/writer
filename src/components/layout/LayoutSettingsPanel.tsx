@@ -1,6 +1,13 @@
+import { PatternCategory } from "$editor/pattern-matcher";
 import { XIcon } from "$icons";
-import type { EditorFontFamily, FocusDimmingMode, FocusModeSettings } from "$types";
-import { type ChangeEvent, useCallback } from "react";
+import type {
+  EditorFontFamily,
+  FocusDimmingMode,
+  FocusModeSettings,
+  StyleCheckPattern,
+  StyleCheckSettings,
+} from "$types";
+import { type ChangeEvent, ChangeEventHandler, useCallback, useMemo, useState } from "react";
 
 type LayoutSettingsPanelProps = {
   isVisible: boolean;
@@ -14,6 +21,7 @@ type LayoutSettingsPanelProps = {
   editorFontFamily: EditorFontFamily;
   focusModeSettings: FocusModeSettings;
   posHighlightingEnabled: boolean;
+  styleCheckSettings: StyleCheckSettings;
   onSetSidebarCollapsed: (value: boolean) => void;
   onSetTopBarsCollapsed: (value: boolean) => void;
   onSetStatusBarCollapsed: (value: boolean) => void;
@@ -25,6 +33,10 @@ type LayoutSettingsPanelProps = {
   onSetTypewriterScrollingEnabled: (enabled: boolean) => void;
   onSetFocusDimmingMode: (mode: FocusDimmingMode) => void;
   onSetPosHighlightingEnabled: (value: boolean) => void;
+  onSetStyleCheckEnabled: (enabled: boolean) => void;
+  onSetStyleCheckCategory: (category: keyof StyleCheckSettings["categories"], enabled: boolean) => void;
+  onAddCustomPattern: (pattern: { text: string; category: PatternCategory; replacement?: string }) => void;
+  onRemoveCustomPattern: (index: number) => void;
   onClose: () => void;
 };
 
@@ -148,6 +160,238 @@ function DimmingModeRow({ value, setter }: DimmingModeRowProps) {
   );
 }
 
+const ToggleCustom = (
+  { showCustom, setShowCustom, settings }: {
+    showCustom: boolean;
+    setShowCustom: (value: boolean) => void;
+    settings: StyleCheckSettings;
+  },
+) => {
+  const handleClick = useCallback(() => setShowCustom(!showCustom), [showCustom, setShowCustom]);
+  const label = useMemo(() => {
+    const count = settings.customPatterns.length;
+    const tag = showCustom ? "Hide" : "Show";
+    return `${tag} Custom Patterns (${count})`;
+  }, [showCustom, settings.customPatterns.length]);
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="text-xs text-text-secondary hover:text-text-primary cursor-pointer bg-transparent border-none p-0">
+      {label}
+    </button>
+  );
+};
+
+const PatternLabel = ({ pattern }: { pattern: StyleCheckPattern }) => (
+  <span className="truncate flex-1">
+    <span className="text-text-secondary">[{pattern.category}]</span>{" "}
+    <span className="text-text-primary">{pattern.text}</span>
+    {pattern.replacement && <span className="text-text-secondary">→ {pattern.replacement}</span>}
+  </span>
+);
+
+const RemovePatternButton = (
+  { index, onRemovePattern }: { index: number; onRemovePattern: (index: number) => void },
+) => {
+  const handleClick = useCallback(() => onRemovePattern(index), [index, onRemovePattern]);
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="ml-2 text-text-secondary hover:text-red-500 cursor-pointer bg-transparent border-none p-0">
+      <XIcon size="xs" />
+    </button>
+  );
+};
+
+const CustomPattern = (
+  { settings, onRemovePattern }: { settings: StyleCheckSettings; onRemovePattern: (index: number) => void },
+) => (
+  <div className="max-h-24 overflow-y-auto border border-border-subtle rounded">
+    {settings.customPatterns.map((pattern, index) => {
+      const key = `${pattern.category}-${pattern.text}`;
+      return (
+        <div
+          key={key}
+          className="flex items-center justify-between px-2 py-1.5 text-xs border-b border-border-subtle last:border-b-0">
+          <PatternLabel pattern={pattern} />
+          <RemovePatternButton index={index} onRemovePattern={onRemovePattern} />
+        </div>
+      );
+    })}
+  </div>
+);
+
+const AddPatternForm = (
+  {
+    pattern: [patternValue, setPatternValue],
+    category: [categoryValue, setCategoryValue],
+    replacement: [replacementValue, setReplacementValue],
+    addPattern,
+  }: {
+    pattern: [string, React.Dispatch<React.SetStateAction<string>>];
+    category: [string, React.Dispatch<React.SetStateAction<PatternCategory>>];
+    replacement: [string, React.Dispatch<React.SetStateAction<string>>];
+    addPattern: () => void;
+  },
+) => {
+  const handlePatternChange: ChangeEventHandler<HTMLInputElement> = useCallback(
+    (e) => setPatternValue(e.target.value),
+    [setPatternValue],
+  );
+
+  const handleReplacementChange: ChangeEventHandler<HTMLInputElement> = useCallback(
+    (e) => setReplacementValue(e.target.value),
+    [setReplacementValue],
+  );
+
+  const handleCategoryChange: ChangeEventHandler<HTMLSelectElement> = useCallback(
+    (e) => setCategoryValue(e.target.value as PatternCategory),
+    [setCategoryValue],
+  );
+
+  return (
+    <div className="space-y-1.5">
+      <input
+        type="text"
+        value={patternValue}
+        onChange={handlePatternChange}
+        placeholder="Pattern to flag"
+        className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary" />
+      <select
+        value={categoryValue}
+        onChange={handleCategoryChange}
+        className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary">
+        <option value="filler">Filler</option>
+        <option value="redundancy">Redundancy</option>
+        <option value="cliche">Cliché</option>
+      </select>
+      <input
+        type="text"
+        value={replacementValue}
+        onChange={handleReplacementChange}
+        placeholder="Replacement (optional)"
+        className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary" />
+      <button
+        type="button"
+        onClick={addPattern}
+        disabled={!patternValue.trim()}
+        className="w-full h-7 text-xs rounded bg-accent-cyan text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none">
+        Add Pattern
+      </button>
+    </div>
+  );
+};
+
+const CustomPatternSection = (
+  { settings, onRemovePattern, custom: [showCustom, setShowCustom], pattern, category, replacement, addPattern }: {
+    settings: StyleCheckSettings;
+    pattern: [string, React.Dispatch<React.SetStateAction<string>>];
+    category: [PatternCategory, React.Dispatch<React.SetStateAction<PatternCategory>>];
+    replacement: [string, React.Dispatch<React.SetStateAction<string>>];
+    custom: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+    addPattern: () => void;
+    onRemovePattern: (index: number) => void;
+  },
+) => (
+  <div className="mt-3">
+    <ToggleCustom showCustom={showCustom} setShowCustom={setShowCustom} settings={settings} />
+
+    {showCustom && (
+      <div className="mt-2 space-y-2">
+        {settings.customPatterns.length > 0 && <CustomPattern settings={settings} onRemovePattern={onRemovePattern} />}
+
+        <AddPatternForm pattern={pattern} category={category} replacement={replacement} addPattern={addPattern} />
+      </div>
+    )}
+  </div>
+);
+
+type StyleCheckSectionProps = {
+  settings: StyleCheckSettings;
+  onSetEnabled: (enabled: boolean) => void;
+  onSetCategory: (category: keyof StyleCheckSettings["categories"], enabled: boolean) => void;
+  onAddPattern: (pattern: { text: string; category: PatternCategory; replacement?: string }) => void;
+  onRemovePattern: (index: number) => void;
+};
+
+function StyleCheckSection(
+  { settings, onSetEnabled, onSetCategory, onAddPattern, onRemovePattern }: StyleCheckSectionProps,
+) {
+  const customState = useState(false);
+  const patternState = useState("");
+  const categoryState = useState<PatternCategory>("filler");
+  const replacementState = useState("");
+
+  const toggleFiller = useCallback(() => {
+    onSetCategory("filler", !settings.categories.filler);
+  }, [onSetCategory, settings.categories.filler]);
+
+  const toggleRedundancy = useCallback(() => {
+    onSetCategory("redundancy", !settings.categories.redundancy);
+  }, [onSetCategory, settings.categories.redundancy]);
+
+  const toggleCliche = useCallback(() => {
+    onSetCategory("cliche", !settings.categories.cliche);
+  }, [onSetCategory, settings.categories.cliche]);
+
+  const handleAddPattern = useCallback(() => {
+    const [newPattern, setNewPattern] = patternState;
+    const [newCategory] = categoryState;
+    const [newReplacement, setNewReplacement] = replacementState;
+    if (newPattern.trim()) {
+      onAddPattern({
+        text: newPattern.trim().toLowerCase(),
+        category: newCategory,
+        replacement: newReplacement.trim() || undefined,
+      });
+      setNewPattern("");
+      setNewReplacement("");
+    }
+  }, [patternState, categoryState, replacementState, onAddPattern]);
+
+  return (
+    <div className="py-2.5">
+      <ToggleRow
+        label="Style Check"
+        description="Flag weak patterns: fillers, redundancies, and clichés."
+        isVisible={settings.enabled}
+        onToggle={onSetEnabled} />
+
+      {settings.enabled && (
+        <div className="mt-2 pl-3 border-l-2 border-border-subtle">
+          <p className="m-0 text-xs text-text-secondary mb-2">Categories</p>
+          <ToggleRow
+            label="Fillers & Weak Language"
+            description="Flag filler words like 'basically', 'actually', 'just'."
+            isVisible={settings.categories.filler}
+            onToggle={toggleFiller} />
+          <ToggleRow
+            label="Redundancies"
+            description="Flag complex phrases that could be simplified."
+            isVisible={settings.categories.redundancy}
+            onToggle={toggleRedundancy} />
+          <ToggleRow
+            label="Clichés"
+            description="Flag overused expressions like 'at the end of the day'."
+            isVisible={settings.categories.cliche}
+            onToggle={toggleCliche} />
+
+          <CustomPatternSection
+            settings={settings}
+            onRemovePattern={onRemovePattern}
+            custom={customState}
+            pattern={patternState}
+            category={categoryState}
+            replacement={replacementState}
+            addPattern={handleAddPattern} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function LayoutSettingsPanel(
   {
     isVisible,
@@ -161,6 +405,7 @@ export function LayoutSettingsPanel(
     editorFontFamily,
     focusModeSettings,
     posHighlightingEnabled,
+    styleCheckSettings,
     onSetSidebarCollapsed,
     onSetTopBarsCollapsed,
     onSetStatusBarCollapsed,
@@ -172,6 +417,10 @@ export function LayoutSettingsPanel(
     onSetTypewriterScrollingEnabled,
     onSetFocusDimmingMode,
     onSetPosHighlightingEnabled,
+    onSetStyleCheckEnabled,
+    onSetStyleCheckCategory,
+    onAddCustomPattern,
+    onRemoveCustomPattern,
     onClose,
   }: LayoutSettingsPanelProps,
 ) {
@@ -274,6 +523,13 @@ export function LayoutSettingsPanel(
             description="Color text by grammatical role (nouns, verbs, adjectives, etc.)."
             isVisible={posHighlightingEnabled}
             onToggle={togglePosHighlighting} />
+
+          <StyleCheckSection
+            settings={styleCheckSettings}
+            onSetEnabled={onSetStyleCheckEnabled}
+            onSetCategory={onSetStyleCheckCategory}
+            onAddPattern={onAddCustomPattern}
+            onRemovePattern={onRemoveCustomPattern} />
         </section>
       </div>
     );

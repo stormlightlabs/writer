@@ -10,7 +10,7 @@ use writer_core::{
     SaveResult, SearchFilters, SearchHit,
 };
 use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult};
-use writer_store::{Store, UiLayoutSettings};
+use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
 
 /// Application state shared across commands
 pub struct AppState {
@@ -602,6 +602,32 @@ pub fn markdown_render_for_pdf(
                 writer_core::ErrorCode::Parse,
                 format!("Failed to render markdown for PDF: {}", e),
             )))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn style_check_get(state: State<'_, AppState>) -> Result<CommandResult<StyleCheckSettings>, ()> {
+    tracing::debug!("Loading persisted style check settings");
+
+    match state.store.style_check_get() {
+        Ok(settings) => Ok(CommandResult::ok(settings)),
+        Err(e) => {
+            tracing::error!("Failed to load style check settings: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Persisting style check settings");
+
+    match state.store.style_check_set(&settings) {
+        Ok(()) => Ok(CommandResult::ok(true)),
+        Err(e) => {
+            tracing::error!("Failed to persist style check settings: {}", e);
+            Ok(CommandResult::err(e))
         }
     }
 }

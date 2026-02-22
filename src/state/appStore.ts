@@ -6,6 +6,7 @@ import type {
   FocusDimmingMode,
   FocusModeSettings,
   LocationDescriptor,
+  StyleCheckPattern,
   StyleCheckSettings,
   Tab,
 } from "$types";
@@ -71,6 +72,8 @@ export type LayoutActions = {
   setStyleCheckSettings: (settings: StyleCheckSettings) => void;
   toggleStyleCheck: () => void;
   setStyleCheckCategory: (category: keyof StyleCheckSettings["categories"], enabled: boolean) => void;
+  addCustomPattern: (pattern: StyleCheckPattern) => void;
+  removeCustomPattern: (index: number) => void;
 };
 
 export type WorkspaceState = {
@@ -123,7 +126,7 @@ const getInitialLayoutState = (): LayoutState => ({
   theme: "dark",
   focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
   posHighlightingEnabled: false,
-  styleCheckSettings: { enabled: false, categories: { filler: true, redundancy: true, cliche: true } },
+  styleCheckSettings: { enabled: false, categories: { filler: true, redundancy: true, cliche: true }, customPatterns: [] },
 });
 
 const getInitialWorkspaceState = (): WorkspaceState => ({
@@ -206,6 +209,20 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
       styleCheckSettings: {
         ...state.styleCheckSettings,
         categories: { ...state.styleCheckSettings.categories, [category]: enabled },
+      },
+    })),
+  addCustomPattern: (pattern) =>
+    set((state) => ({
+      styleCheckSettings: {
+        ...state.styleCheckSettings,
+        customPatterns: [...state.styleCheckSettings.customPatterns, pattern],
+      },
+    })),
+  removeCustomPattern: (index) =>
+    set((state) => ({
+      styleCheckSettings: {
+        ...state.styleCheckSettings,
+        customPatterns: state.styleCheckSettings.customPatterns.filter((_, i) => i !== index),
       },
     })),
 });
@@ -399,6 +416,8 @@ export const useLayoutActions = () =>
       setStyleCheckSettings: state.setStyleCheckSettings,
       toggleStyleCheck: state.toggleStyleCheck,
       setStyleCheckCategory: state.setStyleCheckCategory,
+      addCustomPattern: state.addCustomPattern,
+      removeCustomPattern: state.removeCustomPattern,
     })),
   );
 

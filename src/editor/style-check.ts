@@ -37,6 +37,7 @@ export type StyleCheckConfig = {
   enabled: boolean;
   categories: { filler: boolean; redundancy: boolean; cliche: boolean };
   customPatterns: Pattern[];
+  onMatchesChange?: (matches: StyleMatch[]) => void;
 };
 
 const DEFAULT_CONFIG: StyleCheckConfig = {
@@ -133,13 +134,17 @@ function createStyleCheckPlugin(config: StyleCheckConfig) {
           const result = scanViewport(view, this.matcher);
           this.decorations = result.decorations;
           this.matches = result.matches;
+          config.onMatchesChange?.(this.matches);
         }
       }
 
       update(update: ViewUpdate) {
         if (!config.enabled) {
           this.decorations = Decoration.none;
-          this.matches = [];
+          if (this.matches.length > 0) {
+            this.matches = [];
+            config.onMatchesChange?.(this.matches);
+          }
           return;
         }
 
@@ -147,6 +152,7 @@ function createStyleCheckPlugin(config: StyleCheckConfig) {
           const result = scanViewport(this.view, this.matcher);
           this.decorations = result.decorations;
           this.matches = result.matches;
+          config.onMatchesChange?.(this.matches);
         }
       }
 

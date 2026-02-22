@@ -60,6 +60,17 @@ pub enum Encoding {
     Utf16Be,
 }
 
+impl From<Encoding> for i32 {
+    fn from(val: Encoding) -> Self {
+        match val {
+            Encoding::Utf8 => 0,
+            Encoding::Utf8WithBom => 1,
+            Encoding::Utf16Le => 2,
+            Encoding::Utf16Be => 3,
+        }
+    }
+}
+
 /// Line ending style preservation
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum LineEnding {
@@ -67,6 +78,25 @@ pub enum LineEnding {
     Lf,
     CrLf,
     Auto,
+}
+
+impl LineEnding {
+    /// Detects line ending style from text content
+    pub fn detect(text: &str) -> LineEnding {
+        let crlf_count = text.matches("\r\n").count();
+        let lf_count = text.matches('\n').count() - crlf_count;
+        if crlf_count > lf_count { LineEnding::CrLf } else { LineEnding::Lf }
+    }
+}
+
+impl From<LineEnding> for i32 {
+    fn from(val: LineEnding) -> Self {
+        match val {
+            LineEnding::Lf => 0,
+            LineEnding::CrLf => 1,
+            LineEnding::Auto => 2,
+        }
+    }
 }
 
 /// Document content with metadata for opening

@@ -1,6 +1,6 @@
 import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
 import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
-import { styleCheck, styleCheckTheme } from "$editor/style-check";
+import { type StyleMatch, styleCheck, styleCheckTheme } from "$editor/style-check";
 import { typewriterScroll } from "$editor/typewriter-scroll";
 import { oxocarbonDark } from "$themes/oxocarbon-dark";
 import { oxocarbonLight } from "$themes/oxocarbon-light";
@@ -34,10 +34,11 @@ export type EditorProps = {
   onSave?: () => void;
   onCursorMove?: (line: number, column: number) => void;
   onSelectionChange?: (from: number, to: number | null) => void;
+  onStyleMatchesChange?: (matches: StyleMatch[]) => void;
   className?: string;
 };
 
-type EditorCallbacks = Pick<EditorProps, "onChange" | "onSave" | "onCursorMove" | "onSelectionChange">;
+type EditorCallbacks = Pick<EditorProps, "onChange" | "onSave" | "onCursorMove" | "onSelectionChange" | "onStyleMatchesChange">;
 
 type CreateEditorStateOptions = {
   doc: string;
@@ -53,6 +54,7 @@ type CreateEditorStateOptions = {
   focusDimmingMode: FocusDimmingMode;
   posHighlightingEnabled: boolean;
   styleCheckSettings: StyleCheckSettings;
+  onStyleMatchesChange?: (matches: StyleMatch[]) => void;
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
@@ -82,6 +84,7 @@ function createEditorState(
     focusDimmingMode,
     posHighlightingEnabled,
     styleCheckSettings,
+    onStyleMatchesChange,
   }: CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
@@ -100,7 +103,12 @@ function createEditorState(
       styleCheck({
         enabled: styleCheckSettings.enabled,
         categories: styleCheckSettings.categories,
-        customPatterns: [],
+        customPatterns: styleCheckSettings.customPatterns.map((p) => ({
+          text: p.text,
+          category: p.category,
+          replacement: p.replacement,
+        })),
+        onMatchesChange: onStyleMatchesChange,
       }),
       styleCheckTheme,
     ]
@@ -142,17 +150,18 @@ export function Editor(
     typewriterScrollingEnabled = false,
     focusDimmingMode = "off",
     posHighlightingEnabled = false,
-    styleCheckSettings = { enabled: false, categories: { filler: true, redundancy: true, cliche: true } },
+    styleCheckSettings = { enabled: false, categories: { filler: true, redundancy: true, cliche: true }, customPatterns: [] },
     onChange,
     onSave,
     onCursorMove,
     onSelectionChange,
+    onStyleMatchesChange,
     className = "",
   }: EditorProps,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacksRef = useRef<EditorCallbacks>({ onChange, onSave, onCursorMove, onSelectionChange });
+  const callbacksRef = useRef<EditorCallbacks>({ onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange });
   const debounceMsRef = useRef(debounceMs);
   const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialTextRef = useRef(initialText);
@@ -171,8 +180,8 @@ export function Editor(
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    callbacksRef.current = { onChange, onSave, onCursorMove, onSelectionChange };
-  }, [onChange, onSave, onCursorMove, onSelectionChange]);
+    callbacksRef.current = { onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange };
+  }, [onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange]);
 
   useEffect(() => {
     debounceMsRef.current = debounceMs;
@@ -231,6 +240,7 @@ export function Editor(
       placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
       onSave: () => callbacksRef.current.onSave?.(),
+      onStyleMatchesChange: callbacksRef.current.onStyleMatchesChange,
       typewriterScrollingEnabled: currentPresentation.typewriterScrollingEnabled,
       focusDimmingMode: currentPresentation.focusDimmingMode,
       posHighlightingEnabled: currentPresentation.posHighlightingEnabled,
