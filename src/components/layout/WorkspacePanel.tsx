@@ -1,3 +1,10 @@
+import { DocumentTabs, type DocumentTabsProps } from "$components/DocumentTabs";
+import { Editor, type EditorProps } from "$components/Editor";
+import { Preview, type PreviewProps } from "$components/Preview";
+import { Sidebar, type SidebarProps } from "$components/Sidebar";
+import { StatusBar, type StatusBarProps } from "$components/StatusBar";
+import { Toolbar, type ToolbarProps } from "$components/Toolbar";
+import { useResizable } from "$hooks/useResizable";
 import {
   useWorkspacePanelModeState,
   useWorkspacePanelSidebarState,
@@ -6,13 +13,6 @@ import {
 } from "$state/panel-selectors";
 import { PanelMode } from "$types";
 import { type PointerEventHandler, useCallback, useMemo } from "react";
-import { useResizable } from "../../hooks/useResizable";
-import { DocumentTabs, type DocumentTabsProps } from "../DocumentTabs";
-import { Editor, type EditorProps } from "../Editor";
-import { Preview, type PreviewProps } from "../Preview";
-import { Sidebar, type SidebarProps } from "../Sidebar";
-import { StatusBar, type StatusBarProps } from "../StatusBar";
-import { Toolbar, type ToolbarProps } from "../Toolbar";
 
 type K = "initialText" | "presentation" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;

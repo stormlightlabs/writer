@@ -1,6 +1,6 @@
+import { useResizable } from "$hooks/useResizable";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { useResizable } from "../hooks/useResizable";
 
 describe("useResizable", () => {
   it("initializes and resizes within bounds", () => {

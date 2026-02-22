@@ -1,6 +1,7 @@
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "$editor/constants";
 import type { StyleMatch } from "$editor/style-check";
 import { XIcon } from "$icons";
+import { PatternCategory } from "$types";
 import { useCallback, useMemo } from "react";
 
 type DiagnosticsPanelProps = {
@@ -12,15 +13,13 @@ type DiagnosticsPanelProps = {
   onClose: () => void;
 };
 
-type GroupedMatches = { filler: StyleMatch[]; redundancy: StyleMatch[]; cliche: StyleMatch[] };
+type GroupedMatches = Record<PatternCategory, StyleMatch[]>;
 
-function groupMatches(matches: StyleMatch[]): GroupedMatches {
-  return {
-    filler: matches.filter((m) => m.category === "filler"),
-    redundancy: matches.filter((m) => m.category === "redundancy"),
-    cliche: matches.filter((m) => m.category === "cliche"),
-  };
-}
+const groupMatches = (matches: StyleMatch[]): GroupedMatches => ({
+  filler: matches.filter((m) => m.category === "filler"),
+  redundancy: matches.filter((m) => m.category === "redundancy"),
+  cliche: matches.filter((m) => m.category === "cliche"),
+});
 
 function MatchItem({ match, onClick }: { match: StyleMatch; onClick: (match: StyleMatch) => void }) {
   const matchStyle = useMemo(

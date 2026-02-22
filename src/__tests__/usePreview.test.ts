@@ -1,8 +1,8 @@
+import { initialPreviewModel, updatePreview, usePreview } from "$hooks/usePreview";
 import { invoke } from "@tauri-apps/api/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { beforeEach, vi } from "vitest";
-import { initialPreviewModel, updatePreview, usePreview } from "../hooks/usePreview";
 
 describe("updatePreview", () => {
   beforeEach(() => {

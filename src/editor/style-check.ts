@@ -15,10 +15,11 @@
  */
 
 import styleDictionaries from "$data/style-dictionaries.json";
+import { PatternCategory } from "$types";
 import { RangeSetBuilder } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import type { Pattern, PatternCategory } from "./pattern-matcher";
+import type { Pattern } from "./pattern-matcher";
 import { PatternMatcher } from "./pattern-matcher";
 
 export type StyleCategory = PatternCategory;

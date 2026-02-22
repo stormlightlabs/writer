@@ -26,7 +26,8 @@
       "$components/*": ["./components/*"],
       "$themes/*": ["./themes/*"],
       "$data/*": ["./data/*"],
-      "$state/*": ["./state/*"]
+      "$state/*": ["./state/*"],
+      "$hooks/*": ["./hooks/*"]
     }
   },
   "include": ["src"],

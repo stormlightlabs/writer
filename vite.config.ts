@@ -43,6 +43,7 @@ export default defineConfig({
       "$themes": resolveFromRoot("./src/themes"),
       "$data": resolveFromRoot("./src/data"),
       "$state": resolveFromRoot("./src/state"),
+      "$hooks": resolveFromRoot("./src/hooks"),
     },
   },
 });
