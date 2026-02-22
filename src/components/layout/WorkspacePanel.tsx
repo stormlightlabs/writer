@@ -1,3 +1,9 @@
+import {
+  useWorkspacePanelModeState,
+  useWorkspacePanelSidebarState,
+  useWorkspacePanelStatusBarCollapsed,
+  useWorkspacePanelTopBarsCollapsed,
+} from "$state/panel-selectors";
 import { PanelMode } from "$types";
 import { type PointerEventHandler, useCallback, useMemo } from "react";
 import { useResizable } from "../../hooks/useResizable";
@@ -8,36 +14,18 @@ import { Sidebar, type SidebarProps } from "../Sidebar";
 import { StatusBar, type StatusBarProps } from "../StatusBar";
 import { Toolbar, type ToolbarProps } from "../Toolbar";
 
-export type WorkspaceLayoutProps = {
-  sidebarCollapsed: boolean;
-  topBarsCollapsed: boolean;
-  statusBarCollapsed: boolean;
-  isSplitView: boolean;
-  isPreviewVisible: boolean;
-};
-
-type K =
-  | "initialText"
-  | "theme"
-  | "showLineNumbers"
-  | "textWrappingEnabled"
-  | "syntaxHighlightingEnabled"
-  | "fontSize"
-  | "fontFamily"
-  | "onChange"
-  | "onSave"
-  | "onCursorMove"
-  | "onSelectionChange";
+type K = "initialText" | "presentation" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
 type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
 export type WorkspacePanelProps = {
-  layout: WorkspaceLayoutProps;
-  onToggleSidebar: () => void;
-  sidebar: SidebarProps;
-  toolbar: ToolbarProps;
+  sidebar: Pick<SidebarProps, "handleAddLocation" | "handleRemoveLocation" | "handleSelectDocument">;
+  toolbar: Pick<
+    ToolbarProps,
+    "saveStatus" | "onSave" | "onOpenSettings" | "onExportPdf" | "isExportingPdf" | "isPdfExportDisabled" | "onRefresh"
+  >;
   tabs: DocumentTabsProps;
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
@@ -84,17 +72,13 @@ const MainPanel = (
 
   return (
     <div className="flex-1 min-h-0 flex overflow-hidden">
-      {panelMode === "editor"
-        ? (
-          <div className="flex min-h-0 min-w-0 flex-col w-full">
-            <Editor {...editor} />
-          </div>
-        )
-        : null}
+      {panelMode === "editor" && (
+        <div className="flex min-h-0 min-w-0 flex-col w-full">
+          <Editor {...editor} />
+        </div>
+      )}
 
-      {panelMode === "preview"
-        ? <Preview className="min-h-0 min-w-0 flex-1 w-full bg-bg-primary" {...preview} />
-        : null}
+      {panelMode === "preview" && <Preview className="min-h-0 min-w-0 flex-1 w-full bg-bg-primary" {...preview} />}
     </div>
   );
 };
@@ -111,13 +95,12 @@ function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMod
   return "editor";
 }
 
-export function WorkspacePanel(
-  { layout, onToggleSidebar, sidebar, toolbar, tabs, editor, preview, statusBar }: WorkspacePanelProps,
-) {
-  const panelMode = useMemo(() => getPanelMode(layout.isSplitView, layout.isPreviewVisible), [
-    layout.isSplitView,
-    layout.isPreviewVisible,
-  ]);
+export function WorkspacePanel({ sidebar, toolbar, tabs, editor, preview, statusBar }: WorkspacePanelProps) {
+  const { sidebarCollapsed } = useWorkspacePanelSidebarState();
+  const { isSplitView, isPreviewVisible } = useWorkspacePanelModeState();
+  const topBarsCollapsed = useWorkspacePanelTopBarsCollapsed();
+  const statusBarCollapsed = useWorkspacePanelStatusBarCollapsed();
+  const panelMode = useMemo(() => getPanelMode(isSplitView, isPreviewVisible), [isSplitView, isPreviewVisible]);
   const viewportWidth = globalThis.innerWidth || FALLBACK_VIEWPORT_WIDTH;
   const splitMaxWidth = Math.max(SPLIT_PANEL_MIN_WIDTH, viewportWidth - SPLIT_PANEL_MIN_WIDTH);
 
@@ -147,9 +130,9 @@ export function WorkspacePanel(
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {layout.sidebarCollapsed ? null : (
+      {sidebarCollapsed ? null : (
         <div className="relative flex h-full shrink-0" style={sidebarStyle}>
-          <Sidebar {...sidebar} onToggleCollapse={onToggleSidebar} />
+          <Sidebar {...sidebar} />
           <div
             role="separator"
             aria-label="Resize sidebar"
@@ -163,7 +146,7 @@ export function WorkspacePanel(
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Toolbar {...toolbar} />
-        {layout.topBarsCollapsed ? null : <DocumentTabs {...tabs} />}
+        {topBarsCollapsed ? null : <DocumentTabs {...tabs} />}
         <MainPanel
           panelMode={panelMode}
           editor={editor}
@@ -171,7 +154,7 @@ export function WorkspacePanel(
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}
           onSplitResizeStart={handleSplitResizeStart} />
-        {layout.statusBarCollapsed ? null : <StatusBar {...statusBar} />}
+        {statusBarCollapsed ? null : <StatusBar {...statusBar} />}
       </div>
     </div>
   );

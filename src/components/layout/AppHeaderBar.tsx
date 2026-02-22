@@ -1,15 +1,8 @@
 import { ChevronDownIcon, LibraryIcon, SearchIcon } from "$icons";
+import { useAppHeaderBarState } from "$state/panel-selectors";
+import { useCallback } from "react";
 
-type AppHeaderBarProps = {
-  onToggleSidebar: () => void;
-  onToggleTabBar: () => void;
-  onOpenSearch: () => void;
-  tabBarCollapsed: boolean;
-};
-
-type K = "onOpenSearch" | "onToggleTabBar" | "tabBarCollapsed";
-
-const AppTitle = ({ onToggleSidebar }: Pick<AppHeaderBarProps, "onToggleSidebar">) => (
+const AppTitle = ({ onToggleSidebar }: { onToggleSidebar: () => void }) => (
   <div className="flex items-center gap-3">
     <button
       onClick={onToggleSidebar}
@@ -21,7 +14,13 @@ const AppTitle = ({ onToggleSidebar }: Pick<AppHeaderBarProps, "onToggleSidebar"
   </div>
 );
 
-const SearchRow = ({ onOpenSearch, onToggleTabBar, tabBarCollapsed }: Pick<AppHeaderBarProps, K>) => (
+const SearchRow = (
+  { onOpenSearch, onToggleTabBar, tabBarCollapsed }: {
+    onOpenSearch: () => void;
+    onToggleTabBar: () => void;
+    tabBarCollapsed: boolean;
+  },
+) => (
   <div className="flex items-center gap-2">
     <button
       onClick={onOpenSearch}
@@ -41,9 +40,20 @@ const SearchRow = ({ onOpenSearch, onToggleTabBar, tabBarCollapsed }: Pick<AppHe
   </div>
 );
 
-export const AppHeaderBar = ({ onToggleSidebar, onToggleTabBar, onOpenSearch, tabBarCollapsed }: AppHeaderBarProps) => (
-  <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-4 shrink-0">
-    <AppTitle onToggleSidebar={onToggleSidebar} />
-    <SearchRow onOpenSearch={onOpenSearch} onToggleTabBar={onToggleTabBar} tabBarCollapsed={tabBarCollapsed} />
-  </header>
-);
+export const AppHeaderBar = () => {
+  const { tabBarCollapsed, toggleSidebarCollapsed, toggleTabBarCollapsed, setShowSearch } = useAppHeaderBarState();
+
+  const handleOpenSearch = useCallback(() => {
+    setShowSearch(true);
+  }, [setShowSearch]);
+
+  return (
+    <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-4 shrink-0">
+      <AppTitle onToggleSidebar={toggleSidebarCollapsed} />
+      <SearchRow
+        onOpenSearch={handleOpenSearch}
+        onToggleTabBar={toggleTabBarCollapsed}
+        tabBarCollapsed={tabBarCollapsed} />
+    </header>
+  );
+};

@@ -1,7 +1,8 @@
 import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
 import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
-import { type StyleMatch, styleCheck, styleCheckTheme } from "$editor/style-check";
+import { styleCheck, styleCheckTheme, type StyleMatch } from "$editor/style-check";
 import { typewriterScroll } from "$editor/typewriter-scroll";
+import { useEditorPresentationState } from "$state/panel-selectors";
 import { oxocarbonDark } from "$themes/oxocarbon-dark";
 import { oxocarbonLight } from "$themes/oxocarbon-light";
 import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
@@ -15,21 +16,27 @@ import type { CSSProperties } from "react";
 
 export type EditorTheme = AppTheme;
 
+export type EditorPresentationOverrides = Partial<
+  {
+    theme: EditorTheme;
+    showLineNumbers: boolean;
+    textWrappingEnabled: boolean;
+    syntaxHighlightingEnabled: boolean;
+    fontSize: number;
+    fontFamily: EditorFontFamily;
+    typewriterScrollingEnabled: boolean;
+    focusDimmingMode: FocusDimmingMode;
+    posHighlightingEnabled: boolean;
+    styleCheckSettings: StyleCheckSettings;
+  }
+>;
+
 export type EditorProps = {
   initialText?: string;
-  theme?: EditorTheme;
   disabled?: boolean;
-  showLineNumbers?: boolean;
-  textWrappingEnabled?: boolean;
-  syntaxHighlightingEnabled?: boolean;
-  fontSize?: number;
-  fontFamily?: EditorFontFamily;
   placeholder?: string;
   debounceMs?: number;
-  typewriterScrollingEnabled?: boolean;
-  focusDimmingMode?: FocusDimmingMode;
-  posHighlightingEnabled?: boolean;
-  styleCheckSettings?: StyleCheckSettings;
+  presentation?: EditorPresentationOverrides;
   onChange?: (text: string) => void;
   onSave?: () => void;
   onCursorMove?: (line: number, column: number) => void;
@@ -38,7 +45,10 @@ export type EditorProps = {
   className?: string;
 };
 
-type EditorCallbacks = Pick<EditorProps, "onChange" | "onSave" | "onCursorMove" | "onSelectionChange" | "onStyleMatchesChange">;
+type EditorCallbacks = Pick<
+  EditorProps,
+  "onChange" | "onSave" | "onCursorMove" | "onSelectionChange" | "onStyleMatchesChange"
+>;
 
 type CreateEditorStateOptions = {
   doc: string;
@@ -138,19 +148,10 @@ function createEditorState(
 export function Editor(
   {
     initialText = "",
-    theme = "dark",
     disabled = false,
-    showLineNumbers = true,
-    textWrappingEnabled = true,
-    syntaxHighlightingEnabled = true,
-    fontSize = 16,
-    fontFamily = "IBM Plex Mono",
     placeholder,
     debounceMs = 500,
-    typewriterScrollingEnabled = false,
-    focusDimmingMode = "off",
-    posHighlightingEnabled = false,
-    styleCheckSettings = { enabled: false, categories: { filler: true, redundancy: true, cliche: true }, customPatterns: [] },
+    presentation,
     onChange,
     onSave,
     onCursorMove,
@@ -159,9 +160,27 @@ export function Editor(
     className = "",
   }: EditorProps,
 ) {
+  const defaults = useEditorPresentationState();
+  const theme = presentation?.theme ?? defaults.theme;
+  const showLineNumbers = presentation?.showLineNumbers ?? defaults.showLineNumbers;
+  const textWrappingEnabled = presentation?.textWrappingEnabled ?? defaults.textWrappingEnabled;
+  const syntaxHighlightingEnabled = presentation?.syntaxHighlightingEnabled ?? defaults.syntaxHighlightingEnabled;
+  const fontSize = presentation?.fontSize ?? defaults.fontSize;
+  const fontFamily = presentation?.fontFamily ?? defaults.fontFamily;
+  const typewriterScrollingEnabled = presentation?.typewriterScrollingEnabled ?? defaults.typewriterScrollingEnabled;
+  const focusDimmingMode = presentation?.focusDimmingMode ?? defaults.focusDimmingMode;
+  const posHighlightingEnabled = presentation?.posHighlightingEnabled ?? defaults.posHighlightingEnabled;
+  const styleCheckSettings = presentation?.styleCheckSettings ?? defaults.styleCheckSettings;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacksRef = useRef<EditorCallbacks>({ onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange });
+  const callbacksRef = useRef<EditorCallbacks>({
+    onChange,
+    onSave,
+    onCursorMove,
+    onSelectionChange,
+    onStyleMatchesChange,
+  });
   const debounceMsRef = useRef(debounceMs);
   const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialTextRef = useRef(initialText);

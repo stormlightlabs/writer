@@ -8,6 +8,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePdfExport } from "../hooks/usePdfExport";
+import { useAppStore } from "../state/appStore";
 
 vi.mock("$components/pdf/MarkdownPdfDocument", () => ({ MarkdownPdfDocument: () => null }));
 
@@ -58,6 +59,7 @@ describe(usePdfExport, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     toBlobMock.mockReset();
+    useAppStore.getState().resetPdfExport();
   });
 
   it("retries with built-in fonts on any custom render failure", async () => {
@@ -70,7 +72,7 @@ describe(usePdfExport, () => {
 
     let didExport = false;
     await act(async () => {
-      didExport = await result.current.exportPdf(renderResult, DEFAULT_OPTIONS, "IBM Plex Sans Variable");
+      didExport = await result.current(renderResult, DEFAULT_OPTIONS, "IBM Plex Sans Variable");
     });
 
     expect(didExport).toBeTruthy();
@@ -102,14 +104,14 @@ describe(usePdfExport, () => {
     const { result } = renderHook(() => usePdfExport());
 
     await act(async () => {
-      await expect(result.current.exportPdf(renderResult, DEFAULT_OPTIONS, "IBM Plex Sans Variable")).rejects.toThrow(
+      await expect(result.current(renderResult, DEFAULT_OPTIONS, "IBM Plex Sans Variable")).rejects.toThrow(
         "Failed to render PDF using both custom and built-in fonts. Check logs for details.",
       );
     });
 
     expect(vi.mocked(save)).not.toHaveBeenCalled();
-    expect(result.current.state.isExporting).toBeFalsy();
-    expect(result.current.state.error).toBe(
+    expect(useAppStore.getState().isExportingPdf).toBeFalsy();
+    expect(useAppStore.getState().pdfExportError).toBe(
       "Failed to render PDF using both custom and built-in fonts. Check logs for details.",
     );
     expect(vi.mocked(logger.error)).toHaveBeenCalledWith(

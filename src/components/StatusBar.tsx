@@ -1,12 +1,16 @@
 import type { DocMeta, LineEnding } from "$types";
 
-export type StatusBarProps = {
-  docMeta?: DocMeta | null;
+export type StatusBarStats = {
   cursorLine: number;
   cursorColumn: number;
   wordCount: number;
   charCount: number;
   selectionCount?: number;
+};
+
+export type StatusBarProps = {
+  docMeta?: DocMeta | null;
+  stats: StatusBarStats;
   encoding?: string;
   lineEnding?: LineEnding;
 };
@@ -70,10 +74,8 @@ const SelectedCount = ({ selectionCount }: { selectionCount: number }) => (
   </>
 );
 
-export function StatusBar(
-  { docMeta, cursorLine, cursorColumn, wordCount, charCount, selectionCount, encoding = "utf8", lineEnding = "LF" }:
-    StatusBarProps,
-) {
+export function StatusBar({ docMeta, stats, encoding = "utf8", lineEnding = "LF" }: StatusBarProps) {
+  const { cursorLine, cursorColumn, wordCount, charCount, selectionCount } = stats;
   return (
     <footer className="h-7 bg-layer-01 border-t border-border-subtle flex items-center justify-between px-3 font-mono">
       <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">

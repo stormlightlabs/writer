@@ -1,4 +1,3 @@
-import { PatternCategory } from "$editor/pattern-matcher";
 import { logger } from "$logger";
 import type { PdfRenderResult } from "$pdf/types";
 import type {
@@ -11,6 +10,7 @@ import type {
   LocationDescriptor,
   LocationId,
   MarkdownProfile,
+  PatternCategory,
   RenderResult,
   SaveStatus,
   SearchHit,
@@ -61,7 +61,7 @@ export type PersistedStyleCheckSettings = {
   custom_patterns: StyleCheckPattern[];
 };
 
-type RenderMarkdownParams<T> = [...LocationPathTextParams, profile: MarkdownProfile | undefined, ...LocParams<T>];
+type RenderMarkdownParams<T> = [...LocationPathTextParams, profile?: MarkdownProfile, ...LocParams<T>];
 type UiLayoutSetParams<T> = Parameters<
   (settings: UiLayoutSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
@@ -122,7 +122,7 @@ export type BackendEventsSub = { type: "BackendEvents"; onEvent: (event: Backend
 export type NoneSub = { type: "None" };
 export type Sub = BackendEventsSub | NoneSub;
 
-type RenderMarkdownForPdfParams<T> = [...LocationPathTextParams, profile: MarkdownProfile | undefined, ...LocParams<T>];
+type RenderMarkdownForPdfParams<T> = [...LocationPathTextParams, profile?: MarkdownProfile, ...LocParams<T>];
 
 export const ok = <T>(value: T): CmdResult<T> => ({ type: "ok", value });
 

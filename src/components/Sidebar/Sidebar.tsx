@@ -1,5 +1,5 @@
-import { CollapseIcon, LibraryIcon } from "$icons";
-import type { DocMeta, LocationDescriptor } from "$types";
+import { CollapseIcon } from "$icons";
+import { useSidebarState } from "$state/panel-selectors";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
@@ -9,26 +9,16 @@ import { SidebarLocationItem } from "./SidebarLocationItem";
 import { Title } from "./Title";
 
 export type SidebarProps = {
-  locations: LocationDescriptor[];
-  selectedLocationId?: number;
-  selectedDocPath?: string;
-  documents: DocMeta[];
-  isCollapsed?: boolean;
-  isLoading?: boolean;
-  onAddLocation: () => void;
-  onRemoveLocation: (locationId: number) => void;
-  onSelectLocation: (locationId: number) => void;
-  onSelectDocument: (locationId: number, path: string) => void;
-  filterText?: string;
-  onFilterChange?: (text: string) => void;
-  onToggleCollapse?: () => void;
+  handleAddLocation: () => void;
+  handleRemoveLocation: (locationId: number) => void;
+  handleSelectDocument: (locationId: number, path: string) => void;
 };
 
 type SidebarActionsProps = {
   onAddLocation: () => void;
   handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
   handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
-  onToggleCollapse?: () => void;
+  onToggleCollapse: () => void;
 };
 
 const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
@@ -47,29 +37,29 @@ const SidebarActions = (
 ) => (
   <div className="flex items-center gap-2">
     <AddButton onAddLocation={onAddLocation} handleMouseEnter={handleMouseEnter} handleMouseLeave={handleMouseLeave} />
-    {onToggleCollapse ? <HideSidebarButton onToggleCollapse={onToggleCollapse} /> : null}
+    <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
 );
 
-export function Sidebar(
-  {
+export function Sidebar({ handleAddLocation, handleRemoveLocation, handleSelectDocument }: SidebarProps) {
+  const {
     locations,
     selectedLocationId,
     selectedDocPath,
     documents,
-    isCollapsed = false,
-    isLoading = false,
-    onAddLocation,
-    onRemoveLocation,
-    onSelectLocation,
-    onSelectDocument,
-    filterText = "",
-    onFilterChange,
-    onToggleCollapse,
-  }: SidebarProps,
-) {
+    isLoading,
+    filterText,
+    setFilterText,
+    selectLocation,
+    toggleSidebarCollapsed,
+  } = useSidebarState();
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
   const [showLocationMenu, setShowLocationMenu] = useState<number | null>(null);
+
+  const locationDocuments = useMemo(
+    () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
+    [documents, selectedLocationId],
+  );
 
   const toggleLocation = useCallback((locationId: number) => {
     setExpandedLocations((prev) => {
@@ -86,12 +76,12 @@ export function Sidebar(
   const filteredDocuments = useMemo(
     () =>
       filterText
-        ? documents.filter((doc) =>
+        ? locationDocuments.filter((doc) =>
           doc.title.toLowerCase().includes(filterText.toLowerCase())
           || doc.rel_path.toLowerCase().includes(filterText.toLowerCase())
         )
-        : documents,
-    [documents, filterText],
+        : locationDocuments,
+    [locationDocuments, filterText],
   );
 
   const handleMouseEnter: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
@@ -103,35 +93,23 @@ export function Sidebar(
   }, []);
 
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = useCallback((e) => {
-    onFilterChange?.(e.currentTarget.value);
-  }, [onFilterChange]);
-
-  if (isCollapsed) {
-    return (
-      <aside className="w-full bg-layer-01 border-r border-border-subtle flex flex-col items-center pt-4 shrink-0">
-        <button
-          className="w-8 h-8 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded"
-          title="Library">
-          <LibraryIcon size="lg" />
-        </button>
-      </aside>
-    );
-  }
+    setFilterText(e.currentTarget.value);
+  }, [setFilterText]);
 
   return (
     <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">
       <div className="p-4 border-b border-border-subtle flex items-center justify-between">
         <Title isLoading={isLoading} />
         <SidebarActions
-          onAddLocation={onAddLocation}
+          onAddLocation={handleAddLocation}
           handleMouseEnter={handleMouseEnter}
           handleMouseLeave={handleMouseLeave}
-          onToggleCollapse={onToggleCollapse} />
+          onToggleCollapse={toggleSidebarCollapsed} />
       </div>
       <SearchInput filterText={filterText} handleInputChange={handleInputChange} />
       <div className="flex-1 overflow-y-auto pt-2 pb-2">
         {locations.length === 0
-          ? <EmptyLocations onAddLocation={onAddLocation} />
+          ? <EmptyLocations onAddLocation={handleAddLocation} />
           : (locations.map((location) => (
             <SidebarLocationItem
               key={location.id}
@@ -139,10 +117,10 @@ export function Sidebar(
               isSelected={selectedLocationId === location.id}
               selectedDocPath={selectedDocPath}
               isExpanded={expandedLocations.has(location.id)}
-              onSelect={onSelectLocation}
+              onSelect={selectLocation}
               onToggle={toggleLocation}
-              onRemove={onRemoveLocation}
-              onSelectDocument={onSelectDocument}
+              onRemove={handleRemoveLocation}
+              onSelectDocument={handleSelectDocument}
               setShowLocationMenu={setShowLocationMenu}
               isMenuOpen={showLocationMenu === location.id}
               documents={filteredDocuments}
@@ -152,7 +130,9 @@ export function Sidebar(
 
       <div className="px-4 py-2 border-t border-border-subtle text-xs text-text-placeholder flex items-center justify-between">
         <span>{locations.length} location{locations.length === 1 ? "" : "s"}</span>
-        <span>{selectedLocationId ? `${documents.length} document${documents.length === 1 ? "" : "s"}` : ""}</span>
+        <span>
+          {selectedLocationId ? `${locationDocuments.length} document${locationDocuments.length === 1 ? "" : "s"}` : ""}
+        </span>
       </div>
     </aside>
   );

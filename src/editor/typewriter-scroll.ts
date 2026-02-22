@@ -5,31 +5,43 @@ export function typewriterScroll(): Extension {
   return ViewPlugin.fromClass(
     class {
       constructor(private view: EditorView) {
-        this.centerCursor();
+        this.scheduleCenterCursor();
       }
 
       update(update: ViewUpdate) {
         if (update.selectionSet || update.docChanged) {
-          this.centerCursor();
+          this.scheduleCenterCursor();
         }
       }
 
-      private centerCursor() {
-        const view = this.view;
-        const cursorPos = view.state.selection.main.head;
-        const coords = view.coordsAtPos(cursorPos);
+      private scheduleCenterCursor() {
+        this.view.requestMeasure({
+          read: (view) => {
+            const cursorPos = view.state.selection.main.head;
+            const coords = view.coordsAtPos(cursorPos);
+            if (!coords) {
+              return null;
+            }
 
-        if (!coords) return;
+            const scroller = view.scrollDOM;
+            const scrollerRect = scroller.getBoundingClientRect();
 
-        const scroller = view.scrollDOM;
-        const scrollerRect = scroller.getBoundingClientRect();
-        const scrollerHeight = scrollerRect.height;
-        const cursorY = coords.top - scrollerRect.top;
-        const targetY = scrollerHeight / 2;
+            return {
+              cursorY: coords.top - scrollerRect.top,
+              scrollerHeight: scrollerRect.height,
+              scrollTop: scroller.scrollTop,
+            };
+          },
+          write: (measurement) => {
+            if (!measurement) {
+              return;
+            }
 
-        const scrollOffset = cursorY - targetY + scroller.scrollTop;
-
-        scroller.scrollTo({ top: scrollOffset, behavior: "smooth" });
+            const targetY = measurement.scrollerHeight / 2;
+            const scrollOffset = measurement.cursorY - targetY + measurement.scrollTop;
+            this.view.scrollDOM.scrollTo({ top: scrollOffset, behavior: "smooth" });
+          },
+        });
       }
     },
   );

@@ -2,20 +2,19 @@ import { logger } from "$logger";
 import { locationAddViaDialog, locationRemove, runCmd } from "$ports";
 import type { DocRef, Tab } from "$types";
 import { useCallback, useMemo } from "react";
-import { useAppStore, useTabsActions, useTabsState, useWorkspaceActions, useWorkspaceState } from "../state/appStore";
+import {
+  useAppStore,
+  useTabsActions,
+  useTabsState,
+  useWorkspaceDocumentsState,
+  useWorkspaceLocationsActions,
+  useWorkspaceLocationsState,
+} from "../state/appStore";
 
 export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
-  const {
-    locations,
-    selectedLocationId,
-    selectedDocPath,
-    documents,
-    isLoadingLocations,
-    isLoadingDocuments,
-    sidebarFilter,
-  } = useWorkspaceState();
-
-  const { setSidebarFilter, setSelectedLocation, addLocation, removeLocation } = useWorkspaceActions();
+  const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();
+  const { selectedDocPath, documents, isLoadingDocuments } = useWorkspaceDocumentsState();
+  const { setSidebarFilter, setSelectedLocation, addLocation, removeLocation } = useWorkspaceLocationsActions();
   const { tabs, activeTabId } = useTabsState();
   const { openDocumentTab, selectTab, closeTab, reorderTabs, markActiveTabModified } = useTabsActions();
 

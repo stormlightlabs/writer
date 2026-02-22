@@ -1,30 +1,14 @@
-import { Editor, type EditorTheme } from "$components/Editor";
+import { Editor } from "$components/Editor";
+import type { EditorProps } from "$components/Editor";
 import { StatusBar } from "$components/StatusBar";
+import type { StatusBarProps } from "$components/StatusBar";
 import { FocusIcon } from "$icons";
-import type { DocMeta, EditorFontFamily, FocusModeSettings } from "$types";
+import { useFocusModePanelState } from "$state/panel-selectors";
+import { useCallback } from "react";
 
 type FocusModePanelProps = {
-  theme: EditorTheme;
-  text: string;
-  docMeta: DocMeta | null;
-  cursorLine: number;
-  cursorColumn: number;
-  wordCount: number;
-  charCount: number;
-  selectionCount?: number;
-  lineNumbersVisible: boolean;
-  textWrappingEnabled: boolean;
-  syntaxHighlightingEnabled: boolean;
-  editorFontSize: number;
-  editorFontFamily: EditorFontFamily;
-  statusBarCollapsed: boolean;
-  focusModeSettings: FocusModeSettings;
-  posHighlightingEnabled?: boolean;
-  onExit: () => void;
-  onEditorChange: (text: string) => void;
-  onSave: () => void;
-  onCursorMove: (line: number, column: number) => void;
-  onSelectionChange: (from: number, to: number | null) => void;
+  editor: Pick<EditorProps, "initialText" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange">;
+  statusBar: Pick<StatusBarProps, "docMeta" | "stats">;
 };
 
 const FocusHeader = ({ onExit }: { onExit: () => void }) => (
@@ -41,62 +25,22 @@ const FocusHeader = ({ onExit }: { onExit: () => void }) => (
   </div>
 );
 
-export const FocusModePanel = (
-  {
-    theme,
-    text,
-    docMeta,
-    cursorLine,
-    cursorColumn,
-    wordCount,
-    charCount,
-    selectionCount,
-    lineNumbersVisible,
-    textWrappingEnabled,
-    syntaxHighlightingEnabled,
-    editorFontSize,
-    editorFontFamily,
-    statusBarCollapsed,
-    focusModeSettings,
-    posHighlightingEnabled = false,
-    onExit,
-    onEditorChange,
-    onSave,
-    onCursorMove,
-    onSelectionChange,
-  }: FocusModePanelProps,
-) => (
-  <div className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
-    <FocusHeader onExit={onExit} />
+export const FocusModePanel = ({ editor, statusBar }: FocusModePanelProps) => {
+  const { statusBarCollapsed, setFocusMode } = useFocusModePanelState();
 
-    <div className="flex-1 max-w-3xl mx-auto w-full">
-      <Editor
-        initialText={text}
-        theme={theme}
-        showLineNumbers={lineNumbersVisible}
-        textWrappingEnabled={textWrappingEnabled}
-        syntaxHighlightingEnabled={syntaxHighlightingEnabled}
-        fontSize={editorFontSize}
-        fontFamily={editorFontFamily}
-        typewriterScrollingEnabled={focusModeSettings.typewriterScrollingEnabled}
-        focusDimmingMode={focusModeSettings.dimmingMode}
-        posHighlightingEnabled={posHighlightingEnabled}
-        onChange={onEditorChange}
-        onSave={onSave}
-        onCursorMove={onCursorMove}
-        onSelectionChange={onSelectionChange} />
+  const handleExit = useCallback(() => {
+    setFocusMode(false);
+  }, [setFocusMode]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
+      <FocusHeader onExit={handleExit} />
+
+      <div className="flex-1 max-w-3xl mx-auto w-full">
+        <Editor {...editor} />
+      </div>
+
+      {statusBarCollapsed ? null : <StatusBar {...statusBar} />}
     </div>
-
-    {statusBarCollapsed
-      ? null
-      : (
-        <StatusBar
-          docMeta={docMeta}
-          cursorLine={cursorLine}
-          cursorColumn={cursorColumn}
-          wordCount={wordCount}
-          charCount={charCount}
-          selectionCount={selectionCount} />
-      )}
-  </div>
-);
+  );
+};

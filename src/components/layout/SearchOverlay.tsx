@@ -1,39 +1,28 @@
 import { type SearchFilters, SearchPanel } from "$components/SearchPanel";
+import { useSearchOverlayState } from "$state/panel-selectors";
 import type { LocationDescriptor } from "$types";
 import type { SearchHit } from "$types";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 type SearchOverlayProps = {
-  isVisible: boolean;
-  sidebarCollapsed: boolean;
-  topOffset: number;
-  query: string;
-  results: SearchHit[];
+  searchQuery: string;
+  searchResults: SearchHit[];
   isSearching: boolean;
   locations: LocationDescriptor[];
   filters: SearchFilters;
-  onQueryChange: (query: string) => void;
-  onFiltersChange: (filters: SearchFilters) => void;
-  onSelectResult: (hit: SearchHit) => void;
-  onClose: () => void;
+  handleSearch: (query: string) => void;
+  setFilters: (filters: SearchFilters) => void;
+  handleSelectSearchResult: (hit: SearchHit) => void;
 };
 
 export function SearchOverlay(
-  {
-    isVisible,
-    sidebarCollapsed,
-    topOffset,
-    query,
-    results,
-    isSearching,
-    locations,
-    filters,
-    onQueryChange,
-    onFiltersChange,
-    onSelectResult,
-    onClose,
-  }: SearchOverlayProps,
+  { searchQuery, searchResults, isSearching, locations, filters, handleSearch, setFilters, handleSelectSearchResult }:
+    SearchOverlayProps,
 ) {
+  const { isVisible, sidebarCollapsed, setShowSearch } = useSearchOverlayState();
+  const handleClose = useCallback(() => {
+    setShowSearch(false);
+  }, [setShowSearch]);
   const locationsToRender = useMemo(() => locations.map((location) => ({ id: location.id, name: location.name })), [
     locations,
   ]);
@@ -44,16 +33,16 @@ export function SearchOverlay(
 
   return (
     <SearchPanel
-      query={query}
-      results={results}
+      query={searchQuery}
+      results={searchResults}
       isSearching={isSearching}
       sidebarCollapsed={sidebarCollapsed}
-      topOffset={topOffset}
+      topOffset={48}
       locations={locationsToRender}
       filters={filters}
-      onQueryChange={onQueryChange}
-      onFiltersChange={onFiltersChange}
-      onSelectResult={onSelectResult}
-      onClose={onClose} />
+      onQueryChange={handleSearch}
+      onFiltersChange={setFilters}
+      onSelectResult={handleSelectSearchResult}
+      onClose={handleClose} />
   );
 }

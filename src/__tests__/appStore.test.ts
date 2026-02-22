@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   resetAppStore,
   useAppStore,
-  useLayoutActions,
-  useLayoutState,
+  useEditorPresentationActions,
+  useEditorPresentationState,
+  useLayoutChromeActions,
+  useLayoutChromeState,
   useTabsActions,
   useTabsState,
-  useWorkspaceActions,
-  useWorkspaceState,
+  useViewModeActions,
+  useViewModeState,
+  useWorkspaceDocumentsActions,
+  useWorkspaceDocumentsState,
+  useWorkspaceLocationsActions,
+  useWorkspaceLocationsState,
 } from "../state/appStore";
 
 describe("appStore", () => {
@@ -143,94 +149,100 @@ describe("appStore", () => {
     expect(useAppStore.getState().tabs).toStrictEqual([]);
   });
 
-  it("layout selector hooks expose and update layout state", () => {
-    const { result: layoutState } = renderHook(() => useLayoutState());
-    const { result: layoutActions } = renderHook(() => useLayoutActions());
+  it("focused layout hooks expose and update layout state", () => {
+    const { result: chromeState } = renderHook(() => useLayoutChromeState());
+    const { result: chromeActions } = renderHook(() => useLayoutChromeActions());
+    const { result: editorState } = renderHook(() => useEditorPresentationState());
+    const { result: editorActions } = renderHook(() => useEditorPresentationActions());
+    const { result: viewModeState } = renderHook(() => useViewModeState());
+    const { result: viewModeActions } = renderHook(() => useViewModeActions());
 
-    expect(layoutState.current.sidebarCollapsed).toBeFalsy();
-    expect(layoutState.current.topBarsCollapsed).toBeFalsy();
-    expect(layoutState.current.statusBarCollapsed).toBeFalsy();
-    expect(layoutState.current.lineNumbersVisible).toBeTruthy();
-    expect(layoutState.current.textWrappingEnabled).toBeTruthy();
-    expect(layoutState.current.syntaxHighlightingEnabled).toBeTruthy();
-    expect(layoutState.current.editorFontSize).toBe(16);
-    expect(layoutState.current.editorFontFamily).toBe("IBM Plex Mono");
-    expect(layoutState.current.isSplitView).toBeFalsy();
-    expect(layoutState.current.isFocusMode).toBeFalsy();
+    expect(chromeState.current.sidebarCollapsed).toBeFalsy();
+    expect(chromeState.current.topBarsCollapsed).toBeFalsy();
+    expect(chromeState.current.statusBarCollapsed).toBeFalsy();
+    expect(editorState.current.lineNumbersVisible).toBeTruthy();
+    expect(editorState.current.textWrappingEnabled).toBeTruthy();
+    expect(editorState.current.syntaxHighlightingEnabled).toBeTruthy();
+    expect(editorState.current.editorFontSize).toBe(16);
+    expect(editorState.current.editorFontFamily).toBe("IBM Plex Mono");
+    expect(viewModeState.current.isSplitView).toBeFalsy();
+    expect(viewModeState.current.isFocusMode).toBeFalsy();
 
     act(() => {
-      layoutActions.current.toggleSidebarCollapsed();
-      layoutActions.current.toggleTabBarCollapsed();
-      layoutActions.current.toggleStatusBarCollapsed();
-      layoutActions.current.toggleLineNumbersVisible();
-      layoutActions.current.toggleTextWrappingEnabled();
-      layoutActions.current.toggleSyntaxHighlightingEnabled();
-      layoutActions.current.setEditorFontSize(20);
-      layoutActions.current.setEditorFontFamily("Monaspace Neon");
-      layoutActions.current.setSplitView(true);
-      layoutActions.current.toggleFocusMode();
-      layoutActions.current.setPreviewVisible(false);
-      layoutActions.current.setShowSearch(true);
+      chromeActions.current.toggleSidebarCollapsed();
+      chromeActions.current.toggleTabBarCollapsed();
+      chromeActions.current.toggleStatusBarCollapsed();
+      chromeActions.current.setShowSearch(true);
+      editorActions.current.toggleLineNumbersVisible();
+      editorActions.current.toggleTextWrappingEnabled();
+      editorActions.current.toggleSyntaxHighlightingEnabled();
+      editorActions.current.setEditorFontSize(20);
+      editorActions.current.setEditorFontFamily("Monaspace Neon");
+      viewModeActions.current.setSplitView(true);
+      viewModeActions.current.toggleFocusMode();
+      viewModeActions.current.setPreviewVisible(false);
     });
 
-    expect(layoutState.current.sidebarCollapsed).toBeTruthy();
-    expect(layoutState.current.topBarsCollapsed).toBeTruthy();
-    expect(layoutState.current.statusBarCollapsed).toBeTruthy();
-    expect(layoutState.current.lineNumbersVisible).toBeFalsy();
-    expect(layoutState.current.textWrappingEnabled).toBeFalsy();
-    expect(layoutState.current.syntaxHighlightingEnabled).toBeFalsy();
-    expect(layoutState.current.editorFontSize).toBe(20);
-    expect(layoutState.current.editorFontFamily).toBe("Monaspace Neon");
-    expect(layoutState.current.isSplitView).toBeTruthy();
-    expect(layoutState.current.isFocusMode).toBeTruthy();
-    expect(layoutState.current.isPreviewVisible).toBeFalsy();
-    expect(layoutState.current.showSearch).toBeTruthy();
-    expect(layoutState.current.theme).toBe("dark");
+    expect(chromeState.current.sidebarCollapsed).toBeTruthy();
+    expect(chromeState.current.topBarsCollapsed).toBeTruthy();
+    expect(chromeState.current.statusBarCollapsed).toBeTruthy();
+    expect(chromeState.current.showSearch).toBeTruthy();
+    expect(editorState.current.lineNumbersVisible).toBeFalsy();
+    expect(editorState.current.textWrappingEnabled).toBeFalsy();
+    expect(editorState.current.syntaxHighlightingEnabled).toBeFalsy();
+    expect(editorState.current.editorFontSize).toBe(20);
+    expect(editorState.current.editorFontFamily).toBe("Monaspace Neon");
+    expect(editorState.current.theme).toBe("dark");
+    expect(viewModeState.current.isSplitView).toBeTruthy();
+    expect(viewModeState.current.isFocusMode).toBeTruthy();
+    expect(viewModeState.current.isPreviewVisible).toBeFalsy();
   });
 
   it("enabling split view forces preview visible", () => {
-    const { result: layoutState } = renderHook(() => useLayoutState());
-    const { result: layoutActions } = renderHook(() => useLayoutActions());
+    const { result: viewModeState } = renderHook(() => useViewModeState());
+    const { result: viewModeActions } = renderHook(() => useViewModeActions());
 
     act(() => {
-      layoutActions.current.setPreviewVisible(false);
-      layoutActions.current.toggleSplitView();
+      viewModeActions.current.setPreviewVisible(false);
+      viewModeActions.current.toggleSplitView();
     });
 
-    expect(layoutState.current.isSplitView).toBeTruthy();
-    expect(layoutState.current.isPreviewVisible).toBeTruthy();
+    expect(viewModeState.current.isSplitView).toBeTruthy();
+    expect(viewModeState.current.isPreviewVisible).toBeTruthy();
   });
 
-  it("workspace selector hooks expose and update workspace state", () => {
-    const { result: workspaceState } = renderHook(() => useWorkspaceState());
-    const { result: workspaceActions } = renderHook(() => useWorkspaceActions());
+  it("focused workspace hooks expose and update workspace state", () => {
+    const { result: locationsState } = renderHook(() => useWorkspaceLocationsState());
+    const { result: locationsActions } = renderHook(() => useWorkspaceLocationsActions());
+    const { result: documentsState } = renderHook(() => useWorkspaceDocumentsState());
+    const { result: documentsActions } = renderHook(() => useWorkspaceDocumentsActions());
 
     act(() => {
-      workspaceActions.current.setLoadingLocations(false);
-      workspaceActions.current.setSidebarFilter("draft");
-      workspaceActions.current.setDocuments([{
+      locationsActions.current.setLoadingLocations(false);
+      locationsActions.current.setSidebarFilter("draft");
+      documentsActions.current.setDocuments([{
         location_id: 1,
         rel_path: "a.md",
         title: "A",
         updated_at: "2024-01-01T00:00:00Z",
         word_count: 10,
       }]);
-      workspaceActions.current.setLoadingDocuments(true);
-      workspaceActions.current.addLocation({ id: 9, name: "N", root_path: "/n", added_at: "2024-01-01" });
-      workspaceActions.current.removeLocation(9);
+      documentsActions.current.setLoadingDocuments(true);
+      locationsActions.current.addLocation({ id: 9, name: "N", root_path: "/n", added_at: "2024-01-01" });
+      locationsActions.current.removeLocation(9);
     });
 
-    expect(workspaceState.current.isLoadingLocations).toBeFalsy();
-    expect(workspaceState.current.sidebarFilter).toBe("draft");
-    expect(workspaceState.current.documents).toStrictEqual([{
+    expect(locationsState.current.isLoadingLocations).toBeFalsy();
+    expect(locationsState.current.sidebarFilter).toBe("draft");
+    expect(documentsState.current.documents).toStrictEqual([{
       location_id: 1,
       rel_path: "a.md",
       title: "A",
       updated_at: "2024-01-01T00:00:00Z",
       word_count: 10,
     }]);
-    expect(workspaceState.current.isLoadingDocuments).toBeTruthy();
-    expect(workspaceState.current.locations).toStrictEqual([]);
+    expect(documentsState.current.isLoadingDocuments).toBeTruthy();
+    expect(locationsState.current.locations).toStrictEqual([]);
   });
 
   it("tabs selector hooks expose and update tab state", () => {

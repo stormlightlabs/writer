@@ -10,6 +10,7 @@ import {
   SettingsIcon,
   SplitViewIcon,
 } from "$icons";
+import { useToolbarState } from "$state/panel-selectors";
 import { SaveStatus } from "$types";
 import type { MouseEventHandler } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -17,13 +18,7 @@ import { Tooltip } from "./Tooltip";
 
 export type ToolbarProps = {
   saveStatus: SaveStatus;
-  isSplitView: boolean;
-  isFocusMode: boolean;
-  isPreviewVisible: boolean;
   onSave: () => void;
-  onToggleSplitView: () => void;
-  onToggleFocusMode: () => void;
-  onTogglePreview: () => void;
   onOpenSettings: () => void;
   onExportPdf?: () => void;
   isExportingPdf?: boolean;
@@ -120,22 +115,11 @@ function SaveStatusIndicator({ status }: { status: SaveStatus }) {
 }
 
 export function Toolbar(
-  {
-    saveStatus,
-    isSplitView,
-    isFocusMode,
-    isPreviewVisible,
-    onSave,
-    onToggleSplitView,
-    onToggleFocusMode,
-    onTogglePreview,
-    onOpenSettings,
-    onExportPdf,
-    isExportingPdf = false,
-    isPdfExportDisabled = false,
-    onRefresh,
-  }: ToolbarProps,
+  { saveStatus, onSave, onOpenSettings, onExportPdf, isExportingPdf = false, isPdfExportDisabled = false, onRefresh }:
+    ToolbarProps,
 ) {
+  const { isSplitView, isFocusMode, isPreviewVisible, toggleSplitView, toggleFocusMode, togglePreviewVisible } =
+    useToolbarState();
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
       save: { Component: SaveIcon, size: "sm" },
@@ -167,21 +151,21 @@ export function Toolbar(
           icon={icons.splitView}
           label="Split"
           isActive={isSplitView}
-          onClick={onToggleSplitView}
+          onClick={toggleSplitView}
           shortcut="Ctrl+\\" />
 
         <ToolbarButton
           icon={icons.eye}
           label="Preview"
           isActive={isPreviewVisible}
-          onClick={onTogglePreview}
+          onClick={togglePreviewVisible}
           shortcut="Ctrl+P" />
 
         <ToolbarButton
           icon={icons.focus}
           label="Focus"
           isActive={isFocusMode}
-          onClick={onToggleFocusMode}
+          onClick={toggleFocusMode}
           shortcut="Ctrl+F" />
       </div>
 

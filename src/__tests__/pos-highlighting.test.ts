@@ -16,10 +16,7 @@ describe("posHighlighting", () => {
   });
 
   it("should handle empty text", () => {
-    const state = EditorState.create({
-      doc: "",
-      extensions: [posHighlighting(), posHighlightingTheme],
-    });
+    const state = EditorState.create({ doc: "", extensions: [posHighlighting(), posHighlightingTheme] });
     const view = new EditorView({ state });
 
     expect(view.state.doc.toString()).toBe("");
@@ -27,10 +24,7 @@ describe("posHighlighting", () => {
   });
 
   it("should handle whitespace-only text", () => {
-    const state = EditorState.create({
-      doc: "   \n\n   ",
-      extensions: [posHighlighting(), posHighlightingTheme],
-    });
+    const state = EditorState.create({ doc: "   \n\n   ", extensions: [posHighlighting(), posHighlightingTheme] });
     const view = new EditorView({ state });
 
     expect(view.state.doc.toString()).toBe("   \n\n   ");
@@ -39,10 +33,7 @@ describe("posHighlighting", () => {
 
   it("should handle long text with viewport", () => {
     const longText = "The quick brown fox jumps over the lazy dog. ".repeat(100);
-    const state = EditorState.create({
-      doc: longText,
-      extensions: [posHighlighting(), posHighlightingTheme],
-    });
+    const state = EditorState.create({ doc: longText, extensions: [posHighlighting(), posHighlightingTheme] });
     const view = new EditorView({ state });
 
     expect(view.state.doc.toString()).toBe(longText);

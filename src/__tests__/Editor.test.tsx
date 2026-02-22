@@ -1,3 +1,4 @@
+// oxlint-disable react_perf/jsx-no-new-object-as-prop
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Editor } from "../components/Editor";
@@ -23,7 +24,7 @@ describe(Editor, () => {
     });
 
     it("should set data-theme attribute", () => {
-      render(<Editor theme="light" />);
+      render(<Editor presentation={{ theme: "light" }} />);
       const container = screen.getByTestId("editor-container");
       expect(container).toHaveAttribute("data-theme", "light");
     });
@@ -40,7 +41,7 @@ describe(Editor, () => {
     });
 
     it("should hide line numbers when disabled via prop", () => {
-      const { container } = render(<Editor showLineNumbers={false} />);
+      const { container } = render(<Editor presentation={{ showLineNumbers: false }} />);
       expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
     });
 
@@ -50,12 +51,12 @@ describe(Editor, () => {
     });
 
     it("should disable text wrapping when disabled via prop", () => {
-      const { container } = render(<Editor textWrappingEnabled={false} />);
+      const { container } = render(<Editor presentation={{ textWrappingEnabled: false }} />);
       expect(container.querySelector(".cm-lineWrapping")).not.toBeInTheDocument();
     });
 
     it("should apply custom font family and size variables", () => {
-      render(<Editor fontFamily="IBM Plex Sans Variable" fontSize={19} />);
+      render(<Editor presentation={{ fontFamily: "IBM Plex Sans Variable", fontSize: 19 }} />);
       const container = screen.getByTestId("editor-container");
       expect(container).toHaveStyle(
         "--editor-font-family: \"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
@@ -80,13 +81,13 @@ describe(Editor, () => {
 
   describe("theme switching", () => {
     it("should support dark theme", () => {
-      render(<Editor theme="dark" />);
+      render(<Editor presentation={{ theme: "dark" }} />);
       const container = screen.getByTestId("editor-container");
       expect(container).toHaveAttribute("data-theme", "dark");
     });
 
     it("should support light theme", () => {
-      render(<Editor theme="light" />);
+      render(<Editor presentation={{ theme: "light" }} />);
       const container = screen.getByTestId("editor-container");
       expect(container).toHaveAttribute("data-theme", "light");
     });
@@ -170,10 +171,10 @@ describe(Editor, () => {
     });
 
     it("recreates the editor view when presentation props change", () => {
-      const { container, rerender } = render(<Editor initialText="Persistent" theme="dark" />);
+      const { container, rerender } = render(<Editor initialText="Persistent" presentation={{ theme: "dark" }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
-      rerender(<Editor initialText="Persistent" theme="light" />);
+      rerender(<Editor initialText="Persistent" presentation={{ theme: "light" }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
 
       expect(screen.getByTestId("editor-container")).toHaveAttribute("data-theme", "light");
@@ -183,9 +184,11 @@ describe(Editor, () => {
     });
 
     it("recreates the editor view when line number visibility changes", () => {
-      const { container, rerender } = render(<Editor initialText="Persistent" showLineNumbers />);
+      const { container, rerender } = render(
+        <Editor initialText="Persistent" presentation={{ showLineNumbers: true }} />,
+      );
       const firstEditorRoot = container.querySelector(".cm-editor");
-      rerender(<Editor initialText="Persistent" showLineNumbers={false} />);
+      rerender(<Editor initialText="Persistent" presentation={{ showLineNumbers: false }} />);
 
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).toBeInTheDocument();
@@ -195,9 +198,11 @@ describe(Editor, () => {
     });
 
     it("recreates the editor view when text wrapping changes", () => {
-      const { container, rerender } = render(<Editor initialText="Persistent" textWrappingEnabled />);
+      const { container, rerender } = render(
+        <Editor initialText="Persistent" presentation={{ textWrappingEnabled: true }} />,
+      );
       const firstEditorRoot = container.querySelector(".cm-editor");
-      rerender(<Editor initialText="Persistent" textWrappingEnabled={false} />);
+      rerender(<Editor initialText="Persistent" presentation={{ textWrappingEnabled: false }} />);
 
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).toBeInTheDocument();
@@ -207,9 +212,11 @@ describe(Editor, () => {
     });
 
     it("recreates the editor view when syntax highlighting mode changes", () => {
-      const { container, rerender } = render(<Editor initialText="# Heading" syntaxHighlightingEnabled />);
+      const { container, rerender } = render(
+        <Editor initialText="# Heading" presentation={{ syntaxHighlightingEnabled: true }} />,
+      );
       const firstEditorRoot = container.querySelector(".cm-editor");
-      rerender(<Editor initialText="# Heading" syntaxHighlightingEnabled={false} />);
+      rerender(<Editor initialText="# Heading" presentation={{ syntaxHighlightingEnabled: false }} />);
 
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).toBeInTheDocument();
@@ -227,53 +234,53 @@ describe(Editor, () => {
     });
 
     it("should apply typewriter scrolling when enabled", () => {
-      const { container } = render(<Editor typewriterScrollingEnabled={true} />);
+      const { container } = render(<Editor presentation={{ typewriterScrollingEnabled: true }} />);
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
     it("should apply focus dimming in sentence mode", () => {
-      const { container } = render(<Editor focusDimmingMode="sentence" />);
+      const { container } = render(<Editor presentation={{ focusDimmingMode: "sentence" }} />);
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
     it("should apply focus dimming in paragraph mode", () => {
-      const { container } = render(<Editor focusDimmingMode="paragraph" />);
+      const { container } = render(<Editor presentation={{ focusDimmingMode: "paragraph" }} />);
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
     it("should recreate editor when typewriterScrollingEnabled changes", () => {
-      const { container, rerender } = render(<Editor typewriterScrollingEnabled={false} />);
+      const { container, rerender } = render(<Editor presentation={{ typewriterScrollingEnabled: false }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
-      rerender(<Editor typewriterScrollingEnabled={true} />);
+      rerender(<Editor presentation={{ typewriterScrollingEnabled: true }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
     });
 
     it("should recreate editor when focusDimmingMode changes", () => {
-      const { container, rerender } = render(<Editor focusDimmingMode="off" />);
+      const { container, rerender } = render(<Editor presentation={{ focusDimmingMode: "off" }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
-      rerender(<Editor focusDimmingMode="sentence" />);
+      rerender(<Editor presentation={{ focusDimmingMode: "sentence" }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
     });
 
     it("should apply POS highlighting when enabled", () => {
-      const { container } = render(<Editor posHighlightingEnabled={true} />);
+      const { container } = render(<Editor presentation={{ posHighlightingEnabled: true }} />);
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
     it("should not apply POS highlighting when disabled", () => {
-      const { container } = render(<Editor posHighlightingEnabled={false} />);
+      const { container } = render(<Editor presentation={{ posHighlightingEnabled: false }} />);
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
     it("should recreate editor when posHighlightingEnabled changes", () => {
-      const { container, rerender } = render(<Editor posHighlightingEnabled={false} />);
+      const { container, rerender } = render(<Editor presentation={{ posHighlightingEnabled: false }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
-      rerender(<Editor posHighlightingEnabled={true} />);
+      rerender(<Editor presentation={{ posHighlightingEnabled: true }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
     });

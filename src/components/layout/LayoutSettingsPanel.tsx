@@ -1,44 +1,20 @@
-import { PatternCategory } from "$editor/pattern-matcher";
 import { XIcon } from "$icons";
+import {
+  useLayoutSettingsChromeState,
+  useLayoutSettingsEditorState,
+  useLayoutSettingsFocusState,
+  useLayoutSettingsWriterToolsState,
+} from "$state/panel-selectors";
 import type {
   EditorFontFamily,
   FocusDimmingMode,
-  FocusModeSettings,
+  PatternCategory,
   StyleCheckPattern,
   StyleCheckSettings,
 } from "$types";
 import { type ChangeEvent, ChangeEventHandler, useCallback, useMemo, useState } from "react";
 
-type LayoutSettingsPanelProps = {
-  isVisible: boolean;
-  sidebarCollapsed: boolean;
-  topBarsCollapsed: boolean;
-  statusBarCollapsed: boolean;
-  lineNumbersVisible: boolean;
-  textWrappingEnabled: boolean;
-  syntaxHighlightingEnabled: boolean;
-  editorFontSize: number;
-  editorFontFamily: EditorFontFamily;
-  focusModeSettings: FocusModeSettings;
-  posHighlightingEnabled: boolean;
-  styleCheckSettings: StyleCheckSettings;
-  onSetSidebarCollapsed: (value: boolean) => void;
-  onSetTopBarsCollapsed: (value: boolean) => void;
-  onSetStatusBarCollapsed: (value: boolean) => void;
-  onSetLineNumbersVisible: (value: boolean) => void;
-  onSetTextWrappingEnabled: (value: boolean) => void;
-  onSetSyntaxHighlightingEnabled: (value: boolean) => void;
-  onSetEditorFontSize: (value: number) => void;
-  onSetEditorFontFamily: (value: EditorFontFamily) => void;
-  onSetTypewriterScrollingEnabled: (enabled: boolean) => void;
-  onSetFocusDimmingMode: (mode: FocusDimmingMode) => void;
-  onSetPosHighlightingEnabled: (value: boolean) => void;
-  onSetStyleCheckEnabled: (enabled: boolean) => void;
-  onSetStyleCheckCategory: (category: keyof StyleCheckSettings["categories"], enabled: boolean) => void;
-  onAddCustomPattern: (pattern: { text: string; category: PatternCategory; replacement?: string }) => void;
-  onRemoveCustomPattern: (index: number) => void;
-  onClose: () => void;
-};
+type LayoutSettingsPanelProps = { isVisible: boolean; onClose: () => void };
 
 type ToggleRowProps = {
   label: string;
@@ -311,7 +287,7 @@ const CustomPatternSection = (
 type StyleCheckSectionProps = {
   settings: StyleCheckSettings;
   onSetEnabled: (enabled: boolean) => void;
-  onSetCategory: (category: keyof StyleCheckSettings["categories"], enabled: boolean) => void;
+  onSetCategory: (category: PatternCategory, enabled: boolean) => void;
   onAddPattern: (pattern: { text: string; category: PatternCategory; replacement?: string }) => void;
   onRemovePattern: (index: number) => void;
 };
@@ -392,73 +368,49 @@ function StyleCheckSection(
   );
 }
 
-export function LayoutSettingsPanel(
-  {
-    isVisible,
+export function LayoutSettingsPanel({ isVisible, onClose }: LayoutSettingsPanelProps) {
+  const {
     sidebarCollapsed,
     topBarsCollapsed,
     statusBarCollapsed,
+    toggleSidebarCollapsed,
+    toggleTabBarCollapsed,
+    toggleStatusBarCollapsed,
+  } = useLayoutSettingsChromeState();
+  const {
     lineNumbersVisible,
     textWrappingEnabled,
     syntaxHighlightingEnabled,
     editorFontSize,
     editorFontFamily,
-    focusModeSettings,
+    toggleLineNumbersVisible,
+    toggleTextWrappingEnabled,
+    toggleSyntaxHighlightingEnabled,
+    setEditorFontSize,
+    setEditorFontFamily,
+  } = useLayoutSettingsEditorState();
+  const { focusModeSettings, setTypewriterScrollingEnabled, setFocusDimmingMode } = useLayoutSettingsFocusState();
+  const {
     posHighlightingEnabled,
     styleCheckSettings,
-    onSetSidebarCollapsed,
-    onSetTopBarsCollapsed,
-    onSetStatusBarCollapsed,
-    onSetLineNumbersVisible,
-    onSetTextWrappingEnabled,
-    onSetSyntaxHighlightingEnabled,
-    onSetEditorFontSize,
-    onSetEditorFontFamily,
-    onSetTypewriterScrollingEnabled,
-    onSetFocusDimmingMode,
-    onSetPosHighlightingEnabled,
-    onSetStyleCheckEnabled,
-    onSetStyleCheckCategory,
-    onAddCustomPattern,
-    onRemoveCustomPattern,
-    onClose,
-  }: LayoutSettingsPanelProps,
-) {
-  const toggleSidebar = useCallback(() => {
-    onSetSidebarCollapsed(!sidebarCollapsed);
-  }, [sidebarCollapsed, onSetSidebarCollapsed]);
-
-  const toggleTopBars = useCallback(() => {
-    onSetTopBarsCollapsed(!topBarsCollapsed);
-  }, [topBarsCollapsed, onSetTopBarsCollapsed]);
-
-  const toggleStatusBar = useCallback(() => {
-    onSetStatusBarCollapsed(!statusBarCollapsed);
-  }, [statusBarCollapsed, onSetStatusBarCollapsed]);
-
-  const toggleLineNumbers = useCallback(() => {
-    onSetLineNumbersVisible(!lineNumbersVisible);
-  }, [lineNumbersVisible, onSetLineNumbersVisible]);
-
-  const toggleTextWrapping = useCallback(() => {
-    onSetTextWrappingEnabled(!textWrappingEnabled);
-  }, [onSetTextWrappingEnabled, textWrappingEnabled]);
-
-  const toggleSyntaxHighlighting = useCallback(() => {
-    onSetSyntaxHighlightingEnabled(!syntaxHighlightingEnabled);
-  }, [onSetSyntaxHighlightingEnabled, syntaxHighlightingEnabled]);
+    togglePosHighlighting,
+    setStyleCheckSettings,
+    setStyleCheckCategory,
+    addCustomPattern,
+    removeCustomPattern,
+  } = useLayoutSettingsWriterToolsState();
 
   const handleFontSizeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    onSetEditorFontSize(Number(event.target.value));
-  }, [onSetEditorFontSize]);
+    setEditorFontSize(Number(event.target.value));
+  }, [setEditorFontSize]);
 
   const handleFontFamilyChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
-    onSetEditorFontFamily(event.target.value as EditorFontFamily);
-  }, [onSetEditorFontFamily]);
+    setEditorFontFamily(event.target.value as EditorFontFamily);
+  }, [setEditorFontFamily]);
 
-  const togglePosHighlighting = useCallback(() => {
-    onSetPosHighlightingEnabled(!posHighlightingEnabled);
-  }, [onSetPosHighlightingEnabled, posHighlightingEnabled]);
+  const handleStyleCheckEnabled = useCallback((enabled: boolean) => {
+    setStyleCheckSettings({ ...styleCheckSettings, enabled });
+  }, [setStyleCheckSettings, styleCheckSettings]);
 
   if (isVisible) {
     return (
@@ -475,32 +427,32 @@ export function LayoutSettingsPanel(
             label="Sidebar"
             description="Show or hide the left navigation panel."
             isVisible={!sidebarCollapsed}
-            onToggle={toggleSidebar} />
+            onToggle={toggleSidebarCollapsed} />
           <ToggleRow
             label="Tab Bar"
             description="Show or hide the document tabs."
             isVisible={!topBarsCollapsed}
-            onToggle={toggleTopBars} />
+            onToggle={toggleTabBarCollapsed} />
           <ToggleRow
             label="Status Bar"
             description="Show or hide the editor status row."
             isVisible={!statusBarCollapsed}
-            onToggle={toggleStatusBar} />
+            onToggle={toggleStatusBarCollapsed} />
           <ToggleRow
             label="Line Numbers"
             description="Show or hide line numbers in the editor gutter."
             isVisible={lineNumbersVisible}
-            onToggle={toggleLineNumbers} />
+            onToggle={toggleLineNumbersVisible} />
           <ToggleRow
             label="Text Wrapping"
             description="Wrap long lines in the editor instead of horizontal scrolling."
             isVisible={textWrappingEnabled}
-            onToggle={toggleTextWrapping} />
+            onToggle={toggleTextWrappingEnabled} />
           <ToggleRow
             label="Syntax Highlighting"
             description="Enable Markdown syntax colors and token styling."
             isVisible={syntaxHighlightingEnabled}
-            onToggle={toggleSyntaxHighlighting} />
+            onToggle={toggleSyntaxHighlightingEnabled} />
           <FontFamilyRow value={editorFontFamily} setter={handleFontFamilyChange} />
           <FontSizeRow value={editorFontSize} setter={handleFontSizeChange} />
 
@@ -511,9 +463,9 @@ export function LayoutSettingsPanel(
             label="Typewriter Scrolling"
             description="Keep the active line centered in the viewport."
             isVisible={focusModeSettings.typewriterScrollingEnabled}
-            onToggle={onSetTypewriterScrollingEnabled} />
+            onToggle={setTypewriterScrollingEnabled} />
 
-          <DimmingModeRow value={focusModeSettings.dimmingMode} setter={onSetFocusDimmingMode} />
+          <DimmingModeRow value={focusModeSettings.dimmingMode} setter={setFocusDimmingMode} />
 
           <div className="border-t border-border-subtle my-3" />
           <p className="m-0 text-xs text-text-secondary mb-2">Writer's Tools</p>
@@ -526,10 +478,10 @@ export function LayoutSettingsPanel(
 
           <StyleCheckSection
             settings={styleCheckSettings}
-            onSetEnabled={onSetStyleCheckEnabled}
-            onSetCategory={onSetStyleCheckCategory}
-            onAddPattern={onAddCustomPattern}
-            onRemovePattern={onRemoveCustomPattern} />
+            onSetEnabled={handleStyleCheckEnabled}
+            onSetCategory={setStyleCheckCategory}
+            onAddPattern={addCustomPattern}
+            onRemovePattern={removeCustomPattern} />
         </section>
       </div>
     );

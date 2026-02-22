@@ -7,7 +7,7 @@
  * It handles multi-word phrases and supports case-insensitive matching with word boundary awareness.
  */
 
-export type PatternCategory = "filler" | "redundancy" | "cliche";
+import { PatternCategory } from "$types";
 
 export type Pattern = { text: string; category: PatternCategory; replacement?: string };
 

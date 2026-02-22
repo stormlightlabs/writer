@@ -1,11 +1,16 @@
 import { logger } from "$logger";
 import { backendEvents, docList, locationList, runCmd, startWatch, stopWatch, SubscriptionManager } from "$ports";
 import { useCallback, useEffect, useRef } from "react";
-import { useWorkspaceActions, useWorkspaceState } from "../state/appStore";
+import {
+  useWorkspaceDocumentsActions,
+  useWorkspaceLocationsActions,
+  useWorkspaceLocationsState,
+} from "../state/appStore";
 
 export function useWorkspaceSync(): void {
-  const { selectedLocationId } = useWorkspaceState();
-  const { setLocations, setLoadingLocations, setDocuments, setLoadingDocuments } = useWorkspaceActions();
+  const { selectedLocationId } = useWorkspaceLocationsState();
+  const { setLocations, setLoadingLocations } = useWorkspaceLocationsActions();
+  const { setDocuments, setLoadingDocuments } = useWorkspaceDocumentsActions();
 
   const hasLoadedLocationsRef = useRef(false);
 

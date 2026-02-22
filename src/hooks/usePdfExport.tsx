@@ -3,23 +3,18 @@ import { logger } from "$logger";
 import { serializeError } from "$pdf/errors";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { usePdfExportActions } from "$state/appStore";
 import type { EditorFontFamily } from "$types";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 
-export type PdfExportState = { isExporting: boolean; error: string | null };
-
-type ExportFn = (
+export type ExportPdfFn = (
   result: PdfRenderResult,
   options: PdfExportOptions,
   editorFontFamily: EditorFontFamily,
 ) => Promise<boolean>;
-
-export type UsePdfExportReturn = { state: PdfExportState; exportPdf: ExportFn; reset: () => void };
-
-const initialState: PdfExportState = { isExporting: false, error: null };
 
 const runtimeContext = () => ({
   href: globalThis.location?.href ?? null,
@@ -27,8 +22,8 @@ const runtimeContext = () => ({
   userAgent: globalThis.navigator?.userAgent ?? null,
 });
 
-export function usePdfExport(): UsePdfExportReturn {
-  const [state, setState] = useState<PdfExportState>(initialState);
+export function usePdfExport(): ExportPdfFn {
+  const { startPdfExport, finishPdfExport, failPdfExport } = usePdfExportActions();
 
   const renderPdfBlob = useCallback(
     async (
@@ -62,7 +57,7 @@ export function usePdfExport(): UsePdfExportReturn {
 
   const exportPdf = useCallback(
     async (result: PdfRenderResult, options: PdfExportOptions, editorFontFamily: EditorFontFamily) => {
-      setState({ isExporting: true, error: null });
+      startPdfExport();
 
       try {
         let blob: Blob;
@@ -104,28 +99,24 @@ export function usePdfExport(): UsePdfExportReturn {
             editorFontFamily,
             fallbackUsed: customRenderError !== null,
           });
-          setState({ isExporting: false, error: null });
+          finishPdfExport();
           return false;
         }
 
         await writeFile(filePath, uint8Array);
         logger.info("PDF export completed", { filePath, editorFontFamily, fallbackUsed: customRenderError !== null });
 
-        setState({ isExporting: false, error: null });
+        finishPdfExport();
         return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to export PDF";
         logger.error("PDF export failed", { editorFontFamily, error: serializeError(err) });
-        setState({ isExporting: false, error: errorMessage });
+        failPdfExport(errorMessage);
         throw err;
       }
     },
-    [renderPdfBlob],
+    [failPdfExport, finishPdfExport, renderPdfBlob, startPdfExport],
   );
 
-  const reset = useCallback(() => {
-    setState(initialState);
-  }, []);
-
-  return { state, exportPdf, reset };
+  return exportPdf;
 }

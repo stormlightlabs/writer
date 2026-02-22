@@ -18,10 +18,19 @@ import { usePreview } from "./hooks/usePreview";
 import { useSearchController } from "./hooks/useSearchController";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
-import { useLayoutActions, useLayoutState } from "./state/appStore";
+import {
+  useEditorPresentationActions,
+  useEditorPresentationState,
+  useLayoutChromeActions,
+  useLayoutChromeState,
+  usePdfExportActions,
+  usePdfExportState,
+  useViewModeState,
+  useWriterToolsActions,
+  useWriterToolsState,
+} from "./state/appStore";
 import "@fontsource-variable/ibm-plex-sans";
 import "./App.css";
-import { PatternCategory } from "$editor/pattern-matcher";
 
 // TODO: make shared utils module
 function formatDraftDate(date: Date): string {
@@ -72,7 +81,9 @@ const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; 
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
-  const { state: pdfExportState, exportPdf, reset: resetPdfExport } = usePdfExport();
+  const exportPdf = usePdfExport();
+  const { isExportingPdf, pdfExportError } = usePdfExportState();
+  const { resetPdfExport } = usePdfExportActions();
   const { missingLocations, conflicts } = useBackendEvents();
   const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
   const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
@@ -81,8 +92,19 @@ function App() {
   useWorkspaceSync();
   useLayoutHotkeys();
 
-  const layoutState = useLayoutState();
-  const layoutActions = useLayoutActions();
+  const layoutChrome = useLayoutChromeState();
+  const { setSidebarCollapsed, setTopBarsCollapsed, setStatusBarCollapsed } = useLayoutChromeActions();
+  const editorPresentation = useEditorPresentationState();
+  const {
+    setLineNumbersVisible,
+    setTextWrappingEnabled,
+    setSyntaxHighlightingEnabled,
+    setEditorFontSize,
+    setEditorFontFamily,
+  } = useEditorPresentationActions();
+  const { isFocusMode } = useViewModeState();
+  const { styleCheckSettings } = useWriterToolsState();
+  const { setStyleCheckSettings } = useWriterToolsActions();
   const workspace = useWorkspaceController(openDoc);
   const search = useSearchController(workspace.handleSelectDocument);
 
@@ -157,10 +179,8 @@ function App() {
     setIsPdfExportDialogOpen(true);
   }, [activeTab, resetPdfExport]);
 
-  const handleOpenSearch = useCallback(() => layoutActions.setShowSearch(true), [layoutActions]);
-  const handleShowSidebar = useCallback(() => layoutActions.setSidebarCollapsed(false), [layoutActions]);
-  const handleShowStatusBar = useCallback(() => layoutActions.setStatusBarCollapsed(false), [layoutActions]);
-  const handleExit = useCallback(() => layoutActions.setFocusMode(false), [layoutActions]);
+  const handleShowSidebar = useCallback(() => setSidebarCollapsed(false), [setSidebarCollapsed]);
+  const handleShowStatusBar = useCallback(() => setStatusBarCollapsed(false), [setStatusBarCollapsed]);
 
   const handleCancelPdfExport = useCallback(() => {
     setIsPdfExportDialogOpen(false);
@@ -182,7 +202,7 @@ function App() {
         );
       });
 
-      const didExport = await exportPdf(renderResult, options, layoutState.editorFontFamily);
+      const didExport = await exportPdf(renderResult, options, editorPresentation.editorFontFamily);
       if (didExport) {
         setIsPdfExportDialogOpen(false);
         resetPdfExport();
@@ -190,110 +210,72 @@ function App() {
     } catch (error) {
       logger.error("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) });
     }
-  }, [activeTab, editorModel.text, exportPdf, layoutState.editorFontFamily, resetPdfExport]);
+  }, [activeTab, editorModel.text, exportPdf, editorPresentation.editorFontFamily, resetPdfExport]);
 
-  const showToggleControls = useMemo(() => layoutState.sidebarCollapsed || layoutState.statusBarCollapsed, [
-    layoutState.sidebarCollapsed,
-    layoutState.statusBarCollapsed,
+  const showToggleControls = useMemo(() => layoutChrome.sidebarCollapsed || layoutChrome.statusBarCollapsed, [
+    layoutChrome.sidebarCollapsed,
+    layoutChrome.statusBarCollapsed,
   ]);
-
-  const layoutProps = useMemo(
-    () => ({
-      sidebarCollapsed: layoutState.sidebarCollapsed,
-      topBarsCollapsed: layoutState.topBarsCollapsed,
-      statusBarCollapsed: layoutState.statusBarCollapsed,
-      isSplitView: layoutState.isSplitView,
-      isPreviewVisible: layoutState.isPreviewVisible,
-    }),
-    [layoutState],
-  );
 
   const sidebarProps = useMemo(
     () => ({
-      locations: workspace.locations,
-      selectedLocationId: workspace.selectedLocationId,
-      selectedDocPath: workspace.selectedDocPath,
-      documents: workspace.locationDocuments,
-      isLoading: workspace.isSidebarLoading,
-      filterText: workspace.sidebarFilter,
-      onAddLocation: workspace.handleAddLocation,
-      onRemoveLocation: workspace.handleRemoveLocation,
-      onSelectLocation: workspace.handleSelectLocation,
-      onSelectDocument: workspace.handleSelectDocument,
-      onFilterChange: workspace.setSidebarFilter,
+      handleAddLocation: workspace.handleAddLocation,
+      handleRemoveLocation: workspace.handleRemoveLocation,
+      handleSelectDocument: workspace.handleSelectDocument,
     }),
-    [workspace],
+    [workspace.handleAddLocation, workspace.handleRemoveLocation, workspace.handleSelectDocument],
   );
 
   const toolbarProps = useMemo(
     () => ({
       saveStatus: editorModel.saveStatus,
-      isSplitView: layoutState.isSplitView,
-      isFocusMode: layoutState.isFocusMode,
-      isPreviewVisible: layoutState.isPreviewVisible,
       onSave: handleSave,
-      onToggleSplitView: layoutActions.toggleSplitView,
-      onToggleFocusMode: layoutActions.toggleFocusMode,
-      onTogglePreview: layoutActions.togglePreviewVisible,
       onExportPdf: handleOpenPdfExport,
-      isExportingPdf: pdfExportState.isExporting,
+      isExportingPdf: isExportingPdf,
       isPdfExportDisabled: !activeTab,
       onOpenSettings: handleOpenSettings,
     }),
-    [
-      editorModel.saveStatus,
-      layoutState.isSplitView,
-      layoutState.isFocusMode,
-      layoutState.isPreviewVisible,
-      layoutActions.toggleSplitView,
-      layoutActions.toggleFocusMode,
-      layoutActions.togglePreviewVisible,
-      handleOpenPdfExport,
-      pdfExportState.isExporting,
-      activeTab,
-      handleSave,
-      handleOpenSettings,
-    ],
+    [editorModel.saveStatus, handleOpenPdfExport, isExportingPdf, activeTab, handleSave, handleOpenSettings],
   );
 
   const tabProps = useMemo(
     () => ({
       tabs: workspace.tabs,
       activeTabId: workspace.activeTabId,
-      onSelectTab: workspace.handleSelectTab,
-      onCloseTab: workspace.handleCloseTab,
-      onReorderTabs: workspace.handleReorderTabs,
+      handleSelectTab: workspace.handleSelectTab,
+      handleCloseTab: workspace.handleCloseTab,
+      handleReorderTabs: workspace.handleReorderTabs,
     }),
-    [workspace],
+    [
+      workspace.tabs,
+      workspace.activeTabId,
+      workspace.handleSelectTab,
+      workspace.handleCloseTab,
+      workspace.handleReorderTabs,
+    ],
   );
 
   const editorProps = useMemo(
     () => ({
       initialText: editorModel.text,
-      theme: layoutState.theme,
-      showLineNumbers: layoutState.lineNumbersVisible,
-      textWrappingEnabled: layoutState.textWrappingEnabled,
-      syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
-      fontSize: layoutState.editorFontSize,
-      fontFamily: layoutState.editorFontFamily,
-      posHighlightingEnabled: layoutState.posHighlightingEnabled,
-      styleCheckSettings: layoutState.styleCheckSettings,
       onChange: handleEditorChange,
       onSave: handleSave,
       onCursorMove: handleCursorMove,
       onSelectionChange: handleSelectionChange,
     }),
-    [editorModel.text, layoutState, handleEditorChange, handleSave, handleCursorMove, handleSelectionChange],
+    [editorModel.text, handleEditorChange, handleSave, handleCursorMove, handleSelectionChange],
   );
 
   const statusBarProps = useMemo(
     () => ({
       docMeta: activeDocMeta,
-      cursorLine: editorModel.cursorLine,
-      cursorColumn: editorModel.cursorColumn,
-      wordCount,
-      charCount,
-      selectionCount,
+      stats: {
+        cursorLine: editorModel.cursorLine,
+        cursorColumn: editorModel.cursorColumn,
+        wordCount,
+        charCount,
+        selectionCount,
+      },
     }),
     [activeDocMeta, editorModel.cursorLine, editorModel.cursorColumn, wordCount, charCount, selectionCount],
   );
@@ -301,112 +283,66 @@ function App() {
   const previewProps = useMemo(
     () => ({
       renderResult: previewModel.renderResult,
-      theme: layoutState.theme,
+      theme: editorPresentation.theme,
       editorLine: editorModel.cursorLine,
       onScrollToLine: syncPreviewLine,
     }),
-    [previewModel.renderResult, layoutState.theme, editorModel.cursorLine, syncPreviewLine],
+    [previewModel.renderResult, editorPresentation.theme, editorModel.cursorLine, syncPreviewLine],
   );
 
   const searchProps = useMemo(
     () => ({
-      isVisible: layoutState.showSearch,
-      sidebarCollapsed: layoutState.sidebarCollapsed,
-      topOffset: 48,
-      query: search.searchQuery,
-      results: search.searchResults,
-      isSearching: search.isSearching,
       locations: workspace.locations,
+      searchQuery: search.searchQuery,
+      searchResults: search.searchResults,
+      isSearching: search.isSearching,
       filters: search.filters,
-      onQueryChange: search.handleSearch,
-      onFiltersChange: search.setFilters,
-      onSelectResult: search.handleSelectSearchResult,
-      onClose: () => layoutActions.setShowSearch(false),
+      handleSearch: search.handleSearch,
+      setFilters: search.setFilters,
+      handleSelectSearchResult: search.handleSelectSearchResult,
     }),
-    [layoutState.showSearch, layoutState.sidebarCollapsed, search, workspace.locations, layoutActions],
+    [
+      workspace.locations,
+      search.searchQuery,
+      search.searchResults,
+      search.isSearching,
+      search.filters,
+      search.handleSearch,
+      search.setFilters,
+      search.handleSelectSearchResult,
+    ],
   );
 
   const handleSettingsClose = useCallback(() => {
     setIsLayoutSettingsOpen(false);
   }, []);
 
-  const settingsPanelProps = useMemo(
-    () => ({
-      isVisible: isLayoutSettingsOpen,
-      sidebarCollapsed: layoutState.sidebarCollapsed,
-      topBarsCollapsed: layoutState.topBarsCollapsed,
-      statusBarCollapsed: layoutState.statusBarCollapsed,
-      lineNumbersVisible: layoutState.lineNumbersVisible,
-      textWrappingEnabled: layoutState.textWrappingEnabled,
-      syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
-      editorFontSize: layoutState.editorFontSize,
-      editorFontFamily: layoutState.editorFontFamily,
-      focusModeSettings: layoutState.focusModeSettings,
-      onSetSidebarCollapsed: layoutActions.setSidebarCollapsed,
-      onSetTopBarsCollapsed: layoutActions.setTopBarsCollapsed,
-      onSetStatusBarCollapsed: layoutActions.setStatusBarCollapsed,
-      onSetLineNumbersVisible: layoutActions.setLineNumbersVisible,
-      onSetTextWrappingEnabled: layoutActions.setTextWrappingEnabled,
-      onSetSyntaxHighlightingEnabled: layoutActions.setSyntaxHighlightingEnabled,
-      onSetEditorFontSize: layoutActions.setEditorFontSize,
-      onSetEditorFontFamily: layoutActions.setEditorFontFamily,
-      onSetTypewriterScrollingEnabled: layoutActions.setTypewriterScrollingEnabled,
-      onSetFocusDimmingMode: layoutActions.setFocusDimmingMode,
-      posHighlightingEnabled: layoutState.posHighlightingEnabled,
-      onSetPosHighlightingEnabled: layoutActions.setPosHighlightingEnabled,
-      styleCheckSettings: layoutState.styleCheckSettings,
-      onSetStyleCheckEnabled: (enabled: boolean) =>
-        layoutActions.setStyleCheckSettings({ ...layoutState.styleCheckSettings, enabled }),
-      onSetStyleCheckCategory: (category: PatternCategory, enabled: boolean) =>
-        layoutActions.setStyleCheckCategory(category, enabled),
-      onAddCustomPattern: (pattern: { text: string; category: PatternCategory; replacement?: string }) =>
-        layoutActions.addCustomPattern(pattern),
-      onRemoveCustomPattern: (index: number) => layoutActions.removeCustomPattern(index),
-      onClose: handleSettingsClose,
-    }),
-    [isLayoutSettingsOpen, layoutState, layoutActions, handleSettingsClose],
-  );
-
-  const focusModePanelProps = useMemo(
-    () => ({
-      theme: layoutState.theme,
-      text: editorModel.text,
-      docMeta: activeDocMeta,
-      cursorLine: editorModel.cursorLine,
-      cursorColumn: editorModel.cursorColumn,
-      wordCount: wordCount,
-      charCount: charCount,
-      selectionCount: selectionCount,
-      lineNumbersVisible: layoutState.lineNumbersVisible,
-      textWrappingEnabled: layoutState.textWrappingEnabled,
-      syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
-      editorFontSize: layoutState.editorFontSize,
-      editorFontFamily: layoutState.editorFontFamily,
-      statusBarCollapsed: layoutState.statusBarCollapsed,
-      focusModeSettings: layoutState.focusModeSettings,
-      posHighlightingEnabled: layoutState.posHighlightingEnabled,
-      onExit: handleExit,
-      onEditorChange: handleEditorChange,
-      onSave: handleSave,
-      onCursorMove: handleCursorMove,
-      onSelectionChange: handleSelectionChange,
-    }),
-    [
-      layoutState,
-      editorModel.text,
-      activeDocMeta,
-      editorModel.cursorLine,
-      editorModel.cursorColumn,
-      wordCount,
-      charCount,
-      selectionCount,
-      handleExit,
-      handleEditorChange,
-      handleSave,
-      handleCursorMove,
-      handleSelectionChange,
-    ],
-  );
+  const focusModePanelProps = useMemo(() => {
+    const pos = { cursorLine: editorModel.cursorLine, cursorColumn: editorModel.cursorColumn };
+    const stats = { ...pos, wordCount, charCount, selectionCount };
+    return ({
+      editor: {
+        initialText: editorModel.text,
+        onChange: handleEditorChange,
+        onSave: handleSave,
+        onCursorMove: handleCursorMove,
+        onSelectionChange: handleSelectionChange,
+      },
+      statusBar: { docMeta: activeDocMeta, stats },
+    });
+  }, [
+    editorModel.text,
+    activeDocMeta,
+    editorModel.cursorLine,
+    editorModel.cursorColumn,
+    wordCount,
+    charCount,
+    selectionCount,
+    handleEditorChange,
+    handleSave,
+    handleCursorMove,
+    handleSelectionChange,
+  ]);
 
   useEffect(() => {
     workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
@@ -438,14 +374,14 @@ function App() {
         return;
       }
 
-      layoutActions.setSidebarCollapsed(settings.sidebar_collapsed);
-      layoutActions.setTopBarsCollapsed(settings.top_bars_collapsed);
-      layoutActions.setStatusBarCollapsed(settings.status_bar_collapsed);
-      layoutActions.setLineNumbersVisible(settings.line_numbers_visible);
-      layoutActions.setTextWrappingEnabled(settings.text_wrapping_enabled);
-      layoutActions.setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
-      layoutActions.setEditorFontSize(settings.editor_font_size);
-      layoutActions.setEditorFontFamily(settings.editor_font_family);
+      setSidebarCollapsed(settings.sidebar_collapsed);
+      setTopBarsCollapsed(settings.top_bars_collapsed);
+      setStatusBarCollapsed(settings.status_bar_collapsed);
+      setLineNumbersVisible(settings.line_numbers_visible);
+      setTextWrappingEnabled(settings.text_wrapping_enabled);
+      setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
+      setEditorFontSize(settings.editor_font_size);
+      setEditorFontFamily(settings.editor_font_family);
       setLayoutSettingsHydrated(true);
     }, () => {
       if (!isCancelled) {
@@ -458,7 +394,7 @@ function App() {
         return;
       }
 
-      layoutActions.setStyleCheckSettings({
+      setStyleCheckSettings({
         enabled: settings.enabled,
         categories: settings.categories,
         customPatterns: settings.custom_patterns,
@@ -468,7 +404,17 @@ function App() {
     return () => {
       isCancelled = true;
     };
-  }, [layoutActions]);
+  }, [
+    setEditorFontFamily,
+    setEditorFontSize,
+    setLineNumbersVisible,
+    setSidebarCollapsed,
+    setStatusBarCollapsed,
+    setStyleCheckSettings,
+    setSyntaxHighlightingEnabled,
+    setTextWrappingEnabled,
+    setTopBarsCollapsed,
+  ]);
 
   useEffect(() => {
     if (!layoutSettingsHydrated) {
@@ -478,14 +424,14 @@ function App() {
     void runCmd(
       uiLayoutSet(
         {
-          sidebar_collapsed: layoutState.sidebarCollapsed,
-          top_bars_collapsed: layoutState.topBarsCollapsed,
-          status_bar_collapsed: layoutState.statusBarCollapsed,
-          line_numbers_visible: layoutState.lineNumbersVisible,
-          text_wrapping_enabled: layoutState.textWrappingEnabled,
-          syntax_highlighting_enabled: layoutState.syntaxHighlightingEnabled,
-          editor_font_size: layoutState.editorFontSize,
-          editor_font_family: layoutState.editorFontFamily,
+          sidebar_collapsed: layoutChrome.sidebarCollapsed,
+          top_bars_collapsed: layoutChrome.topBarsCollapsed,
+          status_bar_collapsed: layoutChrome.statusBarCollapsed,
+          line_numbers_visible: editorPresentation.lineNumbersVisible,
+          text_wrapping_enabled: editorPresentation.textWrappingEnabled,
+          syntax_highlighting_enabled: editorPresentation.syntaxHighlightingEnabled,
+          editor_font_size: editorPresentation.editorFontSize,
+          editor_font_family: editorPresentation.editorFontFamily,
         },
         () => {},
         () => {},
@@ -493,14 +439,14 @@ function App() {
     );
   }, [
     layoutSettingsHydrated,
-    layoutState.sidebarCollapsed,
-    layoutState.topBarsCollapsed,
-    layoutState.statusBarCollapsed,
-    layoutState.lineNumbersVisible,
-    layoutState.textWrappingEnabled,
-    layoutState.syntaxHighlightingEnabled,
-    layoutState.editorFontSize,
-    layoutState.editorFontFamily,
+    layoutChrome.sidebarCollapsed,
+    layoutChrome.topBarsCollapsed,
+    layoutChrome.statusBarCollapsed,
+    editorPresentation.lineNumbersVisible,
+    editorPresentation.textWrappingEnabled,
+    editorPresentation.syntaxHighlightingEnabled,
+    editorPresentation.editorFontSize,
+    editorPresentation.editorFontFamily,
   ]);
 
   useEffect(() => {
@@ -511,9 +457,9 @@ function App() {
     void runCmd(
       styleCheckSet(
         {
-          enabled: layoutState.styleCheckSettings.enabled,
-          categories: layoutState.styleCheckSettings.categories,
-          custom_patterns: layoutState.styleCheckSettings.customPatterns,
+          enabled: styleCheckSettings.enabled,
+          categories: styleCheckSettings.categories,
+          custom_patterns: styleCheckSettings.customPatterns,
         },
         () => {},
         () => {},
@@ -521,25 +467,13 @@ function App() {
     );
   }, [
     layoutSettingsHydrated,
-    layoutState.styleCheckSettings.enabled,
-    layoutState.styleCheckSettings.categories,
-    layoutState.styleCheckSettings.customPatterns,
+    styleCheckSettings.enabled,
+    styleCheckSettings.categories,
+    styleCheckSettings.customPatterns,
   ]);
-
-  const appHeaderBarProps = useMemo(
-    () => ({
-      onToggleSidebar: layoutActions.toggleSidebarCollapsed,
-      onToggleTabBar: layoutActions.toggleTabBarCollapsed,
-      onOpenSearch: handleOpenSearch,
-      tabBarCollapsed: layoutState.topBarsCollapsed,
-    }),
-    [layoutActions, handleOpenSearch, layoutState.topBarsCollapsed],
-  );
 
   const workspacePanelProps = useMemo(
     () => ({
-      layout: layoutProps,
-      onToggleSidebar: layoutActions.toggleSidebarCollapsed,
       sidebar: sidebarProps,
       toolbar: toolbarProps,
       tabs: tabProps,
@@ -547,7 +481,7 @@ function App() {
       preview: previewProps,
       statusBar: statusBarProps,
     }),
-    [layoutProps, layoutActions, sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps],
+    [sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps],
   );
 
   useEffect(() => {
@@ -565,33 +499,33 @@ function App() {
     return () => globalThis.removeEventListener("keydown", closeOnEscape);
   }, [isLayoutSettingsOpen]);
 
-  if (layoutState.isFocusMode) {
+  if (isFocusMode) {
     return <FocusModePanel {...focusModePanelProps} />;
   }
 
   return (
     <div
-      data-theme={layoutState.theme}
+      data-theme={editorPresentation.theme}
       className="relative h-screen overflow-hidden flex flex-col bg-bg-primary text-text-primary font-sans">
       {showToggleControls && (
         <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
-          {layoutState.sidebarCollapsed && (
+          {layoutChrome.sidebarCollapsed && (
             <ShowButton clickHandler={handleShowSidebar} title="Show sidebar (Ctrl+B)" label="Show Sidebar" />
           )}
-          {layoutState.statusBarCollapsed && (
+          {layoutChrome.statusBarCollapsed && (
             <ShowButton clickHandler={handleShowStatusBar} title="Show status bar" label="Show Status Bar" />
           )}
         </div>
       )}
 
-      <AppHeaderBar {...appHeaderBarProps} />
+      <AppHeaderBar />
       <WorkspacePanel {...workspacePanelProps} />
-      <LayoutSettingsPanel {...settingsPanelProps} />
+      <LayoutSettingsPanel isVisible={isLayoutSettingsOpen} onClose={handleSettingsClose} />
       <PdfExportDialog
         isOpen={isPdfExportDialogOpen}
         title={activeDocMeta?.title}
-        isExporting={pdfExportState.isExporting}
-        errorMessage={pdfExportState.error}
+        isExporting={isExportingPdf}
+        errorMessage={pdfExportError}
         onExport={handleExportPdf}
         onCancel={handleCancelPdfExport} />
       <SearchOverlay {...searchProps} />

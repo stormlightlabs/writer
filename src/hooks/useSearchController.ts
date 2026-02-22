@@ -3,7 +3,7 @@ import { runCmd, searchDocuments, type SearchFiltersPayload } from "$ports";
 import type { SearchHit } from "$types";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
-import { useLayoutActions } from "../state/appStore";
+import { useLayoutChromeActions } from "../state/appStore";
 import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "../state/searchAtoms";
 
 export function useSearchController(onSelectDocument: (locationId: number, path: string) => void) {
@@ -11,7 +11,7 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
   const [searchResults, setSearchResults] = useAtom(searchResultsAtom);
   const [isSearching, setIsSearching] = useAtom(isSearchingAtom);
   const [filters, setFilters] = useAtom(searchFiltersAtom);
-  const { setShowSearch } = useLayoutActions();
+  const { setShowSearch } = useLayoutChromeActions();
   const requestIdRef = useRef(0);
 
   useEffect(() => {

@@ -1,5 +1,3 @@
-import { PatternCategory } from "$editor/pattern-matcher";
-
 export type SaveStatus = "Idle" | "Dirty" | "Saving" | "Saved" | "Error";
 
 export type LineEnding = "LF" | "CRLF" | "CR";
@@ -85,7 +83,9 @@ export type FocusModeSettings = { typewriterScrollingEnabled: boolean; dimmingMo
 
 export type PosHighlightingEnabled = boolean;
 
-export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };
+export type StyleCheckCategorySettings = Record<PatternCategory, boolean>;
+
+export type PatternCategory = "filler" | "redundancy" | "cliche";
 
 export type StyleCheckPattern = { text: string; category: PatternCategory; replacement?: string };
 

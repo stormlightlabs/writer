@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { useLayoutActions } from "../state/appStore";
+import { useLayoutChromeActions, useViewModeActions } from "../state/appStore";
 
 export function useLayoutHotkeys(): void {
-  const { toggleFocusMode, toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed, toggleSplitView } =
-    useLayoutActions();
+  const { toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed } = useLayoutChromeActions();
+  const { toggleFocusMode, toggleSplitView } = useViewModeActions();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
