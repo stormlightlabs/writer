@@ -82,3 +82,7 @@ export type FocusDimmingMode = "off" | "sentence" | "paragraph";
 export type FocusModeSettings = { typewriterScrollingEnabled: boolean; dimmingMode: FocusDimmingMode };
 
 export type PosHighlightingEnabled = boolean;
+
+export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };
+
+export type StyleCheckSettings = { enabled: boolean; categories: StyleCheckCategorySettings };

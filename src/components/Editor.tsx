@@ -1,9 +1,10 @@
 import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
 import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
+import { styleCheck, styleCheckTheme } from "$editor/style-check";
 import { typewriterScroll } from "$editor/typewriter-scroll";
 import { oxocarbonDark } from "$themes/oxocarbon-dark";
 import { oxocarbonLight } from "$themes/oxocarbon-light";
-import type { AppTheme, EditorFontFamily, FocusDimmingMode } from "$types";
+import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState as CMEditorState } from "@codemirror/state";
@@ -28,6 +29,7 @@ export type EditorProps = {
   typewriterScrollingEnabled?: boolean;
   focusDimmingMode?: FocusDimmingMode;
   posHighlightingEnabled?: boolean;
+  styleCheckSettings?: StyleCheckSettings;
   onChange?: (text: string) => void;
   onSave?: () => void;
   onCursorMove?: (line: number, column: number) => void;
@@ -50,6 +52,7 @@ type CreateEditorStateOptions = {
   typewriterScrollingEnabled: boolean;
   focusDimmingMode: FocusDimmingMode;
   posHighlightingEnabled: boolean;
+  styleCheckSettings: StyleCheckSettings;
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
@@ -78,6 +81,7 @@ function createEditorState(
     typewriterScrollingEnabled,
     focusDimmingMode,
     posHighlightingEnabled,
+    styleCheckSettings,
   }: CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
@@ -90,6 +94,17 @@ function createEditorState(
       return true;
     },
   }]);
+
+  const styleCheckExtensions = styleCheckSettings.enabled
+    ? [
+      styleCheck({
+        enabled: styleCheckSettings.enabled,
+        categories: styleCheckSettings.categories,
+        customPatterns: [],
+      }),
+      styleCheckTheme,
+    ]
+    : [];
 
   return CMEditorState.create({
     doc,
@@ -107,6 +122,7 @@ function createEditorState(
       ...(typewriterScrollingEnabled ? [typewriterScroll()] : []),
       ...(focusDimmingMode === "off" ? [] : [focusDimming(focusDimmingMode), focusDimmingTheme]),
       ...(posHighlightingEnabled ? [posHighlighting(), posHighlightingTheme] : []),
+      ...styleCheckExtensions,
     ],
   });
 }
@@ -126,6 +142,7 @@ export function Editor(
     typewriterScrollingEnabled = false,
     focusDimmingMode = "off",
     posHighlightingEnabled = false,
+    styleCheckSettings = { enabled: false, categories: { filler: true, redundancy: true, cliche: true } },
     onChange,
     onSave,
     onCursorMove,
@@ -149,6 +166,7 @@ export function Editor(
     typewriterScrollingEnabled,
     focusDimmingMode,
     posHighlightingEnabled,
+    styleCheckSettings,
   });
   const [isReady, setIsReady] = useState(false);
 
@@ -216,6 +234,7 @@ export function Editor(
       typewriterScrollingEnabled: currentPresentation.typewriterScrollingEnabled,
       focusDimmingMode: currentPresentation.focusDimmingMode,
       posHighlightingEnabled: currentPresentation.posHighlightingEnabled,
+      styleCheckSettings: currentPresentation.styleCheckSettings,
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
@@ -264,6 +283,10 @@ export function Editor(
       && previousPresentation.typewriterScrollingEnabled === typewriterScrollingEnabled
       && previousPresentation.focusDimmingMode === focusDimmingMode
       && previousPresentation.posHighlightingEnabled === posHighlightingEnabled
+      && previousPresentation.styleCheckSettings.enabled === styleCheckSettings.enabled
+      && previousPresentation.styleCheckSettings.categories.filler === styleCheckSettings.categories.filler
+      && previousPresentation.styleCheckSettings.categories.redundancy === styleCheckSettings.categories.redundancy
+      && previousPresentation.styleCheckSettings.categories.cliche === styleCheckSettings.categories.cliche
     ) {
       return;
     }
@@ -278,6 +301,7 @@ export function Editor(
       typewriterScrollingEnabled,
       focusDimmingMode,
       posHighlightingEnabled,
+      styleCheckSettings,
     };
 
     const view = viewRef.current;
@@ -308,6 +332,7 @@ export function Editor(
     typewriterScrollingEnabled,
     focusDimmingMode,
     posHighlightingEnabled,
+    styleCheckSettings,
   ]);
 
   useEffect(() => {

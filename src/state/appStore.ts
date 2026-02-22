@@ -6,6 +6,7 @@ import type {
   FocusDimmingMode,
   FocusModeSettings,
   LocationDescriptor,
+  StyleCheckSettings,
   Tab,
 } from "$types";
 import { create, type StateCreator } from "zustand";
@@ -35,6 +36,7 @@ export type LayoutState = {
   theme: AppTheme;
   focusModeSettings: FocusModeSettings;
   posHighlightingEnabled: boolean;
+  styleCheckSettings: StyleCheckSettings;
 };
 
 export type LayoutActions = {
@@ -66,6 +68,9 @@ export type LayoutActions = {
   toggleShowSearch: () => void;
   setPosHighlightingEnabled: (value: boolean) => void;
   togglePosHighlighting: () => void;
+  setStyleCheckSettings: (settings: StyleCheckSettings) => void;
+  toggleStyleCheck: () => void;
+  setStyleCheckCategory: (category: keyof StyleCheckSettings["categories"], enabled: boolean) => void;
 };
 
 export type WorkspaceState = {
@@ -118,6 +123,7 @@ const getInitialLayoutState = (): LayoutState => ({
   theme: "dark",
   focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
   posHighlightingEnabled: false,
+  styleCheckSettings: { enabled: false, categories: { filler: true, redundancy: true, cliche: true } },
 });
 
 const getInitialWorkspaceState = (): WorkspaceState => ({
@@ -189,6 +195,19 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
 
   setPosHighlightingEnabled: (value) => set({ posHighlightingEnabled: value }),
   togglePosHighlighting: () => set((state) => ({ posHighlightingEnabled: !state.posHighlightingEnabled })),
+
+  setStyleCheckSettings: (settings) => set({ styleCheckSettings: settings }),
+  toggleStyleCheck: () =>
+    set((state) => ({
+      styleCheckSettings: { ...state.styleCheckSettings, enabled: !state.styleCheckSettings.enabled },
+    })),
+  setStyleCheckCategory: (category, enabled) =>
+    set((state) => ({
+      styleCheckSettings: {
+        ...state.styleCheckSettings,
+        categories: { ...state.styleCheckSettings.categories, [category]: enabled },
+      },
+    })),
 });
 
 const createWorkspaceSlice: StateCreator<AppStore, [], [], WorkspaceState & WorkspaceActions> = (set) => ({
@@ -342,6 +361,7 @@ export const useLayoutState = () =>
       theme: state.theme,
       focusModeSettings: state.focusModeSettings,
       posHighlightingEnabled: state.posHighlightingEnabled,
+      styleCheckSettings: state.styleCheckSettings,
     })),
   );
 
@@ -376,6 +396,9 @@ export const useLayoutActions = () =>
       toggleShowSearch: state.toggleShowSearch,
       setPosHighlightingEnabled: state.setPosHighlightingEnabled,
       togglePosHighlighting: state.togglePosHighlighting,
+      setStyleCheckSettings: state.setStyleCheckSettings,
+      toggleStyleCheck: state.toggleStyleCheck,
+      setStyleCheckCategory: state.setStyleCheckCategory,
     })),
   );
 

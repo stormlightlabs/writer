@@ -46,19 +46,23 @@ Real-time prose polish that flags weak patterns without altering the source text
 
 ### Tasks
 
-1. **Pattern engine**
-   - Curate dictionaries:
-     - Fillers (e.g. "basically", "actually", "just", "really")
-     - Redundancies (e.g. "absolutely essential", "end result")
-     - Clichés (e.g. "at the end of the day", "think outside the box")
-   - Match via trie against document text
+1. **Pattern engine** - Aho-Corasick automaton for O(n+m) matching
+   - Dictionaries seeded from retext ecosystem (MIT licensed):
+     - Fillers: `fillers`, `hedges`, `weasels` packages (~375 patterns)
+     - Redundancies: `retext-simplify` (~240 patterns with suggestions)
+     - Clichés: `no-cliches` package (~330 patterns)
 2. **Virtual strikethrough decorations**
-   - Render flagged spans with a CSS strikethrough in the editor (CodeMirror decoration)
-   - Non-destructive: decorations are editor-only, not part of the Markdown AST
-3. **Diagnostics panel**
+   - CodeMirror ViewPlugin with Decoration.mark()
+   - Category-specific colors: orange (fillers), yellow (redundancies), red (clichés)
+   - Non-destructive: editor-only, not part of Markdown AST
+3. **Settings integration**
+   - Enable/disable style check
+   - Per-category toggles (filler/redundancy/cliche)
+   - Zustand store with persistence ready
+4. **Diagnostics panel**
    - Show categorized list of flagged items with line references
    - Click-to-navigate from panel to editor location
-4. **User customization**
+5. **User customization**
    - Allow adding/removing patterns from each dictionary
    - Persist custom dictionaries in settings/store
 

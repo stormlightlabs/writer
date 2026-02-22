@@ -41,6 +41,7 @@ export default defineConfig({
       "$components": resolveFromRoot("./src/components"),
       "$editor": resolveFromRoot("./src/editor"),
       "$themes": resolveFromRoot("./src/themes"),
+      "$data": resolveFromRoot("./src/data"),
     },
   },
 });

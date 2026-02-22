@@ -24,7 +24,8 @@
       "$editor/*": ["./editor/*"],
       "$pdf/*": ["./pdf/*"],
       "$components/*": ["./components/*"],
-      "$themes/*": ["./themes/*"]
+      "$themes/*": ["./themes/*"],
+      "$data/*": ["./data/*"]
     }
   },
   "include": ["src"],
