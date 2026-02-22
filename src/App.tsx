@@ -204,13 +204,7 @@ function App() {
       isSplitView: layoutState.isSplitView,
       isPreviewVisible: layoutState.isPreviewVisible,
     }),
-    [
-      layoutState.sidebarCollapsed,
-      layoutState.topBarsCollapsed,
-      layoutState.statusBarCollapsed,
-      layoutState.isSplitView,
-      layoutState.isPreviewVisible,
-    ],
+    [layoutState],
   );
 
   const sidebarProps = useMemo(
@@ -227,19 +221,7 @@ function App() {
       onSelectDocument: workspace.handleSelectDocument,
       onFilterChange: workspace.setSidebarFilter,
     }),
-    [
-      workspace.locations,
-      workspace.selectedLocationId,
-      workspace.selectedDocPath,
-      workspace.locationDocuments,
-      workspace.isSidebarLoading,
-      workspace.sidebarFilter,
-      workspace.handleAddLocation,
-      workspace.handleRemoveLocation,
-      workspace.handleSelectLocation,
-      workspace.handleSelectDocument,
-      workspace.setSidebarFilter,
-    ],
+    [workspace],
   );
 
   const toolbarProps = useMemo(
@@ -281,13 +263,7 @@ function App() {
       onCloseTab: workspace.handleCloseTab,
       onReorderTabs: workspace.handleReorderTabs,
     }),
-    [
-      workspace.tabs,
-      workspace.activeTabId,
-      workspace.handleSelectTab,
-      workspace.handleCloseTab,
-      workspace.handleReorderTabs,
-    ],
+    [workspace],
   );
 
   const editorProps = useMemo(
@@ -299,24 +275,13 @@ function App() {
       syntaxHighlightingEnabled: layoutState.syntaxHighlightingEnabled,
       fontSize: layoutState.editorFontSize,
       fontFamily: layoutState.editorFontFamily,
+      posHighlightingEnabled: layoutState.posHighlightingEnabled,
       onChange: handleEditorChange,
       onSave: handleSave,
       onCursorMove: handleCursorMove,
       onSelectionChange: handleSelectionChange,
     }),
-    [
-      editorModel.text,
-      layoutState.theme,
-      layoutState.lineNumbersVisible,
-      layoutState.textWrappingEnabled,
-      layoutState.syntaxHighlightingEnabled,
-      layoutState.editorFontSize,
-      layoutState.editorFontFamily,
-      handleEditorChange,
-      handleSave,
-      handleCursorMove,
-      handleSelectionChange,
-    ],
+    [editorModel.text, layoutState, handleEditorChange, handleSave, handleCursorMove, handleSelectionChange],
   );
 
   const statusBarProps = useMemo(
@@ -356,19 +321,7 @@ function App() {
       onSelectResult: search.handleSelectSearchResult,
       onClose: () => layoutActions.setShowSearch(false),
     }),
-    [
-      layoutState.showSearch,
-      layoutState.sidebarCollapsed,
-      search.searchQuery,
-      search.searchResults,
-      search.isSearching,
-      workspace.locations,
-      search.filters,
-      search.handleSearch,
-      search.setFilters,
-      search.handleSelectSearchResult,
-      layoutActions,
-    ],
+    [layoutState.showSearch, layoutState.sidebarCollapsed, search, workspace.locations, layoutActions],
   );
 
   const handleSettingsClose = useCallback(() => {
@@ -397,6 +350,8 @@ function App() {
       onSetEditorFontFamily: layoutActions.setEditorFontFamily,
       onSetTypewriterScrollingEnabled: layoutActions.setTypewriterScrollingEnabled,
       onSetFocusDimmingMode: layoutActions.setFocusDimmingMode,
+      posHighlightingEnabled: layoutState.posHighlightingEnabled,
+      onSetPosHighlightingEnabled: layoutActions.setPosHighlightingEnabled,
       onClose: handleSettingsClose,
     }),
     [isLayoutSettingsOpen, layoutState, layoutActions, handleSettingsClose],
@@ -419,6 +374,7 @@ function App() {
       editorFontFamily: layoutState.editorFontFamily,
       statusBarCollapsed: layoutState.statusBarCollapsed,
       focusModeSettings: layoutState.focusModeSettings,
+      posHighlightingEnabled: layoutState.posHighlightingEnabled,
       onExit: handleExit,
       onEditorChange: handleEditorChange,
       onSave: handleSave,

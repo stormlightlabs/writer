@@ -19,6 +19,7 @@ type FocusModePanelProps = {
   editorFontFamily: EditorFontFamily;
   statusBarCollapsed: boolean;
   focusModeSettings: FocusModeSettings;
+  posHighlightingEnabled?: boolean;
   onExit: () => void;
   onEditorChange: (text: string) => void;
   onSave: () => void;
@@ -57,6 +58,7 @@ export const FocusModePanel = (
     editorFontFamily,
     statusBarCollapsed,
     focusModeSettings,
+    posHighlightingEnabled = false,
     onExit,
     onEditorChange,
     onSave,
@@ -78,6 +80,7 @@ export const FocusModePanel = (
         fontFamily={editorFontFamily}
         typewriterScrollingEnabled={focusModeSettings.typewriterScrollingEnabled}
         focusDimmingMode={focusModeSettings.dimmingMode}
+        posHighlightingEnabled={posHighlightingEnabled}
         onChange={onEditorChange}
         onSave={onSave}
         onCursorMove={onCursorMove}

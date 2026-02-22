@@ -13,6 +13,7 @@ type LayoutSettingsPanelProps = {
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
   focusModeSettings: FocusModeSettings;
+  posHighlightingEnabled: boolean;
   onSetSidebarCollapsed: (value: boolean) => void;
   onSetTopBarsCollapsed: (value: boolean) => void;
   onSetStatusBarCollapsed: (value: boolean) => void;
@@ -23,6 +24,7 @@ type LayoutSettingsPanelProps = {
   onSetEditorFontFamily: (value: EditorFontFamily) => void;
   onSetTypewriterScrollingEnabled: (enabled: boolean) => void;
   onSetFocusDimmingMode: (mode: FocusDimmingMode) => void;
+  onSetPosHighlightingEnabled: (value: boolean) => void;
   onClose: () => void;
 };
 
@@ -158,6 +160,7 @@ export function LayoutSettingsPanel(
     editorFontSize,
     editorFontFamily,
     focusModeSettings,
+    posHighlightingEnabled,
     onSetSidebarCollapsed,
     onSetTopBarsCollapsed,
     onSetStatusBarCollapsed,
@@ -168,6 +171,7 @@ export function LayoutSettingsPanel(
     onSetEditorFontFamily,
     onSetTypewriterScrollingEnabled,
     onSetFocusDimmingMode,
+    onSetPosHighlightingEnabled,
     onClose,
   }: LayoutSettingsPanelProps,
 ) {
@@ -202,6 +206,10 @@ export function LayoutSettingsPanel(
   const handleFontFamilyChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     onSetEditorFontFamily(event.target.value as EditorFontFamily);
   }, [onSetEditorFontFamily]);
+
+  const togglePosHighlighting = useCallback(() => {
+    onSetPosHighlightingEnabled(!posHighlightingEnabled);
+  }, [onSetPosHighlightingEnabled, posHighlightingEnabled]);
 
   if (isVisible) {
     return (
@@ -257,6 +265,15 @@ export function LayoutSettingsPanel(
             onToggle={onSetTypewriterScrollingEnabled} />
 
           <DimmingModeRow value={focusModeSettings.dimmingMode} setter={onSetFocusDimmingMode} />
+
+          <div className="border-t border-border-subtle my-3" />
+          <p className="m-0 text-xs text-text-secondary mb-2">Writer's Tools</p>
+
+          <ToggleRow
+            label="Parts of Speech Highlighting"
+            description="Color text by grammatical role (nouns, verbs, adjectives, etc.)."
+            isVisible={posHighlightingEnabled}
+            onToggle={togglePosHighlighting} />
         </section>
       </div>
     );

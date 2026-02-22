@@ -34,6 +34,7 @@ export type LayoutState = {
   showSearch: boolean;
   theme: AppTheme;
   focusModeSettings: FocusModeSettings;
+  posHighlightingEnabled: boolean;
 };
 
 export type LayoutActions = {
@@ -63,6 +64,8 @@ export type LayoutActions = {
   togglePreviewVisible: () => void;
   setShowSearch: (value: boolean) => void;
   toggleShowSearch: () => void;
+  setPosHighlightingEnabled: (value: boolean) => void;
+  togglePosHighlighting: () => void;
 };
 
 export type WorkspaceState = {
@@ -114,6 +117,7 @@ const getInitialLayoutState = (): LayoutState => ({
   showSearch: false,
   theme: "dark",
   focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
+  posHighlightingEnabled: false,
 });
 
 const getInitialWorkspaceState = (): WorkspaceState => ({
@@ -182,6 +186,9 @@ const createLayoutSlice: StateCreator<AppStore, [], [], LayoutState & LayoutActi
 
   setShowSearch: (value) => set({ showSearch: value }),
   toggleShowSearch: () => set((state) => ({ showSearch: !state.showSearch })),
+
+  setPosHighlightingEnabled: (value) => set({ posHighlightingEnabled: value }),
+  togglePosHighlighting: () => set((state) => ({ posHighlightingEnabled: !state.posHighlightingEnabled })),
 });
 
 const createWorkspaceSlice: StateCreator<AppStore, [], [], WorkspaceState & WorkspaceActions> = (set) => ({
@@ -334,6 +341,7 @@ export const useLayoutState = () =>
       showSearch: state.showSearch,
       theme: state.theme,
       focusModeSettings: state.focusModeSettings,
+      posHighlightingEnabled: state.posHighlightingEnabled,
     })),
   );
 
@@ -366,6 +374,8 @@ export const useLayoutActions = () =>
       togglePreviewVisible: state.togglePreviewVisible,
       setShowSearch: state.setShowSearch,
       toggleShowSearch: state.toggleShowSearch,
+      setPosHighlightingEnabled: state.setPosHighlightingEnabled,
+      togglePosHighlighting: state.togglePosHighlighting,
     })),
   );
 

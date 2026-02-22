@@ -80,3 +80,5 @@ export type AppError = { code: ErrorCode; message: string; context?: string };
 export type FocusDimmingMode = "off" | "sentence" | "paragraph";
 
 export type FocusModeSettings = { typewriterScrollingEnabled: boolean; dimmingMode: FocusDimmingMode };
+
+export type PosHighlightingEnabled = boolean;

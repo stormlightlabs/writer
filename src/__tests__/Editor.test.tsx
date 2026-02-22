@@ -258,5 +258,24 @@ describe(Editor, () => {
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).not.toBe(firstEditorRoot);
     });
+
+    it("should apply POS highlighting when enabled", () => {
+      const { container } = render(<Editor posHighlightingEnabled={true} />);
+      expect(container.querySelector(".cm-editor")).toBeInTheDocument();
+    });
+
+    it("should not apply POS highlighting when disabled", () => {
+      const { container } = render(<Editor posHighlightingEnabled={false} />);
+      expect(container.querySelector(".cm-editor")).toBeInTheDocument();
+    });
+
+    it("should recreate editor when posHighlightingEnabled changes", () => {
+      const { container, rerender } = render(<Editor posHighlightingEnabled={false} />);
+      const firstEditorRoot = container.querySelector(".cm-editor");
+
+      rerender(<Editor posHighlightingEnabled={true} />);
+      const secondEditorRoot = container.querySelector(".cm-editor");
+      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+    });
   });
 });

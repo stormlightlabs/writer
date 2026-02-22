@@ -1,4 +1,5 @@
 import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
+import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
 import { typewriterScroll } from "$editor/typewriter-scroll";
 import { oxocarbonDark } from "$themes/oxocarbon-dark";
 import { oxocarbonLight } from "$themes/oxocarbon-light";
@@ -26,6 +27,7 @@ export type EditorProps = {
   debounceMs?: number;
   typewriterScrollingEnabled?: boolean;
   focusDimmingMode?: FocusDimmingMode;
+  posHighlightingEnabled?: boolean;
   onChange?: (text: string) => void;
   onSave?: () => void;
   onCursorMove?: (line: number, column: number) => void;
@@ -47,6 +49,7 @@ type CreateEditorStateOptions = {
   onSave: () => void;
   typewriterScrollingEnabled: boolean;
   focusDimmingMode: FocusDimmingMode;
+  posHighlightingEnabled: boolean;
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
@@ -74,6 +77,7 @@ function createEditorState(
     onSave,
     typewriterScrollingEnabled,
     focusDimmingMode,
+    posHighlightingEnabled,
   }: CreateEditorStateOptions,
 ): CMEditorState {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
@@ -102,6 +106,7 @@ function createEditorState(
       placeholder ? EditorView.theme({ ".cm-placeholder": { color: "#888" } }) : [],
       ...(typewriterScrollingEnabled ? [typewriterScroll()] : []),
       ...(focusDimmingMode === "off" ? [] : [focusDimming(focusDimmingMode), focusDimmingTheme]),
+      ...(posHighlightingEnabled ? [posHighlighting(), posHighlightingTheme] : []),
     ],
   });
 }
@@ -120,6 +125,7 @@ export function Editor(
     debounceMs = 500,
     typewriterScrollingEnabled = false,
     focusDimmingMode = "off",
+    posHighlightingEnabled = false,
     onChange,
     onSave,
     onCursorMove,
@@ -142,6 +148,7 @@ export function Editor(
     placeholder,
     typewriterScrollingEnabled,
     focusDimmingMode,
+    posHighlightingEnabled,
   });
   const [isReady, setIsReady] = useState(false);
 
@@ -208,6 +215,7 @@ export function Editor(
       onSave: () => callbacksRef.current.onSave?.(),
       typewriterScrollingEnabled: currentPresentation.typewriterScrollingEnabled,
       focusDimmingMode: currentPresentation.focusDimmingMode,
+      posHighlightingEnabled: currentPresentation.posHighlightingEnabled,
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
@@ -255,6 +263,7 @@ export function Editor(
       && previousPresentation.placeholder === placeholder
       && previousPresentation.typewriterScrollingEnabled === typewriterScrollingEnabled
       && previousPresentation.focusDimmingMode === focusDimmingMode
+      && previousPresentation.posHighlightingEnabled === posHighlightingEnabled
     ) {
       return;
     }
@@ -268,6 +277,7 @@ export function Editor(
       placeholder,
       typewriterScrollingEnabled,
       focusDimmingMode,
+      posHighlightingEnabled,
     };
 
     const view = viewRef.current;
@@ -297,6 +307,7 @@ export function Editor(
     theme,
     typewriterScrollingEnabled,
     focusDimmingMode,
+    posHighlightingEnabled,
   ]);
 
   useEffect(() => {
