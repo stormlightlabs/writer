@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { useCallback } from "react";
 
 type ToggleRowProps = {
@@ -18,7 +19,7 @@ export const ToggleRow = ({ label, description, isVisible, onToggle }: ToggleRow
         <p className="m-0 text-[0.8125rem] text-text-primary">{label}</p>
         <p className="m-0 text-xs text-text-secondary">{description}</p>
       </div>
-      <button
+      <Button
         type="button"
         role="switch"
         aria-checked={isVisible}
@@ -30,7 +31,7 @@ export const ToggleRow = ({ label, description, isVisible, onToggle }: ToggleRow
           className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform duration-150 ${
             isVisible ? "translate-x-[20px]" : ""
           }`} />
-      </button>
+      </Button>
     </div>
   );
 };

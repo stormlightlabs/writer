@@ -309,11 +309,7 @@ describe("Calm UI state", () => {
   it("should have default Calm UI settings", () => {
     const { result } = renderHook(() => useAppStore());
 
-    expect(result.current.calmUiSettings).toEqual({
-      enabled: true,
-      autoHide: true,
-      focusMode: true,
-    });
+    expect(result.current.calmUiSettings).toEqual({ enabled: true, autoHide: true, focusMode: true });
     expect(result.current.chromeTemporarilyVisible).toBe(false);
   });
 
@@ -386,11 +382,7 @@ describe("Calm UI state", () => {
 
   it("should set all Calm UI settings at once", () => {
     const { result } = renderHook(() => useAppStore());
-    const newSettings = {
-      enabled: false,
-      autoHide: false,
-      focusMode: false,
-    };
+    const newSettings = { enabled: false, autoHide: false, focusMode: false };
 
     act(() => {
       result.current.setCalmUiSettings(newSettings);

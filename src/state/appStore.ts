@@ -167,11 +167,7 @@ const getInitialLayoutChromeState = (): LayoutChromeState => ({
   topBarsCollapsed: false,
   statusBarCollapsed: false,
   showSearch: false,
-  calmUiSettings: {
-    enabled: true,
-    autoHide: true,
-    focusMode: true,
-  },
+  calmUiSettings: { enabled: true, autoHide: true, focusMode: true },
   chromeTemporarilyVisible: false,
 });
 

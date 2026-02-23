@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { XIcon } from "$icons";
 import {
   useCalmUiActions,
@@ -17,13 +18,9 @@ import { ToggleRow } from "./ToggleRow";
 const SettingsHeader = ({ onClose }: { onClose: () => void }) => (
   <div className="flex items-center justify-between mb-2">
     <h2 className="m-0 text-sm font-medium text-text-primary">Layout Settings</h2>
-    <button
-      type="button"
-      onClick={onClose}
-      className="w-7 h-7 flex items-center justify-center bg-transparent border border-border-subtle rounded text-icon-secondary hover:text-icon-primary cursor-pointer"
-      aria-label="Close layout settings">
+    <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label="Close layout settings">
       <XIcon size="sm" />
-    </button>
+    </Button>
   </div>
 );
 
@@ -119,11 +116,7 @@ function ChromeSettingsSection() {
 
 function CalmUiSettingsSection() {
   const { enabled, autoHide, focusMode } = useCalmUiSettings();
-  const {
-    toggleCalmUi,
-    setCalmUiAutoHide,
-    setCalmUiFocusMode,
-  } = useCalmUiActions();
+  const { toggleCalmUi, setCalmUiAutoHide, setCalmUiFocusMode } = useCalmUiActions();
 
   return (
     <div className="py-2.5">
@@ -240,7 +233,7 @@ export const LayoutSettingsPanel = ({ isVisible, onClose }: LayoutSettingsPanelP
   isVisible
     ? (
       <div className="fixed inset-0 z-50">
-        <button
+        <Button
           type="button"
           onClick={onClose}
           aria-label="Close layout settings"

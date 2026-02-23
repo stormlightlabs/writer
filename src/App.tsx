@@ -1,7 +1,8 @@
+import { Button } from "$components/Button";
 import { logger } from "$logger";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { renderMarkdownForPdf, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
-import { stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
+import { pick, stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
 import type { DocMeta, DocRef, Tab } from "$types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
@@ -71,12 +72,12 @@ function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]
 const getDraftTitle = (relPath: string): string => relPath.split("/").pop() || "Untitled";
 
 const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; title: string; label: string }) => (
-  <button
+  <Button
     onClick={clickHandler}
     className="px-2.5 py-1.5 bg-layer-01 border border-border-subtle rounded text-[0.75rem] text-text-secondary hover:text-text-primary cursor-pointer"
     title={title}>
     {label}
-  </button>
+  </Button>
 );
 
 function App() {
@@ -228,20 +229,12 @@ function App() {
     }
 
     const hideWhileTyping = calmUiSettings.autoHide && isTyping;
-    return {
-      sidebar: !hideWhileTyping,
-      statusBar: !hideWhileTyping,
-      tabBar: !hideWhileTyping,
-    };
+    return { sidebar: !hideWhileTyping, statusBar: !hideWhileTyping, tabBar: !hideWhileTyping };
   }, [layoutChrome, isTyping]);
 
   const sidebarProps = useMemo(
-    () => ({
-      handleAddLocation: workspace.handleAddLocation,
-      handleRemoveLocation: workspace.handleRemoveLocation,
-      handleSelectDocument: workspace.handleSelectDocument,
-    }),
-    [workspace.handleAddLocation, workspace.handleRemoveLocation, workspace.handleSelectDocument],
+    () => pick(workspace, ["handleAddLocation", "handleRemoveLocation", "handleSelectDocument"]),
+    [workspace],
   );
 
   const toolbarProps = useMemo(
@@ -257,20 +250,8 @@ function App() {
   );
 
   const tabProps = useMemo(
-    () => ({
-      tabs: workspace.tabs,
-      activeTabId: workspace.activeTabId,
-      handleSelectTab: workspace.handleSelectTab,
-      handleCloseTab: workspace.handleCloseTab,
-      handleReorderTabs: workspace.handleReorderTabs,
-    }),
-    [
-      workspace.tabs,
-      workspace.activeTabId,
-      workspace.handleSelectTab,
-      workspace.handleCloseTab,
-      workspace.handleReorderTabs,
-    ],
+    () => pick(workspace, ["tabs", "activeTabId", "handleSelectTab", "handleCloseTab", "handleReorderTabs"]),
+    [workspace],
   );
 
   const handleEditorChangeWithTyping = useCallback((text: string) => {
@@ -292,15 +273,9 @@ function App() {
   const statusBarProps = useMemo(
     () => ({
       docMeta: activeDocMeta,
-      stats: {
-        cursorLine: editorModel.cursorLine,
-        cursorColumn: editorModel.cursorColumn,
-        wordCount,
-        charCount,
-        selectionCount,
-      },
+      stats: { ...pick(editorModel, ["cursorLine", "cursorColumn"]), wordCount, charCount, selectionCount },
     }),
-    [activeDocMeta, editorModel.cursorLine, editorModel.cursorColumn, wordCount, charCount, selectionCount],
+    [activeDocMeta, editorModel, wordCount, charCount, selectionCount],
   );
 
   const previewProps = useMemo(
@@ -316,24 +291,17 @@ function App() {
   const searchProps = useMemo(
     () => ({
       locations: workspace.locations,
-      searchQuery: search.searchQuery,
-      searchResults: search.searchResults,
-      isSearching: search.isSearching,
-      filters: search.filters,
-      handleSearch: search.handleSearch,
-      setFilters: search.setFilters,
-      handleSelectSearchResult: search.handleSelectSearchResult,
+      ...pick(search, [
+        "searchQuery",
+        "searchResults",
+        "isSearching",
+        "filters",
+        "handleSearch",
+        "setFilters",
+        "handleSelectSearchResult",
+      ]),
     }),
-    [
-      workspace.locations,
-      search.searchQuery,
-      search.searchResults,
-      search.isSearching,
-      search.filters,
-      search.handleSearch,
-      search.setFilters,
-      search.handleSelectSearchResult,
-    ],
+    [workspace.locations, search],
   );
 
   const handleSettingsClose = useCallback(() => {
@@ -341,7 +309,7 @@ function App() {
   }, []);
 
   const focusModePanelProps = useMemo(() => {
-    const pos = { cursorLine: editorModel.cursorLine, cursorColumn: editorModel.cursorColumn };
+    const pos = pick(editorModel, ["cursorLine", "cursorColumn"]);
     const stats = { ...pos, wordCount, charCount, selectionCount };
     return ({
       editor: {
@@ -354,10 +322,8 @@ function App() {
       statusBar: { docMeta: activeDocMeta, stats },
     });
   }, [
-    editorModel.text,
     activeDocMeta,
-    editorModel.cursorLine,
-    editorModel.cursorColumn,
+    editorModel,
     wordCount,
     charCount,
     selectionCount,
@@ -466,7 +432,9 @@ function App() {
       return;
     }
 
-    void runCmd(uiLayoutSet(stateToLayoutSettings(layoutChrome, editorPresentation, focusModeSettings), () => {}, () => {}));
+    void runCmd(
+      uiLayoutSet(stateToLayoutSettings(layoutChrome, editorPresentation, focusModeSettings), () => {}, () => {}),
+    );
   }, [layoutSettingsHydrated, layoutChrome, editorPresentation, focusModeSettings]);
 
   useEffect(() => {
@@ -476,21 +444,12 @@ function App() {
 
     void runCmd(
       styleCheckSet(
-        {
-          enabled: styleCheckSettings.enabled,
-          categories: styleCheckSettings.categories,
-          custom_patterns: styleCheckSettings.customPatterns,
-        },
+        { ...pick(styleCheckSettings, ["categories", "enabled"]), custom_patterns: styleCheckSettings.customPatterns },
         () => {},
         () => {},
       ),
     );
-  }, [
-    layoutSettingsHydrated,
-    styleCheckSettings.enabled,
-    styleCheckSettings.categories,
-    styleCheckSettings.customPatterns,
-  ]);
+  }, [layoutSettingsHydrated, styleCheckSettings]);
 
   const workspacePanelProps = useMemo(
     () => ({

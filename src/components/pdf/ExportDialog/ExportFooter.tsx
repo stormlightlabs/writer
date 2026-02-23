@@ -1,3 +1,5 @@
+import { Button } from "$components/Button";
+
 export const PdfExportDialogFooter = (
   { handleCancel, handleExportClick, isExporting = false }: {
     handleCancel: () => void;
@@ -6,19 +8,23 @@ export const PdfExportDialogFooter = (
   },
 ) => (
   <div className="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
-    <button
+    <Button
       type="button"
+      variant="secondary"
+      size="lg"
       onClick={handleCancel}
       disabled={isExporting}
-      className="flex-1 px-4 py-2 bg-layer-02 border border-border-subtle rounded text-text-primary text-sm font-medium hover:bg-layer-03 cursor-pointer">
+      className="flex-1">
       Cancel
-    </button>
-    <button
+    </Button>
+    <Button
       type="button"
+      variant="primary"
+      size="lg"
       onClick={handleExportClick}
       disabled={isExporting}
-      className="flex-1 px-4 py-2 bg-accent-cyan border border-accent-cyan rounded text-white text-sm font-medium hover:opacity-90 cursor-pointer">
+      className="flex-1">
       {isExporting ? "Exporting..." : "Export PDF"}
-    </button>
+    </Button>
   </div>
 );

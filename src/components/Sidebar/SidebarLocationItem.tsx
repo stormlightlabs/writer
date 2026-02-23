@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { FolderIcon, MoreVerticalIcon } from "$icons";
 import { DocMeta, LocationDescriptor } from "$types";
 import { MouseEventHandler, useCallback, useMemo } from "react";
@@ -68,11 +69,11 @@ export function SidebarLocationItem(
 
   const LocationActions = useCallback(() => (
     <div className="relative">
-      <button
+      <Button
         onClick={handleMenuClick}
         className="location-actions-btn w-5 h-5 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded opacity-0 transition-opacity duration-150 group-hover:opacity-100">
         <MoreVerticalIcon size="sm" />
-      </button>
+      </Button>
       <RemoveButton
         isMenuOpen={isMenuOpen}
         handleRemoveClick={handleRemoveClick}

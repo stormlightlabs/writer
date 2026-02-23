@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { FileTextIcon, SearchIcon, XIcon } from "$icons";
 import type { SearchHit } from "$types";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
@@ -66,12 +67,12 @@ function SearchResult({ hit, onSelectResult }: SearchResultProps) {
   {
     const handleClick = useCallback(() => onSelectResult(hit), [onSelectResult, hit]);
     return (
-      <button
+      <Button
         onClick={handleClick}
         className="w-full px-4 py-3 bg-layer-01 border border-border-subtle rounded-md text-left cursor-pointer transition-all duration-150 hover:bg-layer-hover-01 hover:border-border-strong">
         <HighlightLabel hit={hit} />
         <HighlightedSnippet text={hit.snippet} matches={hit.matches} />
-      </button>
+      </Button>
     );
   }
 }
@@ -154,11 +155,11 @@ const SearchInput = ({ query, handleQueryChange, clearQuery }: SearchInputProps)
       autoFocus
       className="w-full pl-10 pr-3 py-2.5 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)]" />
     {query && (
-      <button
+      <Button
         onClick={clearQuery}
         className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
         <XIcon size="sm" />
-      </button>
+      </Button>
     )}
   </div>
 );
@@ -186,21 +187,21 @@ function FilterLocation({ location, filters, handleToggleLocation }: FilterLocat
 
     return base.join(" ");
   }, [filters.locations, location.id]);
-  return <button onClick={handleClick} className={classes}>{location.name}</button>;
+  return <Button onClick={handleClick} className={classes}>{location.name}</Button>;
 }
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => (
-  <button onClick={onClose} className="p-2.5 bg-transparent border-none text-icon-secondary cursor-pointer rounded-md">
+  <Button onClick={onClose} className="p-2.5 bg-transparent border-none text-icon-secondary cursor-pointer rounded-md">
     <XIcon size="xl" />
-  </button>
+  </Button>
 );
 
 const ClearAllFilters = ({ handleClearFilters }: { handleClearFilters: () => void }) => (
-  <button
+  <Button
     onClick={handleClearFilters}
     className="self-start px-3 py-1.5 bg-transparent border-none text-link-primary text-[0.8125rem] cursor-pointer underline underline-offset-2">
     Clear all filters
-  </button>
+  </Button>
 );
 
 type ToggleButtonProps = {
@@ -232,14 +233,14 @@ function ToggleButton({ toggleFilters, showFilters, activeFilterCount }: ToggleB
     return base.join(" ");
   }, [showFilters, activeFilterCount]);
   return (
-    <button onClick={toggleFilters} className={classes}>
+    <Button onClick={toggleFilters} className={classes}>
       Filters
       {activeFilterCount > 0 && (
         <span className="bg-accent-blue text-white text-xs px-1.5 py-0.5 rounded-[10px] font-semibold">
           {activeFilterCount}
         </span>
       )}
-    </button>
+    </Button>
   );
 }
 

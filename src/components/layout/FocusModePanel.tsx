@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { Editor } from "$components/Editor";
 import type { EditorProps } from "$components/Editor";
 import { StatusBar } from "$components/StatusBar";
@@ -17,11 +18,9 @@ const FocusHeader = ({ onExit }: { onExit: () => void }) => (
       <FocusIcon size="md" />
       Focus Mode
     </h1>
-    <button
-      onClick={onExit}
-      className="px-4 py-2 bg-layer-01 border border-border-subtle rounded-md text-text-secondary text-[0.8125rem] cursor-pointer">
+    <Button variant="surface" size="lg" onClick={onExit} className="rounded-md text-[0.8125rem]">
       Exit Focus Mode (Esc)
-    </button>
+    </Button>
   </div>
 );
 

@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import type { Tab } from "$types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
@@ -119,21 +120,21 @@ export function DocumentTabs(
         <div
           className="fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 min-w-[160px] p-1"
           style={contextMenuStyle}>
-          <button
+          <Button
             onClick={closeContextMenu}
             className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
             Close
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={closeOthers}
             className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
             Close Others
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={closeAll}
             className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
             Close All
-          </button>
+          </Button>
         </div>
       )}
     </div>

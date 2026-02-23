@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import {
   CheckIcon,
   DocumentIcon,
@@ -61,7 +62,7 @@ function ToolbarButton(
 
   return (
     <>
-      <button
+      <Button
         ref={buttonRef}
         onClick={onClick}
         disabled={disabled}
@@ -76,7 +77,7 @@ function ToolbarButton(
         onMouseOut={handleMouseOut}>
         <icon.Component size={icon.size} />
         <span>{label}</span>
-      </button>
+      </Button>
       {shortcut ? <Tooltip anchorRef={buttonRef} visible={showTooltip}>{shortcut}</Tooltip> : null}
     </>
   );

@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import type { PatternCategory } from "$types";
 import { ChangeEventHandler, useCallback, useState } from "react";
 
@@ -56,13 +57,13 @@ export const AddPatternForm = ({ onAddPattern }: { onAddPattern: AddPatternFn })
         onChange={handleReplacementChange}
         placeholder="Replacement (optional)"
         className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary" />
-      <button
+      <Button
         type="button"
         onClick={handleAddPattern}
         disabled={!patternValue.trim()}
         className="w-full h-7 text-xs rounded bg-accent-cyan text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none">
         Add Pattern
-      </button>
+      </Button>
     </div>
   );
 };

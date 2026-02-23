@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { CollapseIcon } from "$icons";
 import { useSidebarState } from "$state/panel-selectors";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
@@ -22,14 +23,16 @@ type SidebarActionsProps = {
 };
 
 const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
-  <button
+  <Button
     type="button"
+    variant="outline"
+    size="sm"
     onClick={onToggleCollapse}
-    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer hover:text-text-primary"
+    className="flex items-center gap-1.5"
     title="Hide sidebar (Ctrl+B)">
     <CollapseIcon size="sm" />
     Hide
-  </button>
+  </Button>
 );
 
 const SidebarActions = (

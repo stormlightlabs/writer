@@ -68,10 +68,7 @@ function createRegions(view: EditorView, mode: FocusDimmingMode): Region[] {
     const paragraphText = doc.sliceString(paragraph.start, paragraph.end);
     const sentenceBoundaries = findSentenceBoundaries(paragraphText);
     for (const sentence of sentenceBoundaries) {
-      sentenceRegions.push({
-        start: paragraph.start + sentence.start,
-        end: paragraph.start + sentence.end,
-      });
+      sentenceRegions.push({ start: paragraph.start + sentence.start, end: paragraph.start + sentence.end });
     }
   }
 

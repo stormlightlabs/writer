@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { ChevronRightIcon, IconProps, type IconSize } from "$icons";
 import type { CSSProperties, MouseEventHandler } from "react";
 import { useCallback, useMemo } from "react";
@@ -82,12 +83,12 @@ export function TreeItem(
       onMouseLeave={handleMouseLeave}>
       {hasChildren
         ? (
-          <button
+          <Button
             onClick={handleButtonClick}
             className="bg-transparent border-none p-0.5 cursor-pointer text-icon-secondary flex items-center justify-center rounded transition-transform duration-150"
             style={buttonStyle}>
             <ChevronRightIcon size="xs" />
-          </button>
+          </Button>
         )
         : <span className="w-5" />}
       <span className={`flex items-center shrink-0 ${isSelected ? "text-icon-primary" : "text-icon-secondary"}`}>

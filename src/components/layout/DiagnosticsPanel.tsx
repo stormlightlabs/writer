@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "$editor/constants";
 import type { StyleMatch } from "$editor/style-check";
 import { XIcon } from "$icons";
@@ -30,7 +31,7 @@ function MatchItem({ match, onClick }: { match: StyleMatch; onClick: (match: Sty
   const clickHandler = useCallback(() => onClick(match), [onClick, match]);
 
   return (
-    <button
+    <Button
       type="button"
       onClick={clickHandler}
       className="w-full text-left px-3 py-2 hover:bg-layer-hover border-b border-border-subtle last:border-b-0 cursor-pointer bg-transparent border-l-0 border-r-0 border-t-0">
@@ -41,7 +42,7 @@ function MatchItem({ match, onClick }: { match: StyleMatch; onClick: (match: Sty
       {match.replacement && (
         <p className="m-0 mt-1 text-xs text-text-secondary truncate">Suggestion: {match.replacement}</p>
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -82,13 +83,9 @@ const DiagnosticsPanelHeader = ({ totalCount, onClose }: { totalCount: number; o
         {totalCount === 0 ? "No issues found" : `${totalCount} issue${totalCount === 1 ? "" : "s"} found`}
       </p>
     </div>
-    <button
-      type="button"
-      onClick={onClose}
-      className="w-7 h-7 flex items-center justify-center bg-transparent border border-border-subtle rounded text-icon-secondary hover:text-icon-primary cursor-pointer"
-      aria-label="Close diagnostics panel">
+    <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label="Close diagnostics panel">
       <XIcon className="w-4 h-4" />
-    </button>
+    </Button>
   </>
 );
 

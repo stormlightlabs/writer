@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { XIcon } from "$icons";
 import type { StyleCheckPattern, StyleCheckSettings } from "$types";
 import { useCallback } from "react";
@@ -15,12 +16,12 @@ const RemovePatternButton = (
 ) => {
   const handleClick = useCallback(() => onRemovePattern(index), [index, onRemovePattern]);
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
       className="ml-2 text-text-secondary hover:text-red-500 cursor-pointer bg-transparent border-none p-0">
       <XIcon size="xs" />
-    </button>
+    </Button>
   );
 };
 

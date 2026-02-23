@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import type { StyleCheckSettings } from "$types";
 import { useCallback, useMemo } from "react";
 
@@ -11,11 +12,11 @@ export const ToggleCustom = ({ showCustom, setShowCustom, settings }: ToggleCust
     return `${tag} Custom Patterns (${count})`;
   }, [showCustom, settings.customPatterns.length]);
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
       className="text-xs text-text-secondary hover:text-text-primary cursor-pointer bg-transparent border-none p-0">
       {label}
-    </button>
+    </Button>
   );
 };

@@ -1,3 +1,4 @@
+import { Button } from "$components/Button";
 import { XIcon } from "$icons";
 import type { CaptureMode } from "$types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -35,7 +36,7 @@ const ModeButton = ({ currentMode, setMode, isSubmitting, mode }: ModeButtonProp
   const modeLabel = useMemo(() => getModeLabel(mode), [mode]);
 
   return (
-    <button
+    <Button
       className={`px-3 py-1.5 text-sm font-medium border rounded transition-all ${
         mode === currentMode
           ? "bg-accent-blue text-white border-accent-blue"
@@ -44,7 +45,7 @@ const ModeButton = ({ currentMode, setMode, isSubmitting, mode }: ModeButtonProp
       onClick={handleClick}
       disabled={isSubmitting}>
       {modeLabel}
-    </button>
+    </Button>
   );
 };
 
@@ -75,12 +76,12 @@ const FooterActions = (
         : "Enter to save, Shift+Enter for newline, Esc to close"}
     </span>
 
-    <button
+    <Button
       className="px-4 py-2 text-sm font-semibold bg-accent-blue text-white rounded hover:bg-link-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={handleSubmit}
       disabled={isSubmitting || !text.trim()}>
       {isSubmitting ? "Saving..." : "Save"}
-    </button>
+    </Button>
   </div>
 );
 
@@ -90,13 +91,13 @@ const QuickCaptureFormHeader = (
   <header className="flex justify-between items-center px-4 py-3 border-b border-border-subtle bg-layer-01">
     <ModeButtons currentMode={currentMode} setMode={setMode} isSubmitting={isSubmitting} />
 
-    <button
+    <Button
       className="w-7 h-7 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-all"
       onClick={onClose}
       disabled={isSubmitting}
       aria-label="Close">
       <XIcon size="sm" />
-    </button>
+    </Button>
   </header>
 );
 
