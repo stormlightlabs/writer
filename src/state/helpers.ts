@@ -1,6 +1,6 @@
 import { UiLayoutSettings } from "$ports";
 import type { CalmUiSettings, FocusModeSettings } from "$types";
-import type { EditorPresentationState, LayoutChromeState } from "./appStore";
+import type { EditorPresentationState, LayoutChromeState } from "./types";
 
 export const stateToLayoutSettings = (
   layoutChrome: LayoutChromeState,
