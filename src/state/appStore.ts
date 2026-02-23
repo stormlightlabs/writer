@@ -1,5 +1,6 @@
 import type {
   AppTheme,
+  CalmUiSettings,
   DocMeta,
   DocRef,
   EditorFontFamily,
@@ -27,6 +28,8 @@ export type LayoutChromeState = {
   topBarsCollapsed: boolean;
   statusBarCollapsed: boolean;
   showSearch: boolean;
+  calmUiSettings: CalmUiSettings;
+  chromeTemporarilyVisible: boolean;
 };
 
 export type EditorPresentationState = {
@@ -56,6 +59,12 @@ export type LayoutChromeActions = {
   toggleStatusBarCollapsed: () => void;
   setShowSearch: (value: boolean) => void;
   toggleShowSearch: () => void;
+  setCalmUiSettings: (settings: CalmUiSettings) => void;
+  toggleCalmUi: () => void;
+  setCalmUiAutoHide: (value: boolean) => void;
+  setCalmUiFocusMode: (value: boolean) => void;
+  setChromeTemporarilyVisible: (value: boolean) => void;
+  revealChromeTemporarily: () => void;
 };
 
 export type EditorPresentationActions = {
@@ -158,6 +167,12 @@ const getInitialLayoutChromeState = (): LayoutChromeState => ({
   topBarsCollapsed: false,
   statusBarCollapsed: false,
   showSearch: false,
+  calmUiSettings: {
+    enabled: true,
+    autoHide: true,
+    focusMode: true,
+  },
+  chromeTemporarilyVisible: false,
 });
 
 const getInitialEditorPresentationState = (): EditorPresentationState => ({
@@ -228,6 +243,23 @@ const createLayoutChromeSlice: StateCreator<AppStore, [], [], LayoutChromeState 
 
   setShowSearch: (value) => set({ showSearch: value }),
   toggleShowSearch: () => set((state) => ({ showSearch: !state.showSearch })),
+
+  setCalmUiSettings: (settings) => set({ calmUiSettings: settings }),
+  toggleCalmUi: () =>
+    set((state) => {
+      const nextEnabled = !state.calmUiSettings.enabled;
+      return {
+        calmUiSettings: { ...state.calmUiSettings, enabled: nextEnabled },
+        sidebarCollapsed: nextEnabled,
+        topBarsCollapsed: nextEnabled,
+        statusBarCollapsed: nextEnabled,
+        chromeTemporarilyVisible: false,
+      };
+    }),
+  setCalmUiAutoHide: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, autoHide: value } })),
+  setCalmUiFocusMode: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, focusMode: value } })),
+  setChromeTemporarilyVisible: (value) => set({ chromeTemporarilyVisible: value }),
+  revealChromeTemporarily: () => set({ chromeTemporarilyVisible: true }),
 });
 
 const createEditorPresentationSlice: StateCreator<
@@ -484,6 +516,8 @@ export const useLayoutChromeState = () =>
       topBarsCollapsed: state.topBarsCollapsed,
       statusBarCollapsed: state.statusBarCollapsed,
       showSearch: state.showSearch,
+      calmUiSettings: state.calmUiSettings,
+      chromeTemporarilyVisible: state.chromeTemporarilyVisible,
     })),
   );
 
@@ -498,6 +532,12 @@ export const useLayoutChromeActions = () =>
       toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
       setShowSearch: state.setShowSearch,
       toggleShowSearch: state.toggleShowSearch,
+      setCalmUiSettings: state.setCalmUiSettings,
+      toggleCalmUi: state.toggleCalmUi,
+      setCalmUiAutoHide: state.setCalmUiAutoHide,
+      setCalmUiFocusMode: state.setCalmUiFocusMode,
+      setChromeTemporarilyVisible: state.setChromeTemporarilyVisible,
+      revealChromeTemporarily: state.revealChromeTemporarily,
     })),
   );
 

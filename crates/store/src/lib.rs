@@ -18,7 +18,7 @@ mod text_utils;
 
 pub use settings::StyleCheckSettings;
 pub use settings::UiLayoutSettings;
-pub use settings::{CaptureDocRef, CaptureMode, GlobalCaptureSettings};
+pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, GlobalCaptureSettings};
 
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
@@ -1495,6 +1495,11 @@ mod tests {
             syntax_highlighting_enabled: false,
             editor_font_size: 18,
             editor_font_family: "Monaspace Neon".to_string(),
+            calm_ui_enabled: false,
+            calm_ui_auto_hide: false,
+            calm_ui_focus_mode: false,
+            focus_typewriter_scrolling_enabled: false,
+            focus_dimming_mode: FocusDimmingMode::Paragraph,
         };
 
         store.ui_layout_set(&settings).unwrap();
@@ -1528,6 +1533,11 @@ mod tests {
         assert!(loaded.syntax_highlighting_enabled);
         assert_eq!(loaded.editor_font_size, 16);
         assert_eq!(loaded.editor_font_family, "IBM Plex Mono");
+        assert!(loaded.calm_ui_enabled);
+        assert!(loaded.calm_ui_auto_hide);
+        assert!(loaded.calm_ui_focus_mode);
+        assert!(loaded.focus_typewriter_scrolling_enabled);
+        assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);
     }
 
     #[test]

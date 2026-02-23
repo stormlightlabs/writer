@@ -1,4 +1,4 @@
-import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
+import type { AppTheme, CalmUiSettings, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
 import { useShallow } from "zustand/react/shallow";
 import { useAppStore } from "./appStore";
 
@@ -145,5 +145,25 @@ export const useEditorPresentationState = () =>
       focusDimmingMode: state.isFocusMode ? state.focusModeSettings.dimmingMode : "off",
       posHighlightingEnabled: state.posHighlightingEnabled,
       styleCheckSettings: state.isFocusMode ? FOCUS_MODE_STYLE_CHECK_SETTINGS : state.styleCheckSettings,
+    })),
+  );
+
+export const useCalmUiSettings = () =>
+  useAppStore(
+    useShallow((state): CalmUiSettings & { chromeTemporarilyVisible: boolean } => ({
+      ...state.calmUiSettings,
+      chromeTemporarilyVisible: state.chromeTemporarilyVisible,
+    })),
+  );
+
+export const useCalmUiActions = () =>
+  useAppStore(
+    useShallow((state) => ({
+      setCalmUiSettings: state.setCalmUiSettings,
+      toggleCalmUi: state.toggleCalmUi,
+      setCalmUiAutoHide: state.setCalmUiAutoHide,
+      setCalmUiFocusMode: state.setCalmUiFocusMode,
+      setChromeTemporarilyVisible: state.setChromeTemporarilyVisible,
+      revealChromeTemporarily: state.revealChromeTemporarily,
     })),
   );

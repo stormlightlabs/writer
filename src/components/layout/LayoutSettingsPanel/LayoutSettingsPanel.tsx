@@ -1,5 +1,7 @@
 import { XIcon } from "$icons";
 import {
+  useCalmUiActions,
+  useCalmUiSettings,
   useLayoutSettingsChromeState,
   useLayoutSettingsEditorState,
   useLayoutSettingsFocusState,
@@ -115,6 +117,42 @@ function ChromeSettingsSection() {
   );
 }
 
+function CalmUiSettingsSection() {
+  const { enabled, autoHide, focusMode } = useCalmUiSettings();
+  const {
+    toggleCalmUi,
+    setCalmUiAutoHide,
+    setCalmUiFocusMode,
+  } = useCalmUiActions();
+
+  return (
+    <div className="py-2.5">
+      <ToggleRow
+        label="Calm UI"
+        description="Writing-first defaults with quieter chrome behavior."
+        isVisible={enabled}
+        onToggle={toggleCalmUi} />
+
+      {enabled && (
+        <div className="mt-2 pl-3 border-l-2 border-border-subtle">
+          <p className="m-0 text-xs text-text-secondary mb-2">Calm UI Options</p>
+          <ToggleRow
+            label="Auto-enter Focus Mode"
+            description="Enter Focus mode when opening a document."
+            isVisible={focusMode}
+            onToggle={setCalmUiFocusMode} />
+          <ToggleRow
+            label="Auto-hide While Typing"
+            description="Hide interface elements while you type, show on pause."
+            isVisible={autoHide}
+            onToggle={setCalmUiAutoHide} />
+          <p className="m-0 text-xs text-text-placeholder mt-2">Hold Ctrl+Shift+H to reveal hidden UI</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditorSettingsSection() {
   const {
     lineNumbersVisible,
@@ -210,6 +248,7 @@ export const LayoutSettingsPanel = ({ isVisible, onClose }: LayoutSettingsPanelP
 
         <section className="absolute right-4 top-14 w-[320px] bg-layer-01 border border-border-subtle rounded-lg shadow-xl p-4">
           <SettingsHeader onClose={onClose} />
+          <CalmUiSettingsSection />
           <ChromeSettingsSection />
           <EditorSettingsSection />
 

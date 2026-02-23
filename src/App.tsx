@@ -1,8 +1,9 @@
 import { logger } from "$logger";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { renderMarkdownForPdf, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
+import { stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
 import type { DocMeta, DocRef, Tab } from "$types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
 import { FocusModePanel } from "./components/layout/FocusModePanel";
@@ -16,6 +17,7 @@ import { useLayoutHotkeys } from "./hooks/useLayoutHotkeys";
 import { usePdfExport } from "./hooks/usePdfExport";
 import { usePreview } from "./hooks/usePreview";
 import { useSearchController } from "./hooks/useSearchController";
+import { useTypingActivity } from "./hooks/useTypingActivity";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
 import {
@@ -25,6 +27,7 @@ import {
   useLayoutChromeState,
   usePdfExportActions,
   usePdfExportState,
+  useViewModeActions,
   useViewModeState,
   useWriterToolsActions,
   useWriterToolsState,
@@ -91,7 +94,8 @@ function App() {
   useLayoutHotkeys();
 
   const layoutChrome = useLayoutChromeState();
-  const { setSidebarCollapsed, setTopBarsCollapsed, setStatusBarCollapsed } = useLayoutChromeActions();
+  const { setSidebarCollapsed, setTopBarsCollapsed, setStatusBarCollapsed, setCalmUiSettings } =
+    useLayoutChromeActions();
   const editorPresentation = useEditorPresentationState();
   const {
     setLineNumbersVisible,
@@ -100,11 +104,13 @@ function App() {
     setEditorFontSize,
     setEditorFontFamily,
   } = useEditorPresentationActions();
-  const { isFocusMode } = useViewModeState();
+  const { isFocusMode, focusModeSettings } = useViewModeState();
+  const { setFocusMode, setFocusModeSettings } = useViewModeActions();
   const { styleCheckSettings } = useWriterToolsState();
   const { setStyleCheckSettings } = useWriterToolsActions();
   const workspace = useWorkspaceController(openDoc);
   const search = useSearchController(workspace.handleSelectDocument);
+  const { isTyping, handleTypingActivity } = useTypingActivity({ idleTimeout: 1500 });
 
   const activeTab = useMemo(() => workspace.tabs.find((tab) => tab.id === workspace.activeTabId) ?? null, [
     workspace.activeTabId,
@@ -215,6 +221,20 @@ function App() {
     layoutChrome.statusBarCollapsed,
   ]);
 
+  const calmUiEffectiveVisibility = useMemo(() => {
+    const { calmUiSettings, chromeTemporarilyVisible } = layoutChrome;
+    if (!calmUiSettings.enabled || chromeTemporarilyVisible) {
+      return { sidebar: true, statusBar: true, tabBar: true };
+    }
+
+    const hideWhileTyping = calmUiSettings.autoHide && isTyping;
+    return {
+      sidebar: !hideWhileTyping,
+      statusBar: !hideWhileTyping,
+      tabBar: !hideWhileTyping,
+    };
+  }, [layoutChrome, isTyping]);
+
   const sidebarProps = useMemo(
     () => ({
       handleAddLocation: workspace.handleAddLocation,
@@ -253,15 +273,20 @@ function App() {
     ],
   );
 
+  const handleEditorChangeWithTyping = useCallback((text: string) => {
+    handleEditorChange(text);
+    handleTypingActivity();
+  }, [handleEditorChange, handleTypingActivity]);
+
   const editorProps = useMemo(
     () => ({
       initialText: editorModel.text,
-      onChange: handleEditorChange,
+      onChange: handleEditorChangeWithTyping,
       onSave: handleSave,
       onCursorMove: handleCursorMove,
       onSelectionChange: handleSelectionChange,
     }),
-    [editorModel.text, handleEditorChange, handleSave, handleCursorMove, handleSelectionChange],
+    [editorModel.text, handleEditorChangeWithTyping, handleSave, handleCursorMove, handleSelectionChange],
   );
 
   const statusBarProps = useMemo(
@@ -364,6 +389,22 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [activeTab, editorModel.text, renderPreview]);
 
+  const lastEnteredFocusDocRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!layoutSettingsHydrated || !activeTab || isFocusMode) {
+      return;
+    }
+
+    const { calmUiSettings } = layoutChrome;
+    const docKey = `${activeTab.docRef.location_id}:${activeTab.docRef.rel_path}`;
+
+    if (calmUiSettings.enabled && calmUiSettings.focusMode && lastEnteredFocusDocRef.current !== docKey) {
+      lastEnteredFocusDocRef.current = docKey;
+      setFocusMode(true);
+    }
+  }, [layoutSettingsHydrated, activeTab, isFocusMode, layoutChrome, setFocusMode]);
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -380,6 +421,10 @@ function App() {
       setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
       setEditorFontSize(settings.editor_font_size);
       setEditorFontFamily(settings.editor_font_family);
+
+      const calmUiSettings = uiSettingsToCalmUI(settings);
+      setCalmUiSettings(calmUiSettings);
+      setFocusModeSettings(uiSettingsToFocusMode(settings));
       setLayoutSettingsHydrated(true);
     }, () => {
       if (!isCancelled) {
@@ -412,6 +457,8 @@ function App() {
     setSyntaxHighlightingEnabled,
     setTextWrappingEnabled,
     setTopBarsCollapsed,
+    setCalmUiSettings,
+    setFocusModeSettings,
   ]);
 
   useEffect(() => {
@@ -419,33 +466,8 @@ function App() {
       return;
     }
 
-    void runCmd(
-      uiLayoutSet(
-        {
-          sidebar_collapsed: layoutChrome.sidebarCollapsed,
-          top_bars_collapsed: layoutChrome.topBarsCollapsed,
-          status_bar_collapsed: layoutChrome.statusBarCollapsed,
-          line_numbers_visible: editorPresentation.lineNumbersVisible,
-          text_wrapping_enabled: editorPresentation.textWrappingEnabled,
-          syntax_highlighting_enabled: editorPresentation.syntaxHighlightingEnabled,
-          editor_font_size: editorPresentation.editorFontSize,
-          editor_font_family: editorPresentation.editorFontFamily,
-        },
-        () => {},
-        () => {},
-      ),
-    );
-  }, [
-    layoutSettingsHydrated,
-    layoutChrome.sidebarCollapsed,
-    layoutChrome.topBarsCollapsed,
-    layoutChrome.statusBarCollapsed,
-    editorPresentation.lineNumbersVisible,
-    editorPresentation.textWrappingEnabled,
-    editorPresentation.syntaxHighlightingEnabled,
-    editorPresentation.editorFontSize,
-    editorPresentation.editorFontFamily,
-  ]);
+    void runCmd(uiLayoutSet(stateToLayoutSettings(layoutChrome, editorPresentation, focusModeSettings), () => {}, () => {}));
+  }, [layoutSettingsHydrated, layoutChrome, editorPresentation, focusModeSettings]);
 
   useEffect(() => {
     if (!layoutSettingsHydrated) {
@@ -478,8 +500,9 @@ function App() {
       editor: editorProps,
       preview: previewProps,
       statusBar: statusBarProps,
+      calmUiVisibility: calmUiEffectiveVisibility,
     }),
-    [sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps],
+    [sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps, calmUiEffectiveVisibility],
   );
 
   useEffect(() => {

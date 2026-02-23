@@ -20,6 +20,8 @@ export type WorkspaceEditorProps = Pick<EditorProps, K>;
 type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
+export type CalmUiVisibility = { sidebar: boolean; statusBar: boolean; tabBar: boolean };
+
 export type WorkspacePanelProps = {
   sidebar: Pick<SidebarProps, "handleAddLocation" | "handleRemoveLocation" | "handleSelectDocument">;
   toolbar: Pick<
@@ -30,6 +32,7 @@ export type WorkspacePanelProps = {
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
   statusBar: StatusBarProps;
+  calmUiVisibility?: CalmUiVisibility;
 };
 
 const SPLIT_PANEL_MIN_WIDTH = 280;
@@ -95,7 +98,9 @@ function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMod
   return "editor";
 }
 
-export function WorkspacePanel({ sidebar, toolbar, tabs, editor, preview, statusBar }: WorkspacePanelProps) {
+export function WorkspacePanel(
+  { sidebar, toolbar, tabs, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps,
+) {
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
   const { isSplitView, isPreviewVisible } = useWorkspacePanelModeState();
   const topBarsCollapsed = useWorkspacePanelTopBarsCollapsed();
@@ -103,6 +108,12 @@ export function WorkspacePanel({ sidebar, toolbar, tabs, editor, preview, status
   const panelMode = useMemo(() => getPanelMode(isSplitView, isPreviewVisible), [isSplitView, isPreviewVisible]);
   const viewportWidth = globalThis.innerWidth || FALLBACK_VIEWPORT_WIDTH;
   const splitMaxWidth = Math.max(SPLIT_PANEL_MIN_WIDTH, viewportWidth - SPLIT_PANEL_MIN_WIDTH);
+
+  const effectiveSidebarVisible = calmUiVisibility ? calmUiVisibility.sidebar && !sidebarCollapsed : !sidebarCollapsed;
+  const effectiveTabBarVisible = calmUiVisibility ? calmUiVisibility.tabBar && !topBarsCollapsed : !topBarsCollapsed;
+  const effectiveStatusBarVisible = calmUiVisibility
+    ? calmUiVisibility.statusBar && !statusBarCollapsed
+    : !statusBarCollapsed;
 
   const { size: sidebarWidth, isResizing, startResizing } = useResizable({
     initialSize: 280,
@@ -130,23 +141,25 @@ export function WorkspacePanel({ sidebar, toolbar, tabs, editor, preview, status
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {sidebarCollapsed ? null : (
-        <div className="relative flex h-full shrink-0" style={sidebarStyle}>
-          <Sidebar {...sidebar} />
-          <div
-            role="separator"
-            aria-label="Resize sidebar"
-            aria-orientation="vertical"
-            onPointerDown={handleSidebarResizeStart}
-            className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
-              isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
-            }`} />
-        </div>
-      )}
+      {effectiveSidebarVisible
+        ? (
+          <div className="relative flex h-full shrink-0" style={sidebarStyle}>
+            <Sidebar {...sidebar} />
+            <div
+              role="separator"
+              aria-label="Resize sidebar"
+              aria-orientation="vertical"
+              onPointerDown={handleSidebarResizeStart}
+              className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
+                isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
+              }`} />
+          </div>
+        )
+        : null}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Toolbar {...toolbar} />
-        {topBarsCollapsed ? null : <DocumentTabs {...tabs} />}
+        {effectiveTabBarVisible ? <DocumentTabs {...tabs} /> : null}
         <MainPanel
           panelMode={panelMode}
           editor={editor}
@@ -154,7 +167,7 @@ export function WorkspacePanel({ sidebar, toolbar, tabs, editor, preview, status
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}
           onSplitResizeStart={handleSplitResizeStart} />
-        {statusBarCollapsed ? null : <StatusBar {...statusBar} />}
+        {effectiveStatusBarVisible ? <StatusBar {...statusBar} /> : null}
       </div>
     </div>
   );

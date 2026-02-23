@@ -738,6 +738,11 @@ describe("ui layout Commands", () => {
           syntax_highlighting_enabled: false,
           editor_font_size: 18,
           editor_font_family: "Monaspace Neon",
+          calm_ui_enabled: true,
+          calm_ui_auto_hide: true,
+          calm_ui_focus_mode: true,
+          focus_typewriter_scrolling_enabled: true,
+          focus_dimming_mode: "sentence",
         },
         onOk,
         onErr,
@@ -755,6 +760,11 @@ describe("ui layout Commands", () => {
           syntax_highlighting_enabled: false,
           editor_font_size: 18,
           editor_font_family: "Monaspace Neon",
+          calm_ui_enabled: true,
+          calm_ui_auto_hide: true,
+          calm_ui_focus_mode: true,
+          focus_typewriter_scrolling_enabled: true,
+          focus_dimming_mode: "sentence",
         },
       });
     });

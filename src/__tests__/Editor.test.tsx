@@ -229,7 +229,9 @@ describe(Editor, () => {
       fireEvent.click(screen.getByTestId("editor-container"));
 
       await waitFor(() => {
-        expect(container.querySelector(".cm-content")).toBe(document.activeElement);
+        const editorRoot = container.querySelector(".cm-editor");
+        expect(editorRoot).toBeInTheDocument();
+        expect(editorRoot?.contains(document.activeElement)).toBe(true);
       });
     });
 

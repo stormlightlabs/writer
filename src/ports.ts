@@ -2,8 +2,8 @@ import { logger } from "$logger";
 import type { PdfRenderResult } from "$pdf/types";
 import type {
   AppError,
-  CaptureMode,
   CaptureDocRef,
+  CaptureMode,
   CaptureSubmitInput,
   CaptureSubmitResult,
   DocContent,
@@ -11,6 +11,7 @@ import type {
   DocRef,
   EditorFontFamily,
   ErrorCode,
+  FocusDimmingMode,
   GlobalCaptureSettings,
   LocationDescriptor,
   LocationId,
@@ -54,6 +55,11 @@ export type UiLayoutSettings = {
   syntax_highlighting_enabled: boolean;
   editor_font_size: number;
   editor_font_family: EditorFontFamily;
+  calm_ui_enabled: boolean;
+  calm_ui_auto_hide: boolean;
+  calm_ui_focus_mode: boolean;
+  focus_typewriter_scrolling_enabled: boolean;
+  focus_dimming_mode: FocusDimmingMode;
 };
 
 export type StyleCheckPattern = { text: string; category: PatternCategory; replacement?: string };
@@ -357,13 +363,7 @@ function normalizeGlobalCaptureSettings(value: unknown): GlobalCaptureSettings {
 
 function normalizeCaptureSubmitResult(value: unknown): CaptureSubmitResult {
   if (!isRecord(value)) {
-    return {
-      success: false,
-      savedTo: null,
-      locationId: 0,
-      shouldClose: true,
-      lastCaptureTarget: null,
-    };
+    return { success: false, savedTo: null, locationId: 0, shouldClose: true, lastCaptureTarget: null };
   }
 
   return {

@@ -1,6 +1,6 @@
 import { XIcon } from "$icons";
 import type { CaptureMode } from "$types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type QuickCaptureFormProps = {
   defaultMode?: CaptureMode;
@@ -32,6 +32,8 @@ const ModeButton = ({ currentMode, setMode, isSubmitting, mode }: ModeButtonProp
     setMode(mode);
   }, [mode, setMode]);
 
+  const modeLabel = useMemo(() => getModeLabel(mode), [mode]);
+
   return (
     <button
       className={`px-3 py-1.5 text-sm font-medium border rounded transition-all ${
@@ -41,7 +43,7 @@ const ModeButton = ({ currentMode, setMode, isSubmitting, mode }: ModeButtonProp
       }`}
       onClick={handleClick}
       disabled={isSubmitting}>
-      {getModeLabel(mode)}
+      {modeLabel}
     </button>
   );
 };
@@ -132,13 +134,7 @@ export function QuickCaptureForm(
       return;
     }
 
-    if (
-      mode !== "WritingSession"
-      && e.key === "Enter"
-      && !hasMod
-      && !e.shiftKey
-      && !e.altKey
-    ) {
+    if (mode !== "WritingSession" && e.key === "Enter" && !hasMod && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       handleSubmit();
     }

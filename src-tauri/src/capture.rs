@@ -12,7 +12,6 @@ use writer_store::{CaptureMode, GlobalCaptureSettings};
 const QUICK_CAPTURE_WINDOW_LABEL: &str = "quick_capture";
 const MAIN_WINDOW_LABEL: &str = "main";
 const TRAY_ICON_ID: &str = "global_capture_tray";
-
 const MENU_ITEM_NEW_QUICK_NOTE: &str = "capture.new_quick_note";
 const MENU_ITEM_OPEN_WRITER: &str = "capture.open_writer";
 const MENU_ITEM_TOGGLE_SHORTCUT: &str = "capture.toggle_shortcut";
@@ -109,7 +108,11 @@ pub fn reconcile_shortcut_registration(app: &AppHandle, settings: &GlobalCapture
 }
 
 fn tray_pause_label(paused: bool) -> &'static str {
-    if paused { "Resume Shortcut" } else { "Pause Shortcut" }
+    if paused {
+        "Resume Shortcut"
+    } else {
+        "Pause Shortcut"
+    }
 }
 
 fn tray_shortcut_status(settings: &GlobalCaptureSettings) -> String {
