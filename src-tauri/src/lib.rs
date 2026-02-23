@@ -1,11 +1,9 @@
 use tauri::Manager;
 
+mod capture;
 mod commands;
-use commands::{
-    doc_exists, doc_list, doc_open, doc_save, location_add_via_dialog, location_list, location_remove,
-    location_validate, markdown_render, markdown_render_for_pdf, search, style_check_get, style_check_set,
-    ui_layout_get, ui_layout_set, watch_disable, watch_enable,
-};
+
+use commands as cmd;
 
 pub use commands::AppState;
 
@@ -22,6 +20,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             tracing::info!("Initializing application");
 
@@ -43,27 +42,45 @@ pub fn run() {
                 tracing::error!("Location reconciliation failed: {}", e);
             }
 
+            let state = app.state::<AppState>();
+            match state.store.global_capture_get() {
+                Ok(settings) => {
+                    if let Err(e) = capture::reconcile_capture_runtime(app.handle(), &settings) {
+                        tracing::warn!("Failed to initialize global capture runtime: {}", e);
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to load global capture settings: {}", e);
+                }
+            }
+
             tracing::info!("Application setup complete");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            location_add_via_dialog,
-            location_list,
-            location_remove,
-            location_validate,
-            doc_list,
-            doc_open,
-            doc_save,
-            doc_exists,
-            watch_enable,
-            watch_disable,
-            search,
-            markdown_render,
-            markdown_render_for_pdf,
-            ui_layout_get,
-            ui_layout_set,
-            style_check_get,
-            style_check_set
+            cmd::location_add_via_dialog,
+            cmd::location_list,
+            cmd::location_remove,
+            cmd::location_validate,
+            cmd::doc_list,
+            cmd::doc_open,
+            cmd::doc_save,
+            cmd::doc_exists,
+            cmd::watch_enable,
+            cmd::watch_disable,
+            cmd::search,
+            cmd::markdown_render,
+            cmd::markdown_render_for_pdf,
+            cmd::ui_layout_get,
+            cmd::ui_layout_set,
+            cmd::style_check_get,
+            cmd::style_check_set,
+            cmd::global_capture_get,
+            cmd::global_capture_set,
+            cmd::global_capture_open,
+            cmd::global_capture_submit,
+            cmd::global_capture_pause,
+            cmd::global_capture_validate_shortcut,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

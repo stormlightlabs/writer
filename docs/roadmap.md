@@ -3,10 +3,9 @@ title: "Roadmap"
 last_updated: 2026-02-23
 ---
 
-
 ## Focus mode enhancements (typewriter scrolling + sentence dimming)
 
-Evolve the existing Focus toggle into a writing environment. This should be the default mode.
+Evolve the existing Focus toggle into a stronger writing environment.
 
 ### Tasks
 
@@ -69,6 +68,51 @@ Real-time prose polish that flags weak patterns without altering the source text
 5. **User customization**
    - Allow adding/removing patterns from each dictionary
    - Persist custom dictionaries in settings/store
+
+## Global capture (shortcut + menu bar/tray quick add)
+
+Add a global capture flow so notes can be added from anywhere in macOS without opening the full app.
+
+### Tasks
+
+1. **Global shortcut registration**
+   - Register a user-configurable app-wide shortcut in Tauri (default: `Cmd+Shift+Space`)
+   - Persist shortcut choice in settings and validate conflicts
+2. **Quick-add floating window**
+   - Add a lightweight always-on-top capture window for fast note entry
+   - Support modes: quick note, longer writing session, and append-to-existing note
+   - Keyboard-first flow: open, write, save, close without mouse interaction
+3. **macOS menu bar + tray integration**
+   - Add a menu bar/tray icon with actions: New Quick Note, Open Writer, Pause Shortcut, Quit
+   - Show shortcut hint and last capture target in the menu
+4. **Capture routing + storage**
+   - Route quick captures to a default inbox note/location
+   - Optional prompt to choose destination when modifier key is held
+5. **Reliability + permissions**
+   - Handle app lifecycle edge cases (relaunch, sleep/wake, multiple windows)
+   - Add onboarding/help text for accessibility and shortcut permissions on macOS
+
+## Calm UI defaults (focus-by-default + less intrusive chrome)
+
+Make writing-first, low-distraction behavior the default experience while preserving power-user controls.
+
+### Tasks
+
+1. **Default focus mode**
+   - Enable Focus mode by default for new installs and when creating/opening a document
+   - Add migration logic so existing users keep current preference unless they opt in
+2. **Reduce interface noise**
+   - Auto-hide non-essential panels/toolbars while typing
+   - Replace persistent controls with contextual/hover/focus-triggered controls where appropriate
+3. **Density + spacing pass**
+   - Tune spacing, contrast, and visual hierarchy to keep the editor dominant
+   - Reduce competing highlights and non-critical badges in writing view
+4. **Settings + escape hatches**
+   - Add a simple `Calm UI` preset toggle with granular overrides
+   - One-command shortcut to temporarily reveal all UI chrome
+5. **Validation**
+   - Usability pass for keyboard-only and screen-reader flows
+   - Add regression tests for panel visibility, focus defaults, and persisted preferences
 
 ## Content blocks (transclusion)
 

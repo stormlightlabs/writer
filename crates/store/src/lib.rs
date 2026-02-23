@@ -18,9 +18,11 @@ mod text_utils;
 
 pub use settings::StyleCheckSettings;
 pub use settings::UiLayoutSettings;
+pub use settings::{CaptureDocRef, CaptureMode, GlobalCaptureSettings};
 
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
+const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StyleCheckPattern {
@@ -253,6 +255,59 @@ impl Store {
             params![STYLE_CHECK_SETTINGS_KEY, settings_json, updated_at],
         )
         .map_err(|e| AppError::io(format!("Failed to persist style check settings: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub fn global_capture_get(&self) -> Result<GlobalCaptureSettings, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let maybe_value = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?1",
+                params![GLOBAL_CAPTURE_SETTINGS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| AppError::io(format!("Failed to query global capture settings: {}", e)))?;
+
+        match maybe_value {
+            Some(value) => serde_json::from_str::<GlobalCaptureSettings>(&value).map_err(|e| {
+                AppError::new(
+                    ErrorCode::Parse,
+                    format!("Failed to parse persisted global capture settings: {}", e),
+                )
+            }),
+            None => Ok(GlobalCaptureSettings::default()),
+        }
+    }
+
+    pub fn global_capture_set(&self, settings: &GlobalCaptureSettings) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let settings_json = serde_json::to_string(settings).map_err(|e| {
+            AppError::new(
+                ErrorCode::Parse,
+                format!("Failed to serialize global capture settings: {}", e),
+            )
+        })?;
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET
+             value = excluded.value,
+             updated_at = excluded.updated_at",
+            params![GLOBAL_CAPTURE_SETTINGS_KEY, settings_json, updated_at],
+        )
+        .map_err(|e| AppError::io(format!("Failed to persist global capture settings: {}", e)))?;
 
         Ok(())
     }
@@ -1473,5 +1528,73 @@ mod tests {
         assert!(loaded.syntax_highlighting_enabled);
         assert_eq!(loaded.editor_font_size, 16);
         assert_eq!(loaded.editor_font_family, "IBM Plex Mono");
+    }
+
+    #[test]
+    fn test_global_capture_settings_defaults() {
+        let (store, _temp) = create_test_store();
+        let settings = store.global_capture_get().unwrap();
+
+        assert_eq!(settings, GlobalCaptureSettings::default());
+        assert!(!settings.enabled);
+        assert_eq!(settings.shortcut, "CommandOrControl+Shift+Space");
+        assert!(!settings.paused);
+        assert_eq!(settings.default_mode, CaptureMode::QuickNote);
+        assert!(settings.target_location_id.is_none());
+        assert_eq!(settings.inbox_relative_dir, "inbox");
+        assert!(settings.append_target.is_none());
+        assert!(settings.close_after_save);
+        assert!(settings.show_tray_icon);
+        assert!(settings.last_capture_target.is_none());
+    }
+
+    #[test]
+    fn test_global_capture_settings_round_trip() {
+        let (store, _temp) = create_test_store();
+        let settings = GlobalCaptureSettings {
+            enabled: true,
+            shortcut: "CommandOrControl+Shift+N".to_string(),
+            paused: false,
+            default_mode: CaptureMode::Append,
+            target_location_id: Some(42),
+            inbox_relative_dir: "captures".to_string(),
+            append_target: Some(CaptureDocRef { location_id: 42, rel_path: "notes/daily.md".to_string() }),
+            close_after_save: false,
+            show_tray_icon: false,
+            last_capture_target: Some("Inbox/Daily".to_string()),
+        };
+
+        store.global_capture_set(&settings).unwrap();
+        let loaded = store.global_capture_get().unwrap();
+
+        assert_eq!(loaded, settings);
+    }
+
+    #[test]
+    fn test_global_capture_settings_backfills_defaults() {
+        let (store, _temp) = create_test_store();
+        let conn = store
+            .conn
+            .lock()
+            .expect("expected to lock database connection for test");
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![
+                GLOBAL_CAPTURE_SETTINGS_KEY,
+                "{\"enabled\":true}",
+                Utc::now().to_rfc3339(),
+            ],
+        )
+        .unwrap();
+        drop(conn);
+
+        let loaded = store.global_capture_get().unwrap();
+        assert!(loaded.enabled);
+        assert_eq!(loaded.shortcut, "CommandOrControl+Shift+Space");
+        assert!(!loaded.paused);
+        assert_eq!(loaded.inbox_relative_dir, "inbox");
+        assert!(loaded.close_after_save);
+        assert!(loaded.show_tray_icon);
     }
 }

@@ -57,7 +57,6 @@ function loadBuiltinPatterns(): Pattern[] {
   const patterns: Pattern[] = [];
 
   for (const [category, dict] of Object.entries(styleDictionaries)) {
-    // Skip metadata keys like _sources
     if (category.startsWith("_")) continue;
     const cat = category as PatternCategory;
     const entry = dict as DictionaryEntry;

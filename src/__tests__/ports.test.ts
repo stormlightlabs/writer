@@ -6,6 +6,12 @@ import {
   docOpen,
   docSave,
   err,
+  globalCaptureGet,
+  globalCaptureOpen,
+  globalCapturePause,
+  globalCaptureSet,
+  globalCaptureSubmit,
+  globalCaptureValidateShortcut,
   invokeCmd,
   isErr,
   isOk,
@@ -368,6 +374,70 @@ describe(runCmd, () => {
       expect(onOk).toHaveBeenCalledWith([{ id: 1 }]);
       expect(onErr).not.toHaveBeenCalled();
     });
+
+    it("normalizes global capture settings from backend snake_case", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        type: "ok",
+        value: {
+          enabled: true,
+          shortcut: "CommandOrControl+Shift+N",
+          paused: false,
+          default_mode: "Append",
+          target_location_id: 9,
+          inbox_relative_dir: "captures",
+          append_target: { location_id: 9, rel_path: "notes/daily.md" },
+          close_after_save: false,
+          show_tray_icon: true,
+          last_capture_target: "9/notes/daily.md",
+        },
+      });
+
+      await runCmd(globalCaptureGet(onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith({
+        enabled: true,
+        shortcut: "CommandOrControl+Shift+N",
+        paused: false,
+        defaultMode: "Append",
+        targetLocationId: 9,
+        inboxRelativeDir: "captures",
+        appendTarget: { locationId: 9, relPath: "notes/daily.md" },
+        closeAfterSave: false,
+        showTrayIcon: true,
+        lastCaptureTarget: "9/notes/daily.md",
+      });
+      expect(onErr).not.toHaveBeenCalled();
+    });
+
+    it("normalizes global capture submit results from backend snake_case", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        type: "ok",
+        value: {
+          success: true,
+          saved_to: "inbox/2026/2026-02-23_12-00-00.md",
+          location_id: 3,
+          should_close: true,
+          last_capture_target: "3/inbox/2026/2026-02-23_12-00-00.md",
+        },
+      });
+
+      await runCmd(globalCaptureSubmit({ mode: "QuickNote", text: "hello" }, onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith({
+        success: true,
+        savedTo: "inbox/2026/2026-02-23_12-00-00.md",
+        locationId: 3,
+        shouldClose: true,
+        lastCaptureTarget: "3/inbox/2026/2026-02-23_12-00-00.md",
+      });
+      expect(onErr).not.toHaveBeenCalled();
+    });
   });
 
   describe("batch commands", () => {
@@ -687,6 +757,116 @@ describe("ui layout Commands", () => {
           editor_font_family: "Monaspace Neon",
         },
       });
+    });
+  });
+});
+
+describe("global capture Commands", () => {
+  describe(globalCaptureGet, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = globalCaptureGet(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("global_capture_get");
+      expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe(globalCaptureSet, () => {
+    it("should create command with settings payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const settings = {
+        enabled: true,
+        shortcut: "CommandOrControl+Shift+Space",
+        paused: false,
+        defaultMode: "QuickNote" as const,
+        targetLocationId: 1,
+        inboxRelativeDir: "inbox",
+        appendTarget: null,
+        closeAfterSave: true,
+        showTrayIcon: true,
+        lastCaptureTarget: null,
+      };
+      const cmd = globalCaptureSet(settings, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("global_capture_set");
+      expect(cmd.payload).toStrictEqual({
+        settings: {
+          enabled: true,
+          shortcut: "CommandOrControl+Shift+Space",
+          paused: false,
+          default_mode: "QuickNote",
+          target_location_id: 1,
+          inbox_relative_dir: "inbox",
+          append_target: null,
+          close_after_save: true,
+          show_tray_icon: true,
+          last_capture_target: null,
+        },
+      });
+    });
+  });
+
+  describe(globalCaptureOpen, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = globalCaptureOpen(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("global_capture_open");
+      expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe(globalCaptureSubmit, () => {
+    it("should create command with input payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const input = {
+        mode: "QuickNote" as const,
+        text: "Test capture",
+        destination: { locationId: 1, relPath: "notes/capture.md" },
+        openMainAfterSave: false,
+      };
+      const cmd = globalCaptureSubmit(input, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("global_capture_submit");
+      expect(cmd.payload).toStrictEqual({
+        mode: "QuickNote",
+        text: "Test capture",
+        destination: { location_id: 1, rel_path: "notes/capture.md" },
+        open_main_after_save: false,
+      });
+    });
+  });
+
+  describe(globalCapturePause, () => {
+    it("should create command with paused flag", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = globalCapturePause(true, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("global_capture_pause");
+      expect(cmd.payload).toStrictEqual({ paused: true });
+    });
+  });
+
+  describe(globalCaptureValidateShortcut, () => {
+    it("should create command with shortcut string", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = globalCaptureValidateShortcut("CommandOrControl+Shift+N", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("global_capture_validate_shortcut");
+      expect(cmd.payload).toStrictEqual({ shortcut: "CommandOrControl+Shift+N" });
     });
   });
 });

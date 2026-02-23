@@ -94,3 +94,35 @@ export type StyleCheckSettings = {
   categories: StyleCheckCategorySettings;
   customPatterns: StyleCheckPattern[];
 };
+
+export type CaptureMode = "QuickNote" | "WritingSession" | "Append";
+
+export type CaptureDocRef = { locationId: number; relPath: string };
+
+export type GlobalCaptureSettings = {
+  enabled: boolean;
+  shortcut: string;
+  paused: boolean;
+  defaultMode: CaptureMode;
+  targetLocationId: number | null;
+  inboxRelativeDir: string;
+  appendTarget: CaptureDocRef | null;
+  closeAfterSave: boolean;
+  showTrayIcon: boolean;
+  lastCaptureTarget: string | null;
+};
+
+export type CaptureSubmitResult = {
+  success: boolean;
+  savedTo: string | null;
+  locationId: number;
+  shouldClose: boolean;
+  lastCaptureTarget: string | null;
+};
+
+export type CaptureSubmitInput = {
+  mode: CaptureMode;
+  text: string;
+  destination?: { locationId: number; relPath: string };
+  openMainAfterSave?: boolean;
+};

@@ -29,8 +29,6 @@ import {
   useWriterToolsActions,
   useWriterToolsState,
 } from "./state/appStore";
-import "@fontsource-variable/ibm-plex-sans";
-import "./App.css";
 
 // TODO: make shared utils module
 function formatDraftDate(date: Date): string {

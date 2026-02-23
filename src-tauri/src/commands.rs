@@ -1,3 +1,4 @@
+use super::capture;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -629,5 +630,153 @@ pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings)
             tracing::error!("Failed to persist style check settings: {}", e);
             Ok(CommandResult::err(e))
         }
+    }
+}
+
+/// Gets global capture settings
+#[tauri::command]
+pub fn global_capture_get(
+    state: State<'_, AppState>,
+) -> Result<CommandResult<writer_store::GlobalCaptureSettings>, ()> {
+    tracing::debug!("Loading global capture settings");
+
+    match state.store.global_capture_get() {
+        Ok(settings) => Ok(CommandResult::ok(settings)),
+        Err(e) => {
+            tracing::error!("Failed to load global capture settings: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Sets global capture settings and reconciles runtime state
+#[tauri::command]
+pub fn global_capture_set(
+    app: AppHandle, state: State<'_, AppState>, settings: writer_store::GlobalCaptureSettings,
+) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Persisting global capture settings");
+
+    if let Err(e) = capture::validate_shortcut_format(&settings.shortcut) {
+        return Ok(CommandResult::err(e));
+    }
+
+    match state.store.global_capture_set(&settings) {
+        Ok(()) => match capture::reconcile_capture_runtime(&app, &settings) {
+            Ok(_) => Ok(CommandResult::ok(true)),
+            Err(e) => {
+                tracing::error!("Failed to reconcile capture runtime: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to persist global capture settings: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Opens the quick capture window
+#[tauri::command]
+pub fn global_capture_open(app: AppHandle) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Opening quick capture window");
+
+    match capture::show_quick_capture_window(&app) {
+        Ok(()) => Ok(CommandResult::ok(true)),
+        Err(e) => {
+            tracing::error!("Failed to open quick capture window: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Submits a capture
+#[tauri::command]
+pub async fn global_capture_submit(
+    app: AppHandle, state: State<'_, AppState>, mode: writer_store::CaptureMode, text: String,
+    destination: Option<writer_store::CaptureDocRef>, open_main_after_save: Option<bool>,
+) -> Result<CommandResult<capture::CaptureSubmitResult>, ()> {
+    tracing::debug!("Submitting capture: mode={:?}, text_len={}", mode, text.len());
+
+    let settings = match state.store.global_capture_get() {
+        Ok(s) => s,
+        Err(e) => return Ok(CommandResult::err(e)),
+    };
+
+    let target_location = destination
+        .as_ref()
+        .map(|d| d.location_id)
+        .or(settings.target_location_id);
+
+    let append_target = if let Some(ref dest) = destination {
+        Some(writer_store::CaptureDocRef { location_id: dest.location_id, rel_path: dest.rel_path.clone() })
+    } else {
+        settings.append_target.clone()
+    };
+
+    match crate::capture::handle_capture_submit(
+        &app,
+        mode,
+        text,
+        target_location,
+        &settings.inbox_relative_dir,
+        &append_target,
+        settings.close_after_save,
+    )
+    .await
+    {
+        Ok(result) => {
+            if let Err(e) = capture::update_last_capture_target(&app, result.last_capture_target.clone()) {
+                tracing::warn!("Failed to update last capture target: {}", e);
+            }
+
+            if open_main_after_save.unwrap_or(false) && result.success {
+                if let Err(e) = capture::show_main_window(&app) {
+                    tracing::warn!("Failed to show main window: {}", e);
+                }
+            }
+
+            Ok(CommandResult::ok(result))
+        }
+        Err(e) => Ok(CommandResult::err(e)),
+    }
+}
+
+/// Pauses or resumes the global shortcut
+#[tauri::command]
+pub fn global_capture_pause(
+    app: AppHandle, state: State<'_, AppState>, paused: bool,
+) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Setting global capture pause state: {}", paused);
+
+    let mut settings = match state.store.global_capture_get() {
+        Ok(s) => s,
+        Err(e) => return Ok(CommandResult::err(e)),
+    };
+
+    settings.paused = paused;
+
+    match state.store.global_capture_set(&settings) {
+        Ok(()) => match capture::reconcile_capture_runtime(&app, &settings) {
+            Ok(_) => Ok(CommandResult::ok(true)),
+            Err(e) => {
+                tracing::error!("Failed to reconcile capture runtime: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to persist global capture settings: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Validates a shortcut format
+#[tauri::command]
+pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Validating shortcut: {}", shortcut);
+
+    match capture::validate_shortcut_format(&shortcut) {
+        Ok(()) => Ok(CommandResult::ok(true)),
+        Err(e) => Ok(CommandResult::err(e)),
     }
 }

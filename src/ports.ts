@@ -2,11 +2,16 @@ import { logger } from "$logger";
 import type { PdfRenderResult } from "$pdf/types";
 import type {
   AppError,
+  CaptureMode,
+  CaptureDocRef,
+  CaptureSubmitInput,
+  CaptureSubmitResult,
   DocContent,
   DocMeta,
   DocRef,
   EditorFontFamily,
   ErrorCode,
+  GlobalCaptureSettings,
   LocationDescriptor,
   LocationId,
   MarkdownProfile,
@@ -117,6 +122,28 @@ export type SearchFiltersPayload = {
 export type CmdResult<T> = { type: "ok"; value: T } | { type: "err"; error: AppError };
 
 type RustCommandResult<T> = { Ok: T } | { Err: unknown };
+
+type BackendCaptureDocRef = { location_id: number; rel_path: string };
+
+type BackendGlobalCaptureSettings = {
+  enabled: boolean;
+  shortcut: string;
+  paused: boolean;
+  default_mode: CaptureMode;
+  target_location_id: number | null;
+  inbox_relative_dir: string;
+  append_target: BackendCaptureDocRef | null;
+  close_after_save: boolean;
+  show_tray_icon: boolean;
+  last_capture_target: string | null;
+};
+
+type BackendCaptureSubmitInput = {
+  mode: CaptureMode;
+  text: string;
+  destination?: BackendCaptureDocRef;
+  open_main_after_save?: boolean;
+};
 
 export type BackendEventsSub = { type: "BackendEvents"; onEvent: (event: BackendEvent) => void };
 export type NoneSub = { type: "None" };
@@ -280,6 +307,108 @@ function normalizeSearchHit(value: unknown): SearchHit {
   };
 }
 
+function normalizeCaptureDocRef(value: unknown): CaptureDocRef | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (typeof value.location_id !== "number" || typeof value.rel_path !== "string") {
+    return null;
+  }
+
+  return { locationId: value.location_id, relPath: value.rel_path };
+}
+
+function normalizeGlobalCaptureSettings(value: unknown): GlobalCaptureSettings {
+  if (!isRecord(value)) {
+    return {
+      enabled: false,
+      shortcut: "CommandOrControl+Shift+Space",
+      paused: false,
+      defaultMode: "QuickNote",
+      targetLocationId: null,
+      inboxRelativeDir: "inbox",
+      appendTarget: null,
+      closeAfterSave: true,
+      showTrayIcon: true,
+      lastCaptureTarget: null,
+    };
+  }
+
+  const defaultMode = value.default_mode;
+  const normalizedMode: CaptureMode =
+    defaultMode === "QuickNote" || defaultMode === "WritingSession" || defaultMode === "Append"
+      ? defaultMode
+      : "QuickNote";
+
+  return {
+    enabled: typeof value.enabled === "boolean" ? value.enabled : false,
+    shortcut: typeof value.shortcut === "string" ? value.shortcut : "CommandOrControl+Shift+Space",
+    paused: typeof value.paused === "boolean" ? value.paused : false,
+    defaultMode: normalizedMode,
+    targetLocationId: typeof value.target_location_id === "number" ? value.target_location_id : null,
+    inboxRelativeDir: typeof value.inbox_relative_dir === "string" ? value.inbox_relative_dir : "inbox",
+    appendTarget: normalizeCaptureDocRef(value.append_target),
+    closeAfterSave: typeof value.close_after_save === "boolean" ? value.close_after_save : true,
+    showTrayIcon: typeof value.show_tray_icon === "boolean" ? value.show_tray_icon : true,
+    lastCaptureTarget: typeof value.last_capture_target === "string" ? value.last_capture_target : null,
+  };
+}
+
+function normalizeCaptureSubmitResult(value: unknown): CaptureSubmitResult {
+  if (!isRecord(value)) {
+    return {
+      success: false,
+      savedTo: null,
+      locationId: 0,
+      shouldClose: true,
+      lastCaptureTarget: null,
+    };
+  }
+
+  return {
+    success: Boolean(value.success),
+    savedTo: typeof value.saved_to === "string" ? value.saved_to : null,
+    locationId: typeof value.location_id === "number" ? value.location_id : 0,
+    shouldClose: typeof value.should_close === "boolean" ? value.should_close : true,
+    lastCaptureTarget: typeof value.last_capture_target === "string" ? value.last_capture_target : null,
+  };
+}
+
+function toBackendCaptureDocRef(value: CaptureDocRef | null): BackendCaptureDocRef | null {
+  if (!value) {
+    return null;
+  }
+
+  return { location_id: value.locationId, rel_path: value.relPath };
+}
+
+function toBackendGlobalCaptureSettings(settings: GlobalCaptureSettings): BackendGlobalCaptureSettings {
+  return {
+    enabled: settings.enabled,
+    shortcut: settings.shortcut,
+    paused: settings.paused,
+    default_mode: settings.defaultMode,
+    target_location_id: settings.targetLocationId,
+    inbox_relative_dir: settings.inboxRelativeDir,
+    append_target: toBackendCaptureDocRef(settings.appendTarget),
+    close_after_save: settings.closeAfterSave,
+    show_tray_icon: settings.showTrayIcon,
+    last_capture_target: settings.lastCaptureTarget,
+  };
+}
+
+function toBackendCaptureSubmitInput(input: CaptureSubmitInput): BackendCaptureSubmitInput {
+  return {
+    mode: input.mode,
+    text: input.text,
+    destination: input.destination
+      ? { location_id: input.destination.locationId, rel_path: input.destination.relPath }
+      : void 0,
+    open_main_after_save: input.openMainAfterSave,
+  };
+}
+
 function normalizeCommandValue(command: string, value: unknown): unknown {
   switch (command) {
     case "doc_list": {
@@ -305,6 +434,12 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
         return [];
       }
       return value.map((hit) => normalizeSearchHit(hit));
+    }
+    case "global_capture_get": {
+      return normalizeGlobalCaptureSettings(value);
+    }
+    case "global_capture_submit": {
+      return normalizeCaptureSubmitResult(value);
     }
     default: {
       return value;
@@ -519,4 +654,42 @@ export function styleCheckGet(...[onOk, onErr]: LocParams<PersistedStyleCheckSet
 
 export function styleCheckSet(...[settings, onOk, onErr]: StyleCheckSetParams<boolean>): Cmd {
   return invokeCmd<boolean>("style_check_set", { settings }, onOk, onErr);
+}
+
+export function globalCaptureGet(...[onOk, onErr]: LocParams<GlobalCaptureSettings>): Cmd {
+  return invokeCmd<GlobalCaptureSettings>("global_capture_get", {}, onOk, onErr);
+}
+
+export function globalCaptureSet(
+  ...[settings, onOk, onErr]: Parameters<
+    (settings: GlobalCaptureSettings, onOk: SuccessCallback<boolean>, onErr: ErrorCallback) => void
+  >
+): Cmd {
+  return invokeCmd<boolean>("global_capture_set", { settings: toBackendGlobalCaptureSettings(settings) }, onOk, onErr);
+}
+
+export function globalCaptureOpen(...[onOk, onErr]: LocParams<boolean>): Cmd {
+  return invokeCmd<boolean>("global_capture_open", {}, onOk, onErr);
+}
+
+export function globalCaptureSubmit(
+  ...[input, onOk, onErr]: Parameters<
+    (input: CaptureSubmitInput, onOk: SuccessCallback<CaptureSubmitResult>, onErr: ErrorCallback) => void
+  >
+): Cmd {
+  return invokeCmd<CaptureSubmitResult>("global_capture_submit", toBackendCaptureSubmitInput(input), onOk, onErr);
+}
+
+export function globalCapturePause(
+  ...[paused, onOk, onErr]: Parameters<(paused: boolean, onOk: SuccessCallback<boolean>, onErr: ErrorCallback) => void>
+): Cmd {
+  return invokeCmd<boolean>("global_capture_pause", { paused }, onOk, onErr);
+}
+
+export function globalCaptureValidateShortcut(
+  ...[shortcut, onOk, onErr]: Parameters<
+    (shortcut: string, onOk: SuccessCallback<boolean>, onErr: ErrorCallback) => void
+  >
+): Cmd {
+  return invokeCmd<boolean>("global_capture_validate_shortcut", { shortcut }, onOk, onErr);
 }
