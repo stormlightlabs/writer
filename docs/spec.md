@@ -1,4 +1,8 @@
-# Writer spec
+---
+title: "Writer spec"
+last_updated: 2026-02-23
+---
+
 
 ## Intent
 
@@ -27,7 +31,7 @@ Tauri's **dialog plugin** can open file/directory selectors; selected paths are 
 ### 3.3 Platform notes
 
 - **macOS App Sandbox / MAS**: persistent access to user-selected folders typically involves **security-scoped bookmarks**; Apple's sandboxing docs explicitly describe using bookmarks that grant access when resolved. ([Apple Developer][6])
-    - Practical spec stance: if you plan Mac App Store distribution, design the "Location persistence layer" so it *can* be backed by security-scoped bookmarks; for non-MAS builds, Tauri persisted scope may be sufficient depending on entitlements and packaging.
+  - Practical spec stance: if you plan Mac App Store distribution, design the "Location persistence layer" so it *can* be backed by security-scoped bookmarks; for non-MAS builds, Tauri persisted scope may be sufficient depending on entitlements and packaging.
 - **Linux (Flatpak/Snap)**: sandboxed deployments often rely on **XDG portals**; the **Document portal** exposes external files to sandboxed apps via a controlled mount (`/run/user/$UID/doc/…`). ([Flatpak][7])
 - **Windows**: sandboxed models (UWP-like) preserve file-picker access using concepts like a **future-access list**; even if you're not UWP, this is a useful conceptual model for "remembering user-granted access." ([Microsoft Learn][8])
 
@@ -38,19 +42,19 @@ Tauri's **dialog plugin** can open file/directory selectors; selected paths are 
 ### Library (Locations-first)
 
 - Sidebar shows:
-    - Locations (root folders)
-    - Within each: folders + documents tree (optional), or flat list with filters
+  - Locations (root folders)
+  - Within each: folders + documents tree (optional), or flat list with filters
 - "Add Location…" opens folder picker (directory selection). ([Tauri][9])
 
 ### Editor
 
 - Split view
 - Focus modes:
-    - typewriter scroll
-    - distraction-free
+  - typewriter scroll
+  - distraction-free
 - Autosave:
-    - default on (debounced)
-    - status indicator: Saved / Saving / Error
+  - default on (debounced)
+  - status indicator: Saved / Saving / Error
 
 ### Search
 

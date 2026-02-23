@@ -1,4 +1,8 @@
-# Roadmap
+---
+title: "Roadmap"
+last_updated: 2026-02-23
+---
+
 
 ## Focus mode enhancements (typewriter scrolling + sentence dimming)
 
