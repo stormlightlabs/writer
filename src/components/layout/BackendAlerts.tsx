@@ -1,27 +1,56 @@
+import { AnimatePresence, motion } from "motion/react";
+
 type MissingLocation = { location_id: number; path: string };
 type Conflict = { location_id: number; rel_path: string; conflict_filename: string };
-
 type BackendAlertsProps = { missingLocations: MissingLocation[]; conflicts: Conflict[] };
 
-export const BackendAlerts = ({ missingLocations, conflicts }: BackendAlertsProps) => (
-  <>
-    {missingLocations.length > 0 && (
-      <div className="fixed bottom-8 right-8 bg-support-error text-white px-4 py-3 rounded-md shadow-xl z-50 max-w-[400px]">
-        <strong>Missing Locations</strong>
-        <p className="mt-1 text-[0.8125rem]">
-          {missingLocations.length} location(s) could not be found. They may have been moved or deleted.
-        </p>
-      </div>
-    )}
+const ALERT_INITIAL = { opacity: 0, y: 12 } as const;
+const ALERT_ANIMATE = { opacity: 1, y: 0 } as const;
+const ALERT_EXIT = { opacity: 0, y: 8 } as const;
+const ALERT_TRANSITION = { duration: 0.18, ease: "easeOut" } as const;
 
-    {conflicts.length > 0 && (
-      <div
-        className={`fixed right-8 bg-accent-yellow text-bg-primary px-4 py-3 rounded-md shadow-xl z-50 max-w-[400px] ${
-          missingLocations.length > 0 ? "bottom-[120px]" : "bottom-8"
-        }`}>
-        <strong>Conflicts Detected</strong>
-        <p className="mt-1 text-[0.8125rem]">{conflicts.length} file(s) have conflicts that need attention.</p>
-      </div>
-    )}
-  </>
+const MissingLocationsAlert = ({ count }: { count: number }) => (
+  <motion.div
+    key="missing-locations"
+    initial={ALERT_INITIAL}
+    animate={ALERT_ANIMATE}
+    exit={ALERT_EXIT}
+    transition={ALERT_TRANSITION}
+    className="bg-support-error text-white px-4 py-3 rounded-md shadow-xl">
+    <strong>Missing Locations</strong>
+    <p className="mt-1 text-[0.8125rem]">
+      {count} location(s) could not be found. They may have been moved or deleted.
+    </p>
+  </motion.div>
 );
+
+const ConflictsAlert = ({ count }: { count: number }) => (
+  <motion.div
+    key="conflicts"
+    initial={ALERT_INITIAL}
+    animate={ALERT_ANIMATE}
+    exit={ALERT_EXIT}
+    transition={ALERT_TRANSITION}
+    className="bg-accent-yellow text-bg-primary px-4 py-3 rounded-md shadow-xl">
+    <strong>Conflicts Detected</strong>
+    <p className="mt-1 text-[0.8125rem]">{count} file(s) have conflicts that need attention.</p>
+  </motion.div>
+);
+
+export const BackendAlerts = ({ missingLocations, conflicts }: BackendAlertsProps) => {
+  const hasMissingLocations = missingLocations.length > 0;
+  const hasConflicts = conflicts.length > 0;
+
+  if (!hasMissingLocations && !hasConflicts) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-x-3 bottom-3 z-50 flex flex-col gap-2 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-88">
+      <AnimatePresence initial={false}>
+        {hasMissingLocations ? <MissingLocationsAlert count={missingLocations.length} /> : null}
+        {hasConflicts ? <ConflictsAlert count={conflicts.length} /> : null}
+      </AnimatePresence>
+    </div>
+  );
+};

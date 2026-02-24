@@ -1,4 +1,6 @@
 import { Button } from "$components/Button";
+import { Dialog } from "$components/Dialog";
+import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
 import {
   useCalmUiActions,
@@ -252,31 +254,38 @@ type LayoutSettingsPanelProps = {
 
 export const LayoutSettingsPanel = (
   { isVisible, onClose, quickCaptureEnabled, onQuickCaptureEnabledChange }: LayoutSettingsPanelProps,
-) =>
-  isVisible
-    ? (
-      <div className="fixed inset-0 z-50">
-        <Button
-          type="button"
-          onClick={onClose}
-          aria-label="Close layout settings"
-          className="absolute inset-0 bg-black/30 border-none p-0 m-0" />
+) => {
+  const { isCompact, viewportWidth } = useViewportTier();
+  const compactPanel = isCompact || viewportWidth < 920;
 
-        <section className="absolute right-4 top-14 w-[320px] bg-layer-01 border border-border-subtle rounded-lg shadow-xl p-4">
-          <SettingsHeader onClose={onClose} />
-          <CalmUiSettingsSection />
-          <ChromeSettingsSection />
-          <EditorSettingsSection />
+  return (
+    <Dialog
+      isOpen={isVisible}
+      onClose={onClose}
+      ariaLabel="Layout settings"
+      motionPreset={compactPanel ? "slideUp" : "slideRight"}
+      backdropClassName={compactPanel ? "bg-black/35" : "bg-black/30"}
+      containerClassName="z-50 pointer-events-none"
+      panelClassName={`absolute bg-layer-01 border border-border-subtle shadow-xl ${
+        compactPanel
+          ? "left-3 right-3 bottom-3 max-h-[calc(100vh-5rem)] rounded-lg"
+          : "right-4 top-14 w-[360px] max-h-[calc(100vh-4.5rem)] rounded-lg"
+      }`}>
+      <section className="h-full overflow-y-auto p-4">
+        <SettingsHeader onClose={onClose} />
+        <CalmUiSettingsSection />
+        <ChromeSettingsSection />
+        <EditorSettingsSection />
 
-          <div className="border-t border-border-subtle my-3" />
-          <FocusModeSection />
+        <div className="border-t border-border-subtle my-3" />
+        <FocusModeSection />
 
-          <div className="border-t border-border-subtle my-3" />
-          <WriterToolsSection />
+        <div className="border-t border-border-subtle my-3" />
+        <WriterToolsSection />
 
-          <div className="border-t border-border-subtle my-3" />
-          <QuickCaptureSection enabled={quickCaptureEnabled} onEnabledChange={onQuickCaptureEnabledChange} />
-        </section>
-      </div>
-    )
-    : null;
+        <div className="border-t border-border-subtle my-3" />
+        <QuickCaptureSection enabled={quickCaptureEnabled} onEnabledChange={onQuickCaptureEnabledChange} />
+      </section>
+    </Dialog>
+  );
+};

@@ -1,4 +1,7 @@
+import { useViewportTier } from "$hooks/useViewportTier";
 import type { DocMeta, LineEnding } from "$types";
+import { formatStatusDate } from "$utils/date";
+import { useMemo } from "react";
 
 export type StatusBarStats = {
   cursorLine: number;
@@ -26,72 +29,104 @@ const StatusItem = ({ label, value, title, valueClassName = "" }: StatusItemProp
 
 const StatusDivider = () => <div className="h-3 w-px bg-border-subtle" />;
 
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
-      return "—";
-    }
+const UpdatedAtItem = ({ updatedAt }: { updatedAt: string }) => (
+  <>
+    <StatusItem
+      label="Updated"
+      value={formatStatusDate(updatedAt)}
+      valueClassName="max-w-[9.5rem]"
+      title={`Last modified: ${new Date(updatedAt).toLocaleString()}`} />
+    <StatusDivider />
+  </>
+);
 
-    return new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(date);
-  } catch {
-    return "—";
-  }
-}
+const WordAndCharItems = ({ wordCount, charCount }: { wordCount: number; charCount: number }) => (
+  <>
+    <StatusItem label="Words" value={wordCount.toLocaleString()} valueClassName="tabular-nums" />
+    <StatusDivider />
+    <StatusItem label="Chars" value={charCount.toLocaleString()} valueClassName="tabular-nums" />
+  </>
+);
 
-const StatusMeta = (
-  { docMeta, wordCount, charCount }: { docMeta: DocMeta | null; wordCount: number; charCount: number },
-) => {
-  if (docMeta) {
-    return (
-      <>
-        <StatusItem
-          label="Updated"
-          value={formatDate(docMeta.updated_at)}
-          valueClassName="max-w-[9.5rem]"
-          title={`Last modified: ${new Date(docMeta.updated_at).toLocaleString()}`} />
-        <StatusDivider />
-        <StatusItem label="Words" value={wordCount.toLocaleString()} valueClassName="tabular-nums" />
-        <StatusDivider />
-        <StatusItem label="Chars" value={charCount.toLocaleString()} valueClassName="tabular-nums" />
-      </>
-    );
-  }
-
-  return null;
-};
-
-const SelectedCount = ({ selectionCount }: { selectionCount: number }) => (
+const SelectionItems = ({ selectionCount }: { selectionCount: number }) => (
   <>
     <StatusDivider />
     <StatusItem label="Selected" value={selectionCount.toLocaleString()} />
   </>
 );
 
-export function StatusBar({ docMeta, stats, encoding = "utf8", lineEnding = "LF" }: StatusBarProps) {
-  const { cursorLine, cursorColumn, wordCount, charCount, selectionCount } = stats;
-  return (
-    <footer className="h-7 bg-layer-01 border-t border-border-subtle flex items-center justify-between px-3 font-mono">
-      <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-        {docMeta
-          ? <StatusMeta docMeta={docMeta} wordCount={wordCount} charCount={charCount} />
-          : <span className="truncate text-[0.6875rem] text-text-placeholder">No document open</span>}
-        {selectionCount && selectionCount > 0 ? <SelectedCount selectionCount={selectionCount} /> : null}
-      </div>
+const EncodingItems = ({ encoding }: { encoding: string }) => (
+  <>
+    <StatusDivider />
+    <StatusItem value={encoding} />
+  </>
+);
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <StatusItem label="Position" value={`Ln ${cursorLine}, Col ${cursorColumn}`} valueClassName="tabular-nums" />
-        <StatusDivider />
-        <StatusItem value={encoding} />
-        <StatusDivider />
-        <StatusItem value={lineEnding} />
-      </div>
+const LineEndingItems = ({ lineEnding }: { lineEnding: LineEnding }) => (
+  <>
+    <StatusDivider />
+    <StatusItem value={lineEnding} />
+  </>
+);
+
+const LeftItems = (
+  { docMeta, stats, showUpdatedAt, showSelection }: {
+    docMeta?: DocMeta | null;
+    stats: StatusBarStats;
+    showUpdatedAt: boolean;
+    showSelection: boolean;
+  },
+) => {
+  const selectionCount = useMemo(() => stats.selectionCount ?? 0, [stats.selectionCount]);
+  if (!docMeta) {
+    return <span className="truncate text-[0.6875rem] text-text-placeholder">No document open</span>;
+  }
+
+  return (
+    <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+      {showUpdatedAt ? <UpdatedAtItem updatedAt={docMeta.updated_at} /> : null}
+      <WordAndCharItems wordCount={stats.wordCount} charCount={stats.charCount} />
+      {showSelection && selectionCount > 0 ? <SelectionItems selectionCount={selectionCount} /> : null}
+    </div>
+  );
+};
+
+const RightItems = (
+  { stats, encoding, lineEnding, showEncoding, showLineEnding }: {
+    stats: StatusBarStats;
+    encoding: string;
+    lineEnding: LineEnding;
+    showEncoding: boolean;
+    showLineEnding: boolean;
+  },
+) => (
+  <div className="flex shrink-0 items-center gap-1.5">
+    <StatusItem
+      label="Position"
+      value={`Ln ${stats.cursorLine}, Col ${stats.cursorColumn}`}
+      valueClassName="tabular-nums" />
+    {showEncoding ? <EncodingItems encoding={encoding} /> : null}
+    {showLineEnding ? <LineEndingItems lineEnding={lineEnding} /> : null}
+  </div>
+);
+
+export function StatusBar({ docMeta, stats, encoding = "utf8", lineEnding = "LF" }: StatusBarProps) {
+  const { viewportWidth, isCompact, isNarrow } = useViewportTier();
+  const showUpdatedAt = useMemo(() => !isCompact && viewportWidth >= 900, [isCompact, viewportWidth]);
+  const showEncoding = useMemo(() => !isCompact, [isCompact]);
+  const showLineEnding = useMemo(() => !isNarrow, [isNarrow]);
+  const showSelection = useMemo(() => !isCompact, [isCompact]);
+
+  return (
+    <footer className="h-7 bg-layer-01 border-t border-border-subtle flex items-center justify-between px-2 sm:px-3 font-mono gap-2">
+      <LeftItems docMeta={docMeta} stats={stats} showUpdatedAt={showUpdatedAt} showSelection={showSelection} />
+
+      <RightItems
+        stats={stats}
+        encoding={encoding}
+        lineEnding={lineEnding}
+        showEncoding={showEncoding}
+        showLineEnding={showLineEnding} />
     </footer>
   );
 }

@@ -14,6 +14,7 @@ type DocumentTabProps = {
   handleContextMenu: (e: React.MouseEvent, tabId: string) => void;
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
+  compact?: boolean;
 };
 
 export const DocumentTab = (
@@ -28,10 +29,11 @@ export const DocumentTab = (
     handleContextMenu,
     onSelectTab,
     onCloseTab,
+    compact = false,
   }: DocumentTabProps,
 ) => {
-  const isActive = tab.id === activeTabId;
-  const isDragOver = tab.id === dragOverTab;
+  const isActive = useMemo(() => tab.id === activeTabId, [tab.id, activeTabId]);
+  const isDragOver = useMemo(() => tab.id === dragOverTab, [tab.id, dragOverTab]);
   const onDragStart: DragEventHandler<HTMLDivElement> = useCallback((e) => {
     handleDragStart(e, tab.id);
   }, [tab.id, handleDragStart]);
@@ -71,8 +73,14 @@ export const DocumentTab = (
 
   const classes = useMemo(() => {
     const base = [
-      "group flex items-center gap-1.5 px-3 min-w-[120px] max-w-[200px] shrink-0 cursor-pointer border-r border-border-subtle select-none transition-all duration-150",
+      "group flex items-center gap-1.5 px-2.5 shrink-0 cursor-pointer border-r border-border-subtle select-none transition-all duration-150",
     ];
+
+    if (compact) {
+      base.push("min-w-[96px] max-w-[152px]");
+    } else {
+      base.push("min-w-[120px] max-w-[220px]");
+    }
 
     if (isActive) {
       base.push("bg-layer-01 border-b-2 border-b-accent-blue");
@@ -90,10 +98,10 @@ export const DocumentTab = (
     }
 
     return base.join(" ");
-  }, [isActive, isDragOver, draggingTab, tab.id]);
+  }, [compact, isActive, isDragOver, draggingTab, tab.id]);
 
   const titleClasses = useMemo(() => {
-    const base = ["flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[0.8125rem]"];
+    const base = ["min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[0.8125rem]"];
 
     if (isActive) {
       base.push("text-text-primary font-medium");
@@ -122,7 +130,7 @@ export const DocumentTab = (
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
       {tab.isModified && <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan shrink-0" />}
-      <DocumentIcon />
+      {compact ? null : <DocumentIcon />}
       <span className={titleClasses} title={`${tab.title}${tab.isModified ? " (modified)" : ""}`}>{tab.title}</span>
       <CloseTabButton handleCloseTabClick={handleCloseTabClick} />
     </div>

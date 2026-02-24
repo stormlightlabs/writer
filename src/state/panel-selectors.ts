@@ -1,6 +1,7 @@
-import type { AppTheme, CalmUiSettings, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
+import type { CalmUiSettings, StyleCheckSettings } from "$types";
 import { useShallow } from "zustand/react/shallow";
 import { useAppStore } from "./stores/app";
+import { EditorPresentation } from "./types";
 
 const FOCUS_MODE_STYLE_CHECK_SETTINGS: StyleCheckSettings = {
   enabled: false,
@@ -79,13 +80,7 @@ export const useWorkspacePanelTopBarsCollapsed = () => useAppStore((state) => st
 export const useWorkspacePanelStatusBarCollapsed = () => useAppStore((state) => state.statusBarCollapsed);
 
 export const useSearchOverlayState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      isVisible: state.showSearch,
-      sidebarCollapsed: state.sidebarCollapsed,
-      setShowSearch: state.setShowSearch,
-    })),
-  );
+  useAppStore(useShallow((state) => ({ isVisible: state.showSearch, setShowSearch: state.setShowSearch })));
 
 export const useFocusModePanelState = () =>
   useAppStore(
@@ -118,19 +113,6 @@ export const useToolbarState = () =>
       togglePreviewVisible: state.togglePreviewVisible,
     })),
   );
-
-type EditorPresentation = {
-  theme: AppTheme;
-  showLineNumbers: boolean;
-  textWrappingEnabled: boolean;
-  syntaxHighlightingEnabled: boolean;
-  fontSize: number;
-  fontFamily: EditorFontFamily;
-  typewriterScrollingEnabled: boolean;
-  focusDimmingMode: FocusDimmingMode;
-  posHighlightingEnabled: boolean;
-  styleCheckSettings: StyleCheckSettings;
-};
 
 export const useEditorPresentationState = () =>
   useAppStore(
@@ -167,3 +149,11 @@ export const useCalmUiActions = () =>
       revealChromeTemporarily: state.revealChromeTemporarily,
     })),
   );
+
+export type SidebarStateReturn = ReturnType<typeof useSidebarState>;
+export type ToolbarStateReturn = ReturnType<typeof useToolbarState>;
+export type EditorPresentationStateReturn = ReturnType<typeof useEditorPresentationState>;
+export type WorkspacePanelSidebarStateReturn = ReturnType<typeof useWorkspacePanelSidebarState>;
+export type WorkspacePanelModeStateReturn = ReturnType<typeof useWorkspacePanelModeState>;
+export type TopBarsCollapsedReturn = ReturnType<typeof useWorkspacePanelTopBarsCollapsed>;
+export type StatusBarCollapsedReturn = ReturnType<typeof useWorkspacePanelStatusBarCollapsed>;

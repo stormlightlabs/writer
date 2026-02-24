@@ -1,4 +1,5 @@
 import { Button } from "$components/Button";
+import { useViewportTier } from "$hooks/useViewportTier";
 import {
   CheckIcon,
   DocumentIcon,
@@ -28,13 +29,14 @@ export type ToolbarProps = {
 };
 
 function ToolbarButton(
-  { icon, label, isActive = false, onClick, disabled = false, shortcut }: {
+  { icon, label, isActive = false, onClick, disabled = false, shortcut, iconOnly = false }: {
     icon: { Component: React.ComponentType<IconProps>; size: IconSize };
     label: string;
     isActive?: boolean;
     onClick: () => void;
     disabled?: boolean;
     shortcut?: string;
+    iconOnly?: boolean;
   },
 ) {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -72,11 +74,15 @@ function ToolbarButton(
           isActive
             ? "bg-layer-accent-01 border border-border-strong text-text-primary"
             : "bg-transparent border border-transparent text-text-secondary"
-        } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+        } ${iconOnly ? "w-8 h-8 px-0 justify-center" : ""} ${
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+        }`}
         onMouseOver={handleMouseOver}
-        onMouseOut={handleMouseOut}>
+        onMouseOut={handleMouseOut}
+        aria-label={iconOnly ? label : undefined}
+        title={iconOnly ? label : undefined}>
         <icon.Component size={icon.size} />
-        <span>{label}</span>
+        {iconOnly ? null : <span>{label}</span>}
       </Button>
       {shortcut ? <Tooltip anchorRef={buttonRef} visible={showTooltip}>{shortcut}</Tooltip> : null}
     </>
@@ -103,14 +109,14 @@ const getStatusDisplay = (status: SaveStatus) => {
   }
 };
 
-function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+function SaveStatusIndicator({ status, compact = false }: { status: SaveStatus; compact?: boolean }) {
   const { Icon, text, color } = getStatusDisplay(status);
 
   return (
     <div
       className={`flex items-center gap-1.5 text-xs ${color} px-2 py-1 bg-layer-01 rounded border border-border-subtle`}>
       {Icon && <Icon size="sm" />}
-      <span>{text}</span>
+      {compact ? null : <span>{text}</span>}
     </div>
   );
 }
@@ -121,6 +127,7 @@ export function Toolbar(
 ) {
   const { isSplitView, isFocusMode, isPreviewVisible, toggleSplitView, toggleFocusMode, togglePreviewVisible } =
     useToolbarState();
+  const { viewportWidth, isCompact, isNarrow } = useViewportTier();
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
       save: { Component: SaveIcon, size: "sm" },
@@ -134,40 +141,50 @@ export function Toolbar(
     [],
   );
 
+  const iconOnly = useMemo(() => isNarrow, [isNarrow]);
+  const hideRefresh = useMemo(() => viewportWidth < 1080, [viewportWidth]);
+  const compactStatus = useMemo(() => viewportWidth < 960, [viewportWidth]);
+
   return (
-    <div className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-4 gap-4">
-      <div className="flex items-center gap-2">
+    <div className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2 sm:px-4 gap-2 overflow-x-auto">
+      <div className="flex items-center gap-1.5 shrink-0">
         <ToolbarButton
           icon={icons.save}
           label="Save"
           onClick={onSave}
           disabled={saveStatus === "Saved" || saveStatus === "Saving"}
-          shortcut="Ctrl+S" />
-        <SaveStatusIndicator status={saveStatus} />
-        {onRefresh && <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" />}
+          shortcut="Ctrl+S"
+          iconOnly={isCompact} />
+        <SaveStatusIndicator status={saveStatus} compact={compactStatus} />
+        {onRefresh && !hideRefresh && (
+          <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly={iconOnly} />
+        )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         <ToolbarButton
           icon={icons.splitView}
           label="Split"
           isActive={isSplitView}
           onClick={toggleSplitView}
-          shortcut="Ctrl+\\" />
+          shortcut="Ctrl+\\"
+          iconOnly={iconOnly} />
 
         <ToolbarButton
           icon={icons.eye}
           label="Preview"
           isActive={isPreviewVisible}
           onClick={togglePreviewVisible}
-          shortcut="Ctrl+P" />
+          shortcut="Ctrl+P"
+          iconOnly={iconOnly} />
 
         <ToolbarButton
           icon={icons.focus}
           label="Focus"
           isActive={isFocusMode}
           onClick={toggleFocusMode}
-          shortcut="Ctrl+F" />
+          shortcut="Ctrl+F"
+          iconOnly={iconOnly} />
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
@@ -176,9 +193,10 @@ export function Toolbar(
             icon={icons.export}
             label={isExportingPdf ? "Exporting" : "Export PDF"}
             onClick={onExportPdf}
-            disabled={isExportingPdf || isPdfExportDisabled} />
+            disabled={isExportingPdf || isPdfExportDisabled}
+            iconOnly={iconOnly} />
         )}
-        <ToolbarButton icon={icons.settings} label="Settings" onClick={onOpenSettings} />
+        <ToolbarButton icon={icons.settings} label="Settings" onClick={onOpenSettings} iconOnly={iconOnly} />
       </div>
     </div>
   );

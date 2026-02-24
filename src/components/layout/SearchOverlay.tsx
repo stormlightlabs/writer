@@ -19,7 +19,7 @@ export function SearchOverlay(
   { searchQuery, searchResults, isSearching, locations, filters, handleSearch, setFilters, handleSelectSearchResult }:
     SearchOverlayProps,
 ) {
-  const { isVisible, sidebarCollapsed, setShowSearch } = useSearchOverlayState();
+  const { isVisible, setShowSearch } = useSearchOverlayState();
   const handleClose = useCallback(() => {
     setShowSearch(false);
   }, [setShowSearch]);
@@ -27,16 +27,12 @@ export function SearchOverlay(
     locations,
   ]);
 
-  if (!isVisible) {
-    return null;
-  }
-
   return (
     <SearchPanel
+      isOpen={isVisible}
       query={searchQuery}
       results={searchResults}
       isSearching={isSearching}
-      sidebarCollapsed={sidebarCollapsed}
       topOffset={48}
       locations={locationsToRender}
       filters={filters}

@@ -7,14 +7,14 @@ export const PdfExportDialogFooter = (
     isExporting?: boolean;
   },
 ) => (
-  <div className="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+  <div className="mt-6 pt-4 border-t border-border-subtle flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
     <Button
       type="button"
       variant="secondary"
       size="lg"
       onClick={handleCancel}
       disabled={isExporting}
-      className="flex-1">
+      className="sm:flex-1">
       Cancel
     </Button>
     <Button
@@ -23,7 +23,7 @@ export const PdfExportDialogFooter = (
       size="lg"
       onClick={handleExportClick}
       disabled={isExporting}
-      className="flex-1">
+      className="sm:flex-1">
       {isExporting ? "Exporting..." : "Export PDF"}
     </Button>
   </div>

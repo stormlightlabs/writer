@@ -153,3 +153,16 @@ export type AppStore =
   & TabsActions
   & PdfExportState
   & PdfExportActions;
+
+export type EditorPresentation = {
+  theme: AppTheme;
+  showLineNumbers: boolean;
+  textWrappingEnabled: boolean;
+  syntaxHighlightingEnabled: boolean;
+  fontSize: number;
+  fontFamily: EditorFontFamily;
+  typewriterScrollingEnabled: boolean;
+  focusDimmingMode: FocusDimmingMode;
+  posHighlightingEnabled: boolean;
+  styleCheckSettings: StyleCheckSettings;
+};

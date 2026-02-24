@@ -1,3 +1,5 @@
+import { Dialog } from "$components/Dialog";
+import { useViewportTier } from "$hooks/useViewportTier";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import type { MarginSide, PdfExportOptions, StandardPageSize } from "$pdf/types";
 import { useCallback, useState } from "react";
@@ -25,6 +27,7 @@ const PdfTitle = ({ title }: { title?: string }) => (title
 export function PdfExportDialog(
   { isOpen, title, isExporting = false, errorMessage, onExport, onCancel }: PdfExportDialogProps,
 ) {
+  const { isCompact, viewportWidth } = useViewportTier();
   const [options, setOptions] = useState<PdfExportOptions>(DEFAULT_OPTIONS);
 
   const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -59,29 +62,43 @@ export function PdfExportDialog(
     await onExport(options);
   }, [onExport, options]);
 
-  if (isOpen) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="w-full max-w-md bg-layer-01 rounded-lg shadow-xl border border-border-subtle p-6">
-          <PdfExportDialogHeader handleCancel={onCancel} />
-          <PdfTitle title={title} />
-          {errorMessage ? <p className="text-sm text-support-error mb-4">{errorMessage}</p> : null}
-          <PdfExportDialogOptions
-            options={options}
-            handlePageSizeChange={handlePageSizeChange}
-            handleOrientationChange={handleOrientationChange}
-            handleFontSizeChange={handleFontSizeChange}
-            handleMarginChange={handleMarginChange}
-            handleIncludeHeaderChange={handleIncludeHeaderChange}
-            handleIncludeFooterChange={handleIncludeFooterChange} />
-          <PdfExportDialogFooter
-            handleCancel={onCancel}
-            handleExportClick={handleExportClick}
-            isExporting={isExporting} />
-        </div>
-      </div>
-    );
-  }
+  const compactPanel = isCompact || viewportWidth < 880;
+  const optionsContent = (
+    <PdfExportDialogOptions
+      options={options}
+      handlePageSizeChange={handlePageSizeChange}
+      handleOrientationChange={handleOrientationChange}
+      handleFontSizeChange={handleFontSizeChange}
+      handleMarginChange={handleMarginChange}
+      handleIncludeHeaderChange={handleIncludeHeaderChange}
+      handleIncludeFooterChange={handleIncludeFooterChange} />
+  );
 
-  return null;
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onCancel}
+      ariaLabel="Export to PDF"
+      motionPreset={compactPanel ? "slideUp" : "scale"}
+      backdropClassName={compactPanel ? "bg-black/40" : "bg-black/50"}
+      containerClassName={`z-50 flex pointer-events-none ${
+        compactPanel ? "items-end justify-center px-3 pb-3" : "items-center justify-center p-4"
+      }`}
+      panelClassName={`pointer-events-auto bg-layer-01 border border-border-subtle shadow-xl ${
+        compactPanel
+          ? "w-full max-w-2xl max-h-[calc(100vh-4.25rem)] rounded-lg"
+          : "w-full max-w-xl max-h-[calc(100vh-2rem)] rounded-lg"
+      }`}>
+      <div className={`flex h-full flex-col ${compactPanel ? "p-4" : "p-6"}`}>
+        <PdfExportDialogHeader handleCancel={onCancel} />
+        <PdfTitle title={title} />
+        {errorMessage ? <p className="text-sm text-support-error mb-4">{errorMessage}</p> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">{optionsContent}</div>
+        <PdfExportDialogFooter
+          handleCancel={onCancel}
+          handleExportClick={handleExportClick}
+          isExporting={isExporting} />
+      </div>
+    </Dialog>
+  );
 }

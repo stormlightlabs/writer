@@ -1,16 +1,19 @@
 import { Button } from "$components/Button";
+import { Dialog } from "$components/Dialog";
+import { useViewportTier } from "$hooks/useViewportTier";
 import { FileTextIcon, SearchIcon, XIcon } from "$icons";
 import type { SearchHit } from "$types";
+import { cn } from "$utils/tw";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
 
 type SearchPanelProps = {
+  isOpen: boolean;
   query: string;
   results: SearchHit[];
   isSearching: boolean;
-  sidebarCollapsed: boolean;
   topOffset: number;
   locations: Array<{ id: number; name: string }>;
   filters: SearchFilters;
@@ -54,9 +57,9 @@ function HighlightedSnippet({ text, matches }: { text: string; matches: Array<{ 
 
 function HighlightLabel({ hit }: { hit: SearchHit }) {
   return (
-    <div className="flex items-center gap-2 mb-1">
+    <div className="flex min-w-0 items-center gap-2 mb-1">
       <FileTextIcon size="sm" className="text-icon-secondary" />
-      <span className="text-sm font-medium text-text-primary">{hit.title}</span>
+      <span className="min-w-0 truncate text-sm font-medium text-text-primary">{hit.title}</span>
       <span className="text-text-placeholder text-xs" />
       <span className="text-xs text-text-secondary">Line {hit.line}</span>
     </div>
@@ -140,10 +143,11 @@ type SearchInputProps = {
   query: string;
   handleQueryChange: ChangeEventHandler<HTMLInputElement>;
   clearQuery: MouseEventHandler<HTMLButtonElement>;
+  compact?: boolean;
 };
 
-const SearchInput = ({ query, handleQueryChange, clearQuery }: SearchInputProps) => (
-  <div className="flex-1 relative">
+const SearchInput = ({ query, handleQueryChange, clearQuery, compact = false }: SearchInputProps) => (
+  <div className="min-w-0 flex-1 basis-[16rem] relative">
     <SearchIcon
       size="xl"
       className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-secondary pointer-events-none" />
@@ -153,7 +157,9 @@ const SearchInput = ({ query, handleQueryChange, clearQuery }: SearchInputProps)
       onChange={handleQueryChange}
       placeholder="Search across all documents..."
       autoFocus
-      className="w-full pl-10 pr-3 py-2.5 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)]" />
+      className={`w-full pl-10 pr-3 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
+        compact ? "py-2" : "py-2.5"
+      }`} />
     {query && (
       <Button
         onClick={clearQuery}
@@ -190,8 +196,10 @@ function FilterLocation({ location, filters, handleToggleLocation }: FilterLocat
   return <Button onClick={handleClick} className={classes}>{location.name}</Button>;
 }
 
-const CloseButton = ({ onClose }: { onClose: () => void }) => (
-  <Button onClick={onClose} className="p-2.5 bg-transparent border-none text-icon-secondary cursor-pointer rounded-md">
+const CloseButton = ({ onClose, compact = false }: { onClose: () => void; compact?: boolean }) => (
+  <Button
+    onClick={onClose}
+    className={`bg-transparent border-none text-icon-secondary cursor-pointer rounded-md ${compact ? "p-2" : "p-2.5"}`}>
     <XIcon size="xl" />
   </Button>
 );
@@ -208,12 +216,13 @@ type ToggleButtonProps = {
   toggleFilters: MouseEventHandler<HTMLButtonElement>;
   showFilters: boolean;
   activeFilterCount: number;
+  compact?: boolean;
 };
 
-function ToggleButton({ toggleFilters, showFilters, activeFilterCount }: ToggleButtonProps) {
+function ToggleButton({ toggleFilters, showFilters, activeFilterCount, compact = false }: ToggleButtonProps) {
   const classes = useMemo(() => {
     const base = [
-      "px-4 py-2.5",
+      compact ? "px-3 py-2" : "px-4 py-2.5",
       "border border-border-subtle rounded-md",
       "text-sm cursor-pointer flex items-center gap-1.5 transition-all duration-150",
     ];
@@ -231,7 +240,7 @@ function ToggleButton({ toggleFilters, showFilters, activeFilterCount }: ToggleB
     }
 
     return base.join(" ");
-  }, [showFilters, activeFilterCount]);
+  }, [showFilters, activeFilterCount, compact]);
   return (
     <Button onClick={toggleFilters} className={classes}>
       Filters
@@ -287,6 +296,7 @@ function SearchResultsHeader(
     handleQueryChange,
     clearQuery,
     toggleFilters,
+    compact,
   }: {
     query: string;
     isSearching: boolean;
@@ -301,14 +311,19 @@ function SearchResultsHeader(
     handleQueryChange: ChangeEventHandler<HTMLInputElement>;
     clearQuery: MouseEventHandler<HTMLButtonElement>;
     toggleFilters: MouseEventHandler<HTMLButtonElement>;
+    compact: boolean;
   },
 ) {
   return (
-    <div className="px-6 py-4 border-b border-border-subtle flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <SearchInput query={query} handleQueryChange={handleQueryChange} clearQuery={clearQuery} />
-        <ToggleButton toggleFilters={toggleFilters} showFilters={showFilters} activeFilterCount={activeFilterCount} />
-        <CloseButton onClose={onClose} />
+    <div className={`border-b border-border-subtle flex flex-col gap-3 ${compact ? "px-3 py-3" : "px-6 py-4"}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput query={query} handleQueryChange={handleQueryChange} clearQuery={clearQuery} compact={compact} />
+        <ToggleButton
+          toggleFilters={toggleFilters}
+          showFilters={showFilters}
+          activeFilterCount={activeFilterCount}
+          compact={compact} />
+        <CloseButton onClose={onClose} compact={compact} />
       </div>
 
       <VisibleFilters
@@ -330,10 +345,10 @@ function SearchResultsHeader(
 
 export function SearchPanel(
   {
+    isOpen,
     query,
     results,
     isSearching,
-    sidebarCollapsed,
     topOffset,
     locations,
     filters,
@@ -343,7 +358,14 @@ export function SearchPanel(
     onClose,
   }: SearchPanelProps,
 ) {
+  const { viewportWidth, isCompact } = useViewportTier();
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowFilters(false);
+    }
+  }, [isOpen]);
 
   const handleToggleLocation = useCallback((locationId: number) => {
     const currentLocations = filters.locations || [];
@@ -374,12 +396,43 @@ export function SearchPanel(
     [filters],
   );
 
-  const containerStyle = useMemo(() => ({ top: topOffset }), [topOffset]);
-
-  const leftClass = useMemo(() => sidebarCollapsed ? "left-0" : "left-sidebar", [sidebarCollapsed]);
+  const panelTopOffset = useMemo(() => Math.max(0, topOffset), [topOffset]);
+  const containerStyle = useMemo(() => ({ top: panelTopOffset, left: 0, right: 0, bottom: 0 }), [panelTopOffset]);
+  const panelClassName = useMemo(
+    () =>
+      cn(
+        "flex h-full flex-col overflow-hidden bg-bg-primary border border-border-subtle",
+        isCompact ? "w-full rounded-none" : "mx-auto w-full max-w-5xl rounded-lg shadow-2xl",
+      ),
+    [isCompact],
+  );
+  const panelBodyClassName = useMemo(
+    () => (isCompact ? "flex-1 overflow-y-auto px-3 py-3" : "flex-1 overflow-y-auto px-6 py-4"),
+    [isCompact],
+  );
+  const backdropClassName = useMemo(() => (isCompact ? "bg-black/35" : "bg-black/20"), [isCompact]);
+  const containerClassName = useMemo(
+    () =>
+      cn(
+        "z-100 flex",
+        isCompact ? "items-stretch justify-stretch" : "items-end justify-center px-3 pb-3",
+        "pointer-events-none",
+      ),
+    [isCompact],
+  );
 
   return (
-    <div className={`fixed ${leftClass} right-0 bottom-0 bg-bg-primary z-100 flex flex-col`} style={containerStyle}>
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Search documents"
+      showBackdrop
+      closeOnBackdrop
+      motionPreset="slideUp"
+      backdropClassName={backdropClassName}
+      containerClassName={containerClassName}
+      containerStyle={containerStyle}
+      panelClassName={panelClassName}>
       <SearchResultsHeader
         query={query}
         isSearching={isSearching}
@@ -393,11 +446,12 @@ export function SearchPanel(
         onClose={onClose}
         handleQueryChange={handleQueryChange}
         clearQuery={clearQuery}
-        toggleFilters={toggleFilters} />
+        toggleFilters={toggleFilters}
+        compact={isCompact || viewportWidth < 900} />
 
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className={panelBodyClassName}>
         <Results isSearching={isSearching} results={results} query={query} onSelectResult={onSelectResult} />
       </div>
-    </div>
+    </Dialog>
   );
 }

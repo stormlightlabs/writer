@@ -1,4 +1,5 @@
 import { Button } from "$components/Button";
+import { useViewportTier } from "$hooks/useViewportTier";
 import type { Tab } from "$types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
@@ -14,6 +15,7 @@ export type DocumentTabsProps = {
 export function DocumentTabs(
   { tabs, activeTabId, handleSelectTab, handleCloseTab, handleReorderTabs }: DocumentTabsProps,
 ) {
+  const { viewportWidth, isCompact, isNarrow } = useViewportTier();
   const [draggingTab, setDraggingTab] = useState<string | null>(null);
   const [dragOverTab, setDragOverTab] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
@@ -88,6 +90,8 @@ export function DocumentTabs(
   const contextMenuStyle = useMemo(() => contextMenu ? ({ left: contextMenu.x, top: contextMenu.y }) : {}, [
     contextMenu,
   ]);
+  const compactTabs = useMemo(() => isCompact || viewportWidth < 860, [isCompact, viewportWidth]);
+  const compactContextMenu = useMemo(() => isNarrow, [isNarrow]);
 
   if (tabs.length === 0) {
     return (
@@ -100,7 +104,8 @@ export function DocumentTabs(
   return (
     <div
       ref={tabsRef}
-      className="h-tab bg-bg-primary border-b border-border-subtle flex overflow-x-auto overflow-y-hidden">
+      className="h-tab bg-bg-primary border-b border-border-subtle flex overflow-x-auto overflow-y-hidden"
+      data-compact-tabs={compactTabs}>
       {tabs.map((tab) => (
         <DocumentTab
           key={tab.id}
@@ -113,12 +118,15 @@ export function DocumentTabs(
           handleDrop={handleDrop}
           handleContextMenu={handleContextMenu}
           onSelectTab={handleSelectTab}
-          onCloseTab={handleCloseTab} />
+          onCloseTab={handleCloseTab}
+          compact={compactTabs} />
       ))}
 
       {contextMenu && (
         <div
-          className="fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 min-w-[160px] p-1"
+          className={`fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 p-1 ${
+            compactContextMenu ? "min-w-[140px]" : "min-w-[160px]"
+          }`}
           style={contextMenuStyle}>
           <Button
             onClick={closeContextMenu}

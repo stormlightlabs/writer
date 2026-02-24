@@ -1,5 +1,10 @@
 /* oxlint-disable eslint-plugin-react-perf/jsx-no-new-object-as-prop */
+import { DocumentTabsProps } from "$components/DocumentTabs";
+import { EditorProps } from "$components/Editor";
 import { WorkspacePanel } from "$components/layout/WorkspacePanel";
+import type { CalmUiVisibility, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
+import { PreviewProps } from "$components/Preview";
+import { StatusBarProps } from "$components/StatusBar";
 import {
   useEditorPresentationState,
   useSidebarState,
@@ -9,8 +14,17 @@ import {
   useWorkspacePanelStatusBarCollapsed,
   useWorkspacePanelTopBarsCollapsed,
 } from "$state/panel-selectors";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import type {
+  EditorPresentationStateReturn,
+  SidebarStateReturn,
+  StatusBarCollapsedReturn,
+  ToolbarStateReturn,
+  TopBarsCollapsedReturn,
+  WorkspacePanelModeStateReturn,
+  WorkspacePanelSidebarStateReturn,
+} from "$state/panel-selectors";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
   "$state/panel-selectors",
@@ -25,83 +39,149 @@ vi.mock(
   }),
 );
 
-describe("WorkspacePanel", () => {
-  it("renders preview-only mode when preview is enabled without split view", () => {
-    vi.mocked(useSidebarState).mockReturnValue({
-      locations: [],
-      selectedLocationId: undefined,
-      selectedDocPath: undefined,
-      documents: [],
-      isLoading: false,
-      filterText: "",
-      setFilterText: vi.fn(),
-      selectLocation: vi.fn(),
-      toggleSidebarCollapsed: vi.fn(),
-    });
-    vi.mocked(useToolbarState).mockReturnValue({
-      isSplitView: false,
-      isFocusMode: false,
-      isPreviewVisible: true,
-      toggleSplitView: vi.fn(),
-      toggleFocusMode: vi.fn(),
-      togglePreviewVisible: vi.fn(),
-    });
-    vi.mocked(useEditorPresentationState).mockReturnValue({
-      theme: "dark",
-      showLineNumbers: true,
-      textWrappingEnabled: true,
-      syntaxHighlightingEnabled: true,
-      fontSize: 16,
-      fontFamily: "IBM Plex Mono",
-      typewriterScrollingEnabled: false,
-      focusDimmingMode: "off",
-      posHighlightingEnabled: false,
-      styleCheckSettings: {
-        enabled: false,
-        categories: { filler: true, redundancy: true, cliche: true },
-        customPatterns: [],
-      },
-    });
-    vi.mocked(useWorkspacePanelSidebarState).mockReturnValue({ sidebarCollapsed: true });
-    vi.mocked(useWorkspacePanelModeState).mockReturnValue({ isSplitView: false, isPreviewVisible: true });
-    vi.mocked(useWorkspacePanelTopBarsCollapsed).mockReturnValue(true);
-    vi.mocked(useWorkspacePanelStatusBarCollapsed).mockReturnValue(true);
-    const sidebar = { handleAddLocation: vi.fn(), handleRemoveLocation: vi.fn(), handleSelectDocument: vi.fn() };
-    const toolbar = { saveStatus: "Idle" as const, onSave: vi.fn(), onOpenSettings: vi.fn() };
-    const tabs = {
-      tabs: [],
-      activeTabId: null,
-      handleSelectTab: vi.fn(),
-      handleCloseTab: vi.fn(),
-      handleReorderTabs: vi.fn(),
-    };
-    const editor = {
-      initialText: "# Hidden",
-      onChange: vi.fn(),
-      onSave: vi.fn(),
-      onCursorMove: vi.fn(),
-      onSelectionChange: vi.fn(),
-    };
-    const preview = {
-      renderResult: {
-        html: "<p>Preview content</p>",
-        metadata: { title: null, outline: [], links: [], task_items: { total: 0, completed: 0 }, word_count: 2 },
-      },
-      theme: "dark" as const,
-      editorLine: 1,
-      onScrollToLine: vi.fn(),
-    };
-    const statusBar = { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 } };
+type SelectorOverrides = {
+  sidebarState?: Partial<SidebarStateReturn>;
+  toolbarState?: Partial<ToolbarStateReturn>;
+  editorPresentationState?: Partial<EditorPresentationStateReturn>;
+  workspacePanelSidebarState?: Partial<WorkspacePanelSidebarStateReturn>;
+  workspacePanelModeState?: Partial<WorkspacePanelModeStateReturn>;
+  topBarsCollapsed?: TopBarsCollapsedReturn;
+  statusBarCollapsed?: StatusBarCollapsedReturn;
+};
 
-    const { container } = render(
-      <WorkspacePanel
-        sidebar={sidebar}
-        toolbar={toolbar}
-        tabs={tabs}
-        editor={editor}
-        preview={preview}
-        statusBar={statusBar} />,
-    );
+type WorkspacePanelPropOverrides = {
+  sidebar?: Partial<WorkspacePanelProps["sidebar"]>;
+  toolbar?: Partial<WorkspacePanelProps["toolbar"]>;
+  tabs?: Partial<DocumentTabsProps>;
+  editor?: Partial<EditorProps>;
+  preview?: Partial<PreviewProps>;
+  statusBar?: Partial<StatusBarProps>;
+  calmUiVisibility?: CalmUiVisibility;
+};
+
+const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => ({
+  locations: [],
+  selectedLocationId: undefined,
+  selectedDocPath: undefined,
+  documents: [],
+  isLoading: false,
+  filterText: "",
+  setFilterText: vi.fn(),
+  selectLocation: vi.fn(),
+  toggleSidebarCollapsed: vi.fn(),
+  ...overrides,
+});
+
+const createToolbarState = (overrides: Partial<ToolbarStateReturn> = {}): ToolbarStateReturn => ({
+  isSplitView: false,
+  isFocusMode: false,
+  isPreviewVisible: false,
+  toggleSplitView: vi.fn(),
+  toggleFocusMode: vi.fn(),
+  togglePreviewVisible: vi.fn(),
+  ...overrides,
+});
+
+const createEditorPresentationState = (
+  overrides: Partial<EditorPresentationStateReturn> = {},
+): EditorPresentationStateReturn => ({
+  theme: "dark",
+  showLineNumbers: true,
+  textWrappingEnabled: true,
+  syntaxHighlightingEnabled: true,
+  fontSize: 16,
+  fontFamily: "IBM Plex Mono",
+  typewriterScrollingEnabled: false,
+  focusDimmingMode: "off",
+  posHighlightingEnabled: false,
+  styleCheckSettings: {
+    enabled: false,
+    categories: { filler: true, redundancy: true, cliche: true },
+    customPatterns: [],
+  },
+  ...overrides,
+});
+
+const createWorkspacePanelSidebarState = (
+  overrides: Partial<WorkspacePanelSidebarStateReturn> = {},
+): WorkspacePanelSidebarStateReturn => ({ sidebarCollapsed: true, ...overrides });
+
+const createWorkspacePanelModeState = (
+  overrides: Partial<WorkspacePanelModeStateReturn> = {},
+): WorkspacePanelModeStateReturn => ({ isSplitView: false, isPreviewVisible: false, ...overrides });
+
+const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
+  vi.mocked(useSidebarState).mockReturnValue(createSidebarState(overrides.sidebarState));
+  vi.mocked(useToolbarState).mockReturnValue(createToolbarState(overrides.toolbarState));
+  vi.mocked(useEditorPresentationState).mockReturnValue(
+    createEditorPresentationState(overrides.editorPresentationState),
+  );
+  vi.mocked(useWorkspacePanelSidebarState).mockReturnValue(
+    createWorkspacePanelSidebarState(overrides.workspacePanelSidebarState),
+  );
+  vi.mocked(useWorkspacePanelModeState).mockReturnValue(
+    createWorkspacePanelModeState(overrides.workspacePanelModeState),
+  );
+  vi.mocked(useWorkspacePanelTopBarsCollapsed).mockReturnValue(overrides.topBarsCollapsed ?? true);
+  vi.mocked(useWorkspacePanelStatusBarCollapsed).mockReturnValue(overrides.statusBarCollapsed ?? true);
+};
+
+const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}): WorkspacePanelProps => ({
+  sidebar: {
+    handleAddLocation: vi.fn(),
+    handleRemoveLocation: vi.fn(),
+    handleSelectDocument: vi.fn(),
+    ...overrides.sidebar,
+  },
+  toolbar: { saveStatus: "Idle", onSave: vi.fn(), onOpenSettings: vi.fn(), ...overrides.toolbar },
+  tabs: {
+    tabs: [],
+    activeTabId: null,
+    handleSelectTab: vi.fn(),
+    handleCloseTab: vi.fn(),
+    handleReorderTabs: vi.fn(),
+    ...overrides.tabs,
+  },
+  editor: {
+    initialText: "# Document",
+    onChange: vi.fn(),
+    onSave: vi.fn(),
+    onCursorMove: vi.fn(),
+    onSelectionChange: vi.fn(),
+    ...overrides.editor,
+  },
+  preview: {
+    renderResult: {
+      html: "<p>Preview content</p>",
+      metadata: { title: null, outline: [], links: [], task_items: { total: 0, completed: 0 }, word_count: 2 },
+    },
+    theme: "dark",
+    editorLine: 1,
+    onScrollToLine: vi.fn(),
+    ...overrides.preview,
+  },
+  statusBar: { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 }, ...overrides.statusBar },
+  calmUiVisibility: overrides.calmUiVisibility,
+});
+
+const renderWorkspacePanel = (
+  propOverrides: WorkspacePanelPropOverrides = {},
+  selectorOverrides: SelectorOverrides = {},
+) => {
+  mockPanelSelectors(selectorOverrides);
+  return render(<WorkspacePanel {...createWorkspacePanelProps(propOverrides)} />);
+};
+
+describe("WorkspacePanel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders preview-only mode when preview is enabled without split view", () => {
+    const { container } = renderWorkspacePanel({ editor: { initialText: "# Hidden" } }, {
+      toolbarState: { isPreviewVisible: true },
+      workspacePanelModeState: { isPreviewVisible: true },
+    });
 
     expect(screen.getByText("Preview content")).toBeInTheDocument();
     expect(container.querySelector("[data-testid='editor-container']")).not.toBeInTheDocument();
@@ -109,81 +189,11 @@ describe("WorkspacePanel", () => {
 
   it("renders sidebar controls and supports resizing", () => {
     const onToggleSidebar = vi.fn();
-    vi.mocked(useSidebarState).mockReturnValue({
-      locations: [],
-      selectedLocationId: undefined,
-      selectedDocPath: undefined,
-      documents: [],
-      isLoading: false,
-      filterText: "",
-      setFilterText: vi.fn(),
-      selectLocation: vi.fn(),
-      toggleSidebarCollapsed: onToggleSidebar,
-    });
-    vi.mocked(useToolbarState).mockReturnValue({
-      isSplitView: false,
-      isFocusMode: false,
-      isPreviewVisible: false,
-      toggleSplitView: vi.fn(),
-      toggleFocusMode: vi.fn(),
-      togglePreviewVisible: vi.fn(),
-    });
-    vi.mocked(useEditorPresentationState).mockReturnValue({
-      theme: "dark",
-      showLineNumbers: true,
-      textWrappingEnabled: true,
-      syntaxHighlightingEnabled: true,
-      fontSize: 16,
-      fontFamily: "IBM Plex Mono",
-      typewriterScrollingEnabled: false,
-      focusDimmingMode: "off",
-      posHighlightingEnabled: false,
-      styleCheckSettings: {
-        enabled: false,
-        categories: { filler: true, redundancy: true, cliche: true },
-        customPatterns: [],
-      },
-    });
-    vi.mocked(useWorkspacePanelSidebarState).mockReturnValue({ sidebarCollapsed: false });
-    vi.mocked(useWorkspacePanelModeState).mockReturnValue({ isSplitView: false, isPreviewVisible: false });
-    vi.mocked(useWorkspacePanelTopBarsCollapsed).mockReturnValue(true);
-    vi.mocked(useWorkspacePanelStatusBarCollapsed).mockReturnValue(true);
-    const sidebar = { handleAddLocation: vi.fn(), handleRemoveLocation: vi.fn(), handleSelectDocument: vi.fn() };
-    const toolbar = { saveStatus: "Idle" as const, onSave: vi.fn(), onOpenSettings: vi.fn() };
-    const tabs = {
-      tabs: [],
-      activeTabId: null,
-      handleSelectTab: vi.fn(),
-      handleCloseTab: vi.fn(),
-      handleReorderTabs: vi.fn(),
-    };
-    const editor = {
-      initialText: "# Visible",
-      onChange: vi.fn(),
-      onSave: vi.fn(),
-      onCursorMove: vi.fn(),
-      onSelectionChange: vi.fn(),
-    };
-    const preview = {
-      renderResult: {
-        html: "<p>Preview content</p>",
-        metadata: { title: null, outline: [], links: [], task_items: { total: 0, completed: 0 }, word_count: 2 },
-      },
-      theme: "dark" as const,
-      editorLine: 1,
-      onScrollToLine: vi.fn(),
-    };
-    const statusBar = { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 } };
 
-    render(
-      <WorkspacePanel
-        sidebar={sidebar}
-        toolbar={toolbar}
-        tabs={tabs}
-        editor={editor}
-        preview={preview}
-        statusBar={statusBar} />,
-    );
+    renderWorkspacePanel({ editor: { initialText: "# Visible" } }, {
+      sidebarState: { toggleSidebarCollapsed: onToggleSidebar },
+      workspacePanelSidebarState: { sidebarCollapsed: false },
+    });
 
     fireEvent.click(screen.getByTitle("Hide sidebar (Ctrl+B)"));
     expect(onToggleSidebar).toHaveBeenCalledOnce();
@@ -201,81 +211,10 @@ describe("WorkspacePanel", () => {
   });
 
   it("renders split mode and supports resizing between editor and preview", () => {
-    vi.mocked(useSidebarState).mockReturnValue({
-      locations: [],
-      selectedLocationId: undefined,
-      selectedDocPath: undefined,
-      documents: [],
-      isLoading: false,
-      filterText: "",
-      setFilterText: vi.fn(),
-      selectLocation: vi.fn(),
-      toggleSidebarCollapsed: vi.fn(),
+    renderWorkspacePanel({ editor: { initialText: "# Split" } }, {
+      toolbarState: { isSplitView: true, isPreviewVisible: true },
+      workspacePanelModeState: { isSplitView: true, isPreviewVisible: true },
     });
-    vi.mocked(useToolbarState).mockReturnValue({
-      isSplitView: true,
-      isFocusMode: false,
-      isPreviewVisible: true,
-      toggleSplitView: vi.fn(),
-      toggleFocusMode: vi.fn(),
-      togglePreviewVisible: vi.fn(),
-    });
-    vi.mocked(useEditorPresentationState).mockReturnValue({
-      theme: "dark",
-      showLineNumbers: true,
-      textWrappingEnabled: true,
-      syntaxHighlightingEnabled: true,
-      fontSize: 16,
-      fontFamily: "IBM Plex Mono",
-      typewriterScrollingEnabled: false,
-      focusDimmingMode: "off",
-      posHighlightingEnabled: false,
-      styleCheckSettings: {
-        enabled: false,
-        categories: { filler: true, redundancy: true, cliche: true },
-        customPatterns: [],
-      },
-    });
-    vi.mocked(useWorkspacePanelSidebarState).mockReturnValue({ sidebarCollapsed: true });
-    vi.mocked(useWorkspacePanelModeState).mockReturnValue({ isSplitView: true, isPreviewVisible: true });
-    vi.mocked(useWorkspacePanelTopBarsCollapsed).mockReturnValue(true);
-    vi.mocked(useWorkspacePanelStatusBarCollapsed).mockReturnValue(true);
-    const sidebar = { handleAddLocation: vi.fn(), handleRemoveLocation: vi.fn(), handleSelectDocument: vi.fn() };
-    const toolbar = { saveStatus: "Idle" as const, onSave: vi.fn(), onOpenSettings: vi.fn() };
-    const tabs = {
-      tabs: [],
-      activeTabId: null,
-      handleSelectTab: vi.fn(),
-      handleCloseTab: vi.fn(),
-      handleReorderTabs: vi.fn(),
-    };
-    const editor = {
-      initialText: "# Split",
-      onChange: vi.fn(),
-      onSave: vi.fn(),
-      onCursorMove: vi.fn(),
-      onSelectionChange: vi.fn(),
-    };
-    const preview = {
-      renderResult: {
-        html: "<p>Preview content</p>",
-        metadata: { title: null, outline: [], links: [], task_items: { total: 0, completed: 0 }, word_count: 2 },
-      },
-      theme: "dark" as const,
-      editorLine: 1,
-      onScrollToLine: vi.fn(),
-    };
-    const statusBar = { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 } };
-
-    render(
-      <WorkspacePanel
-        sidebar={sidebar}
-        toolbar={toolbar}
-        tabs={tabs}
-        editor={editor}
-        preview={preview}
-        statusBar={statusBar} />,
-    );
 
     const separator = screen.getByRole("separator", { name: "Resize split panes" });
     const editorPane = screen.getByTestId("editor-container").parentElement as HTMLElement;
@@ -287,5 +226,26 @@ describe("WorkspacePanel", () => {
     fireEvent.pointerUp(appWindow);
 
     expect(editorPane).toHaveStyle({ width: `${initialWidth + 120}px` });
+  });
+
+  it("falls back from split mode to editor-only when viewport is too narrow", () => {
+    Object.defineProperty(globalThis, "innerWidth", { configurable: true, writable: true, value: 540 });
+    act(() => {
+      globalThis.dispatchEvent(new Event("resize"));
+    });
+
+    const { container } = renderWorkspacePanel({ editor: { initialText: "# Split fallback" } }, {
+      toolbarState: { isSplitView: true, isPreviewVisible: true },
+      workspacePanelModeState: { isSplitView: true, isPreviewVisible: true },
+    });
+
+    expect(container.querySelector("[aria-label='Resize split panes']")).not.toBeInTheDocument();
+    expect(screen.queryByText("Preview content")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-testid='editor-container']")).toBeInTheDocument();
+
+    Object.defineProperty(globalThis, "innerWidth", { configurable: true, writable: true, value: 1024 });
+    act(() => {
+      globalThis.dispatchEvent(new Event("resize"));
+    });
   });
 });

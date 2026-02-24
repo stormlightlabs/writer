@@ -76,9 +76,8 @@ function App() {
   const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
   const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
-  const [globalCaptureSettings, setGlobalCaptureSettings] = useState<GlobalCaptureSettings>(
-    DEFAULT_GLOBAL_CAPTURE_SETTINGS,
-  );
+  const [globalCaptureSettings, setGlobalCaptureSettings] = useState(DEFAULT_GLOBAL_CAPTURE_SETTINGS);
+  const cursorPosition = useMemo(() => pick(editorModel, ["cursorLine", "cursorColumn"]), [editorModel]);
 
   useWorkspaceSync();
   useLayoutHotkeys();
@@ -119,6 +118,13 @@ function App() {
         : undefined,
     };
   }, [editorModel.selectionFrom, editorModel.selectionTo, editorModel.text]);
+
+  const editorStats = useMemo(() => ({ ...cursorPosition, wordCount, charCount, selectionCount }), [
+    cursorPosition,
+    wordCount,
+    charCount,
+    selectionCount,
+  ]);
 
   const activeDocMeta = useMemo(() => {
     if (!activeTab) {
@@ -259,13 +265,7 @@ function App() {
     [editorModel.text, handleEditorChangeWithTyping, handleSave, handleCursorMove, handleSelectionChange],
   );
 
-  const statusBarProps = useMemo(
-    () => ({
-      docMeta: activeDocMeta,
-      stats: { ...pick(editorModel, ["cursorLine", "cursorColumn"]), wordCount, charCount, selectionCount },
-    }),
-    [activeDocMeta, editorModel, wordCount, charCount, selectionCount],
-  );
+  const statusBarProps = useMemo(() => ({ docMeta: activeDocMeta, stats: editorStats }), [activeDocMeta, editorStats]);
 
   const previewProps = useMemo(
     () => ({
@@ -313,8 +313,6 @@ function App() {
   }, []);
 
   const focusModePanelProps = useMemo(() => {
-    const pos = pick(editorModel, ["cursorLine", "cursorColumn"]);
-    const stats = { ...pos, wordCount, charCount, selectionCount };
     return ({
       editor: {
         initialText: editorModel.text,
@@ -323,14 +321,12 @@ function App() {
         onCursorMove: handleCursorMove,
         onSelectionChange: handleSelectionChange,
       },
-      statusBar: { docMeta: activeDocMeta, stats },
+      statusBar: { docMeta: activeDocMeta, stats: editorStats },
     });
   }, [
     activeDocMeta,
-    editorModel,
-    wordCount,
-    charCount,
-    selectionCount,
+    editorStats,
+    editorModel.text,
     handleEditorChange,
     handleSave,
     handleCursorMove,
@@ -478,21 +474,6 @@ function App() {
     }),
     [sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps, calmUiEffectiveVisibility],
   );
-
-  useEffect(() => {
-    if (!isLayoutSettingsOpen) {
-      return;
-    }
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsLayoutSettingsOpen(false);
-      }
-    };
-
-    globalThis.addEventListener("keydown", closeOnEscape);
-    return () => globalThis.removeEventListener("keydown", closeOnEscape);
-  }, [isLayoutSettingsOpen]);
 
   if (isFocusMode) {
     return <FocusModePanel {...focusModePanelProps} />;
