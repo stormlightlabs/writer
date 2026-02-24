@@ -412,6 +412,31 @@ describe(runCmd, () => {
       expect(onErr).not.toHaveBeenCalled();
     });
 
+    it("defaults global capture to enabled when backend omits the field", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        type: "ok",
+        value: {
+          shortcut: "CommandOrControl+Shift+Space",
+          paused: false,
+          default_mode: "QuickNote",
+          target_location_id: null,
+          inbox_relative_dir: "inbox",
+          append_target: null,
+          close_after_save: true,
+          show_tray_icon: true,
+          last_capture_target: null,
+        },
+      });
+
+      await runCmd(globalCaptureGet(onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+      expect(onErr).not.toHaveBeenCalled();
+    });
+
     it("normalizes global capture submit results from backend snake_case", async () => {
       const onOk = vi.fn();
       const onErr = vi.fn();

@@ -1,6 +1,6 @@
 ---
 title: "Roadmap"
-last_updated: 2026-02-23
+last_updated: 2026-02-24
 ---
 
 ## Content blocks (transclusion)
@@ -62,3 +62,24 @@ Improve file organization
 2. **Recovery**
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
+
+## Responsiveness adjustments
+
+Improve responsiveness across desktop widths and small-window usage while keeping editor workflows stable.
+
+### Tasks
+
+- **Baseline and guardrails**
+  - Confirm hotspot map: top bars, fixed overlays/dialogs, status/tabs density, and split/sidebar constraints.
+  - Define supported width tiers and expected behavior per tier.
+  - Add a manual viewport checklist for core flows (open doc, edit, search, export, quick capture).
+- **Core shell responsiveness**
+  - Add narrow-width compaction for `AppHeaderBar` and `Toolbar` (wrapping/collapsing with clear priority rules).
+  - Tune sidebar and split-pane constraints with graceful fallback when split is not feasible.
+  - Use react motion for smooth transitions and animations.
+  - Introduce predictable truncation and information priority for tabs and status bar.
+- Create Dialog primitive that can be used for all overlays and dialogs & modals
+  - Convert layout/search overlays from fixed desktop assumptions to responsive sheet/panel behavior.
+  - Rework backend alert anchoring/stacking to avoid clipping at narrow widths.
+  - Improve PDF export dialog sizing/scroll behavior for constrained viewports.
+- Document responsiveness rules so future UI changes follow the same standards.

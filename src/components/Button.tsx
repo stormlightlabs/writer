@@ -1,8 +1,6 @@
-import { type ClassValue, clsx } from "clsx";
+import { cn } from "$utils/tw";
+import { type ClassValue } from "clsx";
 import { type ButtonHTMLAttributes, forwardRef } from "react";
-import { twMerge } from "tailwind-merge";
-
-const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 
 export type ButtonVariant =
   | "unstyled"

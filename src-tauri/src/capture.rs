@@ -27,8 +27,9 @@ pub fn ensure_quick_capture_window(app: &AppHandle) -> Result<WebviewWindow, App
 
     let window = WebviewWindowBuilder::new(app, QUICK_CAPTURE_WINDOW_LABEL, WebviewUrl::App("/".into()))
         .title("Quick Capture")
-        .inner_size(480.0, 320.0)
-        .resizable(false)
+        .inner_size(560.0, 420.0)
+        .min_inner_size(360.0, 260.0)
+        .resizable(true)
         .always_on_top(true)
         .visible(false)
         .center()

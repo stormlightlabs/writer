@@ -44,6 +44,7 @@ export default defineConfig({
       "$data": resolveFromRoot("./src/data"),
       "$state": resolveFromRoot("./src/state"),
       "$hooks": resolveFromRoot("./src/hooks"),
+      "$utils": resolveFromRoot("./src/utils"),
     },
   },
 });

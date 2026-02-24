@@ -1,6 +1,7 @@
 import { Button } from "$components/Button";
 import { XIcon } from "$icons";
 import type { CaptureMode } from "$types";
+import { cn } from "$utils/tw";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type QuickCaptureFormProps = {
@@ -35,22 +36,22 @@ const ModeButton = ({ currentMode, setMode, isSubmitting, mode }: ModeButtonProp
 
   const modeLabel = useMemo(() => getModeLabel(mode), [mode]);
 
-  return (
-    <Button
-      className={`px-3 py-1.5 text-sm font-medium border rounded transition-all ${
+  const classes = useMemo(
+    () =>
+      cn(
+        "px-2.5 py-1.5 text-xs sm:text-sm font-medium border rounded transition-all",
         mode === currentMode
           ? "bg-accent-blue text-white border-accent-blue"
-          : "bg-field-02 text-text-secondary border-border-subtle hover:bg-field-hover-02 hover:text-text-primary"
-      }`}
-      onClick={handleClick}
-      disabled={isSubmitting}>
-      {modeLabel}
-    </Button>
+          : "bg-field-02 text-text-secondary border-border-subtle hover:bg-field-hover-02 hover:text-text-primary",
+      ),
+    [mode, currentMode],
   );
+
+  return <Button className={classes} onClick={handleClick} disabled={isSubmitting}>{modeLabel}</Button>;
 };
 
 const ModeButtons = ({ currentMode, setMode, isSubmitting }: ModeButtonsProps) => (
-  <div className="flex gap-2">
+  <div className="flex flex-wrap gap-2">
     {(["QuickNote", "WritingSession", "Append"] as CaptureMode[]).map((m) => (
       <ModeButton key={m} currentMode={currentMode} setMode={setMode} isSubmitting={isSubmitting} mode={m} />
     ))}
@@ -58,7 +59,7 @@ const ModeButtons = ({ currentMode, setMode, isSubmitting }: ModeButtonsProps) =
 );
 
 const ErrorMessage = ({ error }: { error: string | null }) => {
-  return <div className="flex-1">{error && <span className="text-support-error text-sm">{error}</span>}</div>;
+  return <div className="w-full sm:flex-1">{error && <span className="text-support-error text-sm">{error}</span>}</div>;
 };
 
 const FooterActions = (
@@ -69,15 +70,15 @@ const FooterActions = (
     text: string;
   },
 ) => (
-  <div className="flex items-center gap-4">
-    <span className="text-xs text-text-placeholder">
+  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+    <span className="text-[0.6875rem] sm:text-xs text-text-placeholder">
       {mode === "WritingSession"
         ? "Cmd+Enter to save, Esc to close"
         : "Enter to save, Shift+Enter for newline, Esc to close"}
     </span>
 
     <Button
-      className="px-4 py-2 text-sm font-semibold bg-accent-blue text-white rounded hover:bg-link-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full sm:w-auto px-4 py-2 text-sm font-semibold bg-accent-blue text-white rounded hover:bg-link-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={handleSubmit}
       disabled={isSubmitting || !text.trim()}>
       {isSubmitting ? "Saving..." : "Save"}
@@ -88,11 +89,11 @@ const FooterActions = (
 const QuickCaptureFormHeader = (
   { onClose, currentMode, setMode, isSubmitting }: ModeButtonsProps & { onClose: () => void },
 ) => (
-  <header className="flex justify-between items-center px-4 py-3 border-b border-border-subtle bg-layer-01">
+  <header className="flex flex-wrap justify-between items-start gap-2 px-3 py-3 sm:px-4 border-b border-border-subtle bg-layer-01">
     <ModeButtons currentMode={currentMode} setMode={setMode} isSubmitting={isSubmitting} />
 
     <Button
-      className="w-7 h-7 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-all"
+      className="w-7 h-7 shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-all"
       onClick={onClose}
       disabled={isSubmitting}
       aria-label="Close">
@@ -142,13 +143,13 @@ export function QuickCaptureForm(
   }, [handleSubmit, mode, onClose]);
 
   return (
-    <div className="flex flex-col h-screen bg-bg-primary text-text-primary font-sans">
+    <div className="flex flex-col h-dvh min-h-0 bg-bg-primary text-text-primary font-sans">
       <QuickCaptureFormHeader onClose={onClose} currentMode={mode} setMode={setMode} isSubmitting={isSubmitting} />
 
-      <main className="flex-1 flex flex-col p-4">
+      <main className="flex-1 min-h-0 flex flex-col p-3 sm:p-4">
         <textarea
           ref={textareaRef}
-          className="flex-1 w-full p-3 border border-border-subtle rounded bg-field-02 text-text-primary font-mono text-base leading-relaxed resize-none outline-none focus:border-border-interactive placeholder:text-text-placeholder disabled:opacity-60"
+          className="flex-1 w-full min-h-[120px] p-3 border border-border-subtle rounded bg-field-02 text-text-primary font-mono text-base leading-relaxed resize-none outline-none focus:border-border-interactive placeholder:text-text-placeholder disabled:opacity-60"
           value={text}
           onChange={handleTextChange}
           onKeyDown={handleTextareaKeyDown}
@@ -157,7 +158,7 @@ export function QuickCaptureForm(
           rows={8} />
       </main>
 
-      <footer className="flex justify-between items-center px-4 py-3 border-t border-border-subtle bg-layer-01">
+      <footer className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center px-3 py-3 sm:px-4 border-t border-border-subtle bg-layer-01">
         <ErrorMessage error={error} />
         <FooterActions mode={mode} isSubmitting={isSubmitting} handleSubmit={handleSubmit} text={text} />
       </footer>

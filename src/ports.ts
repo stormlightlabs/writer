@@ -328,7 +328,7 @@ function normalizeCaptureDocRef(value: unknown): CaptureDocRef | null {
 function normalizeGlobalCaptureSettings(value: unknown): GlobalCaptureSettings {
   if (!isRecord(value)) {
     return {
-      enabled: false,
+      enabled: true,
       shortcut: "CommandOrControl+Shift+Space",
       paused: false,
       defaultMode: "QuickNote",
@@ -348,7 +348,7 @@ function normalizeGlobalCaptureSettings(value: unknown): GlobalCaptureSettings {
       : "QuickNote";
 
   return {
-    enabled: typeof value.enabled === "boolean" ? value.enabled : false,
+    enabled: typeof value.enabled === "boolean" ? value.enabled : true,
     shortcut: typeof value.shortcut === "string" ? value.shortcut : "CommandOrControl+Shift+Space",
     paused: typeof value.paused === "boolean" ? value.paused : false,
     defaultMode: normalizedMode,

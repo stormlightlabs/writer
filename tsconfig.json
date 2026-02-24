@@ -27,7 +27,8 @@
       "$themes/*": ["./themes/*"],
       "$data/*": ["./data/*"],
       "$state/*": ["./state/*"],
-      "$hooks/*": ["./hooks/*"]
+      "$hooks/*": ["./hooks/*"],
+      "$utils/*": ["./utils/*"]
     }
   },
   "include": ["src"],

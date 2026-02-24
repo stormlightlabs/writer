@@ -1,11 +1,20 @@
 import { Button } from "$components/Button";
 import { logger } from "$logger";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
-import { renderMarkdownForPdf, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
+import {
+  globalCaptureGet,
+  globalCaptureSet,
+  renderMarkdownForPdf,
+  runCmd,
+  styleCheckGet,
+  styleCheckSet,
+  uiLayoutGet,
+  uiLayoutSet,
+} from "$ports";
 import { pick, stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
-import type { DocRef } from "$types";
+import type { DocRef, GlobalCaptureSettings } from "$types";
+import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildDraftRelPath, getDraftTitle } from "utils/paths";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
 import { FocusModePanel } from "./components/layout/FocusModePanel";
@@ -44,6 +53,19 @@ const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; 
   </Button>
 );
 
+const DEFAULT_GLOBAL_CAPTURE_SETTINGS: GlobalCaptureSettings = {
+  enabled: true,
+  shortcut: "CommandOrControl+Shift+Space",
+  paused: false,
+  defaultMode: "QuickNote",
+  targetLocationId: null,
+  inboxRelativeDir: "inbox",
+  appendTarget: null,
+  closeAfterSave: true,
+  showTrayIcon: true,
+  lastCaptureTarget: null,
+};
+
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
@@ -54,6 +76,9 @@ function App() {
   const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
   const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
+  const [globalCaptureSettings, setGlobalCaptureSettings] = useState<GlobalCaptureSettings>(
+    DEFAULT_GLOBAL_CAPTURE_SETTINGS,
+  );
 
   useWorkspaceSync();
   useLayoutHotkeys();
@@ -272,6 +297,21 @@ function App() {
     setIsLayoutSettingsOpen(false);
   }, []);
 
+  const handleQuickCaptureEnabledChange = useCallback((enabled: boolean) => {
+    setGlobalCaptureSettings((prev) => {
+      if (prev.enabled === enabled) {
+        return prev;
+      }
+
+      const next = { ...prev, enabled };
+      void runCmd(globalCaptureSet(next, () => {}, (error) => {
+        logger.error("Failed to persist quick capture enabled state", error);
+        setGlobalCaptureSettings(prev);
+      }));
+      return next;
+    });
+  }, []);
+
   const focusModePanelProps = useMemo(() => {
     const pos = pick(editorModel, ["cursorLine", "cursorColumn"]);
     const stats = { ...pos, wordCount, charCount, selectionCount };
@@ -374,6 +414,16 @@ function App() {
       });
     }, () => {}));
 
+    void runCmd(globalCaptureGet((settings) => {
+      if (isCancelled) {
+        return;
+      }
+
+      setGlobalCaptureSettings(settings);
+    }, (error) => {
+      logger.error("Failed to load global capture settings", error);
+    }));
+
     return () => {
       isCancelled = true;
     };
@@ -389,6 +439,7 @@ function App() {
     setTopBarsCollapsed,
     setCalmUiSettings,
     setFocusModeSettings,
+    setGlobalCaptureSettings,
   ]);
 
   useEffect(() => {
@@ -464,7 +515,11 @@ function App() {
 
       <AppHeaderBar />
       <WorkspacePanel {...workspacePanelProps} />
-      <LayoutSettingsPanel isVisible={isLayoutSettingsOpen} onClose={handleSettingsClose} />
+      <LayoutSettingsPanel
+        isVisible={isLayoutSettingsOpen}
+        onClose={handleSettingsClose}
+        quickCaptureEnabled={globalCaptureSettings.enabled}
+        onQuickCaptureEnabledChange={handleQuickCaptureEnabledChange} />
       <PdfExportDialog
         isOpen={isPdfExportDialogOpen}
         title={activeDocMeta?.title}

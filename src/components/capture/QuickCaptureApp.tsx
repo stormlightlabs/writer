@@ -68,7 +68,7 @@ export function QuickCaptureApp() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-bg-primary">
+      <div className="flex items-center justify-center h-dvh bg-bg-primary">
         <div className="w-8 h-8 border-3 border-border-subtle border-t-accent-blue rounded-full animate-spin" />
       </div>
     );

@@ -227,9 +227,32 @@ function WriterToolsSection() {
   );
 }
 
-type LayoutSettingsPanelProps = { isVisible: boolean; onClose: () => void };
+type QuickCaptureSectionProps = { enabled: boolean; onEnabledChange: (enabled: boolean) => void };
 
-export const LayoutSettingsPanel = ({ isVisible, onClose }: LayoutSettingsPanelProps) =>
+function QuickCaptureSection({ enabled, onEnabledChange }: QuickCaptureSectionProps) {
+  return (
+    <>
+      <p className="m-0 text-xs text-text-secondary mb-2">Quick Capture</p>
+
+      <ToggleRow
+        label="Enable Quick Capture"
+        description="Turn global quick-note capture on or off."
+        isVisible={enabled}
+        onToggle={onEnabledChange} />
+    </>
+  );
+}
+
+type LayoutSettingsPanelProps = {
+  isVisible: boolean;
+  onClose: () => void;
+  quickCaptureEnabled: boolean;
+  onQuickCaptureEnabledChange: (enabled: boolean) => void;
+};
+
+export const LayoutSettingsPanel = (
+  { isVisible, onClose, quickCaptureEnabled, onQuickCaptureEnabledChange }: LayoutSettingsPanelProps,
+) =>
   isVisible
     ? (
       <div className="fixed inset-0 z-50">
@@ -250,6 +273,9 @@ export const LayoutSettingsPanel = ({ isVisible, onClose }: LayoutSettingsPanelP
 
           <div className="border-t border-border-subtle my-3" />
           <WriterToolsSection />
+
+          <div className="border-t border-border-subtle my-3" />
+          <QuickCaptureSection enabled={quickCaptureEnabled} onEnabledChange={onQuickCaptureEnabledChange} />
         </section>
       </div>
     )

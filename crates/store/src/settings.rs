@@ -136,7 +136,7 @@ pub struct CaptureDocRef {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GlobalCaptureSettings {
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub enabled: bool,
     #[serde(default = "default_global_capture_shortcut")]
     pub shortcut: String,
@@ -161,7 +161,7 @@ pub struct GlobalCaptureSettings {
 impl Default for GlobalCaptureSettings {
     fn default() -> Self {
         Self {
-            enabled: false,
+            enabled: true,
             shortcut: default_global_capture_shortcut(),
             paused: false,
             default_mode: CaptureMode::default(),

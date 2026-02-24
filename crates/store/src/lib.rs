@@ -1546,7 +1546,7 @@ mod tests {
         let settings = store.global_capture_get().unwrap();
 
         assert_eq!(settings, GlobalCaptureSettings::default());
-        assert!(!settings.enabled);
+        assert!(settings.enabled);
         assert_eq!(settings.shortcut, "CommandOrControl+Shift+Space");
         assert!(!settings.paused);
         assert_eq!(settings.default_mode, CaptureMode::QuickNote);
