@@ -1,4 +1,5 @@
 import { Button } from "$components/Button";
+import { CollapsibleSection } from "$components/CollapsibleSection";
 import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
@@ -11,7 +12,7 @@ import {
   useLayoutSettingsWriterToolsState,
 } from "$state/panel-selectors";
 import type { EditorFontFamily } from "$types";
-import { type ChangeEvent, useCallback, useState } from "react";
+import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { CustomPatternControls } from "./CustomPatternControls";
 import { DimmingModeRow } from "./DimmingModeRow";
 import { FontFamilyRow, FontSizeRow } from "./FontRows";
@@ -123,7 +124,7 @@ function CalmUiSettingsSection() {
   return (
     <div className="py-2.5">
       <ToggleRow
-        label="Calm UI"
+        label="Enable Calm UI"
         description="Writing-first defaults with quieter chrome behavior."
         isVisible={enabled}
         onToggle={toggleCalmUi} />
@@ -198,8 +199,6 @@ function FocusModeSection() {
 
   return (
     <>
-      <p className="m-0 text-xs text-text-secondary mb-2">Focus Mode</p>
-
       <ToggleRow
         label="Typewriter Scrolling"
         description="Keep the active line centered in the viewport."
@@ -216,8 +215,6 @@ function WriterToolsSection() {
 
   return (
     <>
-      <p className="m-0 text-xs text-text-secondary mb-2">Writer's Tools</p>
-
       <ToggleRow
         label="Parts of Speech Highlighting"
         description="Color text by grammatical role (nouns, verbs, adjectives, etc.)."
@@ -231,19 +228,38 @@ function WriterToolsSection() {
 
 type QuickCaptureSectionProps = { enabled: boolean; onEnabledChange: (enabled: boolean) => void };
 
-function QuickCaptureSection({ enabled, onEnabledChange }: QuickCaptureSectionProps) {
-  return (
-    <>
-      <p className="m-0 text-xs text-text-secondary mb-2">Quick Capture</p>
+const QuickCaptureSection = ({ enabled, onEnabledChange }: QuickCaptureSectionProps) => (
+  <ToggleRow
+    label="Enable Quick Capture"
+    description="Turn global quick-note capture on or off."
+    isVisible={enabled}
+    onToggle={onEnabledChange} />
+);
 
-      <ToggleRow
-        label="Enable Quick Capture"
-        description="Turn global quick-note capture on or off."
-        isVisible={enabled}
-        onToggle={onEnabledChange} />
-    </>
-  );
-}
+type SettingsBodyProps = { quickCaptureEnabled: boolean; onQuickCaptureEnabledChange: (enabled: boolean) => void };
+
+const SettingsBody = ({ quickCaptureEnabled, onQuickCaptureEnabledChange }: SettingsBodyProps) => (
+  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+    <CollapsibleSection title="Calm UI" description="Reduce visual noise and automate focus-oriented behavior.">
+      <CalmUiSettingsSection />
+    </CollapsibleSection>
+    <CollapsibleSection title="Chrome" description="Control visibility of core app UI regions." defaultOpen>
+      <ChromeSettingsSection />
+    </CollapsibleSection>
+    <CollapsibleSection title="Editor" description="Tune text presentation, wrapping, and typography." defaultOpen>
+      <EditorSettingsSection />
+    </CollapsibleSection>
+    <CollapsibleSection title="Focus Mode" description="Configure centered writing and dimming behavior.">
+      <FocusModeSection />
+    </CollapsibleSection>
+    <CollapsibleSection title="Writer's Tools" description="Adjust writing analysis and guidance features.">
+      <WriterToolsSection />
+    </CollapsibleSection>
+    <CollapsibleSection title="Quick Capture" description="Toggle global quick-note capture behavior.">
+      <QuickCaptureSection enabled={quickCaptureEnabled} onEnabledChange={onQuickCaptureEnabledChange} />
+    </CollapsibleSection>
+  </div>
+);
 
 type LayoutSettingsPanelProps = {
   isVisible: boolean;
@@ -256,7 +272,7 @@ export const LayoutSettingsPanel = (
   { isVisible, onClose, quickCaptureEnabled, onQuickCaptureEnabledChange }: LayoutSettingsPanelProps,
 ) => {
   const { isCompact, viewportWidth } = useViewportTier();
-  const compactPanel = isCompact || viewportWidth < 920;
+  const compactPanel = useMemo(() => isCompact || viewportWidth < 920, [isCompact, viewportWidth]);
 
   return (
     <Dialog
@@ -266,25 +282,16 @@ export const LayoutSettingsPanel = (
       motionPreset={compactPanel ? "slideUp" : "slideRight"}
       backdropClassName={compactPanel ? "bg-black/35" : "bg-black/30"}
       containerClassName="z-50 pointer-events-none"
-      panelClassName={`absolute bg-layer-01 border border-border-subtle shadow-xl ${
+      panelClassName={`absolute flex min-h-0 flex-col overflow-hidden bg-layer-01 border border-border-subtle shadow-xl ${
         compactPanel
           ? "left-3 right-3 bottom-3 max-h-[calc(100vh-5rem)] rounded-lg"
           : "right-4 top-14 w-[360px] max-h-[calc(100vh-4.5rem)] rounded-lg"
       }`}>
-      <section className="h-full overflow-y-auto p-4">
+      <section className="flex min-h-0 h-full flex-col overflow-hidden p-4">
         <SettingsHeader onClose={onClose} />
-        <CalmUiSettingsSection />
-        <ChromeSettingsSection />
-        <EditorSettingsSection />
-
-        <div className="border-t border-border-subtle my-3" />
-        <FocusModeSection />
-
-        <div className="border-t border-border-subtle my-3" />
-        <WriterToolsSection />
-
-        <div className="border-t border-border-subtle my-3" />
-        <QuickCaptureSection enabled={quickCaptureEnabled} onEnabledChange={onQuickCaptureEnabledChange} />
+        <SettingsBody
+          quickCaptureEnabled={quickCaptureEnabled}
+          onQuickCaptureEnabledChange={onQuickCaptureEnabledChange} />
       </section>
     </Dialog>
   );
