@@ -7,7 +7,7 @@ import {
   searchFiltersAtom,
   searchQueryAtom,
   searchResultsAtom,
-} from "../state/searchAtoms";
+} from "../state/atoms/search";
 
 describe("searchAtoms", () => {
   it("computes active filter count", () => {

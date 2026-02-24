@@ -3,7 +3,7 @@ import { logger } from "$logger";
 import { serializeError } from "$pdf/errors";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
-import { usePdfExportActions } from "$state/appStore";
+import { usePdfExportActions } from "$state/stores/app";
 import type { EditorFontFamily } from "$types";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";

@@ -3,8 +3,9 @@ import { logger } from "$logger";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { renderMarkdownForPdf, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
 import { pick, stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
-import type { DocMeta, DocRef, Tab } from "$types";
+import type { DocRef } from "$types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildDraftRelPath, getDraftTitle } from "utils/paths";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
 import { FocusModePanel } from "./components/layout/FocusModePanel";
@@ -32,44 +33,7 @@ import {
   useViewModeState,
   useWriterToolsActions,
   useWriterToolsState,
-} from "./state/appStore";
-
-// TODO: make shared utils module
-function formatDraftDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}_${month}_${day}`;
-}
-
-// TODO: make this recursive
-function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs: Tab[]): string {
-  const usedPaths = new Set<string>();
-
-  for (const doc of documents) {
-    if (doc.location_id === locationId) {
-      usedPaths.add(doc.rel_path.toLowerCase());
-    }
-  }
-
-  for (const tab of tabs) {
-    if (tab.docRef.location_id === locationId) {
-      usedPaths.add(tab.docRef.rel_path.toLowerCase());
-    }
-  }
-
-  const base = `untitled_${formatDraftDate(new Date())}`;
-  let suffix = 0;
-  while (true) {
-    const fileName = suffix === 0 ? `${base}.md` : `${base}_${suffix}.md`;
-    if (!usedPaths.has(fileName.toLowerCase())) {
-      return fileName;
-    }
-    suffix += 1;
-  }
-}
-
-const getDraftTitle = (relPath: string): string => relPath.split("/").pop() || "Untitled";
+} from "./state/stores/app";
 
 const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; title: string; label: string }) => (
   <Button

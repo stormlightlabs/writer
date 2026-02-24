@@ -1,6 +1,6 @@
 import type { AppTheme, CalmUiSettings, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
 import { useShallow } from "zustand/react/shallow";
-import { useAppStore } from "./appStore";
+import { useAppStore } from "./stores/app";
 
 const FOCUS_MODE_STYLE_CHECK_SETTINGS: StyleCheckSettings = {
   enabled: false,

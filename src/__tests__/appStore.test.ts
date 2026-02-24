@@ -15,7 +15,7 @@ import {
   useWorkspaceDocumentsState,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "../state/appStore";
+} from "../state/stores/app";
 
 describe("appStore", () => {
   beforeEach(() => {

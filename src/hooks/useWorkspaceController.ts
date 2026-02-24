@@ -9,7 +9,7 @@ import {
   useWorkspaceDocumentsState,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "../state/appStore";
+} from "../state/stores/app";
 
 export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
   const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();

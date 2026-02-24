@@ -5,7 +5,7 @@ import {
   useWorkspaceDocumentsActions,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "../state/appStore";
+} from "../state/stores/app";
 
 export function useWorkspaceSync(): void {
   const { selectedLocationId } = useWorkspaceLocationsState();

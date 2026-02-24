@@ -21,7 +21,7 @@ import type {
   WorkspaceState,
   WriterToolsActions,
   WriterToolsState,
-} from "./types";
+} from "../types";
 
 let nextTabId = 1;
 
