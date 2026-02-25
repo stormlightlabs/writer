@@ -7,6 +7,7 @@ import {
   FocusIcon,
   IconProps,
   type IconSize,
+  PlusIcon,
   RefreshIcon,
   SaveIcon,
   SettingsIcon,
@@ -21,6 +22,8 @@ import { Tooltip } from "./Tooltip";
 export type ToolbarProps = {
   saveStatus: SaveStatus;
   onSave: () => void;
+  onNewDocument?: () => void;
+  isNewDocumentDisabled?: boolean;
   onOpenSettings: () => void;
   onExportPdf?: () => void;
   isExportingPdf?: boolean;
@@ -122,8 +125,17 @@ function SaveStatusIndicator({ status, compact = false }: { status: SaveStatus; 
 }
 
 export function Toolbar(
-  { saveStatus, onSave, onOpenSettings, onExportPdf, isExportingPdf = false, isPdfExportDisabled = false, onRefresh }:
-    ToolbarProps,
+  {
+    saveStatus,
+    onSave,
+    onNewDocument,
+    isNewDocumentDisabled = false,
+    onOpenSettings,
+    onExportPdf,
+    isExportingPdf = false,
+    isPdfExportDisabled = false,
+    onRefresh,
+  }: ToolbarProps,
 ) {
   const { isSplitView, isFocusMode, isPreviewVisible, toggleSplitView, toggleFocusMode, togglePreviewVisible } =
     useToolbarState();
@@ -131,6 +143,7 @@ export function Toolbar(
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
       save: { Component: SaveIcon, size: "sm" },
+      newDoc: { Component: PlusIcon, size: "sm" },
       refresh: { Component: RefreshIcon, size: "sm" },
       splitView: { Component: SplitViewIcon, size: "sm" },
       eye: { Component: EyeIcon, size: "sm" },
@@ -155,6 +168,15 @@ export function Toolbar(
           disabled={saveStatus === "Saved" || saveStatus === "Saving"}
           shortcut="Ctrl+S"
           iconOnly={isCompact} />
+        {onNewDocument && (
+          <ToolbarButton
+            icon={icons.newDoc}
+            label="New Document"
+            onClick={onNewDocument}
+            disabled={isNewDocumentDisabled}
+            shortcut="Ctrl+N"
+            iconOnly={isCompact} />
+        )}
         <SaveStatusIndicator status={saveStatus} compact={compactStatus} />
         {onRefresh && !hideRefresh && (
           <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly={iconOnly} />

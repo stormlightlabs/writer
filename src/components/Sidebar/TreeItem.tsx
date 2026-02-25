@@ -12,21 +12,12 @@ type TreeItemProps = {
   level?: number;
   onClick?: () => void;
   onToggle?: () => void;
-  Actions?: React.ComponentType;
+  children?: React.ReactNode;
 };
 
 export function TreeItem(
-  {
-    icon,
-    label,
-    isSelected = false,
-    isExpanded = false,
-    hasChildren = false,
-    level = 0,
-    onClick,
-    onToggle,
-    Actions = () => null,
-  }: TreeItemProps,
+  { icon, label, isSelected = false, isExpanded = false, hasChildren = false, level = 0, onClick, onToggle, children }:
+    TreeItemProps,
 ) {
   const paddingLeft = level * 16 + 12;
 
@@ -97,7 +88,7 @@ export function TreeItem(
       <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap" style={labelStyle} title={label}>
         {label}
       </span>
-      <Actions />
+      {children}
     </div>
   );
 }

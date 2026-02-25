@@ -1,6 +1,7 @@
 import { logger } from "$logger";
 import { locationAddViaDialog, locationRemove, runCmd } from "$ports";
 import type { DocRef, Tab } from "$types";
+import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useMemo } from "react";
 import {
   useAppStore,
@@ -81,6 +82,21 @@ export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
     openDocumentTab(docRef, title);
   }, [openDocumentTab]);
 
+  const handleCreateNewDocument = useCallback((locationId?: number) => {
+    const state = useAppStore.getState();
+    const targetLocationId = locationId ?? state.selectedLocationId ?? state.locations[0]?.id;
+
+    if (!targetLocationId) {
+      logger.warn("Cannot create draft without a selected location.");
+      return null;
+    }
+
+    const relPath = buildDraftRelPath(targetLocationId, state.documents, state.tabs);
+    const docRef: DocRef = { location_id: targetLocationId, rel_path: relPath };
+    openDocumentTab(docRef, getDraftTitle(relPath));
+    return docRef;
+  }, [openDocumentTab]);
+
   return {
     locations,
     documents,
@@ -101,5 +117,6 @@ export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
     handleCloseTab,
     handleReorderTabs,
     handleCreateDraftTab,
+    handleCreateNewDocument,
   };
 }

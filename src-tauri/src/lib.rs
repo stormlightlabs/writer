@@ -73,6 +73,8 @@ pub fn run() {
             cmd::markdown_render_for_pdf,
             cmd::ui_layout_get,
             cmd::ui_layout_set,
+            cmd::session_last_doc_get,
+            cmd::session_last_doc_set,
             cmd::style_check_get,
             cmd::style_check_set,
             cmd::global_capture_get,

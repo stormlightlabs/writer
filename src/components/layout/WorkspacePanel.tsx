@@ -24,10 +24,21 @@ export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 export type CalmUiVisibility = { sidebar: boolean; statusBar: boolean; tabBar: boolean };
 
 export type WorkspacePanelProps = {
-  sidebar: Pick<SidebarProps, "handleAddLocation" | "handleRemoveLocation" | "handleSelectDocument">;
+  sidebar: Pick<
+    SidebarProps,
+    "handleAddLocation" | "handleRemoveLocation" | "handleSelectDocument" | "handleCreateNewDocument"
+  >;
   toolbar: Pick<
     ToolbarProps,
-    "saveStatus" | "onSave" | "onOpenSettings" | "onExportPdf" | "isExportingPdf" | "isPdfExportDisabled" | "onRefresh"
+    | "saveStatus"
+    | "onSave"
+    | "onNewDocument"
+    | "isNewDocumentDisabled"
+    | "onOpenSettings"
+    | "onExportPdf"
+    | "isExportingPdf"
+    | "isPdfExportDisabled"
+    | "onRefresh"
   >;
   tabs: DocumentTabsProps;
   editor: WorkspaceEditorProps;

@@ -293,6 +293,18 @@ function normalizeDocMeta(value: unknown): DocMeta {
   return { location_id: locationId, rel_path: relPath, title, updated_at: updatedAt, word_count: wordCount };
 }
 
+function normalizeDocRef(value: unknown): DocRef | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (typeof value.location_id !== "number" || typeof value.rel_path !== "string") {
+    return null;
+  }
+
+  return { location_id: value.location_id, rel_path: value.rel_path };
+}
+
 function normalizeSearchHit(value: unknown): SearchHit {
   if (!isRecord(value)) {
     return { location_id: 0, rel_path: "", title: "Untitled", snippet: "", line: 1, column: 1, matches: [] };
@@ -440,6 +452,9 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     }
     case "global_capture_submit": {
       return normalizeCaptureSubmitResult(value);
+    }
+    case "session_last_doc_get": {
+      return normalizeDocRef(value);
     }
     default: {
       return value;
@@ -620,6 +635,10 @@ export function docSave(...[locationId, relPath, text, onOk, onErr]: DocSavePara
   return invokeCmd<SaveResult>("doc_save", { locationId, relPath, text }, onOk, onErr);
 }
 
+export function docExists(...[locationId, relPath, onOk, onErr]: DocOpenParams<boolean>): Cmd {
+  return invokeCmd<boolean>("doc_exists", { locationId, relPath }, onOk, onErr);
+}
+
 export function searchDocuments(...[query, filters, limit, onOk, onErr]: SearchParams<SearchHit[]>): Cmd {
   return invokeCmd<SearchHit[]>("search", { query, filters, limit }, onOk, onErr);
 }
@@ -642,6 +661,18 @@ export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd 
 
 export function uiLayoutSet(...[settings, onOk, onErr]: UiLayoutSetParams<boolean>): Cmd {
   return invokeCmd<boolean>("ui_layout_set", { settings }, onOk, onErr);
+}
+
+type SessionLastDocSetParams<T> = Parameters<
+  (docRef: DocRef | null, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export function sessionLastDocGet(...[onOk, onErr]: LocParams<DocRef | null>): Cmd {
+  return invokeCmd<DocRef | null>("session_last_doc_get", {}, onOk, onErr);
+}
+
+export function sessionLastDocSet(...[docRef, onOk, onErr]: SessionLastDocSetParams<boolean>): Cmd {
+  return invokeCmd<boolean>("session_last_doc_set", { docRef }, onOk, onErr);
 }
 
 type StyleCheckSetParams<T> = Parameters<

@@ -23,6 +23,7 @@ pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, GlobalCaptureSe
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
 const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
+const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StyleCheckPattern {
@@ -308,6 +309,69 @@ impl Store {
             params![GLOBAL_CAPTURE_SETTINGS_KEY, settings_json, updated_at],
         )
         .map_err(|e| AppError::io(format!("Failed to persist global capture settings: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub fn last_open_doc_get(&self) -> Result<Option<CaptureDocRef>, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let maybe_value = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?1",
+                params![LAST_OPEN_DOC_SETTINGS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| AppError::io(format!("Failed to query last open doc setting: {}", e)))?;
+
+        match maybe_value {
+            Some(value) => serde_json::from_str::<CaptureDocRef>(&value).map(Some).map_err(|e| {
+                AppError::new(
+                    ErrorCode::Parse,
+                    format!("Failed to parse persisted last open doc setting: {}", e),
+                )
+            }),
+            None => Ok(None),
+        }
+    }
+
+    pub fn last_open_doc_set(&self, doc_ref: Option<&CaptureDocRef>) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        if let Some(doc_ref) = doc_ref {
+            let payload = serde_json::to_string(doc_ref).map_err(|e| {
+                AppError::new(
+                    ErrorCode::Parse,
+                    format!("Failed to serialize last open doc setting: {}", e),
+                )
+            })?;
+            let updated_at = Utc::now().to_rfc3339();
+
+            conn.execute(
+                "INSERT INTO app_settings (key, value, updated_at)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(key) DO UPDATE SET
+                 value = excluded.value,
+                 updated_at = excluded.updated_at",
+                params![LAST_OPEN_DOC_SETTINGS_KEY, payload, updated_at],
+            )
+            .map_err(|e| AppError::io(format!("Failed to persist last open doc setting: {}", e)))?;
+
+            return Ok(());
+        }
+
+        conn.execute(
+            "DELETE FROM app_settings WHERE key = ?1",
+            params![LAST_OPEN_DOC_SETTINGS_KEY],
+        )
+        .map_err(|e| AppError::io(format!("Failed to clear last open doc setting: {}", e)))?;
 
         Ok(())
     }
@@ -1606,5 +1670,35 @@ mod tests {
         assert_eq!(loaded.inbox_relative_dir, "inbox");
         assert!(loaded.close_after_save);
         assert!(loaded.show_tray_icon);
+    }
+
+    #[test]
+    fn test_last_open_doc_defaults_to_none() {
+        let (store, _temp) = create_test_store();
+        let loaded = store.last_open_doc_get().unwrap();
+        assert!(loaded.is_none());
+    }
+
+    #[test]
+    fn test_last_open_doc_round_trip() {
+        let (store, _temp) = create_test_store();
+        let doc_ref = CaptureDocRef { location_id: 5, rel_path: "notes/today.md".to_string() };
+
+        store.last_open_doc_set(Some(&doc_ref)).unwrap();
+        let loaded = store.last_open_doc_get().unwrap();
+
+        assert_eq!(loaded, Some(doc_ref));
+    }
+
+    #[test]
+    fn test_last_open_doc_can_be_cleared() {
+        let (store, _temp) = create_test_store();
+        let doc_ref = CaptureDocRef { location_id: 9, rel_path: "draft.md".to_string() };
+
+        store.last_open_doc_set(Some(&doc_ref)).unwrap();
+        store.last_open_doc_set(None).unwrap();
+        let loaded = store.last_open_doc_get().unwrap();
+
+        assert!(loaded.is_none());
     }
 }

@@ -347,4 +347,38 @@ describe(updateEditor, () => {
     expect(newModel.saveStatus).toBe("Dirty");
     expect(cmd.type).toBe("None");
   });
+
+  it("should create a blank draft document", () => {
+    const model = { ...initialEditorModel, text: "Previous", cursorLine: 4, cursorColumn: 12 };
+
+    const [newModel, cmd] = updateEditor(model, {
+      type: "NewDraftCreated",
+      docRef: { location_id: 2, rel_path: "Untitled.md" },
+    });
+
+    expect(newModel.docRef).toStrictEqual({ location_id: 2, rel_path: "Untitled.md" });
+    expect(newModel.text).toBe("");
+    expect(newModel.cursorLine).toBe(1);
+    expect(newModel.cursorColumn).toBe(0);
+    expect(newModel.saveStatus).toBe("Dirty");
+    expect(cmd.type).toBe("None");
+  });
+
+  it("should recover missing generated drafts as blank unsaved docs", () => {
+    const model = { ...initialEditorModel, isLoading: true, text: "Old text" };
+
+    const [newModel, cmd] = updateEditor(model, {
+      type: "DocOpenFinished",
+      success: false,
+      error: { code: "NOT_FOUND", message: "Missing" },
+      docRef: { location_id: 1, rel_path: "untitled_2026_02_24.md" },
+    });
+
+    expect(newModel.docRef).toStrictEqual({ location_id: 1, rel_path: "untitled_2026_02_24.md" });
+    expect(newModel.text).toBe("");
+    expect(newModel.saveStatus).toBe("Dirty");
+    expect(newModel.error).toBeNull();
+    expect(newModel.isLoading).toBeFalsy();
+    expect(cmd.type).toBe("None");
+  });
 });

@@ -230,6 +230,36 @@ pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> 
     }
 }
 
+#[tauri::command]
+pub fn session_last_doc_get(
+    state: State<'_, AppState>,
+) -> Result<CommandResult<Option<writer_store::CaptureDocRef>>, ()> {
+    tracing::debug!("Loading last opened document session state");
+
+    match state.store.last_open_doc_get() {
+        Ok(doc_ref) => Ok(CommandResult::ok(doc_ref)),
+        Err(e) => {
+            tracing::error!("Failed to load last opened document session state: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_last_doc_set(
+    state: State<'_, AppState>, doc_ref: Option<writer_store::CaptureDocRef>,
+) -> Result<CommandResult<bool>, ()> {
+    tracing::debug!("Persisting last opened document session state");
+
+    match state.store.last_open_doc_set(doc_ref.as_ref()) {
+        Ok(()) => Ok(CommandResult::ok(true)),
+        Err(e) => {
+            tracing::error!("Failed to persist last opened document session state: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
 /// Reconciles locations on startup and emits events for any issues
 pub fn reconcile_locations(app: &AppHandle) -> Result<(), AppError> {
     tracing::info!("Starting location reconciliation");

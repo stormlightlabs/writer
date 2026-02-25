@@ -131,6 +131,7 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     handleAddLocation: vi.fn(),
     handleRemoveLocation: vi.fn(),
     handleSelectDocument: vi.fn(),
+    handleCreateNewDocument: vi.fn(),
     ...overrides.sidebar,
   },
   toolbar: { saveStatus: "Idle", onSave: vi.fn(), onOpenSettings: vi.fn(), ...overrides.toolbar },

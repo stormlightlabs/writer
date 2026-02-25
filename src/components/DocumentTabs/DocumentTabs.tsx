@@ -1,8 +1,44 @@
 import { Button } from "$components/Button";
 import { useViewportTier } from "$hooks/useViewportTier";
+import { PlusIcon } from "$icons";
 import type { Tab } from "$types";
+import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
+
+const EMPTY_NEW_DOC_INITIAL = { opacity: 0, y: -4 };
+const EMPTY_NEW_DOC_ANIMATE = { opacity: 1, y: 0 };
+const EMPTY_NEW_DOC_TRANSITION = { duration: 0.18 };
+
+const NewButton = ({ onNewDocument, hasTabs }: { onNewDocument?: () => void; hasTabs: boolean }) => {
+  if (onNewDocument && hasTabs) {
+    return (
+      <div className="sticky right-0 z-10 flex items-center px-2 border-l border-border-subtle bg-bg-primary">
+        <Button
+          variant="iconGhost"
+          size="iconMd"
+          onClick={onNewDocument}
+          className="text-text-secondary hover:text-text-primary"
+          title="New Document (Ctrl+N)">
+          <PlusIcon size="sm" />
+        </Button>
+      </div>
+    );
+  }
+
+  if (onNewDocument) {
+    return (
+      <motion.div initial={EMPTY_NEW_DOC_INITIAL} animate={EMPTY_NEW_DOC_ANIMATE} transition={EMPTY_NEW_DOC_TRANSITION}>
+        <Button variant="outline" size="xs" onClick={onNewDocument} className="flex items-center gap-1.5">
+          <PlusIcon size="sm" />
+          New Document
+        </Button>
+      </motion.div>
+    );
+  }
+
+  return null;
+};
 
 export type DocumentTabsProps = {
   tabs: Tab[];
@@ -10,10 +46,11 @@ export type DocumentTabsProps = {
   handleSelectTab: (tabId: string) => void;
   handleCloseTab: (tabId: string) => void;
   handleReorderTabs?: (tabs: Tab[]) => void;
+  onNewDocument?: () => void;
 };
 
 export function DocumentTabs(
-  { tabs, activeTabId, handleSelectTab, handleCloseTab, handleReorderTabs }: DocumentTabsProps,
+  { tabs, activeTabId, handleSelectTab, handleCloseTab, handleReorderTabs, onNewDocument }: DocumentTabsProps,
 ) {
   const { viewportWidth, isCompact, isNarrow } = useViewportTier();
   const [draggingTab, setDraggingTab] = useState<string | null>(null);
@@ -95,8 +132,9 @@ export function DocumentTabs(
 
   if (tabs.length === 0) {
     return (
-      <div className="h-tab bg-bg-primary border-b border-border-subtle flex items-center pl-4 text-text-placeholder text-[0.8125rem]">
-        No documents open
+      <div className="h-tab bg-bg-primary border-b border-border-subtle flex items-center justify-between pl-4 pr-3 text-text-placeholder text-[0.8125rem]">
+        <span>No documents open</span>
+        <NewButton onNewDocument={onNewDocument} hasTabs={false} />
       </div>
     );
   }
@@ -121,6 +159,7 @@ export function DocumentTabs(
           onCloseTab={handleCloseTab}
           compact={compactTabs} />
       ))}
+      <NewButton onNewDocument={onNewDocument} hasTabs />
 
       {contextMenu && (
         <div

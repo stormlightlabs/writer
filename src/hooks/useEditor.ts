@@ -32,14 +32,20 @@ export type EditorMsg =
   | { type: "SaveRequested" }
   | { type: "SaveFinished"; success: boolean; result?: SaveResult; error?: AppError }
   | { type: "DraftDocInitialized"; docRef: DocRef }
+  | { type: "NewDraftCreated"; docRef: DocRef }
   | { type: "DocOpened"; doc: DocContent }
   | { type: "OpenDocRequested"; docRef: DocRef }
-  | { type: "DocOpenFinished"; success: boolean; error?: AppError }
+  | { type: "DocOpenFinished"; success: boolean; error?: AppError; docRef?: DocRef }
   | { type: "CursorMoved"; line: number; column: number }
   | { type: "SelectionChanged"; from: number; to: number | null };
 
 function isEditorMsg(value: unknown): value is EditorMsg {
   return typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
+}
+
+function isGeneratedDraftPath(path: string): boolean {
+  const filename = path.split("/").pop() ?? "";
+  return /^untitled_\d{4}_\d{2}_\d{2}(?:_\d+)?\.md$/i.test(filename);
 }
 
 export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, Cmd] {
@@ -75,6 +81,21 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
       return [{ ...model, docRef: msg.docRef, saveStatus: "Dirty", error: null }, none];
     }
 
+    case "NewDraftCreated": {
+      return [{
+        ...model,
+        docRef: msg.docRef,
+        text: "",
+        saveStatus: "Dirty",
+        cursorLine: 1,
+        cursorColumn: 0,
+        selectionFrom: null,
+        selectionTo: null,
+        isLoading: false,
+        error: null,
+      }, none];
+    }
+
     case "OpenDocRequested": {
       return [
         { ...model, isLoading: true, error: null },
@@ -82,7 +103,7 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
           msg.docRef.location_id,
           msg.docRef.rel_path,
           (doc: DocContent) => ({ type: "DocOpened", doc }),
-          (error) => ({ type: "DocOpenFinished", success: false, error }),
+          (error) => ({ type: "DocOpenFinished", success: false, error, docRef: msg.docRef }),
         ),
       ];
     }
@@ -99,6 +120,21 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
     }
 
     case "DocOpenFinished": {
+      if (!msg.success && msg.error?.code === "NOT_FOUND" && msg.docRef && isGeneratedDraftPath(msg.docRef.rel_path)) {
+        return [{
+          ...model,
+          docRef: msg.docRef,
+          text: "",
+          saveStatus: "Dirty",
+          cursorLine: 1,
+          cursorColumn: 0,
+          selectionFrom: null,
+          selectionTo: null,
+          isLoading: false,
+          error: null,
+        }, none];
+      }
+
       return [{ ...model, isLoading: false, error: msg.error ?? null }, none];
     }
 

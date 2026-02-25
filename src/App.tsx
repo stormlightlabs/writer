@@ -2,10 +2,13 @@ import { Button } from "$components/Button";
 import { logger } from "$logger";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import {
+  docExists,
   globalCaptureGet,
   globalCaptureSet,
   renderMarkdownForPdf,
   runCmd,
+  sessionLastDocGet,
+  sessionLastDocSet,
   styleCheckGet,
   styleCheckSet,
   uiLayoutGet,
@@ -154,6 +157,16 @@ function App() {
     editorDispatch({ type: "SaveRequested" });
   }, [editorDispatch, editorModel.docRef, workspace]);
 
+  const handleNewDocument = useCallback((locationId?: number) => {
+    const draftRef = workspace.handleCreateNewDocument(locationId);
+    if (!draftRef) {
+      logger.warn("Cannot create a new document without a selected location.");
+      return;
+    }
+
+    editorDispatch({ type: "NewDraftCreated", docRef: draftRef });
+  }, [editorDispatch, workspace]);
+
   const handleEditorChange = useCallback((text: string) => {
     editorDispatch({ type: "EditorChanged", text });
   }, [editorDispatch]);
@@ -228,7 +241,8 @@ function App() {
   }, [layoutChrome, isTyping]);
 
   const sidebarProps = useMemo(
-    () => pick(workspace, ["handleAddLocation", "handleRemoveLocation", "handleSelectDocument"]),
+    () =>
+      pick(workspace, ["handleAddLocation", "handleRemoveLocation", "handleSelectDocument", "handleCreateNewDocument"]),
     [workspace],
   );
 
@@ -236,18 +250,101 @@ function App() {
     () => ({
       saveStatus: editorModel.saveStatus,
       onSave: handleSave,
+      onNewDocument: handleNewDocument,
+      isNewDocumentDisabled: workspace.locations.length === 0,
       onExportPdf: handleOpenPdfExport,
       isExportingPdf: isExportingPdf,
       isPdfExportDisabled: !activeTab,
       onOpenSettings: handleOpenSettings,
     }),
-    [editorModel.saveStatus, handleOpenPdfExport, isExportingPdf, activeTab, handleSave, handleOpenSettings],
+    [
+      editorModel.saveStatus,
+      handleOpenPdfExport,
+      isExportingPdf,
+      activeTab,
+      handleNewDocument,
+      workspace.locations.length,
+      handleSave,
+      handleOpenSettings,
+    ],
   );
 
   const tabProps = useMemo(
-    () => pick(workspace, ["tabs", "activeTabId", "handleSelectTab", "handleCloseTab", "handleReorderTabs"]),
-    [workspace],
+    () => ({
+      ...pick(workspace, ["tabs", "activeTabId", "handleSelectTab", "handleCloseTab", "handleReorderTabs"]),
+      onNewDocument: workspace.locations.length > 0 ? handleNewDocument : void 0,
+    }),
+    [workspace, handleNewDocument],
   );
+
+  const activeDocRef = useMemo(() => activeTab?.docRef ?? null, [activeTab]);
+
+  const startupDocumentReadyRef = useRef(false);
+  const startupDocumentRestoredRef = useRef(false);
+
+  useEffect(() => {
+    if (startupDocumentReadyRef.current) {
+      return;
+    }
+
+    if (workspace.isSidebarLoading || workspace.locations.length === 0 || workspace.tabs.length > 0) {
+      return;
+    }
+
+    startupDocumentReadyRef.current = true;
+
+    const completeStartupRestore = () => {
+      startupDocumentRestoredRef.current = true;
+    };
+
+    const fallbackToBlankDraft = () => {
+      completeStartupRestore();
+      handleNewDocument(workspace.selectedLocationId ?? workspace.locations[0]?.id);
+    };
+
+    void runCmd(sessionLastDocGet((docRef) => {
+      if (!docRef) {
+        fallbackToBlankDraft();
+        return;
+      }
+
+      const locationExists = workspace.locations.some((location) => location.id === docRef.location_id);
+      if (!locationExists) {
+        fallbackToBlankDraft();
+        return;
+      }
+
+      void runCmd(docExists(docRef.location_id, docRef.rel_path, (exists) => {
+        if (exists) {
+          completeStartupRestore();
+          workspace.handleSelectDocument(docRef.location_id, docRef.rel_path);
+          return;
+        }
+
+        fallbackToBlankDraft();
+      }, () => {
+        fallbackToBlankDraft();
+      }));
+    }, () => {
+      fallbackToBlankDraft();
+    }));
+  }, [
+    workspace,
+    workspace.isSidebarLoading,
+    workspace.locations,
+    workspace.selectedLocationId,
+    workspace.tabs.length,
+    workspace.handleSelectDocument,
+    handleNewDocument,
+  ]);
+
+  useEffect(() => {
+    if (!startupDocumentRestoredRef.current) {
+      return;
+    }
+
+    void runCmd(sessionLastDocSet(activeDocRef, () => {}, () => {}));
+  }, [activeDocRef]);
 
   const handleEditorChangeWithTyping = useCallback((text: string) => {
     handleEditorChange(text);

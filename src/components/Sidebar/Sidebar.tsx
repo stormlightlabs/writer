@@ -2,7 +2,7 @@ import { Button } from "$components/Button";
 import { CollapseIcon } from "$icons";
 import { useSidebarState } from "$state/panel-selectors";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
 import { EmptyLocations } from "./EmptyLocations";
 import { SearchInput } from "./SearchInput";
@@ -13,6 +13,7 @@ export type SidebarProps = {
   handleAddLocation: () => void;
   handleRemoveLocation: (locationId: number) => void;
   handleSelectDocument: (locationId: number, path: string) => void;
+  handleCreateNewDocument: (locationId?: number) => void;
 };
 
 type SidebarActionsProps = {
@@ -44,7 +45,9 @@ const SidebarActions = (
   </div>
 );
 
-export function Sidebar({ handleAddLocation, handleRemoveLocation, handleSelectDocument }: SidebarProps) {
+export function Sidebar(
+  { handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument }: SidebarProps,
+) {
   const {
     locations,
     selectedLocationId,
@@ -58,6 +61,28 @@ export function Sidebar({ handleAddLocation, handleRemoveLocation, handleSelectD
   } = useSidebarState();
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
   const [showLocationMenu, setShowLocationMenu] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (showLocationMenu === null) {
+      return;
+    }
+
+    const handleOutsideMenuClick = (event: PointerEvent) => {
+      if (!(event.target instanceof HTMLElement)) {
+        setShowLocationMenu(null);
+        return;
+      }
+
+      if (event.target.closest("[data-location-menu-root]")) {
+        return;
+      }
+
+      setShowLocationMenu(null);
+    };
+
+    document.addEventListener("pointerdown", handleOutsideMenuClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideMenuClick);
+  }, [showLocationMenu]);
 
   const locationDocuments = useMemo(
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
@@ -124,6 +149,7 @@ export function Sidebar({ handleAddLocation, handleRemoveLocation, handleSelectD
               onToggle={toggleLocation}
               onRemove={handleRemoveLocation}
               onSelectDocument={handleSelectDocument}
+              onCreateDocument={handleCreateNewDocument}
               setShowLocationMenu={setShowLocationMenu}
               isMenuOpen={showLocationMenu === location.id}
               documents={filteredDocuments}
