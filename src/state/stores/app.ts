@@ -1,6 +1,6 @@
-import type { Tab } from "$types";
-import { create, type StateCreator } from "zustand";
-import { useShallow } from "zustand/react/shallow";
+import { logger } from "$logger";
+import { DEFAULT_OPTIONS } from "$pdf/constants";
+import { globalCaptureSet, runCmd } from "$ports";
 import type {
   AppStore,
   EditorPresentationActions,
@@ -10,8 +10,12 @@ import type {
   LayoutState,
   PdfExportActions,
   PdfExportState,
+  SearchActions,
+  SearchState,
   TabsActions,
   TabsState,
+  UiActions,
+  UiState,
   ViewModeActions,
   ViewModeState,
   WorkspaceDocumentsActions,
@@ -21,7 +25,9 @@ import type {
   WorkspaceState,
   WriterToolsActions,
   WriterToolsState,
-} from "../types";
+} from "$state/types";
+import type { GlobalCaptureSettings, Tab } from "$types";
+import { create, type StateCreator } from "zustand";
 
 let nextTabId = 1;
 
@@ -29,12 +35,25 @@ function generateTabId(): string {
   return `tab-${nextTabId++}`;
 }
 
+const DEFAULT_GLOBAL_CAPTURE_SETTINGS: GlobalCaptureSettings = {
+  enabled: true,
+  shortcut: "CommandOrControl+Shift+Space",
+  paused: false,
+  defaultMode: "QuickNote",
+  targetLocationId: null,
+  inboxRelativeDir: "inbox",
+  appendTarget: null,
+  closeAfterSave: true,
+  showTrayIcon: true,
+  lastCaptureTarget: null,
+};
+
 const getInitialLayoutChromeState = (): LayoutChromeState => ({
   sidebarCollapsed: false,
   topBarsCollapsed: false,
   statusBarCollapsed: false,
   showSearch: false,
-  calmUiSettings: { enabled: true, autoHide: true, focusMode: true },
+  calmUiSettings: { enabled: true, focusMode: true },
   chromeTemporarilyVisible: false,
 });
 
@@ -50,7 +69,7 @@ const getInitialEditorPresentationState = (): EditorPresentationState => ({
 const getInitialViewModeState = (): ViewModeState => ({
   isSplitView: false,
   isFocusMode: false,
-  isPreviewVisible: true,
+  isPreviewVisible: false,
   focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
 });
 
@@ -81,6 +100,8 @@ const getInitialWorkspaceDocumentsState = (): WorkspaceDocumentsState => ({
   selectedDocPath: undefined,
   documents: [],
   isLoadingDocuments: false,
+  refreshingLocationId: undefined,
+  sidebarRefreshReason: null,
 });
 
 const getInitialWorkspaceState = (): WorkspaceState => ({
@@ -91,6 +112,20 @@ const getInitialWorkspaceState = (): WorkspaceState => ({
 const getInitialTabsState = (): TabsState => ({ tabs: [], activeTabId: null });
 
 const getInitialPdfExportState = (): PdfExportState => ({ isExportingPdf: false, pdfExportError: null });
+
+const getInitialSearchState = (): SearchState => ({
+  searchQuery: "",
+  searchResults: [],
+  isSearching: false,
+  searchFilters: {},
+});
+
+const getInitialUiState = (): UiState => ({
+  layoutSettingsOpen: false,
+  pdfExportDialogOpen: false,
+  pdfExportOptions: DEFAULT_OPTIONS,
+  globalCaptureSettings: DEFAULT_GLOBAL_CAPTURE_SETTINGS,
+});
 
 const createLayoutChromeSlice: StateCreator<AppStore, [], [], LayoutChromeState & LayoutChromeActions> = (set) => ({
   ...getInitialLayoutChromeState(),
@@ -119,7 +154,6 @@ const createLayoutChromeSlice: StateCreator<AppStore, [], [], LayoutChromeState 
         chromeTemporarilyVisible: false,
       };
     }),
-  setCalmUiAutoHide: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, autoHide: value } })),
   setCalmUiFocusMode: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, focusMode: value } })),
   setChromeTemporarilyVisible: (value) => set({ chromeTemporarilyVisible: value }),
   revealChromeTemporarily: () => set({ chromeTemporarilyVisible: true }),
@@ -157,6 +191,7 @@ const createViewModeSlice: StateCreator<AppStore, [], [], ViewModeState & ViewMo
       isSplitView: !state.isSplitView,
       isPreviewVisible: state.isSplitView ? state.isPreviewVisible : true,
     })),
+  setEditorOnlyMode: () => set({ isSplitView: false, isPreviewVisible: false }),
 
   setFocusMode: (value) => set({ isFocusMode: value }),
   toggleFocusMode: () => set((state) => ({ isFocusMode: !state.isFocusMode })),
@@ -267,6 +302,8 @@ const createWorkspaceDocumentsSlice: StateCreator<
   setSelectedDocPath: (path) => set({ selectedDocPath: path }),
   setDocuments: (documents) => set({ documents }),
   setLoadingDocuments: (value) => set({ isLoadingDocuments: value }),
+  setSidebarRefreshState: (locationId, reason = null) =>
+    set({ refreshingLocationId: locationId, sidebarRefreshReason: locationId === undefined ? null : reason }),
 });
 
 const createTabsSlice: StateCreator<AppStore, [], [], TabsState & TabsActions> = (set, get) => ({
@@ -366,6 +403,55 @@ const createPdfExportSlice: StateCreator<AppStore, [], [], PdfExportState & PdfE
   resetPdfExport: () => set({ ...getInitialPdfExportState() }),
 });
 
+const createSearchSlice: StateCreator<AppStore, [], [], SearchState & SearchActions> = (set) => ({
+  ...getInitialSearchState(),
+
+  setSearchQuery: (value) => set({ searchQuery: value }),
+  setSearchResults: (value) => set({ searchResults: value }),
+  setIsSearching: (value) => set({ isSearching: value }),
+  setSearchFilters: (value) => set({ searchFilters: value }),
+  resetSearch: () => set({ ...getInitialSearchState() }),
+});
+
+const createUiSlice: StateCreator<AppStore, [], [], UiState & UiActions> = (set, get) => ({
+  ...getInitialUiState(),
+
+  setLayoutSettingsOpen: (value) => set({ layoutSettingsOpen: value }),
+  setPdfExportDialogOpen: (value) => set({ pdfExportDialogOpen: value }),
+  setPdfExportOptions: (value) => set({ pdfExportOptions: value }),
+  resetPdfExportOptions: () => set({ pdfExportOptions: DEFAULT_OPTIONS }),
+  setPdfPageSize: (value) => set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, pageSize: value } })),
+  setPdfOrientation: (value) =>
+    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, orientation: value } })),
+  setPdfFontSize: (value) => set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, fontSize: value } })),
+  setPdfMargin: (side, value) =>
+    set((state) => ({
+      pdfExportOptions: {
+        ...state.pdfExportOptions,
+        margins: { ...state.pdfExportOptions.margins, [side]: Number.isNaN(value) ? 0 : value },
+      },
+    })),
+  setPdfIncludeHeader: (value) =>
+    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, includeHeader: value } })),
+  setPdfIncludeFooter: (value) =>
+    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, includeFooter: value } })),
+  setGlobalCaptureSettings: (value) => set({ globalCaptureSettings: value }),
+  setQuickCaptureEnabled: async (enabled) => {
+    const previous = get().globalCaptureSettings;
+    if (previous.enabled === enabled) {
+      return;
+    }
+
+    const next = { ...previous, enabled };
+    set({ globalCaptureSettings: next });
+
+    await runCmd(globalCaptureSet(next, () => {}, (error) => {
+      logger.error("Failed to persist quick capture enabled state", error);
+      set({ globalCaptureSettings: previous });
+    }));
+  },
+});
+
 export const useAppStore = create<AppStore>()((...params) => ({
   ...createLayoutChromeSlice(...params),
   ...createEditorPresentationSlice(...params),
@@ -375,179 +461,9 @@ export const useAppStore = create<AppStore>()((...params) => ({
   ...createWorkspaceDocumentsSlice(...params),
   ...createTabsSlice(...params),
   ...createPdfExportSlice(...params),
+  ...createSearchSlice(...params),
+  ...createUiSlice(...params),
 }));
-
-export const useLayoutChromeState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      sidebarCollapsed: state.sidebarCollapsed,
-      topBarsCollapsed: state.topBarsCollapsed,
-      statusBarCollapsed: state.statusBarCollapsed,
-      showSearch: state.showSearch,
-      calmUiSettings: state.calmUiSettings,
-      chromeTemporarilyVisible: state.chromeTemporarilyVisible,
-    })),
-  );
-
-export const useLayoutChromeActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      setSidebarCollapsed: state.setSidebarCollapsed,
-      toggleSidebarCollapsed: state.toggleSidebarCollapsed,
-      setTopBarsCollapsed: state.setTopBarsCollapsed,
-      toggleTabBarCollapsed: state.toggleTabBarCollapsed,
-      setStatusBarCollapsed: state.setStatusBarCollapsed,
-      toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
-      setShowSearch: state.setShowSearch,
-      toggleShowSearch: state.toggleShowSearch,
-      setCalmUiSettings: state.setCalmUiSettings,
-      toggleCalmUi: state.toggleCalmUi,
-      setCalmUiAutoHide: state.setCalmUiAutoHide,
-      setCalmUiFocusMode: state.setCalmUiFocusMode,
-      setChromeTemporarilyVisible: state.setChromeTemporarilyVisible,
-      revealChromeTemporarily: state.revealChromeTemporarily,
-    })),
-  );
-
-export const useEditorPresentationState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      lineNumbersVisible: state.lineNumbersVisible,
-      textWrappingEnabled: state.textWrappingEnabled,
-      syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
-      editorFontSize: state.editorFontSize,
-      editorFontFamily: state.editorFontFamily,
-      theme: state.theme,
-    })),
-  );
-
-export const useEditorPresentationActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      setLineNumbersVisible: state.setLineNumbersVisible,
-      toggleLineNumbersVisible: state.toggleLineNumbersVisible,
-      setTextWrappingEnabled: state.setTextWrappingEnabled,
-      toggleTextWrappingEnabled: state.toggleTextWrappingEnabled,
-      setSyntaxHighlightingEnabled: state.setSyntaxHighlightingEnabled,
-      toggleSyntaxHighlightingEnabled: state.toggleSyntaxHighlightingEnabled,
-      setEditorFontSize: state.setEditorFontSize,
-      setEditorFontFamily: state.setEditorFontFamily,
-    })),
-  );
-
-export const useViewModeState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      isSplitView: state.isSplitView,
-      isFocusMode: state.isFocusMode,
-      isPreviewVisible: state.isPreviewVisible,
-      focusModeSettings: state.focusModeSettings,
-    })),
-  );
-
-export const useViewModeActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      setSplitView: state.setSplitView,
-      toggleSplitView: state.toggleSplitView,
-      setFocusMode: state.setFocusMode,
-      toggleFocusMode: state.toggleFocusMode,
-      setFocusModeSettings: state.setFocusModeSettings,
-      setTypewriterScrollingEnabled: state.setTypewriterScrollingEnabled,
-      setFocusDimmingMode: state.setFocusDimmingMode,
-      toggleTypewriterScrolling: state.toggleTypewriterScrolling,
-      setPreviewVisible: state.setPreviewVisible,
-      togglePreviewVisible: state.togglePreviewVisible,
-    })),
-  );
-
-export const useWriterToolsState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      posHighlightingEnabled: state.posHighlightingEnabled,
-      styleCheckSettings: state.styleCheckSettings,
-    })),
-  );
-
-export const useWriterToolsActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      setPosHighlightingEnabled: state.setPosHighlightingEnabled,
-      togglePosHighlighting: state.togglePosHighlighting,
-      setStyleCheckSettings: state.setStyleCheckSettings,
-      toggleStyleCheck: state.toggleStyleCheck,
-      setStyleCheckCategory: state.setStyleCheckCategory,
-      addCustomPattern: state.addCustomPattern,
-      removeCustomPattern: state.removeCustomPattern,
-    })),
-  );
-
-export const useWorkspaceLocationsState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      locations: state.locations,
-      isLoadingLocations: state.isLoadingLocations,
-      selectedLocationId: state.selectedLocationId,
-      sidebarFilter: state.sidebarFilter,
-    })),
-  );
-
-export const useWorkspaceLocationsActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      setSidebarFilter: state.setSidebarFilter,
-      setLocations: state.setLocations,
-      setLoadingLocations: state.setLoadingLocations,
-      setSelectedLocation: state.setSelectedLocation,
-      addLocation: state.addLocation,
-      removeLocation: state.removeLocation,
-    })),
-  );
-
-export const useWorkspaceDocumentsState = () =>
-  useAppStore(
-    useShallow((state) => ({
-      selectedDocPath: state.selectedDocPath,
-      documents: state.documents,
-      isLoadingDocuments: state.isLoadingDocuments,
-    })),
-  );
-
-export const useWorkspaceDocumentsActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      setSelectedDocPath: state.setSelectedDocPath,
-      setDocuments: state.setDocuments,
-      setLoadingDocuments: state.setLoadingDocuments,
-    })),
-  );
-
-export const useTabsState = () =>
-  useAppStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
-
-export const useTabsActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      openDocumentTab: state.openDocumentTab,
-      selectTab: state.selectTab,
-      closeTab: state.closeTab,
-      reorderTabs: state.reorderTabs,
-      markActiveTabModified: state.markActiveTabModified,
-    })),
-  );
-
-export const usePdfExportState = () =>
-  useAppStore(useShallow((state) => ({ isExportingPdf: state.isExportingPdf, pdfExportError: state.pdfExportError })));
-
-export const usePdfExportActions = () =>
-  useAppStore(
-    useShallow((state) => ({
-      startPdfExport: state.startPdfExport,
-      finishPdfExport: state.finishPdfExport,
-      failPdfExport: state.failPdfExport,
-      resetPdfExport: state.resetPdfExport,
-    })),
-  );
 
 export function resetAppStore(): void {
   nextTabId = 1;
@@ -557,5 +473,7 @@ export function resetAppStore(): void {
     ...getInitialWorkspaceState(),
     ...getInitialTabsState(),
     ...getInitialPdfExportState(),
+    ...getInitialSearchState(),
+    ...getInitialUiState(),
   });
 }

@@ -1,16 +1,12 @@
 import { logger } from "$logger";
 import { runCmd, searchDocuments, type SearchFiltersPayload } from "$ports";
-import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "$state/atoms/search";
-import { useLayoutChromeActions } from "$state/stores/app";
+import { useLayoutChromeActions, useSearchActions, useSearchState } from "$state/selectors";
 import type { SearchHit } from "$types";
-import { useAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export function useSearchController(onSelectDocument: (locationId: number, path: string) => void) {
-  const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
-  const [searchResults, setSearchResults] = useAtom(searchResultsAtom);
-  const [isSearching, setIsSearching] = useAtom(isSearchingAtom);
-  const [filters, setFilters] = useAtom(searchFiltersAtom);
+  const { searchQuery, searchResults, isSearching, filters } = useSearchState();
+  const { setSearchQuery, setSearchResults, setIsSearching, setFilters } = useSearchActions();
   const { setShowSearch } = useLayoutChromeActions();
   const requestIdRef = useRef(0);
 

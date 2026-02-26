@@ -1,7 +1,8 @@
 import { Button } from "$components/Button";
-import { useWorkspaceController } from "$hooks/useWorkspaceController";
-import { CollapseIcon, FileAddIcon, FolderAddIcon } from "$icons";
-import { useSidebarState } from "$state/panel-selectors";
+import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
+import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
+import { useSidebarState } from "$state/selectors";
+import type { DocMeta } from "$types";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
@@ -10,12 +11,16 @@ import { SearchInput } from "./SearchInput";
 import { SidebarLocationItem } from "./SidebarLocationItem";
 import { Title } from "./Title";
 
+const EMPTY_DOCUMENTS: DocMeta[] = [];
+
 export type SidebarProps = { onNewDocument?: (locationId?: number) => void };
 
 type SidebarActionsProps = {
   onAddLocation: () => void;
   onAddDocument: () => void;
+  onRefresh: () => void;
   isAddDocumentDisabled: boolean;
+  isRefreshDisabled: boolean;
   handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
   handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
   onToggleCollapse: () => void;
@@ -35,8 +40,16 @@ const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void 
 );
 
 const SidebarActions = (
-  { onAddLocation, onAddDocument, isAddDocumentDisabled, handleMouseEnter, handleMouseLeave, onToggleCollapse }:
-    SidebarActionsProps,
+  {
+    onAddLocation,
+    onAddDocument,
+    onRefresh,
+    isAddDocumentDisabled,
+    isRefreshDisabled,
+    handleMouseEnter,
+    handleMouseLeave,
+    onToggleCollapse,
+  }: SidebarActionsProps,
 ) => (
   <div className="flex items-center gap-2">
     <AddButton
@@ -52,19 +65,33 @@ const SidebarActions = (
       disabled={isAddDocumentDisabled}
       handleMouseEnter={handleMouseEnter}
       handleMouseLeave={handleMouseLeave} />
+    <AddButton
+      onClick={onRefresh}
+      icon={RefreshIcon}
+      title="Refresh Sidebar"
+      disabled={isRefreshDisabled}
+      handleMouseEnter={handleMouseEnter}
+      handleMouseLeave={handleMouseLeave} />
     <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
 );
 
 export function Sidebar({ onNewDocument }: SidebarProps) {
-  const { handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument } =
-    useWorkspaceController();
+  const {
+    handleAddLocation,
+    handleRemoveLocation,
+    handleSelectDocument,
+    handleCreateNewDocument,
+    handleRefreshSidebar,
+  } = useWorkspaceController();
   const {
     locations,
     selectedLocationId,
     selectedDocPath,
     documents,
     isLoading,
+    refreshingLocationId,
+    sidebarRefreshReason,
     filterText,
     setFilterText,
     selectLocation,
@@ -143,6 +170,10 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     createNewDocument(selectedLocationId);
   }, [handleCreateNewDocument, onNewDocument, selectedLocationId]);
 
+  const handleRefresh = useCallback(() => {
+    handleRefreshSidebar(selectedLocationId);
+  }, [handleRefreshSidebar, selectedLocationId]);
+
   return (
     <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">
       <div className="p-4 border-b border-border-subtle flex items-center justify-between">
@@ -150,20 +181,25 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
         <SidebarActions
           onAddLocation={handleAddLocation}
           onAddDocument={handleAddDocument}
+          onRefresh={handleRefresh}
           isAddDocumentDisabled={!selectedLocationId}
+          isRefreshDisabled={!selectedLocationId || refreshingLocationId === selectedLocationId}
           handleMouseEnter={handleMouseEnter}
           handleMouseLeave={handleMouseLeave}
           onToggleCollapse={toggleSidebarCollapsed} />
       </div>
       <SearchInput filterText={filterText} handleInputChange={handleInputChange} />
       <div className="flex-1 overflow-y-auto pt-2 pb-2">
-        {locations.length === 0
-          ? <EmptyLocations onAddLocation={handleAddLocation} />
-          : (locations.map((location) => (
+        {locations.length === 0 ? <EmptyLocations onAddLocation={handleAddLocation} /> : locations.map((location) => {
+          const isSelectedLocation = selectedLocationId === location.id;
+          const isRefreshingLocation = refreshingLocationId === location.id;
+          const locationDocs = isSelectedLocation ? filteredDocuments : EMPTY_DOCUMENTS;
+
+          return (
             <SidebarLocationItem
               key={location.id}
               location={location}
-              isSelected={selectedLocationId === location.id}
+              isSelected={isSelectedLocation}
               selectedDocPath={selectedDocPath}
               isExpanded={expandedLocations.has(location.id)}
               onSelect={selectLocation}
@@ -172,9 +208,12 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
               onSelectDocument={handleSelectDocument}
               setShowLocationMenu={setShowLocationMenu}
               isMenuOpen={showLocationMenu === location.id}
-              documents={filteredDocuments}
+              documents={locationDocs}
+              isRefreshing={isRefreshingLocation}
+              refreshReason={sidebarRefreshReason}
               filterText={filterText} />
-          )))}
+          );
+        })}
       </div>
 
       <div className="px-4 py-2 border-t border-border-subtle text-xs text-text-placeholder flex items-center justify-between">

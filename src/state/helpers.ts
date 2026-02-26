@@ -16,7 +16,6 @@ export const stateToLayoutSettings = (
   editor_font_size: presentation.editorFontSize,
   editor_font_family: presentation.editorFontFamily,
   calm_ui_enabled: layoutChrome.calmUiSettings.enabled,
-  calm_ui_auto_hide: layoutChrome.calmUiSettings.autoHide,
   calm_ui_focus_mode: layoutChrome.calmUiSettings.focusMode,
   focus_typewriter_scrolling_enabled: focusModeSettings.typewriterScrollingEnabled,
   focus_dimming_mode: focusModeSettings.dimmingMode,
@@ -24,7 +23,6 @@ export const stateToLayoutSettings = (
 
 export const uiSettingsToCalmUI: (uiSettings: UiLayoutSettings) => CalmUiSettings = (uiSettings) => ({
   enabled: uiSettings.calm_ui_enabled,
-  autoHide: uiSettings.calm_ui_auto_hide,
   focusMode: uiSettings.calm_ui_focus_mode,
 });
 

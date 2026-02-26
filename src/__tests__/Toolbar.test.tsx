@@ -1,11 +1,10 @@
 import { Toolbar } from "$components/Toolbar";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { useToolbarState } from "$state/panel-selectors";
-import { render, screen } from "@testing-library/react";
+import { useToolbarState } from "$state/selectors";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$state/panel-selectors", () => ({ useToolbarState: vi.fn() }));
-
+vi.mock("$state/selectors", () => ({ useToolbarState: vi.fn() }));
 vi.mock("$hooks/useViewportTier", () => ({ useViewportTier: vi.fn() }));
 
 describe("Toolbar", () => {
@@ -14,7 +13,8 @@ describe("Toolbar", () => {
     vi.mocked(useToolbarState).mockReturnValue({
       isSplitView: false,
       isFocusMode: false,
-      isPreviewVisible: true,
+      isPreviewVisible: false,
+      setEditorOnlyMode: vi.fn(),
       toggleSplitView: vi.fn(),
       toggleFocusMode: vi.fn(),
       togglePreviewVisible: vi.fn(),
@@ -39,5 +39,23 @@ describe("Toolbar", () => {
     render(<Toolbar saveStatus="Dirty" hasActiveDocument onSave={vi.fn()} />);
 
     expect(screen.getByText("Unsaved")).toBeInTheDocument();
+  });
+
+  it("offers an editor-only toggle", () => {
+    const setEditorOnlyMode = vi.fn();
+    vi.mocked(useToolbarState).mockReturnValue({
+      isSplitView: true,
+      isFocusMode: false,
+      isPreviewVisible: true,
+      setEditorOnlyMode,
+      toggleSplitView: vi.fn(),
+      toggleFocusMode: vi.fn(),
+      togglePreviewVisible: vi.fn(),
+    });
+
+    render(<Toolbar saveStatus="Idle" onSave={vi.fn()} />);
+
+    fireEvent.click(screen.getByText("Editor"));
+    expect(setEditorOnlyMode).toHaveBeenCalledOnce();
   });
 });

@@ -50,7 +50,7 @@ last_updated: 2026-02-23
 - Style-check settings are persisted through Tauri commands:
 - `style_check_get` / `style_check_set` (`src-tauri/src/commands.rs`)
 - Stored in SQLite `app_settings` as key `style_check` (`crates/store/src/lib.rs`)
-- Frontend hydration/save loop happens in `src/App.tsx` (load on startup, save on setting changes after hydration).
+- Runtime hydration/persistence sequence is documented in [`docs/lifecycle.md`](./lifecycle.md).
 
 ## POS Highlighting
 
@@ -71,6 +71,6 @@ last_updated: 2026-02-23
 
 ## State Boundaries
 
-- Runtime UI/state source: Zustand (`src/state/appStore.ts`).
+- Runtime UI/state source: Zustand (`src/state/stores/app.ts`).
 - Search state is separate (Jotai) and unrelated to writer NLP.
 - Persistence for NLP-related settings currently covers style-check only; POS state remains session-scoped.

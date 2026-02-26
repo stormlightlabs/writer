@@ -1,7 +1,8 @@
 import type { Cmd, SaveResult } from "$ports";
-import { docOpen, docSave, none, runCmd } from "$ports";
+import { docOpen, docSave, none } from "$ports";
 import type { AppError, DocContent, DocRef, SaveStatus } from "$types";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useCmdLoop } from "./useCmdLoop";
 
 export type EditorModel = {
   docRef: DocRef | null;
@@ -160,36 +161,7 @@ export interface UseEditorReturn {
 }
 
 export function useEditor(): UseEditorReturn {
-  const [model, setModel] = useState<EditorModel>(initialEditorModel);
-
-  const dispatch = useCallback((msg: EditorMsg) => {
-    setModel((prevModel) => {
-      const [newModel, cmd] = updateEditor(prevModel, msg);
-      if (cmd.type !== "None") {
-        if (cmd.type === "Invoke") {
-          const wrappedCmd: Cmd = {
-            ...cmd,
-            onOk: (value) => {
-              const nextMsg = cmd.onOk(value);
-              if (isEditorMsg(nextMsg)) {
-                dispatch(nextMsg);
-              }
-            },
-            onErr: (error) => {
-              const nextMsg = cmd.onErr(error);
-              if (isEditorMsg(nextMsg)) {
-                dispatch(nextMsg);
-              }
-            },
-          };
-          runCmd(wrappedCmd);
-        } else {
-          runCmd(cmd);
-        }
-      }
-      return newModel;
-    });
-  }, []);
+  const { model, dispatch } = useCmdLoop(initialEditorModel, updateEditor, isEditorMsg);
 
   const openDoc = useCallback((docRef: DocRef) => {
     dispatch({ type: "OpenDocRequested", docRef });

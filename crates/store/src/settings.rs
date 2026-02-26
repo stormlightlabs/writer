@@ -25,10 +25,6 @@ fn default_calm_ui_enabled() -> bool {
     true
 }
 
-fn default_calm_ui_auto_hide() -> bool {
-    true
-}
-
 fn default_calm_ui_focus_mode() -> bool {
     true
 }
@@ -90,8 +86,6 @@ pub struct UiLayoutSettings {
     pub editor_font_family: String,
     #[serde(default = "default_calm_ui_enabled")]
     pub calm_ui_enabled: bool,
-    #[serde(default = "default_calm_ui_auto_hide")]
-    pub calm_ui_auto_hide: bool,
     #[serde(default = "default_calm_ui_focus_mode")]
     pub calm_ui_focus_mode: bool,
     #[serde(default = "default_focus_typewriter_scrolling_enabled")]
@@ -112,7 +106,6 @@ impl Default for UiLayoutSettings {
             editor_font_size: default_editor_font_size(),
             editor_font_family: default_editor_font_family(),
             calm_ui_enabled: default_calm_ui_enabled(),
-            calm_ui_auto_hide: default_calm_ui_auto_hide(),
             calm_ui_focus_mode: default_calm_ui_focus_mode(),
             focus_typewriter_scrolling_enabled: default_focus_typewriter_scrolling_enabled(),
             focus_dimming_mode: default_focus_dimming_mode(),

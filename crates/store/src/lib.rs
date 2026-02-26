@@ -1560,7 +1560,6 @@ mod tests {
             editor_font_size: 18,
             editor_font_family: "Monaspace Neon".to_string(),
             calm_ui_enabled: false,
-            calm_ui_auto_hide: false,
             calm_ui_focus_mode: false,
             focus_typewriter_scrolling_enabled: false,
             focus_dimming_mode: FocusDimmingMode::Paragraph,
@@ -1598,7 +1597,6 @@ mod tests {
         assert_eq!(loaded.editor_font_size, 16);
         assert_eq!(loaded.editor_font_family, "IBM Plex Mono");
         assert!(loaded.calm_ui_enabled);
-        assert!(loaded.calm_ui_auto_hide);
         assert!(loaded.calm_ui_focus_mode);
         assert!(loaded.focus_typewriter_scrolling_enabled);
         assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);

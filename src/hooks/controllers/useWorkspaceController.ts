@@ -1,23 +1,54 @@
 import { logger } from "$logger";
-import { locationAddViaDialog, locationRemove, runCmd } from "$ports";
+import { docList, locationAddViaDialog, locationRemove, runCmd } from "$ports";
 import {
-  useAppStore,
   useTabsActions,
   useTabsState,
+  useWorkspaceDocumentsActions,
   useWorkspaceDocumentsState,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "$state/stores/app";
-import type { DocRef, Tab } from "$types";
+} from "$state/selectors";
+import { useAppStore } from "$state/stores/app";
+import type { SidebarRefreshReason } from "$state/types";
+import type { DocMeta, DocRef, Tab } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useMemo } from "react";
 
+const TRANSIENT_EMPTY_REFRESH_RETRY_DELAY_MS = 120;
+
+type RefreshSidebarOptions = { source?: SidebarRefreshReason; attempt?: number };
+
+function areDocumentsEqual(left: DocMeta[], right: DocMeta[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const a = left[index];
+    const b = right[index];
+    if (
+      a.location_id !== b.location_id
+      || a.rel_path !== b.rel_path
+      || a.title !== b.title
+      || a.updated_at !== b.updated_at
+      || a.word_count !== b.word_count
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function useWorkspaceController() {
   const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();
-  const { selectedDocPath, documents, isLoadingDocuments } = useWorkspaceDocumentsState();
+  const { selectedDocPath, documents, isLoadingDocuments, refreshingLocationId, sidebarRefreshReason } =
+    useWorkspaceDocumentsState();
+  const { setSidebarRefreshState } = useWorkspaceDocumentsActions();
   const { setSidebarFilter, setSelectedLocation, addLocation, removeLocation } = useWorkspaceLocationsActions();
   const { tabs, activeTabId } = useTabsState();
   const { openDocumentTab, selectTab, closeTab, reorderTabs, markActiveTabModified } = useTabsActions();
+  const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [activeTabId, tabs]);
 
   const locationDocuments = useMemo(
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
@@ -87,6 +118,59 @@ export function useWorkspaceController() {
     return docRef;
   }, [openDocumentTab]);
 
+  const handleRefreshSidebar = useCallback((locationId?: number, options: RefreshSidebarOptions = {}) => {
+    const source = options.source ?? "manual";
+    const attempt = options.attempt ?? 0;
+    const state = useAppStore.getState();
+    const targetLocationId = locationId ?? state.selectedLocationId ?? state.locations[0]?.id;
+
+    if (!targetLocationId || state.selectedLocationId !== targetLocationId) {
+      return;
+    }
+
+    setSidebarRefreshState(targetLocationId, source);
+
+    runCmd(docList(targetLocationId, (nextDocuments) => {
+      const latestState = useAppStore.getState();
+      if (latestState.selectedLocationId !== targetLocationId) {
+        if (latestState.refreshingLocationId === targetLocationId) {
+          latestState.setSidebarRefreshState(undefined, null);
+        }
+        return;
+      }
+
+      // Atomic save operations can emit a brief empty listing between fs events.
+      // Retry once to avoid flashing an empty list in the sidebar.
+      if (nextDocuments.length === 0 && latestState.documents.length > 0 && attempt === 0) {
+        setTimeout(() => {
+          handleRefreshSidebar(targetLocationId, { source, attempt: attempt + 1 });
+        }, TRANSIENT_EMPTY_REFRESH_RETRY_DELAY_MS);
+        return;
+      }
+
+      if (!areDocumentsEqual(latestState.documents, nextDocuments)) {
+        latestState.setDocuments(nextDocuments);
+      }
+
+      if (latestState.refreshingLocationId === targetLocationId) {
+        latestState.setSidebarRefreshState(undefined, null);
+      }
+    }, (error) => {
+      if (attempt === 0) {
+        setTimeout(() => {
+          handleRefreshSidebar(targetLocationId, { source, attempt: attempt + 1 });
+        }, TRANSIENT_EMPTY_REFRESH_RETRY_DELAY_MS);
+        return;
+      }
+
+      logger.error("Failed to refresh sidebar documents", { locationId: targetLocationId, error });
+      const latestState = useAppStore.getState();
+      if (latestState.refreshingLocationId === targetLocationId) {
+        latestState.setSidebarRefreshState(undefined, null);
+      }
+    }));
+  }, [setSidebarRefreshState]);
+
   return useMemo(
     () => ({
       locations,
@@ -96,8 +180,11 @@ export function useWorkspaceController() {
       locationDocuments,
       sidebarFilter,
       isSidebarLoading: isLoadingLocations || isLoadingDocuments,
+      refreshingLocationId,
+      sidebarRefreshReason,
       tabs,
       activeTabId,
+      activeTab,
       setSidebarFilter,
       markActiveTabModified,
       handleAddLocation,
@@ -109,6 +196,7 @@ export function useWorkspaceController() {
       handleReorderTabs,
       handleCreateDraftTab,
       handleCreateNewDocument,
+      handleRefreshSidebar,
     }),
     [
       locations,
@@ -119,8 +207,11 @@ export function useWorkspaceController() {
       sidebarFilter,
       isLoadingLocations,
       isLoadingDocuments,
+      refreshingLocationId,
+      sidebarRefreshReason,
       tabs,
       activeTabId,
+      activeTab,
       setSidebarFilter,
       markActiveTabModified,
       handleAddLocation,
@@ -132,6 +223,7 @@ export function useWorkspaceController() {
       handleReorderTabs,
       handleCreateDraftTab,
       handleCreateNewDocument,
+      handleRefreshSidebar,
     ],
   );
 }

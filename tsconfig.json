@@ -17,7 +17,7 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": "./src",
     "paths": {
-      "$ports": ["./ports.ts"],
+      "$ports": ["./ports/index.ts"],
       "$types": ["./types.ts"],
       "$logger": ["./logger.ts"],
       "$icons": ["./components/icons.tsx"],

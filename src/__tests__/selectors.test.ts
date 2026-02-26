@@ -1,9 +1,10 @@
-import { useEditorPresentationState } from "$state/panel-selectors";
-import { resetAppStore, useEditorPresentationActions, useViewModeActions } from "$state/stores/app";
+import { useEditorPresentationState } from "$state/selectors";
+import { useEditorPresentationActions, useViewModeActions } from "$state/selectors";
+import { resetAppStore } from "$state/stores/app";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-describe("panel-selectors", () => {
+describe("selectors", () => {
   beforeEach(() => {
     resetAppStore();
   });

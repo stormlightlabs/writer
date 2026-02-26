@@ -12,7 +12,7 @@ import {
   useWorkspacePanelSidebarState,
   useWorkspacePanelStatusBarCollapsed,
   useWorkspacePanelTopBarsCollapsed,
-} from "$state/panel-selectors";
+} from "$state/selectors";
 import type {
   EditorPresentationStateReturn,
   SidebarStateReturn,
@@ -21,12 +21,12 @@ import type {
   TopBarsCollapsedReturn,
   WorkspacePanelModeStateReturn,
   WorkspacePanelSidebarStateReturn,
-} from "$state/panel-selectors";
+} from "$state/selectors";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
-  "$state/panel-selectors",
+  "$state/selectors",
   () => ({
     useSidebarState: vi.fn(),
     useToolbarState: vi.fn(),
@@ -62,6 +62,8 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   selectedDocPath: undefined,
   documents: [],
   isLoading: false,
+  refreshingLocationId: undefined,
+  sidebarRefreshReason: null,
   filterText: "",
   setFilterText: vi.fn(),
   selectLocation: vi.fn(),
@@ -73,6 +75,7 @@ const createToolbarState = (overrides: Partial<ToolbarStateReturn> = {}): Toolba
   isSplitView: false,
   isFocusMode: false,
   isPreviewVisible: false,
+  setEditorOnlyMode: vi.fn(),
   toggleSplitView: vi.fn(),
   toggleFocusMode: vi.fn(),
   togglePreviewVisible: vi.fn(),

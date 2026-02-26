@@ -1,7 +1,8 @@
 import type { Cmd } from "$ports";
-import { none, renderMarkdown, runCmd } from "$ports";
+import { none, renderMarkdown } from "$ports";
 import type { AppError, DocRef, RenderResult } from "$types";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useCmdLoop } from "./useCmdLoop";
 
 export type PreviewModel = {
   docRef: DocRef | null;
@@ -82,36 +83,7 @@ export function updatePreview(model: PreviewModel, msg: PreviewMsg): [PreviewMod
 }
 
 export function usePreview(): UsePreviewReturn {
-  const [model, setModel] = useState<PreviewModel>(initialPreviewModel);
-
-  const dispatch = useCallback((msg: PreviewMsg) => {
-    setModel((prevModel) => {
-      const [newModel, cmd] = updatePreview(prevModel, msg);
-      if (cmd.type !== "None") {
-        if (cmd.type === "Invoke") {
-          const wrappedCmd: Cmd = {
-            ...cmd,
-            onOk: (value) => {
-              const nextMsg = cmd.onOk(value);
-              if (isPreviewMsg(nextMsg)) {
-                dispatch(nextMsg);
-              }
-            },
-            onErr: (error) => {
-              const nextMsg = cmd.onErr(error);
-              if (isPreviewMsg(nextMsg)) {
-                dispatch(nextMsg);
-              }
-            },
-          };
-          runCmd(wrappedCmd);
-        } else {
-          runCmd(cmd);
-        }
-      }
-      return newModel;
-    });
-  }, []);
+  const { model, dispatch } = useCmdLoop(initialPreviewModel, updatePreview, isPreviewMsg);
 
   const render = useCallback((docRef: DocRef, text: string) => {
     dispatch({ type: "RenderRequested", docRef, text });

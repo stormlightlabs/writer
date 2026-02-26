@@ -99,7 +99,7 @@ export type CaptureMode = "QuickNote" | "WritingSession" | "Append";
 
 export type CaptureDocRef = { locationId: number; relPath: string };
 
-export type CalmUiSettings = { enabled: boolean; autoHide: boolean; focusMode: boolean };
+export type CalmUiSettings = { enabled: boolean; focusMode: boolean };
 
 export type GlobalCaptureSettings = {
   enabled: boolean;

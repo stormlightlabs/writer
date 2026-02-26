@@ -23,10 +23,9 @@ last_updated: 2026-02-23
 
 - UI entry point is `PdfExportDialog` (`src/components/pdf/ExportDialog/ExportDialog.tsx`),
   opened from the toolbar.
-- Export flow in `src/App.tsx`:
-- Request AST from backend via `renderMarkdownForPdf(...)` (ports command -> Tauri command).
-- Pass AST + export options into `usePdfExport()`.
+- Export orchestration lives in `src/App.tsx` (`renderMarkdownForPdf(...)` + `usePdfExport()`).
 - `usePdfExport` (`src/hooks/usePdfExport.tsx`) renders a React PDF document (`MarkdownPdfDocument`) with `@react-pdf/renderer`, then writes bytes to a user-selected path via Tauri plugins.
+- Full runtime sequence is documented in [`docs/lifecycle.md`](./lifecycle.md).
 
 ### Rendering Pipeline
 
@@ -48,10 +47,10 @@ last_updated: 2026-02-23
 - Output is written using:
 - `@tauri-apps/plugin-dialog` (`save`) for destination
 - `@tauri-apps/plugin-fs` (`writeFile`) for bytes
-- Export lifecycle state is tracked in Zustand (`isExportingPdf`, `pdfExportError` in `src/state/appStore.ts`) via `startPdfExport`, `finishPdfExport`, and `failPdfExport`.
+- Export lifecycle state is tracked in Zustand (`isExportingPdf`, `pdfExportError` in `src/state/stores/app.ts`) via `startPdfExport`, `finishPdfExport`, and `failPdfExport`.
 - If the user cancels the save dialog, export exits cleanly without writing a file.
 
 ### Persistence Notes
 
 - PDF files themselves are persisted to the chosen filesystem path.
-- Export dialog options are local React state (session-only) and are not currently persisted in app settings.
+- Export dialog options are kept in Jotai (`pdfExportOptionsAtom`) and are session-only (not persisted in app settings).

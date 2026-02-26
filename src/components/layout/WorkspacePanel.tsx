@@ -11,7 +11,7 @@ import {
   useWorkspacePanelSidebarState,
   useWorkspacePanelStatusBarCollapsed,
   useWorkspacePanelTopBarsCollapsed,
-} from "$state/panel-selectors";
+} from "$state/selectors";
 import { PanelMode } from "$types";
 import { type PointerEventHandler, useCallback, useEffect, useMemo } from "react";
 

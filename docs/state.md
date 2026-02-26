@@ -7,7 +7,7 @@ last_updated: 2026-02-23
 
 ### Zustand
 
-- `src/state/appStore.ts` is the main client state container.
+- `src/state/stores/app.ts` is the main client state container.
 - It is organized as composable slices (layout, editor presentation, view mode,
   writer tools, workspace, tabs, PDF export) and merged into one `useAppStore`.
 - Domain actions in the store are intentionally cross-slice when needed
@@ -18,10 +18,11 @@ last_updated: 2026-02-23
 
 ### Jotai
 
-- Jotai is used for search UI state in `src/state/searchAtoms.ts`.
-- Atoms hold query/results/loading/filters plus simple derived/reset atoms.
-- This state is intentionally separate from Zustand because search interactions
-  are localized and ephemeral.
+- Jotai is used for UI orchestration atoms in `src/state/atoms/`.
+- Search atoms: `src/state/atoms/search.ts`.
+- Dialog/export/quick-capture UI atoms: `src/state/atoms/ui.ts`.
+- Atoms include query/results/loading/filters plus dialog/export/quick-capture UI controls.
+- This state is intentionally separate from Zustand because these concerns are localized and orchestration-focused.
 
 ### Elmish/Ports
 
@@ -37,7 +38,7 @@ last_updated: 2026-02-23
 ### Globals
 
 - A few module-scoped values are used for non-UI implementation details:
-- `nextTabId` in `src/state/appStore.ts` generates runtime tab ids and is reset
+- `nextTabId` in `src/state/stores/app.ts` generates runtime tab ids and is reset
   by `resetAppStore()`.
 - Request/version refs in hooks (for example `documentRequestRef` in `useWorkspaceSync`)
   prevent stale async responses from overwriting newer state.

@@ -1,10 +1,10 @@
 import { Sidebar } from "$components/Sidebar";
-import { useWorkspaceController } from "$hooks/useWorkspaceController";
-import { useSidebarState } from "$state/panel-selectors";
+import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
+import { useSidebarState } from "$state/selectors";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$state/panel-selectors", () => ({ useSidebarState: vi.fn() }));
+vi.mock("$state/selectors", () => ({ useSidebarState: vi.fn() }));
 vi.mock("$hooks/useWorkspaceController", () => ({ useWorkspaceController: vi.fn() }));
 
 const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState>> = {}) => ({
@@ -13,6 +13,8 @@ const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState
   selectedDocPath: undefined,
   documents: [],
   isLoading: false,
+  refreshingLocationId: undefined,
+  sidebarRefreshReason: null,
   filterText: "",
   setFilterText: vi.fn(),
   selectLocation: vi.fn(),
@@ -20,31 +22,40 @@ const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState
   ...overrides,
 });
 
+const createWorkspaceControllerState = (
+  overrides: Partial<ReturnType<typeof useWorkspaceController>> = {},
+): ReturnType<typeof useWorkspaceController> => ({
+  locations: [],
+  documents: [],
+  selectedLocationId: undefined,
+  selectedDocPath: undefined,
+  locationDocuments: [],
+  sidebarFilter: "",
+  isSidebarLoading: false,
+  refreshingLocationId: undefined,
+  sidebarRefreshReason: null,
+  tabs: [],
+  activeTabId: null,
+  activeTab: null,
+  setSidebarFilter: vi.fn(),
+  markActiveTabModified: vi.fn(),
+  handleAddLocation: vi.fn(),
+  handleRemoveLocation: vi.fn(),
+  handleSelectLocation: vi.fn(),
+  handleSelectDocument: vi.fn(),
+  handleSelectTab: vi.fn(),
+  handleCloseTab: vi.fn(),
+  handleReorderTabs: vi.fn(),
+  handleCreateDraftTab: vi.fn(),
+  handleCreateNewDocument: vi.fn(),
+  handleRefreshSidebar: vi.fn(),
+  ...overrides,
+});
+
 describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useWorkspaceController).mockReturnValue({
-      locations: [],
-      documents: [],
-      selectedLocationId: undefined,
-      selectedDocPath: undefined,
-      locationDocuments: [],
-      sidebarFilter: "",
-      isSidebarLoading: false,
-      tabs: [],
-      activeTabId: null,
-      setSidebarFilter: vi.fn(),
-      markActiveTabModified: vi.fn(),
-      handleAddLocation: vi.fn(),
-      handleRemoveLocation: vi.fn(),
-      handleSelectLocation: vi.fn(),
-      handleSelectDocument: vi.fn(),
-      handleSelectTab: vi.fn(),
-      handleCloseTab: vi.fn(),
-      handleReorderTabs: vi.fn(),
-      handleCreateDraftTab: vi.fn(),
-      handleCreateNewDocument: vi.fn(),
-    });
+    vi.mocked(useWorkspaceController).mockReturnValue(createWorkspaceControllerState());
   });
 
   it("shows a single new document action and creates a doc for the selected location", () => {
@@ -71,5 +82,27 @@ describe("Sidebar", () => {
 
     fireEvent.click(newDocumentButton);
     expect(handleCreateNewDocument).not.toHaveBeenCalled();
+  });
+
+  it("refreshes sidebar documents for selected location", () => {
+    vi.mocked(useSidebarState).mockReturnValue(createSidebarState());
+    const handleRefreshSidebar = vi.fn();
+    vi.mocked(useWorkspaceController).mockReturnValue(createWorkspaceControllerState({ handleRefreshSidebar }));
+
+    render(<Sidebar />);
+
+    fireEvent.click(screen.getByTitle("Refresh Sidebar"));
+    expect(handleRefreshSidebar).toHaveBeenCalledWith(1);
+  });
+
+  it("shows refresh feedback for the selected location and disables refresh action", () => {
+    vi.mocked(useSidebarState).mockReturnValue(
+      createSidebarState({ refreshingLocationId: 1, sidebarRefreshReason: "save" }),
+    );
+
+    render(<Sidebar />);
+
+    expect(screen.getByText("Updating after save...")).toBeInTheDocument();
+    expect(screen.getByTitle("Refresh Sidebar")).toBeDisabled();
   });
 });

@@ -2,7 +2,7 @@ import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
 import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
 import { styleCheck, styleCheckTheme, type StyleMatch } from "$editor/style-check";
 import { typewriterScroll } from "$editor/typewriter-scroll";
-import { useEditorPresentationState } from "$state/panel-selectors";
+import { useEditorPresentationState } from "$state/selectors";
 import { oxocarbonDark } from "$themes/oxocarbon-dark";
 import { oxocarbonLight } from "$themes/oxocarbon-light";
 import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";

@@ -1,9 +1,13 @@
 import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import type { PdfExportOptions } from "$pdf/types";
-import { pdfExportDialogOpenAtom, pdfExportOptionsAtom } from "$state/atoms/ui";
-import { usePdfExportActions, usePdfExportState, useTabsState, useWorkspaceDocumentsState } from "$state/stores/app";
-import { useAtom, useAtomValue } from "jotai";
+import {
+  usePdfDialogUiState,
+  usePdfExportActions,
+  usePdfExportState,
+  useTabsState,
+  useWorkspaceDocumentsState,
+} from "$state/selectors";
 import { useCallback } from "react";
 import { PdfExportDialogFooter } from "./ExportFooter";
 import { PdfExportDialogHeader } from "./ExportHeader";
@@ -20,8 +24,7 @@ const PdfTitle = ({ title }: { title?: string }) => (title
   : null);
 
 export function PdfExportDialog({ onExport }: PdfExportDialogProps) {
-  const [isOpen, setIsOpen] = useAtom(pdfExportDialogOpenAtom);
-  const options = useAtomValue(pdfExportOptionsAtom);
+  const { isOpen, setOpen: setIsOpen, options } = usePdfDialogUiState();
   const { pdfExportError } = usePdfExportState();
   const { resetPdfExport } = usePdfExportActions();
   const { tabs, activeTabId } = useTabsState();

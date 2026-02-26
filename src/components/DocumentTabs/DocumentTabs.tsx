@@ -1,8 +1,8 @@
 import { Button } from "$components/Button";
+import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { useWorkspaceController } from "$hooks/useWorkspaceController";
 import { PlusIcon } from "$icons";
-import { useTabsState, useWorkspaceLocationsState } from "$state/stores/app";
+import { useTabsState, useWorkspaceLocationsState } from "$state/selectors";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";

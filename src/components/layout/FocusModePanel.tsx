@@ -4,7 +4,7 @@ import type { EditorProps } from "$components/Editor";
 import { StatusBar } from "$components/StatusBar";
 import type { StatusBarProps } from "$components/StatusBar";
 import { FocusIcon } from "$icons";
-import { useFocusModePanelState } from "$state/panel-selectors";
+import { useFocusModePanelState } from "$state/selectors";
 import { useCallback } from "react";
 
 type FocusModePanelProps = {

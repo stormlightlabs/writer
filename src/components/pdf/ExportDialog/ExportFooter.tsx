@@ -1,11 +1,9 @@
 import { Button } from "$components/Button";
-import { pdfExportDialogOpenAtom } from "$state/atoms/ui";
-import { usePdfExportActions, usePdfExportState } from "$state/stores/app";
-import { useSetAtom } from "jotai";
+import { usePdfDialogUiState, usePdfExportActions, usePdfExportState } from "$state/selectors";
 import { useCallback } from "react";
 
 export const PdfExportDialogFooter = ({ handleExportClick }: { handleExportClick: () => void | Promise<void> }) => {
-  const setIsOpen = useSetAtom(pdfExportDialogOpenAtom);
+  const { setOpen: setIsOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
   const { isExportingPdf } = usePdfExportState();
 

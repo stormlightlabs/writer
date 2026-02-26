@@ -1,5 +1,5 @@
+import { useLayoutChromeActions, useViewModeActions } from "$state/selectors";
 import { useEffect } from "react";
-import { useLayoutChromeActions, useViewModeActions } from "../state/stores/app";
 
 export function useLayoutHotkeys(): void {
   const {

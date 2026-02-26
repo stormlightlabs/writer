@@ -1,11 +1,11 @@
 import { logger } from "$logger";
 import { backendEvents, docList, locationList, runCmd, startWatch, stopWatch, SubscriptionManager } from "$ports";
-import { useCallback, useEffect, useRef } from "react";
 import {
   useWorkspaceDocumentsActions,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "../state/stores/app";
+} from "$state/selectors";
+import { useCallback, useEffect, useRef } from "react";
 
 export function useWorkspaceSync(): void {
   const { selectedLocationId } = useWorkspaceLocationsState();

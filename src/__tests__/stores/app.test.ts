@@ -1,10 +1,6 @@
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
 import {
-  resetAppStore,
-  useAppStore,
   useEditorPresentationActions,
-  useEditorPresentationState,
+  useEditorPresentationStateRaw,
   useLayoutChromeActions,
   useLayoutChromeState,
   useTabsActions,
@@ -15,7 +11,10 @@ import {
   useWorkspaceDocumentsState,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "../state/stores/app";
+} from "$state/selectors";
+import { resetAppStore, useAppStore } from "$state/stores/app";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("appStore", () => {
   beforeEach(() => {
@@ -152,7 +151,7 @@ describe("appStore", () => {
   it("focused layout hooks expose and update layout state", () => {
     const { result: chromeState } = renderHook(() => useLayoutChromeState());
     const { result: chromeActions } = renderHook(() => useLayoutChromeActions());
-    const { result: editorState } = renderHook(() => useEditorPresentationState());
+    const { result: editorState } = renderHook(() => useEditorPresentationStateRaw());
     const { result: editorActions } = renderHook(() => useEditorPresentationActions());
     const { result: viewModeState } = renderHook(() => useViewModeState());
     const { result: viewModeActions } = renderHook(() => useViewModeActions());
@@ -167,6 +166,7 @@ describe("appStore", () => {
     expect(editorState.current.editorFontFamily).toBe("IBM Plex Mono");
     expect(viewModeState.current.isSplitView).toBeFalsy();
     expect(viewModeState.current.isFocusMode).toBeFalsy();
+    expect(viewModeState.current.isPreviewVisible).toBeFalsy();
 
     act(() => {
       chromeActions.current.toggleSidebarCollapsed();
@@ -209,6 +209,19 @@ describe("appStore", () => {
 
     expect(viewModeState.current.isSplitView).toBeTruthy();
     expect(viewModeState.current.isPreviewVisible).toBeTruthy();
+  });
+
+  it("editor-only mode clears split and preview visibility", () => {
+    const { result: viewModeState } = renderHook(() => useViewModeState());
+    const { result: viewModeActions } = renderHook(() => useViewModeActions());
+
+    act(() => {
+      viewModeActions.current.setSplitView(true);
+      viewModeActions.current.setEditorOnlyMode();
+    });
+
+    expect(viewModeState.current.isSplitView).toBeFalsy();
+    expect(viewModeState.current.isPreviewVisible).toBeFalsy();
   });
 
   it("focused workspace hooks expose and update workspace state", () => {
@@ -309,7 +322,7 @@ describe("Calm UI state", () => {
   it("should have default Calm UI settings", () => {
     const { result } = renderHook(() => useAppStore());
 
-    expect(result.current.calmUiSettings).toEqual({ enabled: true, autoHide: true, focusMode: true });
+    expect(result.current.calmUiSettings).toEqual({ enabled: true, focusMode: true });
     expect(result.current.chromeTemporarilyVisible).toBe(false);
   });
 
@@ -360,16 +373,6 @@ describe("Calm UI state", () => {
     expect(result.current.statusBarCollapsed).toBe(false);
   });
 
-  it("should set Calm UI auto-hide", () => {
-    const { result } = renderHook(() => useAppStore());
-
-    act(() => {
-      result.current.setCalmUiAutoHide(false);
-    });
-
-    expect(result.current.calmUiSettings.autoHide).toBe(false);
-  });
-
   it("should set Calm UI focus mode", () => {
     const { result } = renderHook(() => useAppStore());
 
@@ -382,7 +385,7 @@ describe("Calm UI state", () => {
 
   it("should set all Calm UI settings at once", () => {
     const { result } = renderHook(() => useAppStore());
-    const newSettings = { enabled: false, autoHide: false, focusMode: false };
+    const newSettings = { enabled: false, focusMode: false };
 
     act(() => {
       result.current.setCalmUiSettings(newSettings);

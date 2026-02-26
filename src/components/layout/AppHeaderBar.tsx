@@ -1,7 +1,7 @@
 import { Button } from "$components/Button";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { ChevronDownIcon, LibraryIcon, SearchIcon } from "$icons";
-import { useAppHeaderBarState } from "$state/panel-selectors";
+import { useAppHeaderBarState } from "$state/selectors";
 import { useCallback, useMemo } from "react";
 
 const AppTitle = ({ onToggleSidebar, hideTitle }: { onToggleSidebar: () => void; hideTitle: boolean }) => (
@@ -14,10 +14,21 @@ const AppTitle = ({ onToggleSidebar, hideTitle }: { onToggleSidebar: () => void;
 );
 
 const SearchRow = (
-  { onOpenSearch, onToggleTabBar, tabBarCollapsed, iconOnly, showSearchShortcut, compactTabLabel }: {
+  {
+    onOpenSearch,
+    onToggleTabBar,
+    onToggleStatusBar,
+    tabBarCollapsed,
+    statusBarCollapsed,
+    iconOnly,
+    showSearchShortcut,
+    compactTabLabel,
+  }: {
     onOpenSearch: () => void;
     onToggleTabBar: () => void;
+    onToggleStatusBar: () => void;
     tabBarCollapsed: boolean;
+    statusBarCollapsed: boolean;
     iconOnly: boolean;
     showSearchShortcut: boolean;
     compactTabLabel: boolean;
@@ -56,11 +67,38 @@ const SearchRow = (
           </span>
         )}
     </Button>
+
+    <Button
+      onClick={onToggleStatusBar}
+      variant="outline"
+      size="sm"
+      className={`flex items-center gap-1.5 ${iconOnly ? "w-8 h-8 p-0 justify-center" : ""}`}
+      title={`${statusBarCollapsed ? "Show" : "Hide"} status bar`}>
+      <ChevronDownIcon size="sm" />
+      {iconOnly
+        ? null
+        : (
+          <span>
+            {compactTabLabel
+              ? (statusBarCollapsed ? "Show Status" : "Hide Status")
+              : statusBarCollapsed
+              ? "Show Status Bar"
+              : "Hide Status Bar"}
+          </span>
+        )}
+    </Button>
   </div>
 );
 
 export const AppHeaderBar = () => {
-  const { tabBarCollapsed, toggleSidebarCollapsed, toggleTabBarCollapsed, setShowSearch } = useAppHeaderBarState();
+  const {
+    tabBarCollapsed,
+    statusBarCollapsed,
+    toggleSidebarCollapsed,
+    toggleTabBarCollapsed,
+    toggleStatusBarCollapsed,
+    setShowSearch,
+  } = useAppHeaderBarState();
   const { viewportWidth, isCompact, isNarrow } = useViewportTier();
 
   const handleOpenSearch = useCallback(() => {
@@ -76,7 +114,9 @@ export const AppHeaderBar = () => {
       <SearchRow
         onOpenSearch={handleOpenSearch}
         onToggleTabBar={toggleTabBarCollapsed}
+        onToggleStatusBar={toggleStatusBarCollapsed}
         tabBarCollapsed={tabBarCollapsed}
+        statusBarCollapsed={statusBarCollapsed}
         iconOnly={iconOnly}
         showSearchShortcut={showSearchShortcut}
         compactTabLabel={isNarrow} />

@@ -1,20 +1,19 @@
 import { useViewportTier } from "$hooks/useViewportTier";
+import type { IconSize } from "$icons";
 import {
   DocumentIcon,
   EyeIcon,
+  FileTextIcon,
   FocusIcon,
   IconProps,
-  type IconSize,
   PlusIcon,
   RefreshIcon,
   SaveIcon,
   SettingsIcon,
   SplitViewIcon,
 } from "$icons";
-import { layoutSettingsOpenAtom } from "$state/atoms/ui";
-import { useToolbarState } from "$state/panel-selectors";
+import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
 import { SaveStatus } from "$types";
-import { useSetAtom } from "jotai";
 import { useCallback, useMemo } from "react";
 import { SaveStatusIndicator } from "./SaveStatusIndicator";
 import { ToolbarButton } from "./ToolbarButton";
@@ -34,11 +33,11 @@ export type ToolbarProps = {
 function SettingsToolbarButton(
   { icon, iconOnly }: { icon: { Component: React.ComponentType<IconProps>; size: IconSize }; iconOnly: boolean },
 ) {
-  const setIsLayoutSettingsOpen = useSetAtom(layoutSettingsOpenAtom);
+  const { setOpen } = useLayoutSettingsUiState();
 
   const handleOpenSettings = useCallback(() => {
-    setIsLayoutSettingsOpen(true);
-  }, [setIsLayoutSettingsOpen]);
+    setOpen(true);
+  }, [setOpen]);
 
   return <ToolbarButton icon={icon} label="Settings" onClick={handleOpenSettings} iconOnly={iconOnly} />;
 }
@@ -56,14 +55,22 @@ export function Toolbar(
     onRefresh,
   }: ToolbarProps,
 ) {
-  const { isSplitView, isFocusMode, isPreviewVisible, toggleSplitView, toggleFocusMode, togglePreviewVisible } =
-    useToolbarState();
+  const {
+    isSplitView,
+    isFocusMode,
+    isPreviewVisible,
+    setEditorOnlyMode,
+    toggleSplitView,
+    toggleFocusMode,
+    togglePreviewVisible,
+  } = useToolbarState();
   const { viewportWidth, isCompact, isNarrow } = useViewportTier();
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
       save: { Component: SaveIcon, size: "sm" },
       newDoc: { Component: PlusIcon, size: "sm" },
       refresh: { Component: RefreshIcon, size: "sm" },
+      editor: { Component: FileTextIcon, size: "sm" },
       splitView: { Component: SplitViewIcon, size: "sm" },
       eye: { Component: EyeIcon, size: "sm" },
       focus: { Component: FocusIcon, size: "sm" },
@@ -76,6 +83,7 @@ export function Toolbar(
   const iconOnly = useMemo(() => isNarrow, [isNarrow]);
   const hideRefresh = useMemo(() => viewportWidth < 1080, [viewportWidth]);
   const compactStatus = useMemo(() => viewportWidth < 960, [viewportWidth]);
+  const isEditorOnly = useMemo(() => !isSplitView && !isPreviewVisible, [isSplitView, isPreviewVisible]);
 
   return (
     <div className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2 sm:px-4 gap-2 overflow-x-auto">
@@ -103,6 +111,13 @@ export function Toolbar(
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
+        <ToolbarButton
+          icon={icons.editor}
+          label="Editor"
+          isActive={isEditorOnly}
+          onClick={setEditorOnlyMode}
+          iconOnly={iconOnly} />
+
         <ToolbarButton
           icon={icons.splitView}
           label="Split"

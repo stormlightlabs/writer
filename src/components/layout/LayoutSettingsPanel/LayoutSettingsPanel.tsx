@@ -3,17 +3,17 @@ import { CollapsibleSection } from "$components/CollapsibleSection";
 import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
-import { globalCaptureSettingsAtom, layoutSettingsOpenAtom, setQuickCaptureEnabledAtom } from "$state/atoms/ui";
 import {
   useCalmUiActions,
   useCalmUiSettings,
+  useGlobalCaptureSettingsState,
   useLayoutSettingsChromeState,
   useLayoutSettingsEditorState,
   useLayoutSettingsFocusState,
+  useLayoutSettingsUiState,
   useLayoutSettingsWriterToolsState,
-} from "$state/panel-selectors";
+} from "$state/selectors";
 import type { EditorFontFamily } from "$types";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { CustomPatternControls } from "./CustomPatternControls";
 import { DimmingModeRow } from "./DimmingModeRow";
@@ -21,11 +21,11 @@ import { FontFamilyRow, FontSizeRow } from "./FontRows";
 import { ToggleRow } from "./ToggleRow";
 
 const SettingsHeader = () => {
-  const setIsVisible = useSetAtom(layoutSettingsOpenAtom);
+  const { setOpen } = useLayoutSettingsUiState();
 
   const handleClose = useCallback(() => {
-    setIsVisible(false);
-  }, [setIsVisible]);
+    setOpen(false);
+  }, [setOpen]);
 
   return (
     <div className="flex items-center justify-between mb-2">
@@ -128,8 +128,8 @@ function ChromeSettingsSection() {
 }
 
 function CalmUiSettingsSection() {
-  const { enabled, autoHide, focusMode } = useCalmUiSettings();
-  const { toggleCalmUi, setCalmUiAutoHide, setCalmUiFocusMode } = useCalmUiActions();
+  const { enabled, focusMode } = useCalmUiSettings();
+  const { toggleCalmUi, setCalmUiFocusMode } = useCalmUiActions();
 
   return (
     <div className="py-2.5">
@@ -147,12 +147,6 @@ function CalmUiSettingsSection() {
             description="Enter Focus mode when opening a document."
             isVisible={focusMode}
             onToggle={setCalmUiFocusMode} />
-          <ToggleRow
-            label="Auto-hide While Typing"
-            description="Hide interface elements while you type, show on pause."
-            isVisible={autoHide}
-            onToggle={setCalmUiAutoHide} />
-          <p className="m-0 text-xs text-text-placeholder mt-2">Hold Ctrl+Shift+H to reveal hidden UI</p>
         </div>
       )}
     </div>
@@ -237,8 +231,8 @@ function WriterToolsSection() {
 }
 
 const QuickCaptureSection = () => {
-  const quickCaptureEnabled = useAtomValue(globalCaptureSettingsAtom).enabled;
-  const setQuickCaptureEnabled = useSetAtom(setQuickCaptureEnabledAtom);
+  const { settings, setQuickCaptureEnabled } = useGlobalCaptureSettingsState();
+  const quickCaptureEnabled = settings.enabled;
 
   const handleQuickCaptureEnabledChange = useCallback((enabled: boolean) => {
     setQuickCaptureEnabled(enabled);
@@ -277,12 +271,12 @@ const SettingsBody = () => (
 );
 
 export const LayoutSettingsPanel = () => {
-  const [isVisible, setIsVisible] = useAtom(layoutSettingsOpenAtom);
+  const { isOpen: isVisible, setOpen } = useLayoutSettingsUiState();
   const { isCompact, viewportWidth } = useViewportTier();
   const compactPanel = useMemo(() => isCompact || viewportWidth < 920, [isCompact, viewportWidth]);
   const handleClose = useCallback(() => {
-    setIsVisible(false);
-  }, [setIsVisible]);
+    setOpen(false);
+  }, [setOpen]);
 
   return (
     <Dialog

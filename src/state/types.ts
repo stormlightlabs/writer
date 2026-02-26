@@ -1,3 +1,4 @@
+import type { PdfExportOptions } from "$pdf/types";
 import type {
   AppTheme,
   CalmUiSettings,
@@ -6,14 +7,17 @@ import type {
   EditorFontFamily,
   FocusDimmingMode,
   FocusModeSettings,
+  GlobalCaptureSettings,
   LocationDescriptor,
   PatternCategory,
+  SearchHit,
   StyleCheckPattern,
   StyleCheckSettings,
   Tab,
 } from "$types";
 
 export type OpenDocumentTabResult = { tabId: string; didCreateTab: boolean };
+export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
 
 export type LayoutChromeState = {
   sidebarCollapsed: boolean;
@@ -53,7 +57,6 @@ export type LayoutChromeActions = {
   toggleShowSearch: () => void;
   setCalmUiSettings: (settings: CalmUiSettings) => void;
   toggleCalmUi: () => void;
-  setCalmUiAutoHide: (value: boolean) => void;
   setCalmUiFocusMode: (value: boolean) => void;
   setChromeTemporarilyVisible: (value: boolean) => void;
   revealChromeTemporarily: () => void;
@@ -73,6 +76,7 @@ export type EditorPresentationActions = {
 export type ViewModeActions = {
   setSplitView: (value: boolean) => void;
   toggleSplitView: () => void;
+  setEditorOnlyMode: () => void;
   setFocusMode: (value: boolean) => void;
   toggleFocusMode: () => void;
   setFocusModeSettings: (settings: FocusModeSettings) => void;
@@ -104,7 +108,15 @@ export type WorkspaceLocationsState = {
   sidebarFilter: string;
 };
 
-export type WorkspaceDocumentsState = { selectedDocPath?: string; documents: DocMeta[]; isLoadingDocuments: boolean };
+export type SidebarRefreshReason = "manual" | "save" | "external";
+
+export type WorkspaceDocumentsState = {
+  selectedDocPath?: string;
+  documents: DocMeta[];
+  isLoadingDocuments: boolean;
+  refreshingLocationId?: number;
+  sidebarRefreshReason: SidebarRefreshReason | null;
+};
 
 export type WorkspaceLocationsActions = {
   setSidebarFilter: (value: string) => void;
@@ -119,6 +131,7 @@ export type WorkspaceDocumentsActions = {
   setSelectedDocPath: (path?: string) => void;
   setDocuments: (documents: DocMeta[]) => void;
   setLoadingDocuments: (value: boolean) => void;
+  setSidebarRefreshState: (locationId?: number, reason?: SidebarRefreshReason | null) => void;
 };
 
 export type WorkspaceState = WorkspaceLocationsState & WorkspaceDocumentsState;
@@ -144,6 +157,43 @@ export type PdfExportActions = {
   resetPdfExport: () => void;
 };
 
+export type SearchState = {
+  searchQuery: string;
+  searchResults: SearchHit[];
+  isSearching: boolean;
+  searchFilters: SearchFilters;
+};
+
+export type SearchActions = {
+  setSearchQuery: (value: string) => void;
+  setSearchResults: (value: SearchHit[]) => void;
+  setIsSearching: (value: boolean) => void;
+  setSearchFilters: (value: SearchFilters) => void;
+  resetSearch: () => void;
+};
+
+export type UiState = {
+  layoutSettingsOpen: boolean;
+  pdfExportDialogOpen: boolean;
+  pdfExportOptions: PdfExportOptions;
+  globalCaptureSettings: GlobalCaptureSettings;
+};
+
+export type UiActions = {
+  setLayoutSettingsOpen: (value: boolean) => void;
+  setPdfExportDialogOpen: (value: boolean) => void;
+  setPdfExportOptions: (value: PdfExportOptions) => void;
+  resetPdfExportOptions: () => void;
+  setPdfPageSize: (value: PdfExportOptions["pageSize"]) => void;
+  setPdfOrientation: (value: PdfExportOptions["orientation"]) => void;
+  setPdfFontSize: (value: number) => void;
+  setPdfMargin: (side: "top" | "right" | "bottom" | "left", value: number) => void;
+  setPdfIncludeHeader: (value: boolean) => void;
+  setPdfIncludeFooter: (value: boolean) => void;
+  setGlobalCaptureSettings: (value: GlobalCaptureSettings) => void;
+  setQuickCaptureEnabled: (enabled: boolean) => Promise<void>;
+};
+
 export type AppStore =
   & LayoutState
   & LayoutActions
@@ -152,7 +202,11 @@ export type AppStore =
   & TabsState
   & TabsActions
   & PdfExportState
-  & PdfExportActions;
+  & PdfExportActions
+  & SearchState
+  & SearchActions
+  & UiState
+  & UiActions;
 
 export type EditorPresentation = {
   theme: AppTheme;

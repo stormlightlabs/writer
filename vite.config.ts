@@ -33,7 +33,7 @@ export default defineConfig({
   test,
   resolve: {
     alias: {
-      "$ports": resolveFromRoot("./src/ports.ts"),
+      "$ports": resolveFromRoot("./src/ports/index.ts"),
       "$types": resolveFromRoot("./src/types.ts"),
       "$logger": resolveFromRoot("./src/logger.ts"),
       "$icons": resolveFromRoot("./src/components/icons.tsx"),

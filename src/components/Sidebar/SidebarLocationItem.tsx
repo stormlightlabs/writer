@@ -1,8 +1,9 @@
 import { Button } from "$components/Button";
-import { FolderIcon, MoreVerticalIcon } from "$icons";
+import { FolderIcon, MoreVerticalIcon, RefreshIcon } from "$icons";
+import type { SidebarRefreshReason } from "$state/types";
 import { DocMeta, LocationDescriptor } from "$types";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
-import { useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { DocumentItem } from "./DocumentItem";
 import { EmptyDocuments } from "./EmptyDocuments";
 import { RemoveButton } from "./RemoveButton";
@@ -62,6 +63,13 @@ const LocationActions = (
   </div>
 );
 
+const RefreshStatus = ({ reason }: { reason: SidebarRefreshReason | null }) => (
+  <div className="px-6 py-2 text-text-placeholder text-[11px] flex items-center gap-1.5">
+    <RefreshIcon size="xs" className="animate-spin" />
+    <span>{reason === "save" ? "Updating after save..." : "Refreshing files..."}</span>
+  </div>
+);
+
 type SidebarLocationItemProps = {
   location: LocationDescriptor;
   isSelected: boolean;
@@ -73,11 +81,13 @@ type SidebarLocationItemProps = {
   onSelectDocument: (id: number, path: string) => void;
   setShowLocationMenu: Dispatch<SetStateAction<number | null>>;
   documents: DocMeta[];
+  isRefreshing: boolean;
+  refreshReason: SidebarRefreshReason | null;
   filterText: string;
   isMenuOpen: boolean;
 };
 
-export function SidebarLocationItem(
+function SidebarLocationItemComponent(
   {
     location,
     isSelected,
@@ -89,6 +99,8 @@ export function SidebarLocationItem(
     onSelectDocument,
     setShowLocationMenu,
     documents,
+    isRefreshing,
+    refreshReason,
     filterText,
     isMenuOpen,
   }: SidebarLocationItemProps,
@@ -139,6 +151,7 @@ export function SidebarLocationItem(
 
       {isExpanded && isSelected && (
         <div>
+          {isRefreshing ? <RefreshStatus reason={refreshReason} /> : null}
           {documents.length === 0
             ? <EmptyDocuments filterText={filterText} />
             : (documents.map((doc) => (
@@ -154,3 +167,5 @@ export function SidebarLocationItem(
     </div>
   );
 }
+
+export const SidebarLocationItem = memo(SidebarLocationItemComponent);

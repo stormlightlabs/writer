@@ -36,7 +36,6 @@
     "@tauri-apps/plugin-log": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2",
     "clsx": "^2.1.1",
-    "jotai": "^2.17.1",
     "motion": "^12.34.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

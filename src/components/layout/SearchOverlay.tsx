@@ -1,8 +1,8 @@
 import { SearchPanel } from "$components/SearchPanel";
-import { useSearchController } from "$hooks/useSearchController";
-import { useWorkspaceController } from "$hooks/useWorkspaceController";
-import { useSearchOverlayState } from "$state/panel-selectors";
-import { useWorkspaceLocationsState } from "$state/stores/app";
+import { useSearchController } from "$hooks/controllers/useSearchController";
+import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
+import { useSearchOverlayState } from "$state/selectors";
+import { useWorkspaceLocationsState } from "$state/selectors";
 import { useCallback, useMemo } from "react";
 
 export function SearchOverlay() {

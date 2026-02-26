@@ -3,8 +3,9 @@ import { logger } from "$logger";
 import { serializeError } from "$pdf/errors";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
-import { usePdfExportActions } from "$state/stores/app";
-import type { EditorFontFamily } from "$types";
+import { renderMarkdownForPdf, runCmd } from "$ports";
+import { usePdfDialogUiState, usePdfExportActions } from "$state/selectors";
+import type { EditorFontFamily, Tab } from "$types";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
@@ -119,4 +120,51 @@ export function usePdfExport(): ExportPdfFn {
   );
 
   return exportPdf;
+}
+
+type UsePdfExportUIArgs = {
+  activeTab: Tab | null;
+  text: string;
+  editorFontFamily: EditorFontFamily;
+  exportPdf: ExportPdfFn;
+};
+
+export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }: UsePdfExportUIArgs) {
+  const { setOpen: setPdfExportDialogOpen } = usePdfDialogUiState();
+  const { resetPdfExport } = usePdfExportActions();
+
+  const handleOpenPdfExport = useCallback(() => {
+    if (!activeTab) {
+      logger.warn("Cannot export PDF without an active document.");
+      return;
+    }
+
+    resetPdfExport();
+    setPdfExportDialogOpen(true);
+  }, [activeTab, resetPdfExport, setPdfExportDialogOpen]);
+
+  const handleExportPdf = useCallback(async (options: PdfExportOptions) => {
+    if (!activeTab) {
+      logger.warn("Cannot export PDF without an active document.");
+      return;
+    }
+
+    const docRef = activeTab.docRef;
+
+    try {
+      const renderResult = await new Promise<PdfRenderResult>((resolve, reject) => {
+        void runCmd(renderMarkdownForPdf(docRef.location_id, docRef.rel_path, text, void 0, resolve, reject));
+      });
+
+      const didExport = await exportPdf(renderResult, options, editorFontFamily);
+      if (didExport) {
+        setPdfExportDialogOpen(false);
+        resetPdfExport();
+      }
+    } catch (error) {
+      logger.error("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) });
+    }
+  }, [activeTab, editorFontFamily, exportPdf, resetPdfExport, setPdfExportDialogOpen, text]);
+
+  return { handleOpenPdfExport, handleExportPdf };
 }

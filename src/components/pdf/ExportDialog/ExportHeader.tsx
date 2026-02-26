@@ -1,12 +1,10 @@
 import { Button } from "$components/Button";
 import { XIcon } from "$icons";
-import { pdfExportDialogOpenAtom } from "$state/atoms/ui";
-import { usePdfExportActions } from "$state/stores/app";
-import { useSetAtom } from "jotai";
+import { usePdfDialogUiState, usePdfExportActions } from "$state/selectors";
 import { useCallback } from "react";
 
 export const PdfExportDialogHeader = () => {
-  const setIsOpen = useSetAtom(pdfExportDialogOpenAtom);
+  const { setOpen: setIsOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
 
   const handleCancel = useCallback(() => {

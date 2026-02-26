@@ -1,19 +1,10 @@
 import { ORIENTATIONS, PAGE_SIZES } from "$pdf/constants";
 import { MarginSide, type PdfExportOptions } from "$pdf/types";
-import {
-  pdfExportOptionsAtom,
-  setPdfFontSizeAtom,
-  setPdfIncludeFooterAtom,
-  setPdfIncludeHeaderAtom,
-  setPdfMarginAtom,
-  setPdfOrientationAtom,
-  setPdfPageSizeAtom,
-} from "$state/atoms/ui";
-import { useAtomValue, useSetAtom } from "jotai";
+import { usePdfDialogUiState } from "$state/selectors";
 import { useCallback } from "react";
 
 const PdfExportDialogPageSize = ({ options }: { options: PdfExportOptions }) => {
-  const setPageSize = useSetAtom(setPdfPageSizeAtom);
+  const { setPageSize } = usePdfDialogUiState();
 
   const handlePageSizeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     setPageSize(event.target.value as PdfExportOptions["pageSize"]);
@@ -33,7 +24,7 @@ const PdfExportDialogPageSize = ({ options }: { options: PdfExportOptions }) => 
 };
 
 const PdfExportDialogOrientation = ({ options }: { options: PdfExportOptions }) => {
-  const setOrientation = useSetAtom(setPdfOrientationAtom);
+  const { setOrientation } = usePdfDialogUiState();
 
   const handleOrientationChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     setOrientation(event.target.value as PdfExportOptions["orientation"]);
@@ -55,7 +46,7 @@ const PdfExportDialogOrientation = ({ options }: { options: PdfExportOptions }) 
 };
 
 const PdfExportDialogFontSize = ({ options }: { options: PdfExportOptions }) => {
-  const setFontSize = useSetAtom(setPdfFontSizeAtom);
+  const { setFontSize } = usePdfDialogUiState();
 
   const handleFontSizeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setFontSize(parseInt(event.target.value, 10));
@@ -77,10 +68,10 @@ const PdfExportDialogFontSize = ({ options }: { options: PdfExportOptions }) => 
 };
 
 const PdfMarginField = ({ side, value }: { side: MarginSide; value: number }) => {
-  const setMargin = useSetAtom(setPdfMarginAtom);
+  const { setMargin } = usePdfDialogUiState();
 
   const onChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setMargin({ side, value: parseInt(event.target.value || "0", 10) });
+    setMargin(side, parseInt(event.target.value || "0", 10));
   }, [setMargin, side]);
 
   return (
@@ -110,8 +101,7 @@ const PdfExportDialogMargins = ({ options }: { options: PdfExportOptions }) => (
 );
 
 const PdfExportDialogHeaderFooter = ({ options }: { options: PdfExportOptions }) => {
-  const setIncludeHeader = useSetAtom(setPdfIncludeHeaderAtom);
-  const setIncludeFooter = useSetAtom(setPdfIncludeFooterAtom);
+  const { setIncludeHeader, setIncludeFooter } = usePdfDialogUiState();
 
   const onHeaderChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setIncludeHeader(event.target.checked);
@@ -136,7 +126,7 @@ const PdfExportDialogHeaderFooter = ({ options }: { options: PdfExportOptions })
 };
 
 export const PdfExportDialogOptions = () => {
-  const options = useAtomValue(pdfExportOptionsAtom);
+  const { options } = usePdfDialogUiState();
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto pr-1">

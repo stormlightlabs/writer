@@ -16,11 +16,11 @@ Canonical content lives in user-selected folders ("locations"). The app database
 
 ### State Layers
 
-- Zustand (`src/state/appStore.ts`) is the primary app store:
+- Zustand (`src/state/stores/app.ts`) is the primary app store:
   - layout/editor presentation state
   - workspace state (locations, docs, selection)
   - tabs and PDF export status
-- Jotai (`src/state/searchAtoms.ts`) is used for localized search UI state.
+- Jotai (`src/state/atoms/search.ts` and `src/state/atoms/ui.ts`) is used for localized UI orchestration state.
 
 ### Command Boundary (`ports`)
 
@@ -103,9 +103,6 @@ Current NLP/writing-assist features are frontend-first:
 
 Style-check settings are persisted (`style_check_get/set` + SQLite `app_settings`), while POS highlighting is currently session state.
 
-## Runtime Lifecycle (High Level)
+## Runtime Lifecycle
 
-1. Tauri boots plugins, opens store, reconciles locations/indexes, and emits startup events.
-2. Frontend hydrates persisted UI/style settings and loads locations/documents.
-3. Selecting/opening/saving docs goes through typed commands.
-4. Watcher events keep the document index and UI views synchronized with external file changes.
+See [`docs/lifecycle.md`](./lifecycle.md) for the canonical startup/runtime lifecycle.
