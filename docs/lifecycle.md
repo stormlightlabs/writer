@@ -1,138 +1,76 @@
 # App Lifecycle
 
-This document is the canonical runtime lifecycle reference for the desktop app.
-Architecture/state/pdf docs intentionally avoid duplicating this sequence.
-
-## 1. Process Boot and Route Selection
+## 1. Bootstrap and Route Selection
 
 Entry point: `src/main.tsx`.
 
-At startup, the frontend:
+Startup sequence:
 
-1. Initializes frontend logging.
-2. Installs global error handlers (`error`, `unhandledrejection`).
-3. Reads the current Tauri window label via `getCurrentWindow().label`.
-4. Applies an initial hash route with `applyInitialRoute(windowLabel)`.
-5. Renders `AppRouter`.
+1. Initialize frontend logging.
+2. Register global `error` and `unhandledrejection` handlers.
+3. Read current Tauri window label.
+4. Apply hash route (`#/` or `#/quick-capture`).
+5. Render `AppRouter`.
 
-Router: `src/routes/AppRouter.tsx` (hash router).
+## 2. Route Mount
 
-- `#/` -> `App` (main editor app).
-- `#/quick-capture` -> `QuickCaptureApp` (compact capture window).
-- fallback -> not-found route.
+`src/routes/AppRouter.tsx`:
 
-## 2. Main App Mount (`App`)
+- `#/` -> main app (`App`)
+- `#/quick-capture` -> quick capture app (`QuickCaptureApp`)
 
-Primary composition root: `src/App.tsx`.
+## 3. Main App Runtime (`App`)
 
-On mount, `App` sets up:
+`App` delegates orchestration to `useAppController`, which wires:
 
-- Editor state machine (`useEditor`).
-- Preview orchestration (`usePreview`).
-- Workspace synchronization (`useWorkspaceSync`).
-- Layout hotkeys (`useLayoutHotkeys`).
-- Workspace/document/tab actions (`useWorkspaceController`).
-- Typing activity tracking (`useTypingActivity`).
+- workspace sync and selection lifecycle
+- editor state + save behavior
+- preview rendering and editor/preview line sync
+- layout hotkeys and layout controls
+- toolbar/status/sidebar/document tab props
+- PDF export trigger wiring
 
-## 3. Settings Hydration and Persistence Loop
+## 4. Workspace Lifecycle
 
-Hydration effect (runs once):
+Core flow via `useWorkspaceSync` + `useWorkspaceController`:
 
-- `uiLayoutGet` -> layout/editor/focus settings.
-- `styleCheckGet` -> writer tools style-check settings.
-- `globalCaptureGet` -> quick-capture settings atom.
+1. Load locations.
+2. Select an initial location if available.
+3. Load documents for selected location.
+4. Restore/open last document session when possible.
+5. Track and refresh sidebar contents for saves and manual refreshes.
 
-After hydration (`layoutSettingsHydrated = true`):
+## 5. Editor + Save Lifecycle
 
-- UI/layout changes are persisted via `uiLayoutSet`.
-- Style-check changes are persisted via `styleCheckSet`.
+- Editor content and save status are managed via `useEditor` + `useDocumentActions`.
+- Save action dispatches `doc_save` through ports.
+- Save status transitions drive toolbar/status UI and tab modified state.
 
-This protects against writing defaults before persisted values load.
+## 6. Preview Lifecycle
 
-## 4. Workspace and Document Restore Lifecycle
+- Preview source is updated from active document text.
+- Markdown render calls are debounced.
+- Preview line sync is maintained from cursor movement.
 
-Startup restore runs once when:
+## 7. Settings Hydration/Persistence
 
-- locations are loaded,
-- at least one location exists,
-- no tabs are open yet.
+`useSettingsSync` loads persisted settings and then persists store updates.
 
-Restore sequence:
+Persisted backend settings include:
 
-1. `sessionLastDocGet`.
-2. Validate location exists.
-3. `docExists` for the remembered file.
-4. If valid, select/open that document tab.
-5. Otherwise, create a fallback blank draft tab.
+- UI layout settings
+- style-check settings
+- global capture settings
 
-After restore completes, active doc references are saved with `sessionLastDocSet`.
+## 8. Quick Capture Lifecycle
 
-## 5. Active Tab and Editor Lifecycle
+`QuickCaptureApp`:
 
-`App` reacts to active tab changes:
+1. Loads global capture settings.
+2. Submits capture via backend command.
+3. Closes quick capture window when backend returns `shouldClose`.
 
-- Calls `openDoc(activeDocRef)` to load editor content.
-- Updates preview source doc (`setPreviewDoc`).
-- Debounced markdown preview render (`renderPreview`) after 300ms text changes.
-- Marks active tab modified state from editor save status (`Dirty` -> modified badge).
+## 9. Error/Event Lifecycle
 
-Save lifecycle:
-
-1. If current buffer has no `docRef`, create draft path in selected location.
-2. Dispatch `SaveRequested`.
-3. Port command executes `doc_save`.
-4. Save status transitions (`Saving` -> `Saved`/`Error`).
-
-## 6. UI State Lifecycle (Jotai + Zustand)
-
-UI state now uses both stores:
-
-- Zustand (`src/state/stores/app.ts`): structural app/workspace/editor/view/persisted settings and PDF export status.
-- Jotai (`src/state/atoms/*.ts`): localized UI orchestration state.
-
-Current Jotai UI atoms:
-
-- `layoutSettingsOpenAtom`: settings panel visibility.
-- `pdfExportDialogOpenAtom`: PDF dialog visibility.
-- `pdfExportOptionsAtom`: PDF dialog options (session scoped).
-- `globalCaptureSettingsAtom`: quick-capture settings mirror used by UI.
-- `setQuickCaptureEnabledAtom`: optimistic quick-capture toggle with rollback on persist failure.
-- search atoms in `src/state/atoms/search.ts` for search query/results/filters/loading.
-
-## 7. Search Overlay Lifecycle
-
-Search overlay flow:
-
-1. Header toggles search visibility through layout chrome state.
-2. `SearchOverlay` uses `useSearchController`.
-3. Controller debounces query, calls `searchDocuments`, and guards stale responses.
-4. Selecting a hit opens/selects the target tab and closes overlay.
-
-## 8. PDF Export Lifecycle
-
-Open and execute:
-
-1. Toolbar opens dialog (`pdfExportDialogOpenAtom`) only if an active tab exists.
-2. Dialog options are edited through `pdfExportOptionsAtom`.
-3. Export click requests backend AST (`renderMarkdownForPdf`).
-4. `usePdfExport` renders PDF (`@react-pdf/renderer`) and writes via Tauri dialogs/fs plugin.
-5. Export state (`isExportingPdf`, `pdfExportError`) is tracked in Zustand PDF slice.
-6. On cancel/close, dialog closes and PDF export status resets.
-
-## 9. Quick Capture Route Lifecycle
-
-`QuickCaptureApp` (`#/quick-capture`):
-
-1. Loads global capture settings with `globalCaptureGet`.
-2. Submits capture via `globalCaptureSubmit`.
-3. Closes the window when backend result indicates `shouldClose`.
-
-This route is intended for the dedicated quick-capture Tauri window.
-
-## 10. Error and Diagnostics Lifecycle
-
-Runtime diagnostics are continuously handled by:
-
-- frontend logger initialization,
-- global JS error/rejection handlers,
-- backend event alerts (`BackendAlerts`) for missing locations and conflicts.
+- Global JS errors are logged.
+- Backend reconciliation and watcher events are emitted by Tauri and consumed by frontend event hooks.
