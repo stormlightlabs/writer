@@ -10,9 +10,7 @@ import { SearchInput } from "./SearchInput";
 import { SidebarLocationItem } from "./SidebarLocationItem";
 import { Title } from "./Title";
 
-export type SidebarProps = {
-  onNewDocument?: (locationId?: number) => void;
-};
+export type SidebarProps = { onNewDocument?: (locationId?: number) => void };
 
 type SidebarActionsProps = {
   onAddLocation: () => void;
@@ -58,9 +56,7 @@ const SidebarActions = (
   </div>
 );
 
-export function Sidebar(
-  { onNewDocument }: SidebarProps,
-) {
+export function Sidebar({ onNewDocument }: SidebarProps) {
   const { handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument } =
     useWorkspaceController();
   const {

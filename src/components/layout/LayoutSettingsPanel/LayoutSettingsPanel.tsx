@@ -3,6 +3,7 @@ import { CollapsibleSection } from "$components/CollapsibleSection";
 import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
+import { globalCaptureSettingsAtom, layoutSettingsOpenAtom, setQuickCaptureEnabledAtom } from "$state/atoms/ui";
 import {
   useCalmUiActions,
   useCalmUiSettings,
@@ -12,20 +13,29 @@ import {
   useLayoutSettingsWriterToolsState,
 } from "$state/panel-selectors";
 import type { EditorFontFamily } from "$types";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { CustomPatternControls } from "./CustomPatternControls";
 import { DimmingModeRow } from "./DimmingModeRow";
 import { FontFamilyRow, FontSizeRow } from "./FontRows";
 import { ToggleRow } from "./ToggleRow";
 
-const SettingsHeader = ({ onClose }: { onClose: () => void }) => (
-  <div className="flex items-center justify-between mb-2">
-    <h2 className="m-0 text-sm font-medium text-text-primary">Layout Settings</h2>
-    <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label="Close layout settings">
-      <XIcon size="sm" />
-    </Button>
-  </div>
-);
+const SettingsHeader = () => {
+  const setIsVisible = useSetAtom(layoutSettingsOpenAtom);
+
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+  }, [setIsVisible]);
+
+  return (
+    <div className="flex items-center justify-between mb-2">
+      <h2 className="m-0 text-sm font-medium text-text-primary">Layout Settings</h2>
+      <Button type="button" variant="iconSubtle" size="iconLg" onClick={handleClose} aria-label="Close layout settings">
+        <XIcon size="sm" />
+      </Button>
+    </div>
+  );
+};
 
 function StyleCheckSection() {
   const { styleCheckSettings, setStyleCheckSettings, setStyleCheckCategory, addCustomPattern, removeCustomPattern } =
@@ -226,19 +236,24 @@ function WriterToolsSection() {
   );
 }
 
-type QuickCaptureSectionProps = { enabled: boolean; onEnabledChange: (enabled: boolean) => void };
+const QuickCaptureSection = () => {
+  const quickCaptureEnabled = useAtomValue(globalCaptureSettingsAtom).enabled;
+  const setQuickCaptureEnabled = useSetAtom(setQuickCaptureEnabledAtom);
 
-const QuickCaptureSection = ({ enabled, onEnabledChange }: QuickCaptureSectionProps) => (
-  <ToggleRow
-    label="Enable Quick Capture"
-    description="Turn global quick-note capture on or off."
-    isVisible={enabled}
-    onToggle={onEnabledChange} />
-);
+  const handleQuickCaptureEnabledChange = useCallback((enabled: boolean) => {
+    setQuickCaptureEnabled(enabled);
+  }, [setQuickCaptureEnabled]);
 
-type SettingsBodyProps = { quickCaptureEnabled: boolean; onQuickCaptureEnabledChange: (enabled: boolean) => void };
+  return (
+    <ToggleRow
+      label="Enable Quick Capture"
+      description="Turn global quick-note capture on or off."
+      isVisible={quickCaptureEnabled}
+      onToggle={handleQuickCaptureEnabledChange} />
+  );
+};
 
-const SettingsBody = ({ quickCaptureEnabled, onQuickCaptureEnabledChange }: SettingsBodyProps) => (
+const SettingsBody = () => (
   <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
     <CollapsibleSection title="Calm UI" description="Reduce visual noise and automate focus-oriented behavior.">
       <CalmUiSettingsSection />
@@ -256,28 +271,23 @@ const SettingsBody = ({ quickCaptureEnabled, onQuickCaptureEnabledChange }: Sett
       <WriterToolsSection />
     </CollapsibleSection>
     <CollapsibleSection title="Quick Capture" description="Toggle global quick-note capture behavior.">
-      <QuickCaptureSection enabled={quickCaptureEnabled} onEnabledChange={onQuickCaptureEnabledChange} />
+      <QuickCaptureSection />
     </CollapsibleSection>
   </div>
 );
 
-type LayoutSettingsPanelProps = {
-  isVisible: boolean;
-  onClose: () => void;
-  quickCaptureEnabled: boolean;
-  onQuickCaptureEnabledChange: (enabled: boolean) => void;
-};
-
-export const LayoutSettingsPanel = (
-  { isVisible, onClose, quickCaptureEnabled, onQuickCaptureEnabledChange }: LayoutSettingsPanelProps,
-) => {
+export const LayoutSettingsPanel = () => {
+  const [isVisible, setIsVisible] = useAtom(layoutSettingsOpenAtom);
   const { isCompact, viewportWidth } = useViewportTier();
   const compactPanel = useMemo(() => isCompact || viewportWidth < 920, [isCompact, viewportWidth]);
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+  }, [setIsVisible]);
 
   return (
     <Dialog
       isOpen={isVisible}
-      onClose={onClose}
+      onClose={handleClose}
       ariaLabel="Layout settings"
       motionPreset={compactPanel ? "slideUp" : "slideRight"}
       backdropClassName={compactPanel ? "bg-black/35" : "bg-black/30"}
@@ -288,10 +298,8 @@ export const LayoutSettingsPanel = (
           : "right-4 top-14 w-[360px] max-h-[calc(100vh-4.5rem)] rounded-lg"
       }`}>
       <section className="flex min-h-0 h-full flex-col overflow-hidden p-4">
-        <SettingsHeader onClose={onClose} />
-        <SettingsBody
-          quickCaptureEnabled={quickCaptureEnabled}
-          onQuickCaptureEnabledChange={onQuickCaptureEnabledChange} />
+        <SettingsHeader />
+        <SettingsBody />
       </section>
     </Dialog>
   );

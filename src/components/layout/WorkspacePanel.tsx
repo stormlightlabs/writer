@@ -31,7 +31,6 @@ export type WorkspacePanelProps = {
     | "onSave"
     | "onNewDocument"
     | "isNewDocumentDisabled"
-    | "onOpenSettings"
     | "onExportPdf"
     | "isExportingPdf"
     | "isPdfExportDisabled"
@@ -109,9 +108,7 @@ function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMod
   return "editor";
 }
 
-export function WorkspacePanel(
-  { toolbar, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps,
-) {
+export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps) {
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
   const { isSplitView, isPreviewVisible } = useWorkspacePanelModeState();

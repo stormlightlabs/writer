@@ -1,6 +1,6 @@
 import { Button } from "$components/Button";
-import { useWorkspaceController } from "$hooks/useWorkspaceController";
 import { useViewportTier } from "$hooks/useViewportTier";
+import { useWorkspaceController } from "$hooks/useWorkspaceController";
 import { PlusIcon } from "$icons";
 import { useTabsState, useWorkspaceLocationsState } from "$state/stores/app";
 import { motion } from "motion/react";
@@ -41,9 +41,7 @@ const NewButton = ({ onNewDocument, hasTabs }: { onNewDocument?: () => void; has
   return null;
 };
 
-export type DocumentTabsProps = {
-  onNewDocument?: () => void;
-};
+export type DocumentTabsProps = { onNewDocument?: () => void };
 
 export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
   const { tabs, activeTabId } = useTabsState();

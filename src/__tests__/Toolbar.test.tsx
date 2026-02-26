@@ -30,13 +30,13 @@ describe("Toolbar", () => {
   });
 
   it("does not render save status when no document is open", () => {
-    render(<Toolbar saveStatus="Dirty" hasActiveDocument={false} onSave={vi.fn()} onOpenSettings={vi.fn()} />);
+    render(<Toolbar saveStatus="Dirty" hasActiveDocument={false} onSave={vi.fn()} />);
 
     expect(screen.queryByText("Unsaved")).not.toBeInTheDocument();
   });
 
   it("renders save status when a document is open", () => {
-    render(<Toolbar saveStatus="Dirty" hasActiveDocument onSave={vi.fn()} onOpenSettings={vi.fn()} />);
+    render(<Toolbar saveStatus="Dirty" hasActiveDocument onSave={vi.fn()} />);
 
     expect(screen.getByText("Unsaved")).toBeInTheDocument();
   });

@@ -1,19 +1,15 @@
 import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { DEFAULT_OPTIONS } from "$pdf/constants";
-import type { MarginSide, PdfExportOptions, StandardPageSize } from "$pdf/types";
-import { usePdfExportState } from "$state/stores/app";
-import { useCallback, useState } from "react";
+import type { PdfExportOptions } from "$pdf/types";
+import { pdfExportDialogOpenAtom, pdfExportOptionsAtom } from "$state/atoms/ui";
+import { usePdfExportActions, usePdfExportState, useTabsState, useWorkspaceDocumentsState } from "$state/stores/app";
+import { useAtom, useAtomValue } from "jotai";
+import { useCallback } from "react";
 import { PdfExportDialogFooter } from "./ExportFooter";
 import { PdfExportDialogHeader } from "./ExportHeader";
 import { PdfExportDialogOptions } from "./ExportOptions";
 
-export type PdfExportDialogProps = {
-  isOpen: boolean;
-  title?: string;
-  onExport: (options: PdfExportOptions) => Promise<void>;
-  onCancel: () => void;
-};
+export type PdfExportDialogProps = { onExport: (options: PdfExportOptions) => Promise<void> };
 
 const PdfTitle = ({ title }: { title?: string }) => (title
   ? (
@@ -23,60 +19,37 @@ const PdfTitle = ({ title }: { title?: string }) => (title
   )
   : null);
 
-export function PdfExportDialog({ isOpen, title, onExport, onCancel }: PdfExportDialogProps) {
-  const { isExportingPdf, pdfExportError } = usePdfExportState();
+export function PdfExportDialog({ onExport }: PdfExportDialogProps) {
+  const [isOpen, setIsOpen] = useAtom(pdfExportDialogOpenAtom);
+  const options = useAtomValue(pdfExportOptionsAtom);
+  const { pdfExportError } = usePdfExportState();
+  const { resetPdfExport } = usePdfExportActions();
+  const { tabs, activeTabId } = useTabsState();
+  const { documents } = useWorkspaceDocumentsState();
 
   const { isCompact, viewportWidth } = useViewportTier();
-  const [options, setOptions] = useState<PdfExportOptions>(DEFAULT_OPTIONS);
+  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
+  const title = activeTab
+    ? documents.find((doc) =>
+      doc.location_id === activeTab.docRef.location_id && doc.rel_path === activeTab.docRef.rel_path
+    )?.title
+    : undefined;
 
-  const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const pageSize = e.target.value as StandardPageSize;
-    setOptions((prev) => ({ ...prev, pageSize }));
-  }, []);
-
-  const handleOrientationChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const orientation = e.target.value as "portrait" | "landscape";
-    setOptions((prev) => ({ ...prev, orientation }));
-  }, []);
-
-  const handleFontSizeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const fontSize = parseInt(e.target.value, 10);
-    setOptions((prev) => ({ ...prev, fontSize }));
-  }, []);
-
-  const handleMarginChange = useCallback((side: MarginSide, value: number) => {
-    const margin = Number.isNaN(value) ? 0 : value;
-    setOptions((prev) => ({ ...prev, margins: { ...prev.margins, [side]: margin } }));
-  }, []);
-
-  const handleIncludeHeaderChange = useCallback((value: boolean) => {
-    setOptions((prev) => ({ ...prev, includeHeader: value }));
-  }, []);
-
-  const handleIncludeFooterChange = useCallback((value: boolean) => {
-    setOptions((prev) => ({ ...prev, includeFooter: value }));
-  }, []);
+  const handleCancel = useCallback(() => {
+    setIsOpen(false);
+    resetPdfExport();
+  }, [resetPdfExport, setIsOpen]);
 
   const handleExportClick = useCallback(async () => {
     await onExport(options);
   }, [onExport, options]);
 
   const compactPanel = isCompact || viewportWidth < 880;
-  const optionsContent = (
-    <PdfExportDialogOptions
-      options={options}
-      handlePageSizeChange={handlePageSizeChange}
-      handleOrientationChange={handleOrientationChange}
-      handleFontSizeChange={handleFontSizeChange}
-      handleMarginChange={handleMarginChange}
-      handleIncludeHeaderChange={handleIncludeHeaderChange}
-      handleIncludeFooterChange={handleIncludeFooterChange} />
-  );
 
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={onCancel}
+      onClose={handleCancel}
       ariaLabel="Export to PDF"
       motionPreset={compactPanel ? "slideUp" : "scale"}
       backdropClassName={compactPanel ? "bg-black/40" : "bg-black/50"}
@@ -89,14 +62,11 @@ export function PdfExportDialog({ isOpen, title, onExport, onCancel }: PdfExport
           : "w-full max-w-xl max-h-[calc(100vh-2rem)] rounded-lg"
       }`}>
       <div className={`flex h-full flex-col ${compactPanel ? "p-4" : "p-6"}`}>
-        <PdfExportDialogHeader handleCancel={onCancel} />
+        <PdfExportDialogHeader />
         <PdfTitle title={title} />
         {pdfExportError ? <p className="text-sm text-support-error mb-4">{pdfExportError}</p> : null}
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">{optionsContent}</div>
-        <PdfExportDialogFooter
-          handleCancel={onCancel}
-          handleExportClick={handleExportClick}
-          isExporting={isExportingPdf} />
+        <PdfExportDialogOptions />
+        <PdfExportDialogFooter handleExportClick={handleExportClick} />
       </div>
     </Dialog>
   );

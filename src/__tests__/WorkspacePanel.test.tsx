@@ -124,7 +124,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
 };
 
 const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}): WorkspacePanelProps => ({
-  toolbar: { saveStatus: "Idle", onSave: vi.fn(), onOpenSettings: vi.fn(), ...overrides.toolbar },
+  toolbar: { saveStatus: "Idle", onSave: vi.fn(), ...overrides.toolbar },
   editor: {
     initialText: "# Document",
     onChange: vi.fn(),

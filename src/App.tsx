@@ -4,7 +4,6 @@ import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import {
   docExists,
   globalCaptureGet,
-  globalCaptureSet,
   renderMarkdownForPdf,
   runCmd,
   sessionLastDocGet,
@@ -14,9 +13,11 @@ import {
   uiLayoutGet,
   uiLayoutSet,
 } from "$ports";
+import { globalCaptureSettingsAtom, pdfExportDialogOpenAtom } from "$state/atoms/ui";
 import { stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
-import type { DocRef, GlobalCaptureSettings } from "$types";
+import type { DocRef } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
+import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
@@ -53,28 +54,14 @@ const ShowButton = ({ clickHandler, title, label }: { clickHandler: () => void; 
   </Button>
 );
 
-const DEFAULT_GLOBAL_CAPTURE_SETTINGS: GlobalCaptureSettings = {
-  enabled: true,
-  shortcut: "CommandOrControl+Shift+Space",
-  paused: false,
-  defaultMode: "QuickNote",
-  targetLocationId: null,
-  inboxRelativeDir: "inbox",
-  appendTarget: null,
-  closeAfterSave: true,
-  showTrayIcon: true,
-  lastCaptureTarget: null,
-};
-
 function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const exportPdf = usePdfExport();
   const { resetPdfExport } = usePdfExportActions();
-  const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
-  const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
+  const setPdfExportDialogOpen = useSetAtom(pdfExportDialogOpenAtom);
+  const setGlobalCaptureSettings = useSetAtom(globalCaptureSettingsAtom);
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
-  const [globalCaptureSettings, setGlobalCaptureSettings] = useState(DEFAULT_GLOBAL_CAPTURE_SETTINGS);
   const cursorPosition = useMemo(
     () => ({ cursorLine: editorModel.cursorLine, cursorColumn: editorModel.cursorColumn }),
     [editorModel.cursorLine, editorModel.cursorColumn],
@@ -186,8 +173,6 @@ function App() {
     editorDispatch({ type: "SelectionChanged", from, to });
   }, [editorDispatch]);
 
-  const handleOpenSettings = useCallback(() => setIsLayoutSettingsOpen((prev) => !prev), []);
-
   const handleOpenPdfExport = useCallback(() => {
     if (!activeTab) {
       logger.warn("Cannot export PDF without an active document.");
@@ -195,16 +180,11 @@ function App() {
     }
 
     resetPdfExport();
-    setIsPdfExportDialogOpen(true);
-  }, [activeTab, resetPdfExport]);
+    setPdfExportDialogOpen(true);
+  }, [activeTab, resetPdfExport, setPdfExportDialogOpen]);
 
   const handleShowSidebar = useCallback(() => setSidebarCollapsed(false), [setSidebarCollapsed]);
   const handleShowStatusBar = useCallback(() => setStatusBarCollapsed(false), [setStatusBarCollapsed]);
-
-  const handleCancelPdfExport = useCallback(() => {
-    setIsPdfExportDialogOpen(false);
-    resetPdfExport();
-  }, [resetPdfExport]);
 
   const handleExportPdf = useCallback(async (options: PdfExportOptions) => {
     if (!activeTab) {
@@ -223,13 +203,20 @@ function App() {
 
       const didExport = await exportPdf(renderResult, options, editorPresentation.editorFontFamily);
       if (didExport) {
-        setIsPdfExportDialogOpen(false);
+        setPdfExportDialogOpen(false);
         resetPdfExport();
       }
     } catch (error) {
       logger.error("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) });
     }
-  }, [activeTab, editorModel.text, exportPdf, editorPresentation.editorFontFamily, resetPdfExport]);
+  }, [
+    activeTab,
+    editorModel.text,
+    exportPdf,
+    editorPresentation.editorFontFamily,
+    resetPdfExport,
+    setPdfExportDialogOpen,
+  ]);
 
   const showToggleControls = useMemo(() => layoutChrome.sidebarCollapsed || layoutChrome.statusBarCollapsed, [
     layoutChrome.sidebarCollapsed,
@@ -255,17 +242,8 @@ function App() {
       isNewDocumentDisabled: !hasLocations,
       onExportPdf: handleOpenPdfExport,
       isPdfExportDisabled: !activeTab,
-      onOpenSettings: handleOpenSettings,
     }),
-    [
-      editorModel.saveStatus,
-      activeTab,
-      handleOpenPdfExport,
-      handleNewDocument,
-      hasLocations,
-      handleSave,
-      handleOpenSettings,
-    ],
+    [editorModel.saveStatus, activeTab, handleOpenPdfExport, handleNewDocument, hasLocations, handleSave],
   );
 
   const activeDocRef = activeTab?.docRef ?? null;
@@ -364,25 +342,6 @@ function App() {
     }),
     [previewModel.renderResult, editorPresentation.theme, editorModel.cursorLine, syncPreviewLine],
   );
-
-  const handleSettingsClose = useCallback(() => {
-    setIsLayoutSettingsOpen(false);
-  }, []);
-
-  const handleQuickCaptureEnabledChange = useCallback((enabled: boolean) => {
-    setGlobalCaptureSettings((prev) => {
-      if (prev.enabled === enabled) {
-        return prev;
-      }
-
-      const next = { ...prev, enabled };
-      void runCmd(globalCaptureSet(next, () => {}, (error) => {
-        logger.error("Failed to persist quick capture enabled state", error);
-        setGlobalCaptureSettings(prev);
-      }));
-      return next;
-    });
-  }, []);
 
   const focusModePanelProps = useMemo(() => {
     return {
@@ -554,16 +513,8 @@ function App() {
 
       <AppHeaderBar />
       <WorkspacePanel {...workspacePanelProps} />
-      <LayoutSettingsPanel
-        isVisible={isLayoutSettingsOpen}
-        onClose={handleSettingsClose}
-        quickCaptureEnabled={globalCaptureSettings.enabled}
-        onQuickCaptureEnabledChange={handleQuickCaptureEnabledChange} />
-      <PdfExportDialog
-        isOpen={isPdfExportDialogOpen}
-        title={activeDocMeta?.title}
-        onExport={handleExportPdf}
-        onCancel={handleCancelPdfExport} />
+      <LayoutSettingsPanel />
+      <PdfExportDialog onExport={handleExportPdf} />
       <SearchOverlay />
       <BackendAlerts />
     </div>

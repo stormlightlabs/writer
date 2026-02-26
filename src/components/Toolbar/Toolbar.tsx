@@ -1,7 +1,5 @@
-import { Button } from "$components/Button";
 import { useViewportTier } from "$hooks/useViewportTier";
 import {
-  CheckIcon,
   DocumentIcon,
   EyeIcon,
   FocusIcon,
@@ -13,11 +11,13 @@ import {
   SettingsIcon,
   SplitViewIcon,
 } from "$icons";
+import { layoutSettingsOpenAtom } from "$state/atoms/ui";
 import { useToolbarState } from "$state/panel-selectors";
 import { SaveStatus } from "$types";
-import type { MouseEventHandler } from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Tooltip } from "./Tooltip";
+import { useSetAtom } from "jotai";
+import { useCallback, useMemo } from "react";
+import { SaveStatusIndicator } from "./SaveStatusIndicator";
+import { ToolbarButton } from "./ToolbarButton";
 
 export type ToolbarProps = {
   saveStatus: SaveStatus;
@@ -25,104 +25,22 @@ export type ToolbarProps = {
   onSave: () => void;
   onNewDocument?: () => void;
   isNewDocumentDisabled?: boolean;
-  onOpenSettings: () => void;
   onExportPdf?: () => void;
   isExportingPdf?: boolean;
   isPdfExportDisabled?: boolean;
   onRefresh?: () => void;
 };
 
-function ToolbarButton(
-  { icon, label, isActive = false, onClick, disabled = false, shortcut, iconOnly = false }: {
-    icon: { Component: React.ComponentType<IconProps>; size: IconSize };
-    label: string;
-    isActive?: boolean;
-    onClick: () => void;
-    disabled?: boolean;
-    shortcut?: string;
-    iconOnly?: boolean;
-  },
+function SettingsToolbarButton(
+  { icon, iconOnly }: { icon: { Component: React.ComponentType<IconProps>; size: IconSize }; iconOnly: boolean },
 ) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const setIsLayoutSettingsOpen = useSetAtom(layoutSettingsOpenAtom);
 
-  const handleMouseEnter = useCallback(() => {
-    setShowTooltip(true);
-  }, []);
+  const handleOpenSettings = useCallback(() => {
+    setIsLayoutSettingsOpen(true);
+  }, [setIsLayoutSettingsOpen]);
 
-  const handleMouseLeave = useCallback(() => {
-    setShowTooltip(false);
-  }, []);
-
-  const handleMouseOver: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
-    if (!disabled && !isActive) {
-      (e.currentTarget as HTMLButtonElement).classList.add("bg-layer-hover-01", "text-text-primary");
-    }
-  }, [isActive, disabled]);
-
-  const handleMouseOut: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
-    if (!isActive) {
-      (e.currentTarget as HTMLButtonElement).classList.remove("bg-layer-hover-01", "text-text-primary");
-    }
-  }, [isActive]);
-
-  return (
-    <>
-      <Button
-        ref={buttonRef}
-        onClick={onClick}
-        disabled={disabled}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[0.8125rem] relative transition-all duration-150 ease rounded ${
-          isActive
-            ? "bg-layer-accent-01 border border-border-strong text-text-primary"
-            : "bg-transparent border border-transparent text-text-secondary"
-        } ${iconOnly ? "w-8 h-8 px-0 justify-center" : ""} ${
-          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
-        }`}
-        onMouseOver={handleMouseOver}
-        onMouseOut={handleMouseOut}
-        aria-label={iconOnly ? label : undefined}
-        title={iconOnly ? label : undefined}>
-        <icon.Component size={icon.size} />
-        {iconOnly ? null : <span>{label}</span>}
-      </Button>
-      {shortcut ? <Tooltip anchorRef={buttonRef} visible={showTooltip}>{shortcut}</Tooltip> : null}
-    </>
-  );
-}
-
-const getStatusDisplay = (status: SaveStatus) => {
-  switch (status) {
-    case "Saving": {
-      return { Icon: SaveIcon, text: "Saving...", color: "text-accent-cyan" };
-    }
-    case "Saved": {
-      return { Icon: CheckIcon, text: "Saved", color: "text-accent-green" };
-    }
-    case "Dirty": {
-      return { Icon: null, text: "Unsaved", color: "text-accent-yellow" };
-    }
-    case "Error": {
-      return { Icon: null, text: "Error", color: "text-support-error" };
-    }
-    default: {
-      return { Icon: null, text: "Ready", color: "text-text-placeholder" };
-    }
-  }
-};
-
-function SaveStatusIndicator({ status, compact = false }: { status: SaveStatus; compact?: boolean }) {
-  const { Icon, text, color } = getStatusDisplay(status);
-
-  return (
-    <div
-      className={`flex items-center gap-1.5 text-xs ${color} px-2 py-1 bg-layer-01 rounded border border-border-subtle`}>
-      {Icon && <Icon size="sm" />}
-      {compact ? null : <span>{text}</span>}
-    </div>
-  );
+  return <ToolbarButton icon={icon} label="Settings" onClick={handleOpenSettings} iconOnly={iconOnly} />;
 }
 
 export function Toolbar(
@@ -132,7 +50,6 @@ export function Toolbar(
     onSave,
     onNewDocument,
     isNewDocumentDisabled = false,
-    onOpenSettings,
     onExportPdf,
     isExportingPdf = false,
     isPdfExportDisabled = false,
@@ -220,7 +137,7 @@ export function Toolbar(
             disabled={isExportingPdf || isPdfExportDisabled}
             iconOnly={iconOnly} />
         )}
-        <ToolbarButton icon={icons.settings} label="Settings" onClick={onOpenSettings} iconOnly={iconOnly} />
+        <SettingsToolbarButton icon={icons.settings} iconOnly={iconOnly} />
       </div>
     </div>
   );

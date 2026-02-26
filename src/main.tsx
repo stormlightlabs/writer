@@ -2,8 +2,7 @@ import { logger } from "$logger";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import { QuickCaptureApp } from "./components/capture";
+import { applyInitialRoute, AppRouter } from "./routes/AppRouter";
 import "@fontsource-variable/ibm-plex-sans";
 import "./App.css";
 
@@ -31,17 +30,10 @@ globalThis.addEventListener("unhandledrejection", (event) => {
 // Detect window label and render appropriate app
 const windowLabel = getCurrentWindow().label;
 logger.info(`Rendering app for window: ${windowLabel}`);
+applyInitialRoute(windowLabel);
 
-if (windowLabel === "quick_capture") {
-  ReactDOM.createRoot(document.querySelector("#root") as HTMLElement).render(
-    <React.StrictMode>
-      <QuickCaptureApp />
-    </React.StrictMode>,
-  );
-} else {
-  ReactDOM.createRoot(document.querySelector("#root") as HTMLElement).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  );
-}
+ReactDOM.createRoot(document.querySelector("#root") as HTMLElement).render(
+  <React.StrictMode>
+    <AppRouter />
+  </React.StrictMode>,
+);
