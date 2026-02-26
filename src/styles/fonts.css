@@ -1,0 +1,255 @@
+@font-face {
+    font-family: "Writer IBM Plex Mono";
+    src: url("/fonts/ibm-plex-mono-400-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Mono";
+    src: url("/fonts/ibm-plex-mono-400-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Mono";
+    src: url("/fonts/ibm-plex-mono-700-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Mono";
+    src: url("/fonts/ibm-plex-mono-700-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Sans";
+    src: url("/fonts/ibm-plex-sans-400-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Sans";
+    src: url("/fonts/ibm-plex-sans-400-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Sans";
+    src: url("/fonts/ibm-plex-sans-700-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Sans";
+    src: url("/fonts/ibm-plex-sans-700-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Serif";
+    src: url("/fonts/ibm-plex-serif-400-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Serif";
+    src: url("/fonts/ibm-plex-serif-400-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Serif";
+    src: url("/fonts/ibm-plex-serif-700-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer IBM Plex Serif";
+    src: url("/fonts/ibm-plex-serif-700-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Argon";
+    src: url("/fonts/monaspace-argon-400-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Argon";
+    src: url("/fonts/monaspace-argon-400-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Argon";
+    src: url("/fonts/monaspace-argon-700-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Argon";
+    src: url("/fonts/monaspace-argon-700-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Krypton";
+    src: url("/fonts/monaspace-krypton-400-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Krypton";
+    src: url("/fonts/monaspace-krypton-400-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Krypton";
+    src: url("/fonts/monaspace-krypton-700-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Krypton";
+    src: url("/fonts/monaspace-krypton-700-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Neon";
+    src: url("/fonts/monaspace-neon-400-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Neon";
+    src: url("/fonts/monaspace-neon-400-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Neon";
+    src: url("/fonts/monaspace-neon-700-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Neon";
+    src: url("/fonts/monaspace-neon-700-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Radon";
+    src: url("/fonts/monaspace-radon-400-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Radon";
+    src: url("/fonts/monaspace-radon-400-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Radon";
+    src: url("/fonts/monaspace-radon-700-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Radon";
+    src: url("/fonts/monaspace-radon-700-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Xenon";
+    src: url("/fonts/monaspace-xenon-400-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Xenon";
+    src: url("/fonts/monaspace-xenon-400-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Xenon";
+    src: url("/fonts/monaspace-xenon-700-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Monaspace Xenon";
+    src: url("/fonts/monaspace-xenon-700-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}

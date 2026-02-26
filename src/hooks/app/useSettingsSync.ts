@@ -30,6 +30,7 @@ export function useSettingsSync(): void {
       state.setSidebarCollapsed(settings.sidebar_collapsed);
       state.setTopBarsCollapsed(settings.top_bars_collapsed);
       state.setStatusBarCollapsed(settings.status_bar_collapsed);
+      state.setReduceMotion(settings.reduce_motion);
       state.setLineNumbersVisible(settings.line_numbers_visible);
       state.setTextWrappingEnabled(settings.text_wrapping_enabled);
       state.setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);

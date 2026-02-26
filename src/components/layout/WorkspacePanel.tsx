@@ -4,6 +4,7 @@ import { Preview, type PreviewProps } from "$components/Preview";
 import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
 import { Toolbar, type ToolbarProps } from "$components/Toolbar";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { useResizable } from "$hooks/useResizable";
 import { useViewportTier } from "$hooks/useViewportTier";
 import {
@@ -13,6 +14,7 @@ import {
   useWorkspacePanelTopBarsCollapsed,
 } from "$state/selectors";
 import { PanelMode } from "$types";
+import { AnimatePresence, EasingDefinition, motion } from "motion/react";
 import { type PointerEventHandler, useCallback, useEffect, useMemo } from "react";
 
 type K = "initialText" | "presentation" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
@@ -47,6 +49,8 @@ const SPLIT_PANEL_THRESHOLD = SPLIT_PANEL_MIN_WIDTH * 2 + 96;
 const SIDEBAR_MIN_WIDTH = 220;
 const SIDEBAR_MAX_WIDTH = 480;
 const FALLBACK_VIEWPORT_WIDTH = 1280;
+const NO_MOTION_TRANSITION = { duration: 0 };
+const CHROME_SECTION_TRANSITION = { duration: 0.2, ease: "easeOut" as const };
 
 type MainPanelProps = {
   panelMode: PanelMode;
@@ -105,7 +109,37 @@ function MainPanel(
   );
 }
 
+type SectionProps = {
+  children: React.ReactNode;
+  initial: { opacity: number; x?: number; y?: number; height?: number | string };
+  animate: { opacity: number; x?: number; y?: number; height?: number | string };
+  exit: { opacity: number; x?: number; y?: number; height?: number | string };
+  transition: { duration: number; ease?: EasingDefinition };
+  className: string;
+  style?: React.CSSProperties;
+  isVisible: boolean;
+};
+
+function Section({ children, initial, animate, exit, transition, className, style, isVisible }: SectionProps) {
+  return (
+    <AnimatePresence initial={false}>
+      {isVisible && (
+        <motion.div
+          initial={initial}
+          animate={animate}
+          exit={exit}
+          transition={transition}
+          className={className}
+          style={style}>
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps) {
+  const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
   const { isSplitView, isPreviewVisible } = useWorkspacePanelModeState();
@@ -178,30 +212,69 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
 
   const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
 
+  const sectionTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : CHROME_SECTION_TRANSITION, [
+    skipAnimation,
+  ]);
+
   const newDocumentHandler = useMemo(() => toolbar.isNewDocumentDisabled ? void 0 : toolbar.onNewDocument, [
     toolbar.isNewDocumentDisabled,
     toolbar.onNewDocument,
   ]);
 
+  const sidebarMotionProps = useMemo(
+    () => ({
+      initial: { opacity: 0, x: -16 },
+      animate: { opacity: 1, x: 0 },
+      exit: { opacity: 0, x: -12 },
+      transition: sectionTransition,
+    }),
+    [sectionTransition],
+  );
+
+  const tabBarMotionProps = useMemo(
+    () => ({
+      initial: { opacity: 0, y: -8, height: 0 },
+      animate: { opacity: 1, y: 0, height: "auto" },
+      exit: { opacity: 0, y: -8, height: 0 },
+      transition: sectionTransition,
+    }),
+    [sectionTransition],
+  );
+
+  const statusBarMotionProps = useMemo(
+    () => ({
+      initial: { opacity: 0, y: 8, height: 0 },
+      animate: { opacity: 1, y: 0, height: "auto" },
+      exit: { opacity: 0, y: 8, height: 0 },
+      transition: sectionTransition,
+    }),
+    [sectionTransition],
+  );
+
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {effectiveSidebarVisible && (
-        <div className="relative flex h-full shrink-0" style={sidebarStyle}>
-          <Sidebar onNewDocument={newDocumentHandler} />
-          <div
-            role="separator"
-            aria-label="Resize sidebar"
-            aria-orientation="vertical"
-            onPointerDown={handleSidebarResizeStart}
-            className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
-              isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
-            }`} />
-        </div>
-      )}
+      <Section
+        isVisible={effectiveSidebarVisible}
+        {...sidebarMotionProps}
+        className="relative flex h-full shrink-0"
+        style={sidebarStyle}>
+        <Sidebar onNewDocument={newDocumentHandler} />
+        <div
+          role="separator"
+          aria-label="Resize sidebar"
+          aria-orientation="vertical"
+          onPointerDown={handleSidebarResizeStart}
+          className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
+            isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
+          }`} />
+      </Section>
 
+      {/* oxlint-disable react/jsx-max-depth */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Toolbar {...toolbar} />
-        {effectiveTabBarVisible && <DocumentTabs onNewDocument={newDocumentHandler} />}
+        <Section isVisible={effectiveTabBarVisible} {...tabBarMotionProps} className="overflow-hidden">
+          <DocumentTabs onNewDocument={newDocumentHandler} />
+        </Section>
         <MainPanel
           panelMode={effectivePanelMode}
           editor={editor}
@@ -209,8 +282,12 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}
           onSplitResizeStart={handleSplitResizeStart} />
-        {effectiveStatusBarVisible && <StatusBar {...statusBar} />}
+
+        <Section isVisible={effectiveStatusBarVisible} {...statusBarMotionProps} className="overflow-hidden">
+          <StatusBar {...statusBar} />
+        </Section>
       </div>
+      {/* oxlint-enable react/jsx-max-depth */}
     </div>
   );
 }

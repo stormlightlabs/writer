@@ -35,10 +35,15 @@ export const oxocarbonLightTheme = EditorView.theme({
   "&": {
     backgroundColor: colors.background,
     color: colors.text,
-    fontSize: "14px",
-    fontFamily: "\"IBM Plex Mono\", \"SF Mono\", Monaco, monospace",
+    fontSize: "var(--editor-font-size, 14px)",
+    fontFamily: "var(--editor-font-family, \"IBM Plex Mono\", \"SF Mono\", Monaco, monospace)",
   },
-  ".cm-content": { caretColor: colors.cyan, padding: "16px 0" },
+  ".cm-scroller": { fontFamily: "var(--editor-font-family, \"IBM Plex Mono\", \"SF Mono\", Monaco, monospace)" },
+  ".cm-content": {
+    fontFamily: "var(--editor-font-family, \"IBM Plex Mono\", \"SF Mono\", Monaco, monospace)",
+    caretColor: colors.cyan,
+    padding: "16px 0",
+  },
   ".cm-cursor": { borderLeftColor: colors.cyan, borderLeftWidth: "2px" },
   "&.cm-focused .cm-cursor": { borderLeftColor: colors.cyan },
   "&.cm-focused .cm-selectionBackground": { backgroundColor: "rgba(15, 98, 254, 0.2)" },

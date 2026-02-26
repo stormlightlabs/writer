@@ -1554,6 +1554,7 @@ mod tests {
             sidebar_collapsed: true,
             top_bars_collapsed: false,
             status_bar_collapsed: true,
+            reduce_motion: true,
             line_numbers_visible: false,
             text_wrapping_enabled: false,
             syntax_highlighting_enabled: false,
@@ -1591,6 +1592,7 @@ mod tests {
         drop(conn);
 
         let loaded = store.ui_layout_get().unwrap();
+        assert!(!loaded.reduce_motion);
         assert!(loaded.line_numbers_visible);
         assert!(loaded.text_wrapping_enabled);
         assert!(loaded.syntax_highlighting_enabled);

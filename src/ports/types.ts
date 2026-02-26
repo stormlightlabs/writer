@@ -33,6 +33,7 @@ export type UiLayoutSettings = {
   sidebar_collapsed: boolean;
   top_bars_collapsed: boolean;
   status_bar_collapsed: boolean;
+  reduce_motion: boolean;
   line_numbers_visible: boolean;
   text_wrapping_enabled: boolean;
   syntax_highlighting_enabled: boolean;

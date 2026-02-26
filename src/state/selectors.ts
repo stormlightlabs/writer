@@ -301,6 +301,7 @@ export const useLayoutSettingsWriterToolsState = () =>
 export const useAppHeaderBarState = () =>
   useLayoutStore(
     useShallow((state) => ({
+      sidebarCollapsed: state.sidebarCollapsed,
       tabBarCollapsed: state.topBarsCollapsed,
       statusBarCollapsed: state.statusBarCollapsed,
       toggleSidebarCollapsed: state.toggleSidebarCollapsed,

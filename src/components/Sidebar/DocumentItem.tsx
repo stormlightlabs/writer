@@ -1,7 +1,9 @@
 import { FileTextIcon } from "$icons";
 import type { DocMeta } from "$types";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { TreeItem } from "./TreeItem";
+
+const fileTextIcon = { Component: FileTextIcon, size: "sm" as const };
 
 export function DocumentItem(
   { doc, isSelected, selectedDocPath, onSelectDocument, id }: {
@@ -12,12 +14,11 @@ export function DocumentItem(
     id: number;
   },
 ) {
-  const fileTextIcon = useMemo(() => ({ Component: FileTextIcon, size: "sm" as const }), []);
   const handleClick = useCallback(() => onSelectDocument(id, doc.rel_path), [id, onSelectDocument, doc.rel_path]);
   return (
     <TreeItem
       key={doc.rel_path}
-      Icon={fileTextIcon}
+      icon={fileTextIcon}
       label={doc.title || doc.rel_path.split("/").pop() || "Untitled"}
       isSelected={isSelected && selectedDocPath === doc.rel_path}
       level={1}

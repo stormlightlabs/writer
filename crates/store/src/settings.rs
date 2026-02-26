@@ -74,6 +74,8 @@ pub struct UiLayoutSettings {
     pub sidebar_collapsed: bool,
     pub top_bars_collapsed: bool,
     pub status_bar_collapsed: bool,
+    #[serde(default)]
+    pub reduce_motion: bool,
     #[serde(default = "default_true")]
     pub line_numbers_visible: bool,
     #[serde(default = "default_true")]
@@ -100,6 +102,7 @@ impl Default for UiLayoutSettings {
             sidebar_collapsed: false,
             top_bars_collapsed: false,
             status_bar_collapsed: false,
+            reduce_motion: false,
             line_numbers_visible: true,
             text_wrapping_enabled: true,
             syntax_highlighting_enabled: true,

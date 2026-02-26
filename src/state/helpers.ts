@@ -10,6 +10,7 @@ export const stateToLayoutSettings = (
   sidebar_collapsed: layoutChrome.sidebarCollapsed,
   top_bars_collapsed: layoutChrome.topBarsCollapsed,
   status_bar_collapsed: layoutChrome.statusBarCollapsed,
+  reduce_motion: layoutChrome.reduceMotion,
   line_numbers_visible: presentation.lineNumbersVisible,
   text_wrapping_enabled: presentation.textWrappingEnabled,
   syntax_highlighting_enabled: presentation.syntaxHighlightingEnabled,

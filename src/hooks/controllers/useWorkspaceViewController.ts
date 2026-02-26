@@ -12,7 +12,7 @@ import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
 import { usePreview } from "$hooks/usePreview";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions } from "$pdf/types";
-import { useCalmUiSettings, useEditorPresentationStateRaw } from "$state/selectors";
+import { useEditorPresentationStateRaw } from "$state/selectors";
 import type { DocRef, Maybe } from "$types";
 import { useMemo } from "react";
 
@@ -40,7 +40,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   useWorkspaceSync();
   useLayoutHotkeys();
 
-  const calmUiSettings = useCalmUiSettings();
   const editorPresentation = useEditorPresentationStateRaw();
   const {
     locations,
@@ -145,14 +144,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
 
   useSettingsSync();
 
-  const calmUiEffectiveVisibility = useMemo(() => {
-    if (!calmUiSettings.enabled || calmUiSettings.chromeTemporarilyVisible) {
-      return { sidebar: true, statusBar: true, tabBar: true };
-    }
-
-    return { sidebar: false, statusBar: false, tabBar: false };
-  }, [calmUiSettings.chromeTemporarilyVisible, calmUiSettings.enabled]);
-
   const toolbarProps = useMemo(
     () => ({
       saveStatus: editorModel.saveStatus,
@@ -222,14 +213,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   );
 
   const workspacePanelProps = useMemo(
-    () => ({
-      toolbar: toolbarProps,
-      editor: editorProps,
-      preview: previewProps,
-      statusBar: statusBarProps,
-      calmUiVisibility: calmUiEffectiveVisibility,
-    }),
-    [toolbarProps, editorProps, previewProps, statusBarProps, calmUiEffectiveVisibility],
+    () => ({ toolbar: toolbarProps, editor: editorProps, preview: previewProps, statusBar: statusBarProps }),
+    [toolbarProps, editorProps, previewProps, statusBarProps],
   );
 
   return { workspacePanelProps, focusModePanelProps, handleExportPdf };
