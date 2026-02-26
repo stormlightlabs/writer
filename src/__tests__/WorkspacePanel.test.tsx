@@ -4,8 +4,10 @@ import { WorkspacePanel } from "$components/layout/WorkspacePanel";
 import type { CalmUiVisibility, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
 import { PreviewProps } from "$components/Preview";
 import { StatusBarProps } from "$components/StatusBar";
+import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import {
   useEditorPresentationState,
+  useLayoutSettingsUiState,
   useSidebarState,
   useToolbarState,
   useWorkspacePanelModeState,
@@ -30,6 +32,7 @@ vi.mock(
   () => ({
     useSidebarState: vi.fn(),
     useToolbarState: vi.fn(),
+    useLayoutSettingsUiState: vi.fn(),
     useEditorPresentationState: vi.fn(),
     useWorkspacePanelSidebarState: vi.fn(),
     useWorkspacePanelModeState: vi.fn(),
@@ -37,6 +40,7 @@ vi.mock(
     useWorkspacePanelStatusBarCollapsed: vi.fn(),
   }),
 );
+vi.mock("$hooks/controllers/useWorkspaceController", () => ({ useWorkspaceController: vi.fn() }));
 
 type SelectorOverrides = {
   sidebarState?: Partial<SidebarStateReturn>;
@@ -113,6 +117,7 @@ const createWorkspacePanelModeState = (
 const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
   vi.mocked(useSidebarState).mockReturnValue(createSidebarState(overrides.sidebarState));
   vi.mocked(useToolbarState).mockReturnValue(createToolbarState(overrides.toolbarState));
+  vi.mocked(useLayoutSettingsUiState).mockReturnValue({ isOpen: false, setOpen: vi.fn() });
   vi.mocked(useEditorPresentationState).mockReturnValue(
     createEditorPresentationState(overrides.editorPresentationState),
   );
@@ -124,6 +129,32 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
   );
   vi.mocked(useWorkspacePanelTopBarsCollapsed).mockReturnValue(overrides.topBarsCollapsed ?? true);
   vi.mocked(useWorkspacePanelStatusBarCollapsed).mockReturnValue(overrides.statusBarCollapsed ?? true);
+  vi.mocked(useWorkspaceController).mockReturnValue({
+    locations: [],
+    documents: [],
+    selectedLocationId: undefined,
+    selectedDocPath: undefined,
+    locationDocuments: [],
+    sidebarFilter: "",
+    isSidebarLoading: false,
+    refreshingLocationId: undefined,
+    sidebarRefreshReason: null,
+    tabs: [],
+    activeTabId: null,
+    activeTab: null,
+    setSidebarFilter: vi.fn(),
+    markActiveTabModified: vi.fn(),
+    handleAddLocation: vi.fn(),
+    handleRemoveLocation: vi.fn(),
+    handleSelectLocation: vi.fn(),
+    handleSelectDocument: vi.fn(),
+    handleSelectTab: vi.fn(),
+    handleCloseTab: vi.fn(),
+    handleReorderTabs: vi.fn(),
+    handleCreateDraftTab: vi.fn(),
+    handleCreateNewDocument: vi.fn(),
+    handleRefreshSidebar: vi.fn(),
+  });
 };
 
 const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}): WorkspacePanelProps => ({

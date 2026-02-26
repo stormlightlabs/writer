@@ -45,15 +45,19 @@ describe(usePorts, () => {
   });
 
   it("captures execution errors", async () => {
+    const onErr = vi.fn();
     vi.mocked(invoke).mockRejectedValueOnce(new Error("boom"));
 
     const { result } = renderHook(() => usePorts<unknown>());
 
     await act(async () => {
-      await result.current.execute({ type: "Invoke", command: "test", payload: {}, onOk: vi.fn(), onErr: vi.fn() });
+      await result.current.execute({ type: "Invoke", command: "test", payload: {}, onOk: vi.fn(), onErr });
     });
 
-    expect(result.current.error).toStrictEqual({ code: "IO_ERROR", message: "boom" } satisfies AppError);
+    expect(onErr).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "IO_ERROR", message: "boom" } satisfies Partial<AppError>),
+    );
+    expect(result.current.error).toBeNull();
     expect(result.current.loading).toBeFalsy();
   });
 });
@@ -68,7 +72,9 @@ describe(useBackendEvents, () => {
 
     renderHook(() => useBackendEvents({ onLocationMissing }));
 
-    emitBackendEvent({ type: "LocationMissing", location_id: 42, path: "/missing/path" });
+    act(() => {
+      emitBackendEvent({ type: "LocationMissing", location_id: 42, path: "/missing/path" });
+    });
 
     expect(onLocationMissing).toHaveBeenCalledWith(42, "/missing/path");
   });
@@ -82,7 +88,9 @@ describe(useBackendEvents, () => {
     });
 
     rerender({ handler: onLocationMissing2 });
-    emitBackendEvent({ type: "LocationMissing", location_id: 1, path: "/test" });
+    act(() => {
+      emitBackendEvent({ type: "LocationMissing", location_id: 1, path: "/test" });
+    });
 
     expect(onLocationMissing1).not.toHaveBeenCalled();
     expect(onLocationMissing2).toHaveBeenCalledWith(1, "/test");

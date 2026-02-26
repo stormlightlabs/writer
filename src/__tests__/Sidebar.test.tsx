@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$state/selectors", () => ({ useSidebarState: vi.fn() }));
-vi.mock("$hooks/useWorkspaceController", () => ({ useWorkspaceController: vi.fn() }));
+vi.mock("$hooks/controllers/useWorkspaceController", () => ({ useWorkspaceController: vi.fn() }));
 
 const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState>> = {}) => ({
   locations: [{ id: 1, name: "Notes", root_path: "/tmp/notes", added_at: "2026-01-01T00:00:00Z" }],

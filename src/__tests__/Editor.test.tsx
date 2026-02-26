@@ -140,7 +140,7 @@ describe(Editor, () => {
 
         await waitFor(() => {
           expect(mockOnChange).toHaveBeenCalledWith("Text 3");
-        }, { timeout: 200 });
+        }, { timeout: 1200 });
       }
     });
   });

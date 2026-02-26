@@ -1,10 +1,10 @@
 import { Toolbar } from "$components/Toolbar";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { useToolbarState } from "$state/selectors";
+import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$state/selectors", () => ({ useToolbarState: vi.fn() }));
+vi.mock("$state/selectors", () => ({ useToolbarState: vi.fn(), useLayoutSettingsUiState: vi.fn() }));
 vi.mock("$hooks/useViewportTier", () => ({ useViewportTier: vi.fn() }));
 
 describe("Toolbar", () => {
@@ -19,6 +19,7 @@ describe("Toolbar", () => {
       toggleFocusMode: vi.fn(),
       togglePreviewVisible: vi.fn(),
     });
+    vi.mocked(useLayoutSettingsUiState).mockReturnValue({ isOpen: false, setOpen: vi.fn() });
     vi.mocked(useViewportTier).mockReturnValue({
       viewportWidth: 1280,
       tier: "standard",
