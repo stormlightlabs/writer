@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### 2026-02-25
+
+- New document creation from the sidebar and toolbar with draft path generation and recovery.
+
+### 2026-02-24
+
+- Responsive layout system with viewport-tier breakpoints and a mobile-friendly Dialog component.
+
 ### 2026-02-23
 
 - Implemented Global Capture with a system-wide shortcut (Cmd+Shift+Space) and macOS system tray integration for quick note entry.

@@ -347,6 +347,11 @@ const createTabsSlice: StateCreator<AppStore, [], [], TabsState & TabsActions> =
         return state;
       }
 
+      const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
+      if (!activeTab || activeTab.isModified === isModified) {
+        return state;
+      }
+
       return { tabs: state.tabs.map((tab) => (tab.id === state.activeTabId ? { ...tab, isModified } : tab)) };
     });
   },

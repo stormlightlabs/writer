@@ -1,5 +1,5 @@
 import { Button } from "$components/Button";
-import { FolderIcon, MoreVerticalIcon, PlusIcon } from "$icons";
+import { FolderIcon, MoreVerticalIcon } from "$icons";
 import { DocMeta, LocationDescriptor } from "$types";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
 import { useCallback, useMemo } from "react";
@@ -9,15 +9,6 @@ import { RemoveButton } from "./RemoveButton";
 import { TreeItem } from "./TreeItem";
 
 const folderIcon = { Component: FolderIcon, size: "md" as const };
-
-const NewDocumentButton = ({ onClick }: { onClick: () => void }) => (
-  <div className="px-6 py-2">
-    <Button variant="outline" size="xs" onClick={onClick} className="flex items-center gap-1.5 text-[0.75rem]">
-      <PlusIcon size="sm" />
-      New Document
-    </Button>
-  </div>
-);
 
 const FolderItem = (
   { name, isSelected, selectedDocPath, isExpanded, onItemClick, onToggleClick, actionProps }: {
@@ -80,7 +71,6 @@ type SidebarLocationItemProps = {
   onToggle: (id: number) => void;
   onRemove: (id: number) => void;
   onSelectDocument: (id: number, path: string) => void;
-  onCreateDocument: (locationId?: number) => void;
   setShowLocationMenu: Dispatch<SetStateAction<number | null>>;
   documents: DocMeta[];
   filterText: string;
@@ -97,7 +87,6 @@ export function SidebarLocationItem(
     onToggle,
     onRemove,
     onSelectDocument,
-    onCreateDocument,
     setShowLocationMenu,
     documents,
     filterText,
@@ -132,10 +121,6 @@ export function SidebarLocationItem(
     onToggle(location.id);
   }, [location.id, onToggle]);
 
-  const handleCreateDocumentClick = useCallback(() => {
-    onCreateDocument(location.id);
-  }, [location.id, onCreateDocument]);
-
   const actionProps = useMemo(
     () => ({ isMenuOpen, handleMenuClick, handleRemoveClick, handleMouseEnter, handleMouseLeave }),
     [isMenuOpen, handleMenuClick, handleRemoveClick, handleMouseEnter, handleMouseLeave],
@@ -154,9 +139,8 @@ export function SidebarLocationItem(
 
       {isExpanded && isSelected && (
         <div>
-          <NewDocumentButton onClick={handleCreateDocumentClick} />
           {documents.length === 0
-            ? <EmptyDocuments filterText={filterText} onCreateDocument={handleCreateDocumentClick} />
+            ? <EmptyDocuments filterText={filterText} />
             : (documents.map((doc) => (
               <DocumentItem
                 key={doc.rel_path}

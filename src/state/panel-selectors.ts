@@ -118,7 +118,7 @@ export const useEditorPresentationState = () =>
   useAppStore(
     useShallow((state): EditorPresentation => ({
       theme: state.theme,
-      showLineNumbers: state.lineNumbersVisible,
+      showLineNumbers: state.isFocusMode ? false : state.lineNumbersVisible,
       textWrappingEnabled: state.textWrappingEnabled,
       syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
       fontSize: state.editorFontSize,

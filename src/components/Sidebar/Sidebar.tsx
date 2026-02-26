@@ -1,5 +1,5 @@
 import { Button } from "$components/Button";
-import { CollapseIcon } from "$icons";
+import { CollapseIcon, FileAddIcon, FolderAddIcon } from "$icons";
 import { useSidebarState } from "$state/panel-selectors";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -18,6 +18,8 @@ export type SidebarProps = {
 
 type SidebarActionsProps = {
   onAddLocation: () => void;
+  onAddDocument: () => void;
+  isAddDocumentDisabled: boolean;
   handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
   handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
   onToggleCollapse: () => void;
@@ -37,10 +39,23 @@ const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void 
 );
 
 const SidebarActions = (
-  { onAddLocation, handleMouseEnter, handleMouseLeave, onToggleCollapse }: SidebarActionsProps,
+  { onAddLocation, onAddDocument, isAddDocumentDisabled, handleMouseEnter, handleMouseLeave, onToggleCollapse }:
+    SidebarActionsProps,
 ) => (
   <div className="flex items-center gap-2">
-    <AddButton onAddLocation={onAddLocation} handleMouseEnter={handleMouseEnter} handleMouseLeave={handleMouseLeave} />
+    <AddButton
+      onClick={onAddLocation}
+      icon={FolderAddIcon}
+      title="New Location"
+      handleMouseEnter={handleMouseEnter}
+      handleMouseLeave={handleMouseLeave} />
+    <AddButton
+      onClick={onAddDocument}
+      icon={FileAddIcon}
+      title="New Document"
+      disabled={isAddDocumentDisabled}
+      handleMouseEnter={handleMouseEnter}
+      handleMouseLeave={handleMouseLeave} />
     <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
 );
@@ -123,6 +138,13 @@ export function Sidebar(
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = useCallback((e) => {
     setFilterText(e.currentTarget.value);
   }, [setFilterText]);
+  const handleAddDocument = useCallback(() => {
+    if (!selectedLocationId) {
+      return;
+    }
+
+    handleCreateNewDocument(selectedLocationId);
+  }, [handleCreateNewDocument, selectedLocationId]);
 
   return (
     <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">
@@ -130,6 +152,8 @@ export function Sidebar(
         <Title isLoading={isLoading} />
         <SidebarActions
           onAddLocation={handleAddLocation}
+          onAddDocument={handleAddDocument}
+          isAddDocumentDisabled={!selectedLocationId}
           handleMouseEnter={handleMouseEnter}
           handleMouseLeave={handleMouseLeave}
           onToggleCollapse={toggleSidebarCollapsed} />
@@ -149,7 +173,6 @@ export function Sidebar(
               onToggle={toggleLocation}
               onRemove={handleRemoveLocation}
               onSelectDocument={handleSelectDocument}
-              onCreateDocument={handleCreateNewDocument}
               setShowLocationMenu={setShowLocationMenu}
               isMenuOpen={showLocationMenu === location.id}
               documents={filteredDocuments}

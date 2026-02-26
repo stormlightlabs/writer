@@ -1,7 +1,7 @@
 import type { Cmd } from "$ports";
 import { none, renderMarkdown, runCmd } from "$ports";
 import type { AppError, DocRef, RenderResult } from "$types";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export type PreviewModel = {
   docRef: DocRef | null;
@@ -125,5 +125,5 @@ export function usePreview(): UsePreviewReturn {
     dispatch({ type: "DocChanged", docRef });
   }, [dispatch]);
 
-  return { model, dispatch, render, syncLine, setDoc };
+  return useMemo(() => ({ model, dispatch, render, syncLine, setDoc }), [model, dispatch, render, syncLine, setDoc]);
 }

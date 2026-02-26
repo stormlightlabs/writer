@@ -1,10 +1,10 @@
 import { logger } from "$logger";
 import { runCmd, searchDocuments, type SearchFiltersPayload } from "$ports";
+import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "$state/atoms/search";
+import { useLayoutChromeActions } from "$state/stores/app";
 import type { SearchHit } from "$types";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef } from "react";
-import { isSearchingAtom, searchFiltersAtom, searchQueryAtom, searchResultsAtom } from "../state/atoms/search";
-import { useLayoutChromeActions } from "../state/stores/app";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export function useSearchController(onSelectDocument: (locationId: number, path: string) => void) {
   const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
@@ -65,5 +65,8 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
     setShowSearch(false);
   }, [onSelectDocument, setShowSearch]);
 
-  return { searchQuery, searchResults, isSearching, filters, setFilters, handleSearch, handleSelectSearchResult };
+  return useMemo(
+    () => ({ searchQuery, searchResults, isSearching, filters, setFilters, handleSearch, handleSelectSearchResult }),
+    [searchQuery, searchResults, isSearching, filters, setFilters, handleSearch, handleSelectSearchResult],
+  );
 }

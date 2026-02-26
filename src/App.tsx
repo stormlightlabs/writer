@@ -14,7 +14,7 @@ import {
   uiLayoutGet,
   uiLayoutSet,
 } from "$ports";
-import { pick, stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
+import { stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
 import type { DocRef, GlobalCaptureSettings } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -80,7 +80,10 @@ function App() {
   const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
   const [globalCaptureSettings, setGlobalCaptureSettings] = useState(DEFAULT_GLOBAL_CAPTURE_SETTINGS);
-  const cursorPosition = useMemo(() => pick(editorModel, ["cursorLine", "cursorColumn"]), [editorModel]);
+  const cursorPosition = useMemo(
+    () => ({ cursorLine: editorModel.cursorLine, cursorColumn: editorModel.cursorColumn }),
+    [editorModel.cursorLine, editorModel.cursorColumn],
+  );
 
   useWorkspaceSync();
   useLayoutHotkeys();
@@ -97,17 +100,31 @@ function App() {
     setEditorFontFamily,
   } = useEditorPresentationActions();
   const { isFocusMode, focusModeSettings } = useViewModeState();
-  const { setFocusMode, setFocusModeSettings } = useViewModeActions();
+  const { setFocusModeSettings } = useViewModeActions();
   const { styleCheckSettings } = useWriterToolsState();
   const { setStyleCheckSettings } = useWriterToolsActions();
-  const workspace = useWorkspaceController(openDoc);
-  const search = useSearchController(workspace.handleSelectDocument);
+  const {
+    locations,
+    documents,
+    selectedLocationId,
+    isSidebarLoading,
+    tabs,
+    activeTabId,
+    markActiveTabModified,
+    handleAddLocation,
+    handleRemoveLocation,
+    handleSelectDocument,
+    handleSelectTab,
+    handleCloseTab,
+    handleReorderTabs,
+    handleCreateDraftTab,
+    handleCreateNewDocument,
+  } = useWorkspaceController(openDoc);
+  const search = useSearchController(handleSelectDocument);
   const { isTyping, handleTypingActivity } = useTypingActivity({ idleTimeout: 1500 });
 
-  const activeTab = useMemo(() => workspace.tabs.find((tab) => tab.id === workspace.activeTabId) ?? null, [
-    workspace.activeTabId,
-    workspace.tabs,
-  ]);
+  const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [activeTabId, tabs]);
+  const hasLocations = useMemo(() => locations.length > 0, [locations.length]);
 
   const { wordCount, charCount, selectionCount } = useMemo(() => {
     const { text } = editorModel;
@@ -134,38 +151,38 @@ function App() {
       return null;
     }
 
-    const activeDoc = workspace.documents.find((doc) =>
+    const activeDoc = documents.find((doc) =>
       doc.location_id === activeTab.docRef.location_id && doc.rel_path === activeTab.docRef.rel_path
     );
     return activeDoc ?? null;
-  }, [activeTab, workspace.documents]);
+  }, [activeTab, documents]);
 
   const handleSave = useCallback(() => {
-    if (!editorModel.docRef && !workspace.selectedLocationId) {
+    if (!editorModel.docRef && !selectedLocationId) {
       logger.warn("Cannot save draft without a selected location.");
       return;
     }
 
-    if (!editorModel.docRef && workspace.selectedLocationId) {
-      const relPath = buildDraftRelPath(workspace.selectedLocationId, workspace.documents, workspace.tabs);
-      const draftRef: DocRef = { location_id: workspace.selectedLocationId, rel_path: relPath };
+    if (!editorModel.docRef && selectedLocationId) {
+      const relPath = buildDraftRelPath(selectedLocationId, documents, tabs);
+      const draftRef: DocRef = { location_id: selectedLocationId, rel_path: relPath };
 
-      workspace.handleCreateDraftTab(draftRef, getDraftTitle(relPath));
+      handleCreateDraftTab(draftRef, getDraftTitle(relPath));
       editorDispatch({ type: "DraftDocInitialized", docRef: draftRef });
     }
 
     editorDispatch({ type: "SaveRequested" });
-  }, [editorDispatch, editorModel.docRef, workspace]);
+  }, [editorDispatch, editorModel.docRef, selectedLocationId, documents, tabs, handleCreateDraftTab]);
 
   const handleNewDocument = useCallback((locationId?: number) => {
-    const draftRef = workspace.handleCreateNewDocument(locationId);
+    const draftRef = handleCreateNewDocument(locationId);
     if (!draftRef) {
       logger.warn("Cannot create a new document without a selected location.");
       return;
     }
 
     editorDispatch({ type: "NewDraftCreated", docRef: draftRef });
-  }, [editorDispatch, workspace]);
+  }, [editorDispatch, handleCreateNewDocument]);
 
   const handleEditorChange = useCallback((text: string) => {
     editorDispatch({ type: "EditorChanged", text });
@@ -241,17 +258,17 @@ function App() {
   }, [layoutChrome, isTyping]);
 
   const sidebarProps = useMemo(
-    () =>
-      pick(workspace, ["handleAddLocation", "handleRemoveLocation", "handleSelectDocument", "handleCreateNewDocument"]),
-    [workspace],
+    () => ({ handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument }),
+    [handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument],
   );
 
   const toolbarProps = useMemo(
     () => ({
       saveStatus: editorModel.saveStatus,
+      hasActiveDocument: Boolean(activeTab),
       onSave: handleSave,
       onNewDocument: handleNewDocument,
-      isNewDocumentDisabled: workspace.locations.length === 0,
+      isNewDocumentDisabled: !hasLocations,
       onExportPdf: handleOpenPdfExport,
       isExportingPdf: isExportingPdf,
       isPdfExportDisabled: !activeTab,
@@ -259,11 +276,11 @@ function App() {
     }),
     [
       editorModel.saveStatus,
+      activeTab,
       handleOpenPdfExport,
       isExportingPdf,
-      activeTab,
       handleNewDocument,
-      workspace.locations.length,
+      hasLocations,
       handleSave,
       handleOpenSettings,
     ],
@@ -271,10 +288,14 @@ function App() {
 
   const tabProps = useMemo(
     () => ({
-      ...pick(workspace, ["tabs", "activeTabId", "handleSelectTab", "handleCloseTab", "handleReorderTabs"]),
-      onNewDocument: workspace.locations.length > 0 ? handleNewDocument : void 0,
+      tabs,
+      activeTabId,
+      handleSelectTab,
+      handleCloseTab,
+      handleReorderTabs,
+      onNewDocument: hasLocations ? handleNewDocument : void 0,
     }),
-    [workspace, handleNewDocument],
+    [tabs, activeTabId, handleSelectTab, handleCloseTab, handleReorderTabs, hasLocations, handleNewDocument],
   );
 
   const activeDocRef = useMemo(() => activeTab?.docRef ?? null, [activeTab]);
@@ -287,7 +308,7 @@ function App() {
       return;
     }
 
-    if (workspace.isSidebarLoading || workspace.locations.length === 0 || workspace.tabs.length > 0) {
+    if (isSidebarLoading || locations.length === 0 || tabs.length > 0) {
       return;
     }
 
@@ -299,7 +320,7 @@ function App() {
 
     const fallbackToBlankDraft = () => {
       completeStartupRestore();
-      handleNewDocument(workspace.selectedLocationId ?? workspace.locations[0]?.id);
+      handleNewDocument(selectedLocationId ?? locations[0]?.id);
     };
 
     void runCmd(sessionLastDocGet((docRef) => {
@@ -308,7 +329,7 @@ function App() {
         return;
       }
 
-      const locationExists = workspace.locations.some((location) => location.id === docRef.location_id);
+      const locationExists = locations.some((location) => location.id === docRef.location_id);
       if (!locationExists) {
         fallbackToBlankDraft();
         return;
@@ -317,7 +338,7 @@ function App() {
       void runCmd(docExists(docRef.location_id, docRef.rel_path, (exists) => {
         if (exists) {
           completeStartupRestore();
-          workspace.handleSelectDocument(docRef.location_id, docRef.rel_path);
+          handleSelectDocument(docRef.location_id, docRef.rel_path);
           return;
         }
 
@@ -328,15 +349,7 @@ function App() {
     }, () => {
       fallbackToBlankDraft();
     }));
-  }, [
-    workspace,
-    workspace.isSidebarLoading,
-    workspace.locations,
-    workspace.selectedLocationId,
-    workspace.tabs.length,
-    workspace.handleSelectDocument,
-    handleNewDocument,
-  ]);
+  }, [isSidebarLoading, locations, selectedLocationId, tabs.length, handleSelectDocument, handleNewDocument]);
 
   useEffect(() => {
     if (!startupDocumentRestoredRef.current) {
@@ -376,18 +389,25 @@ function App() {
 
   const searchProps = useMemo(
     () => ({
-      locations: workspace.locations,
-      ...pick(search, [
-        "searchQuery",
-        "searchResults",
-        "isSearching",
-        "filters",
-        "handleSearch",
-        "setFilters",
-        "handleSelectSearchResult",
-      ]),
+      locations,
+      searchQuery: search.searchQuery,
+      searchResults: search.searchResults,
+      isSearching: search.isSearching,
+      filters: search.filters,
+      setFilters: search.setFilters,
+      handleSearch: search.handleSearch,
+      handleSelectSearchResult: search.handleSelectSearchResult,
     }),
-    [workspace.locations, search],
+    [
+      locations,
+      search.searchQuery,
+      search.searchResults,
+      search.isSearching,
+      search.filters,
+      search.setFilters,
+      search.handleSearch,
+      search.handleSelectSearchResult,
+    ],
   );
 
   const handleSettingsClose = useCallback(() => {
@@ -410,7 +430,7 @@ function App() {
   }, []);
 
   const focusModePanelProps = useMemo(() => {
-    return ({
+    return {
       editor: {
         initialText: editorModel.text,
         onChange: handleEditorChange,
@@ -419,7 +439,7 @@ function App() {
         onSelectionChange: handleSelectionChange,
       },
       statusBar: { docMeta: activeDocMeta, stats: editorStats },
-    });
+    };
   }, [
     activeDocMeta,
     editorStats,
@@ -431,8 +451,8 @@ function App() {
   ]);
 
   useEffect(() => {
-    workspace.markActiveTabModified(editorModel.saveStatus === "Dirty");
-  }, [editorModel.saveStatus, workspace]);
+    markActiveTabModified(editorModel.saveStatus === "Dirty");
+  }, [editorModel.saveStatus, markActiveTabModified]);
 
   useEffect(() => {
     if (activeTab) {
@@ -451,22 +471,6 @@ function App() {
 
     return () => clearTimeout(timeoutId);
   }, [activeTab, editorModel.text, renderPreview]);
-
-  const lastEnteredFocusDocRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!layoutSettingsHydrated || !activeTab || isFocusMode) {
-      return;
-    }
-
-    const { calmUiSettings } = layoutChrome;
-    const docKey = `${activeTab.docRef.location_id}:${activeTab.docRef.rel_path}`;
-
-    if (calmUiSettings.enabled && calmUiSettings.focusMode && lastEnteredFocusDocRef.current !== docKey) {
-      lastEnteredFocusDocRef.current = docKey;
-      setFocusMode(true);
-    }
-  }, [layoutSettingsHydrated, activeTab, isFocusMode, layoutChrome, setFocusMode]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -552,7 +556,11 @@ function App() {
 
     void runCmd(
       styleCheckSet(
-        { ...pick(styleCheckSettings, ["categories", "enabled"]), custom_patterns: styleCheckSettings.customPatterns },
+        {
+          categories: styleCheckSettings.categories,
+          enabled: styleCheckSettings.enabled,
+          custom_patterns: styleCheckSettings.customPatterns,
+        },
         () => {},
         () => {},
       ),

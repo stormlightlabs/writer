@@ -1,8 +1,5 @@
 import { logger } from "$logger";
 import { locationAddViaDialog, locationRemove, runCmd } from "$ports";
-import type { DocRef, Tab } from "$types";
-import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
-import { useCallback, useMemo } from "react";
 import {
   useAppStore,
   useTabsActions,
@@ -10,7 +7,10 @@ import {
   useWorkspaceDocumentsState,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
-} from "../state/stores/app";
+} from "$state/stores/app";
+import type { DocRef, Tab } from "$types";
+import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
+import { useCallback, useMemo } from "react";
 
 export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
   const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();
@@ -97,26 +97,51 @@ export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
     return docRef;
   }, [openDocumentTab]);
 
-  return {
-    locations,
-    documents,
-    selectedLocationId,
-    selectedDocPath,
-    locationDocuments,
-    sidebarFilter,
-    isSidebarLoading: isLoadingLocations || isLoadingDocuments,
-    tabs,
-    activeTabId,
-    setSidebarFilter,
-    markActiveTabModified,
-    handleAddLocation,
-    handleRemoveLocation,
-    handleSelectLocation,
-    handleSelectDocument,
-    handleSelectTab,
-    handleCloseTab,
-    handleReorderTabs,
-    handleCreateDraftTab,
-    handleCreateNewDocument,
-  };
+  return useMemo(
+    () => ({
+      locations,
+      documents,
+      selectedLocationId,
+      selectedDocPath,
+      locationDocuments,
+      sidebarFilter,
+      isSidebarLoading: isLoadingLocations || isLoadingDocuments,
+      tabs,
+      activeTabId,
+      setSidebarFilter,
+      markActiveTabModified,
+      handleAddLocation,
+      handleRemoveLocation,
+      handleSelectLocation,
+      handleSelectDocument,
+      handleSelectTab,
+      handleCloseTab,
+      handleReorderTabs,
+      handleCreateDraftTab,
+      handleCreateNewDocument,
+    }),
+    [
+      locations,
+      documents,
+      selectedLocationId,
+      selectedDocPath,
+      locationDocuments,
+      sidebarFilter,
+      isLoadingLocations,
+      isLoadingDocuments,
+      tabs,
+      activeTabId,
+      setSidebarFilter,
+      markActiveTabModified,
+      handleAddLocation,
+      handleRemoveLocation,
+      handleSelectLocation,
+      handleSelectDocument,
+      handleSelectTab,
+      handleCloseTab,
+      handleReorderTabs,
+      handleCreateDraftTab,
+      handleCreateNewDocument,
+    ],
+  );
 }

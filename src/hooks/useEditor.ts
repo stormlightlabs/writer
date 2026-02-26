@@ -1,7 +1,7 @@
 import type { Cmd, SaveResult } from "$ports";
 import { docOpen, docSave, none, runCmd } from "$ports";
 import type { AppError, DocContent, DocRef, SaveStatus } from "$types";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export type EditorModel = {
   docRef: DocRef | null;
@@ -199,5 +199,5 @@ export function useEditor(): UseEditorReturn {
     dispatch({ type: "SaveRequested" });
   }, [dispatch]);
 
-  return { model, dispatch, openDoc, saveDoc };
+  return useMemo(() => ({ model, dispatch, openDoc, saveDoc }), [model, dispatch, openDoc, saveDoc]);
 }

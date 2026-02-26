@@ -21,6 +21,7 @@ import { Tooltip } from "./Tooltip";
 
 export type ToolbarProps = {
   saveStatus: SaveStatus;
+  hasActiveDocument?: boolean;
   onSave: () => void;
   onNewDocument?: () => void;
   isNewDocumentDisabled?: boolean;
@@ -127,6 +128,7 @@ function SaveStatusIndicator({ status, compact = false }: { status: SaveStatus; 
 export function Toolbar(
   {
     saveStatus,
+    hasActiveDocument = false,
     onSave,
     onNewDocument,
     isNewDocumentDisabled = false,
@@ -177,7 +179,7 @@ export function Toolbar(
             shortcut="Ctrl+N"
             iconOnly={isCompact} />
         )}
-        <SaveStatusIndicator status={saveStatus} compact={compactStatus} />
+        {hasActiveDocument ? <SaveStatusIndicator status={saveStatus} compact={compactStatus} /> : null}
         {onRefresh && !hideRefresh && (
           <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly={iconOnly} />
         )}

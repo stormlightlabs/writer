@@ -25,9 +25,21 @@ export const FolderIcon = ({ size = "md", className = "", style }: IconProps) =>
   </span>
 );
 
+export const FolderAddIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-folder-add-line" />
+  </span>
+);
+
 export const FileTextIcon = ({ size = "md", className = "", style }: IconProps) => (
   <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
     <i className="i-ri-file-text-line" />
+  </span>
+);
+
+export const FileAddIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-file-add-line" />
   </span>
 );
 

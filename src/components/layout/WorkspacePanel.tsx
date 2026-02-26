@@ -31,6 +31,7 @@ export type WorkspacePanelProps = {
   toolbar: Pick<
     ToolbarProps,
     | "saveStatus"
+    | "hasActiveDocument"
     | "onSave"
     | "onNewDocument"
     | "isNewDocumentDisabled"
