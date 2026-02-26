@@ -29,10 +29,20 @@ import type {
 import type { GlobalCaptureSettings, Tab } from "$types";
 import { create, type StateCreator } from "zustand";
 
-let nextTabId = 1;
-
 function generateTabId(): string {
-  return `tab-${nextTabId++}`;
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getInitialTheme(): "dark" | "light" {
+  if (typeof globalThis.matchMedia === "function") {
+    return globalThis.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+
+  return "dark";
 }
 
 const DEFAULT_GLOBAL_CAPTURE_SETTINGS: GlobalCaptureSettings = {
@@ -63,7 +73,7 @@ const getInitialEditorPresentationState = (): EditorPresentationState => ({
   syntaxHighlightingEnabled: true,
   editorFontSize: 16,
   editorFontFamily: "IBM Plex Mono",
-  theme: "dark",
+  theme: getInitialTheme(),
 });
 
 const getInitialViewModeState = (): ViewModeState => ({
@@ -466,8 +476,6 @@ export const useAppStore = create<AppStore>()((...params) => ({
 }));
 
 export function resetAppStore(): void {
-  nextTabId = 1;
-
   useAppStore.setState({
     ...getInitialLayoutState(),
     ...getInitialWorkspaceState(),

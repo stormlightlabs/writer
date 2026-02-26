@@ -13,6 +13,7 @@ import { usePreview } from "$hooks/usePreview";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions } from "$pdf/types";
 import {
+  useCalmUiSettings,
   useEditorPresentationStateRaw,
   useLayoutChromeActions,
   useLayoutChromeState,
@@ -51,6 +52,7 @@ export function useAppController(): AppController {
   useLayoutHotkeys();
 
   const layoutChrome = useLayoutChromeState();
+  const calmUiSettings = useCalmUiSettings();
   const { setSidebarCollapsed } = useLayoutChromeActions();
   const editorPresentation = useEditorPresentationStateRaw();
   const { isFocusMode } = useViewModeState();
@@ -160,8 +162,12 @@ export function useAppController(): AppController {
   useSettingsSync();
 
   const calmUiEffectiveVisibility = useMemo(() => {
-    return { sidebar: true, statusBar: true, tabBar: true };
-  }, []);
+    if (!calmUiSettings.enabled || calmUiSettings.chromeTemporarilyVisible) {
+      return { sidebar: true, statusBar: true, tabBar: true };
+    }
+
+    return { sidebar: false, statusBar: false, tabBar: false };
+  }, [calmUiSettings.chromeTemporarilyVisible, calmUiSettings.enabled]);
 
   const toolbarProps = useMemo(
     () => ({

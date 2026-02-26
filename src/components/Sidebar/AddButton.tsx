@@ -1,15 +1,13 @@
 import { Button } from "$components/Button";
 import { IconProps } from "$icons";
-import type { ComponentType, MouseEventHandler } from "react";
+import type { ComponentType } from "react";
 
 export const AddButton = (
-  { onClick, icon: Icon, title, disabled = false, handleMouseEnter, handleMouseLeave }: {
+  { onClick, icon: Icon, title, disabled = false }: {
     onClick: () => void;
     icon: ComponentType<IconProps>;
     title: string;
     disabled?: boolean;
-    handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
-    handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
   },
 ) => (
   <Button
@@ -17,9 +15,7 @@ export const AddButton = (
     size="iconMd"
     onClick={onClick}
     disabled={disabled}
-    className="transition-all duration-150"
-    onMouseEnter={handleMouseEnter}
-    onMouseLeave={handleMouseLeave}
+    className="transition-all duration-150 hover:bg-layer-hover-01 hover:text-icon-primary"
     title={title}>
     <Icon size="md" />
   </Button>

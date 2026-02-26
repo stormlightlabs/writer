@@ -10,7 +10,7 @@ import {
 } from "$state/selectors";
 import { useAppStore } from "$state/stores/app";
 import type { SidebarRefreshReason } from "$state/types";
-import type { DocMeta, DocRef, Tab } from "$types";
+import type { DocMeta, DocRef } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useMemo } from "react";
 
@@ -73,10 +73,6 @@ export function useWorkspaceController() {
     }));
   }, [removeLocation]);
 
-  const handleSelectLocation = useCallback((locationId: number) => {
-    setSelectedLocation(locationId);
-  }, [setSelectedLocation]);
-
   const handleSelectDocument = useCallback((locationId: number, path: string) => {
     const docTitle = useAppStore.getState().documents.find((doc) =>
       doc.location_id === locationId && doc.rel_path === path
@@ -87,17 +83,10 @@ export function useWorkspaceController() {
     openDocumentTab(docRef, title);
   }, [openDocumentTab]);
 
-  const handleSelectTab = useCallback((tabId: string) => {
-    selectTab(tabId);
-  }, [selectTab]);
-
-  const handleCloseTab = useCallback((tabId: string) => {
-    closeTab(tabId);
-  }, [closeTab]);
-
-  const handleReorderTabs = useCallback((newTabs: Tab[]) => {
-    reorderTabs(newTabs);
-  }, [reorderTabs]);
+  const handleSelectLocation = setSelectedLocation;
+  const handleSelectTab = selectTab;
+  const handleCloseTab = closeTab;
+  const handleReorderTabs = reorderTabs;
 
   const handleCreateDraftTab = useCallback((docRef: DocRef, title: string) => {
     openDocumentTab(docRef, title);

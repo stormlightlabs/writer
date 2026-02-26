@@ -41,13 +41,9 @@ type LocationActionProps = {
   isMenuOpen: boolean;
   handleMenuClick: MouseEventHandler<HTMLButtonElement>;
   handleRemoveClick: () => void;
-  handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
-  handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
 };
 
-const LocationActions = (
-  { isMenuOpen, handleMenuClick, handleRemoveClick, handleMouseEnter, handleMouseLeave }: LocationActionProps,
-) => (
+const LocationActions = ({ isMenuOpen, handleMenuClick, handleRemoveClick }: LocationActionProps) => (
   <div className="relative" data-location-menu-root>
     <Button
       onClick={handleMenuClick}
@@ -55,11 +51,7 @@ const LocationActions = (
       className="location-actions-btn w-5 h-5 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded opacity-0 transition-opacity duration-150 group-hover:opacity-100">
       <MoreVerticalIcon size="sm" />
     </Button>
-    <RemoveButton
-      isMenuOpen={isMenuOpen}
-      handleRemoveClick={handleRemoveClick}
-      handleMouseEnter={handleMouseEnter}
-      handleMouseLeave={handleMouseLeave} />
+    <RemoveButton isMenuOpen={isMenuOpen} handleRemoveClick={handleRemoveClick} />
   </div>
 );
 
@@ -115,16 +107,6 @@ function SidebarLocationItemComponent(
     setShowLocationMenu((current) => current === location.id ? null : location.id);
   }, [location.id, setShowLocationMenu]);
 
-  const handleMouseEnter: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
-    (e.currentTarget as HTMLButtonElement).classList.add("bg-support-error", "text-white");
-    (e.currentTarget as HTMLButtonElement).classList.remove("text-support-error");
-  }, []);
-
-  const handleMouseLeave: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
-    (e.currentTarget as HTMLButtonElement).classList.remove("bg-support-error", "text-white");
-    (e.currentTarget as HTMLButtonElement).classList.add("text-support-error");
-  }, []);
-
   const onItemClick = useCallback(() => {
     onSelect(location.id);
   }, [location.id, onSelect]);
@@ -133,10 +115,11 @@ function SidebarLocationItemComponent(
     onToggle(location.id);
   }, [location.id, onToggle]);
 
-  const actionProps = useMemo(
-    () => ({ isMenuOpen, handleMenuClick, handleRemoveClick, handleMouseEnter, handleMouseLeave }),
-    [isMenuOpen, handleMenuClick, handleRemoveClick, handleMouseEnter, handleMouseLeave],
-  );
+  const actionProps = useMemo(() => ({ isMenuOpen, handleMenuClick, handleRemoveClick }), [
+    isMenuOpen,
+    handleMenuClick,
+    handleRemoveClick,
+  ]);
 
   return (
     <div>

@@ -1,6 +1,6 @@
 import { cn } from "$utils/tw";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 export type DialogMotionPreset = "scale" | "slideUp" | "slideRight";
@@ -36,6 +36,14 @@ const DIALOG_MOTION_PRESETS: Record<
 const BACKDROP_FADE_MOTION = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } } as const;
 const BACKDROP_FADE_TRANSITION = { duration: 0.16, ease: "easeOut" } as const;
 const DIALOG_SURFACE_TRANSITION = { duration: 0.2, ease: "easeOut" } as const;
+const FOCUSABLE_SELECTOR =
+  "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
+function getFocusableElements(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) =>
+    !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true"
+  );
+}
 
 export function Dialog(
   {
@@ -54,22 +62,66 @@ export function Dialog(
   }: DialogProps,
 ) {
   const motionConfig = DIALOG_MOTION_PRESETS[motionPreset];
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   const handleBackdropClick = closeOnBackdrop ? onClose : undefined;
 
   useEffect(() => {
-    if (!isOpen || !onClose || typeof globalThis.addEventListener !== "function") {
+    if (!isOpen || typeof globalThis.addEventListener !== "function") {
       return;
     }
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+    const panel = panelRef.current;
+    if (!panel) {
+      return;
+    }
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = getFocusableElements(panel);
+    const firstFocusable = focusable[0];
+    const fallbackFocusable = panel;
+    (firstFocusable ?? fallbackFocusable).focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && onClose) {
         onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const activePanel = panelRef.current;
+      if (!activePanel) {
+        return;
+      }
+
+      const cycleTargets = getFocusableElements(activePanel);
+      if (cycleTargets.length === 0) {
+        event.preventDefault();
+        activePanel.focus();
+        return;
+      }
+
+      const first = cycleTargets[0];
+      const last = cycleTargets.at(-1);
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
-    globalThis.addEventListener("keydown", handleEscape);
-    return () => globalThis.removeEventListener("keydown", handleEscape);
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => {
+      globalThis.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
   }, [isOpen, onClose]);
 
   return (
@@ -95,6 +147,8 @@ export function Dialog(
             role="dialog"
             aria-label={ariaLabel}
             aria-modal={showBackdrop}
+            tabIndex={-1}
+            ref={panelRef}
             className={cn("pointer-events-auto", panelClassName)}
             style={panelStyle}
             initial={motionConfig.initial}

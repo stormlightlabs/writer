@@ -3,7 +3,7 @@ import { useWorkspaceController } from "$hooks/controllers/useWorkspaceControlle
 import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
-import type { ChangeEventHandler, MouseEventHandler } from "react";
+import type { ChangeEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
 import { EmptyLocations } from "./EmptyLocations";
@@ -21,8 +21,6 @@ type SidebarActionsProps = {
   onRefresh: () => void;
   isAddDocumentDisabled: boolean;
   isRefreshDisabled: boolean;
-  handleMouseEnter: MouseEventHandler<HTMLButtonElement>;
-  handleMouseLeave: MouseEventHandler<HTMLButtonElement>;
   onToggleCollapse: () => void;
 };
 
@@ -40,38 +38,13 @@ const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void 
 );
 
 const SidebarActions = (
-  {
-    onAddLocation,
-    onAddDocument,
-    onRefresh,
-    isAddDocumentDisabled,
-    isRefreshDisabled,
-    handleMouseEnter,
-    handleMouseLeave,
-    onToggleCollapse,
-  }: SidebarActionsProps,
+  { onAddLocation, onAddDocument, onRefresh, isAddDocumentDisabled, isRefreshDisabled, onToggleCollapse }:
+    SidebarActionsProps,
 ) => (
   <div className="flex items-center gap-2">
-    <AddButton
-      onClick={onAddLocation}
-      icon={FolderAddIcon}
-      title="New Location"
-      handleMouseEnter={handleMouseEnter}
-      handleMouseLeave={handleMouseLeave} />
-    <AddButton
-      onClick={onAddDocument}
-      icon={FileAddIcon}
-      title="New Document"
-      disabled={isAddDocumentDisabled}
-      handleMouseEnter={handleMouseEnter}
-      handleMouseLeave={handleMouseLeave} />
-    <AddButton
-      onClick={onRefresh}
-      icon={RefreshIcon}
-      title="Refresh Sidebar"
-      disabled={isRefreshDisabled}
-      handleMouseEnter={handleMouseEnter}
-      handleMouseLeave={handleMouseLeave} />
+    <AddButton onClick={onAddLocation} icon={FolderAddIcon} title="New Location" />
+    <AddButton onClick={onAddDocument} icon={FileAddIcon} title="New Document" disabled={isAddDocumentDisabled} />
+    <AddButton onClick={onRefresh} icon={RefreshIcon} title="Refresh Sidebar" disabled={isRefreshDisabled} />
     <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
 );
@@ -150,14 +123,6 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     [locationDocuments, filterText],
   );
 
-  const handleMouseEnter: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
-    (e.currentTarget as HTMLButtonElement).classList.add("bg-layer-hover-01", "text-icon-primary");
-  }, []);
-
-  const handleMouseLeave: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
-    (e.currentTarget as HTMLButtonElement).classList.remove("bg-layer-hover-01", "text-icon-primary");
-  }, []);
-
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = useCallback((e) => {
     setFilterText(e.currentTarget.value);
   }, [setFilterText]);
@@ -184,8 +149,6 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
           onRefresh={handleRefresh}
           isAddDocumentDisabled={!selectedLocationId}
           isRefreshDisabled={!selectedLocationId || refreshingLocationId === selectedLocationId}
-          handleMouseEnter={handleMouseEnter}
-          handleMouseLeave={handleMouseLeave}
           onToggleCollapse={toggleSidebarCollapsed} />
       </div>
       <SearchInput filterText={filterText} handleInputChange={handleInputChange} />

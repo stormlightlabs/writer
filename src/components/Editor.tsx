@@ -145,6 +145,25 @@ function createEditorState(
   });
 }
 
+function areCustomPatternsEqual(
+  left: StyleCheckSettings["customPatterns"],
+  right: StyleCheckSettings["customPatterns"],
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const a = left[index];
+    const b = right[index];
+    if (a.text !== b.text || a.category !== b.category || a.replacement !== b.replacement) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function Editor(
   {
     initialText = "",
@@ -316,6 +335,10 @@ export function Editor(
       && previousPresentation.styleCheckSettings.categories.filler === styleCheckSettings.categories.filler
       && previousPresentation.styleCheckSettings.categories.redundancy === styleCheckSettings.categories.redundancy
       && previousPresentation.styleCheckSettings.categories.cliche === styleCheckSettings.categories.cliche
+      && areCustomPatternsEqual(
+        previousPresentation.styleCheckSettings.customPatterns,
+        styleCheckSettings.customPatterns,
+      )
     ) {
       return;
     }

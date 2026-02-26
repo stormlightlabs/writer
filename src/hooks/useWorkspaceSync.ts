@@ -1,11 +1,12 @@
 import { logger } from "$logger";
-import { backendEvents, docList, locationList, runCmd, startWatch, stopWatch, SubscriptionManager } from "$ports";
+import { docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
 import {
   useWorkspaceDocumentsActions,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
 } from "$state/selectors";
 import { useCallback, useEffect, useRef } from "react";
+import { useBackendEvents } from "./useBackendEvents";
 
 export function useWorkspaceSync(): void {
   const { selectedLocationId } = useWorkspaceLocationsState();
@@ -81,28 +82,12 @@ export function useWorkspaceSync(): void {
     };
   }, [selectedLocationId]);
 
-  useEffect(() => {
-    const manager = new SubscriptionManager();
-    let cleanupFn: (() => void) | undefined;
-
-    manager.subscribe(backendEvents((event) => {
-      if (event.type !== "DocModifiedExternally") {
-        return;
-      }
-
+  useBackendEvents({
+    onDocModifiedExternally: (docRef) => {
       const currentLocationId = selectedLocationRef.current;
-      if (currentLocationId && event.doc_id.location_id === currentLocationId) {
+      if (currentLocationId && docRef.location_id === currentLocationId) {
         loadDocuments(currentLocationId);
       }
-    })).then((cleanup) => {
-      cleanupFn = cleanup;
-    }).catch((error) => {
-      logger.error("Failed to subscribe for workspace sync events", { error });
-    });
-
-    return () => {
-      cleanupFn?.();
-      manager.cleanup();
-    };
-  }, [loadDocuments]);
+    },
+  });
 }

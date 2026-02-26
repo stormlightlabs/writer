@@ -2,12 +2,11 @@ import { Button } from "$components/Button";
 import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { FileTextIcon, SearchIcon, XIcon } from "$icons";
+import type { SearchFilters } from "$state/types";
 import type { SearchHit } from "$types";
 import { cn } from "$utils/tw";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
 
 type SearchPanelProps = {
   isOpen: boolean;
@@ -67,17 +66,15 @@ function HighlightLabel({ hit }: { hit: SearchHit }) {
 }
 
 function SearchResult({ hit, onSelectResult }: SearchResultProps) {
-  {
-    const handleClick = useCallback(() => onSelectResult(hit), [onSelectResult, hit]);
-    return (
-      <Button
-        onClick={handleClick}
-        className="w-full px-4 py-3 bg-layer-01 border border-border-subtle rounded-md text-left cursor-pointer transition-all duration-150 hover:bg-layer-hover-01 hover:border-border-strong">
-        <HighlightLabel hit={hit} />
-        <HighlightedSnippet text={hit.snippet} matches={hit.matches} />
-      </Button>
-    );
-  }
+  const handleClick = useCallback(() => onSelectResult(hit), [onSelectResult, hit]);
+  return (
+    <Button
+      onClick={handleClick}
+      className="w-full px-4 py-3 bg-layer-01 border border-border-subtle rounded-md text-left cursor-pointer transition-all duration-150 hover:bg-layer-hover-01 hover:border-border-strong">
+      <HighlightLabel hit={hit} />
+      <HighlightedSnippet text={hit.snippet} matches={hit.matches} />
+    </Button>
+  );
 }
 
 type RenderedLocationsProps = {
@@ -388,8 +385,8 @@ export function SearchPanel(
   }, [onQueryChange]);
 
   const toggleFilters: MouseEventHandler<HTMLButtonElement> = useCallback(() => {
-    setShowFilters(!showFilters);
-  }, [showFilters]);
+    setShowFilters((previous) => !previous);
+  }, []);
 
   const activeFilterCount = useMemo(
     () => (filters.locations?.length ?? 0) + (filters.fileTypes?.length ?? 0) + (filters.dateRange ? 1 : 0),
@@ -414,7 +411,7 @@ export function SearchPanel(
   const containerClassName = useMemo(
     () =>
       cn(
-        "z-100 flex",
+        "z-[var(--z-modal)] flex",
         isCompact ? "items-stretch justify-stretch" : "items-end justify-center px-3 pb-3",
         "pointer-events-none",
       ),

@@ -4,7 +4,6 @@ import type {
   CaptureMode,
   CaptureSubmitInput,
   CaptureSubmitResult,
-  DocContent,
   DocMeta,
   DocRef,
   EditorFontFamily,
@@ -12,10 +11,10 @@ import type {
   GlobalCaptureSettings,
   LocationId,
   MarkdownProfile,
-  PatternCategory,
   RenderResult,
   SaveStatus,
   SearchHit,
+  StyleCheckPattern,
 } from "$types";
 
 export type EditorState = {
@@ -27,14 +26,6 @@ export type EditorState = {
   selection_from: number | null;
   selection_to: number | null;
 };
-
-export type EditorMsg =
-  | { type: "EditorChanged"; text: string }
-  | { type: "SaveRequested" }
-  | { type: "SaveFinished"; success: boolean; error?: AppError }
-  | { type: "DocOpened"; doc: DocContent }
-  | { type: "CursorMoved"; line: number; column: number }
-  | { type: "SelectionChanged"; from: number; to: number | null };
 
 export type SaveResult = { success: boolean; new_meta: DocMeta | null; conflict_detected: boolean };
 
@@ -52,8 +43,6 @@ export type UiLayoutSettings = {
   focus_typewriter_scrolling_enabled: boolean;
   focus_dimming_mode: FocusDimmingMode;
 };
-
-export type StyleCheckPattern = { text: string; category: PatternCategory; replacement?: string };
 
 export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };
 
