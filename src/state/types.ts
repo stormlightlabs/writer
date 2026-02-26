@@ -26,6 +26,7 @@ export type LayoutChromeState = {
   showSearch: boolean;
   calmUiSettings: CalmUiSettings;
   chromeTemporarilyVisible: boolean;
+  reduceMotion: boolean;
 };
 
 export type EditorPresentationState = {
@@ -60,6 +61,7 @@ export type LayoutChromeActions = {
   setCalmUiFocusMode: (value: boolean) => void;
   setChromeTemporarilyVisible: (value: boolean) => void;
   revealChromeTemporarily: () => void;
+  setReduceMotion: (value: boolean) => void;
 };
 
 export type EditorPresentationActions = {

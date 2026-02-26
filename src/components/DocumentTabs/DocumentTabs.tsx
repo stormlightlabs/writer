@@ -1,45 +1,58 @@
 import { Button } from "$components/Button";
+import { EMPTY_NEW_DOC_TRANSITION, NO_MOTION_TRANSITION } from "$constants";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { PlusIcon } from "$icons";
 import { useTabsState, useWorkspaceLocationsState } from "$state/selectors";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
+import { NewButton } from "./NewButton";
 
-const EMPTY_NEW_DOC_INITIAL = { opacity: 0, y: -4 };
-const EMPTY_NEW_DOC_ANIMATE = { opacity: 1, y: 0 };
-const EMPTY_NEW_DOC_TRANSITION = { duration: 0.18 };
+const CONTEXT_MENU_INITIAL = { opacity: 0, scale: 0.96 };
+const CONTEXT_MENU_ANIMATE = { opacity: 1, scale: 1 };
+const CONTEXT_MENU_EXIT = { opacity: 0, scale: 0.96 };
+const CONTEXT_MENU_TRANSITION = { duration: 0.12, ease: "easeOut" as const };
 
-const NewButton = ({ onNewDocument, hasTabs }: { onNewDocument?: () => void; hasTabs: boolean }) => {
-  if (onNewDocument && hasTabs) {
-    return (
-      <div className="sticky right-0 z-10 flex items-center px-2 border-l border-border-subtle bg-bg-primary">
-        <Button
-          variant="iconGhost"
-          size="iconMd"
-          onClick={onNewDocument}
-          className="text-text-secondary hover:text-text-primary"
-          title="New Document (Ctrl+N)">
-          <PlusIcon size="sm" />
-        </Button>
-      </div>
-    );
-  }
-
-  if (onNewDocument) {
-    return (
-      <motion.div initial={EMPTY_NEW_DOC_INITIAL} animate={EMPTY_NEW_DOC_ANIMATE} transition={EMPTY_NEW_DOC_TRANSITION}>
-        <Button variant="outline" size="xs" onClick={onNewDocument} className="flex items-center gap-1.5">
-          <PlusIcon size="sm" />
-          New Document
-        </Button>
-      </motion.div>
-    );
-  }
-
-  return null;
+type ContextMenuProps = {
+  style: React.CSSProperties;
+  close: () => void;
+  closeOthers: () => void;
+  closeAll: () => void;
 };
+
+function ContextMenu({ style, close, closeOthers, closeAll }: ContextMenuProps) {
+  const { isNarrow } = useViewportTier();
+  const skipAnimation = useSkipAnimation();
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : CONTEXT_MENU_TRANSITION, [skipAnimation]);
+  return (
+    <motion.div
+      initial={CONTEXT_MENU_INITIAL}
+      animate={CONTEXT_MENU_ANIMATE}
+      exit={CONTEXT_MENU_EXIT}
+      transition={transition}
+      className={`fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 p-1 ${
+        isNarrow ? "min-w-[140px]" : "min-w-[160px]"
+      }`}
+      style={style}>
+      <Button
+        onClick={close}
+        className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
+        Close
+      </Button>
+      <Button
+        onClick={closeOthers}
+        className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
+        Close Others
+      </Button>
+      <Button
+        onClick={closeAll}
+        className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
+        Close All
+      </Button>
+    </motion.div>
+  );
+}
 
 export type DocumentTabsProps = { onNewDocument?: () => void };
 
@@ -47,11 +60,14 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
   const { tabs, activeTabId } = useTabsState();
   const { locations } = useWorkspaceLocationsState();
   const { handleSelectTab, handleCloseTab, handleReorderTabs, handleCreateNewDocument } = useWorkspaceController();
-  const { viewportWidth, isCompact, isNarrow } = useViewportTier();
+  const { viewportWidth, isCompact } = useViewportTier();
+  const skipAnimation = useSkipAnimation();
   const [draggingTab, setDraggingTab] = useState<string | null>(null);
   const [dragOverTab, setDragOverTab] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : EMPTY_NEW_DOC_TRANSITION, [skipAnimation]);
 
   useEffect(() => {
     const handleClickOutside = () => setContextMenu(null);
@@ -122,8 +138,9 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
   const contextMenuStyle = useMemo(() => contextMenu ? ({ left: contextMenu.x, top: contextMenu.y }) : {}, [
     contextMenu,
   ]);
+
   const compactTabs = useMemo(() => isCompact || viewportWidth < 860, [isCompact, viewportWidth]);
-  const compactContextMenu = useMemo(() => isNarrow, [isNarrow]);
+
   const handleNewDocument = useMemo(
     () => (locations.length > 0 ? onNewDocument ?? (() => handleCreateNewDocument()) : void 0),
     [locations.length, onNewDocument, handleCreateNewDocument],
@@ -133,7 +150,7 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
     return (
       <div className="h-tab bg-bg-primary border-b border-border-subtle flex items-center justify-between pl-4 pr-3 text-text-placeholder text-[0.8125rem]">
         <span>No documents open</span>
-        <NewButton onNewDocument={handleNewDocument} hasTabs={false} />
+        <NewButton onNewDocument={handleNewDocument} hasTabs={false} transition={transition} />
       </div>
     );
   }
@@ -158,31 +175,17 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
           onCloseTab={handleCloseTab}
           compact={compactTabs} />
       ))}
-      <NewButton onNewDocument={handleNewDocument} hasTabs />
+      <NewButton onNewDocument={handleNewDocument} hasTabs transition={transition} />
 
-      {contextMenu && (
-        <div
-          className={`fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 p-1 ${
-            compactContextMenu ? "min-w-[140px]" : "min-w-[160px]"
-          }`}
-          style={contextMenuStyle}>
-          <Button
-            onClick={closeContextMenu}
-            className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
-            Close
-          </Button>
-          <Button
-            onClick={closeOthers}
-            className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
-            Close Others
-          </Button>
-          <Button
-            onClick={closeAll}
-            className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
-            Close All
-          </Button>
-        </div>
-      )}
+      <AnimatePresence>
+        {contextMenu && (
+          <ContextMenu
+            style={contextMenuStyle}
+            close={closeContextMenu}
+            closeOthers={closeOthers}
+            closeAll={closeAll} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,5 +1,6 @@
+import { useSkipAnimation } from "$hooks/useMotion";
 import { cn } from "$utils/tw";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { type ChangeEvent, useCallback, useId, useMemo } from "react";
 
 type SwitchProps = {
@@ -19,11 +20,9 @@ const SWITCH_THUMB_MOTION = { type: "spring", stiffness: 580, damping: 38, mass:
 export const Switch = ({ checked, onCheckedChange, ariaLabel, id, disabled = false, className }: SwitchProps) => {
   const generatedId = useId();
   const inputId = useMemo(() => id ?? generatedId, [id, generatedId]);
-  const prefersReducedMotion = useReducedMotion();
+  const skipAnimation = useSkipAnimation();
   const thumbAnimate = useMemo(() => checked ? SWITCH_THUMB_ON : SWITCH_THUMB_OFF, [checked]);
-  const thumbTransition = useMemo(() => prefersReducedMotion ? SWITCH_THUMB_NO_MOTION : SWITCH_THUMB_MOTION, [
-    prefersReducedMotion,
-  ]);
+  const thumbTransition = useMemo(() => skipAnimation ? SWITCH_THUMB_NO_MOTION : SWITCH_THUMB_MOTION, [skipAnimation]);
 
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onCheckedChange(event.target.checked);

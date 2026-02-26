@@ -26,7 +26,8 @@
       "$components/*": ["./components/*"],
       "$state/*": ["./state/*"],
       "$hooks/*": ["./hooks/*"],
-      "$utils/*": ["./utils/*"]
+      "$utils/*": ["./utils/*"],
+      "$constants": ["./constants.ts"]
     }
   },
   "include": ["src"],

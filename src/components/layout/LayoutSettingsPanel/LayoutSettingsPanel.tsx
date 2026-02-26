@@ -12,6 +12,7 @@ import {
   useLayoutSettingsFocusState,
   useLayoutSettingsUiState,
   useLayoutSettingsWriterToolsState,
+  useReduceMotionState,
 } from "$state/selectors";
 import type { EditorFontFamily } from "$types";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
@@ -247,8 +248,23 @@ const QuickCaptureSection = () => {
   );
 };
 
+function AccessibilitySection() {
+  const { reduceMotion, setReduceMotion } = useReduceMotionState();
+
+  return (
+    <ToggleRow
+      label="Reduce Animations"
+      description="Minimize motion for accessibility and reduced distraction."
+      isVisible={reduceMotion}
+      onToggle={setReduceMotion} />
+  );
+}
+
 const SettingsBody = () => (
   <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+    <CollapsibleSection title="Accessibility" description="Configure motion and display preferences.">
+      <AccessibilitySection />
+    </CollapsibleSection>
     <CollapsibleSection title="Calm UI" description="Reduce visual noise and automate focus-oriented behavior.">
       <CalmUiSettingsSection />
     </CollapsibleSection>

@@ -1,5 +1,5 @@
 import { DocumentTabs } from "$components/DocumentTabs";
-import { Editor, type EditorProps } from "$components/Editor";
+import { type EditorProps, EditorWithContainer } from "$components/Editor";
 import { Preview, type PreviewProps } from "$components/Preview";
 import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
@@ -57,18 +57,32 @@ type MainPanelProps = {
   onSplitResizeStart: PointerEventHandler<HTMLDivElement>;
 };
 
-const MainPanel = (
+function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMode {
+  if (isSplitView && isPreviewVisible) {
+    return "split";
+  }
+
+  if (isPreviewVisible) {
+    return "preview";
+  }
+
+  return "editor";
+}
+
+function MainPanel(
   { panelMode, editor, preview, splitEditorWidth, isSplitResizing, onSplitResizeStart }: MainPanelProps,
-) => {
-  const splitEditorStyle = useMemo(() => ({ width: `${splitEditorWidth}px` }), [splitEditorWidth]);
+) {
+  const container = useMemo(() => {
+    if (panelMode === "split") {
+      return { className: "flex min-h-0 min-w-0 shrink-0 flex-col", style: { width: `${splitEditorWidth}px` } };
+    }
+    return { className: "flex min-h-0 min-w-0 flex-col w-full" };
+  }, [panelMode, splitEditorWidth]);
 
   if (panelMode === "split") {
     return (
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <div className="flex min-h-0 min-w-0 shrink-0 flex-col" style={splitEditorStyle}>
-          <Editor {...editor} />
-        </div>
-
+        <EditorWithContainer {...editor} container={container} />
         <div
           role="separator"
           aria-label="Resize split panes"
@@ -85,27 +99,10 @@ const MainPanel = (
 
   return (
     <div className="flex-1 min-h-0 flex overflow-hidden">
-      {panelMode === "editor" && (
-        <div className="flex min-h-0 min-w-0 flex-col w-full">
-          <Editor {...editor} />
-        </div>
-      )}
-
+      {panelMode === "editor" && <EditorWithContainer {...editor} container={container} />}
       {panelMode === "preview" && <Preview className="min-h-0 min-w-0 flex-1 w-full bg-bg-primary" {...preview} />}
     </div>
   );
-};
-
-function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMode {
-  if (isSplitView && isPreviewVisible) {
-    return "split";
-  }
-
-  if (isPreviewVisible) {
-    return "preview";
-  }
-
-  return "editor";
 }
 
 export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps) {
@@ -119,6 +116,7 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
 
   const effectiveSidebarVisible = calmUiVisibility ? calmUiVisibility.sidebar && !sidebarCollapsed : !sidebarCollapsed;
   const effectiveTabBarVisible = calmUiVisibility ? calmUiVisibility.tabBar && !topBarsCollapsed : !topBarsCollapsed;
+
   const effectiveStatusBarVisible = calmUiVisibility
     ? calmUiVisibility.statusBar && !statusBarCollapsed
     : !statusBarCollapsed;
@@ -134,6 +132,7 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
     SPLIT_PANEL_MIN_WIDTH,
     viewportWidth - (effectiveSidebarVisible ? sidebarWidth : 0),
   );
+
   const splitMaxWidth = Math.max(SPLIT_PANEL_MIN_WIDTH, splitAvailableWidth - SPLIT_PANEL_MIN_WIDTH);
   const splitFeasible = splitAvailableWidth >= SPLIT_PANEL_THRESHOLD;
   const effectivePanelMode = panelMode === "split" && !splitFeasible ? "editor" : panelMode;
@@ -171,35 +170,38 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
     event.preventDefault();
     startResizing(event.clientX);
   }, [startResizing]);
+
   const handleSplitResizeStart: PointerEventHandler<HTMLDivElement> = useCallback((event) => {
     event.preventDefault();
     startSplitResizing(event.clientX);
   }, [startSplitResizing]);
 
   const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
-  const handleNewDocument = toolbar.isNewDocumentDisabled ? void 0 : toolbar.onNewDocument;
+
+  const newDocumentHandler = useMemo(() => toolbar.isNewDocumentDisabled ? void 0 : toolbar.onNewDocument, [
+    toolbar.isNewDocumentDisabled,
+    toolbar.onNewDocument,
+  ]);
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {effectiveSidebarVisible
-        ? (
-          <div className="relative flex h-full shrink-0" style={sidebarStyle}>
-            <Sidebar onNewDocument={handleNewDocument} />
-            <div
-              role="separator"
-              aria-label="Resize sidebar"
-              aria-orientation="vertical"
-              onPointerDown={handleSidebarResizeStart}
-              className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
-                isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
-              }`} />
-          </div>
-        )
-        : null}
+      {effectiveSidebarVisible && (
+        <div className="relative flex h-full shrink-0" style={sidebarStyle}>
+          <Sidebar onNewDocument={newDocumentHandler} />
+          <div
+            role="separator"
+            aria-label="Resize sidebar"
+            aria-orientation="vertical"
+            onPointerDown={handleSidebarResizeStart}
+            className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
+              isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
+            }`} />
+        </div>
+      )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Toolbar {...toolbar} />
-        {effectiveTabBarVisible ? <DocumentTabs onNewDocument={handleNewDocument} /> : null}
+        {effectiveTabBarVisible && <DocumentTabs onNewDocument={newDocumentHandler} />}
         <MainPanel
           panelMode={effectivePanelMode}
           editor={editor}
@@ -207,7 +209,7 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}
           onSplitResizeStart={handleSplitResizeStart} />
-        {effectiveStatusBarVisible ? <StatusBar {...statusBar} /> : null}
+        {effectiveStatusBarVisible && <StatusBar {...statusBar} />}
       </div>
     </div>
   );

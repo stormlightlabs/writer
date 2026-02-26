@@ -3,12 +3,14 @@ import { ChevronRightIcon, IconProps, type IconSize } from "$icons";
 import type { CSSProperties, MouseEventHandler } from "react";
 import { useCallback, useMemo } from "react";
 
+type IconMemo = { Component: React.ComponentType<IconProps>; size: IconSize };
+
 type TreeItemProps = {
-  icon: { Component: (props: IconProps) => React.ReactNode; size: IconSize };
+  icon: IconMemo;
   label: string;
   isSelected?: boolean;
   isExpanded?: boolean;
-  hasChildren?: boolean;
+  hasChildItems?: boolean;
   level?: number;
   onClick?: () => void;
   onToggle?: () => void;
@@ -16,8 +18,17 @@ type TreeItemProps = {
 };
 
 export function TreeItem(
-  { icon, label, isSelected = false, isExpanded = false, hasChildren = false, level = 0, onClick, onToggle, children }:
-    TreeItemProps,
+  {
+    icon,
+    label,
+    isSelected = false,
+    isExpanded = false,
+    hasChildItems = false,
+    level = 0,
+    onClick,
+    onToggle,
+    children,
+  }: TreeItemProps,
 ) {
   const paddingLeft = level * 16 + 12;
 
@@ -72,7 +83,7 @@ export function TreeItem(
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
-      {hasChildren
+      {hasChildItems
         ? (
           <Button
             onClick={handleButtonClick}

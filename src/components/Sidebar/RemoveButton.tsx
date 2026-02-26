@@ -1,16 +1,21 @@
 import { Button } from "$components/Button";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { TrashIcon } from "$icons";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 const MENU_INITIAL = { opacity: 0, y: -6, scale: 0.98 };
 const MENU_ANIMATE = { opacity: 1, y: 0, scale: 1 };
 const MENU_EXIT = { opacity: 0, y: -6, scale: 0.98 };
 const MENU_TRANSITION = { duration: 0.14, ease: "easeOut" as const };
+const NO_MOTION_TRANSITION = { duration: 0 };
 
 export function RemoveButton(
   { isMenuOpen, handleRemoveClick }: { isMenuOpen: boolean; handleRemoveClick: () => void },
 ) {
+  const skipAnimation = useSkipAnimation();
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : MENU_TRANSITION, [skipAnimation]);
+
   const Inner = useCallback(
     () => (
       <Button
@@ -30,7 +35,7 @@ export function RemoveButton(
           initial={MENU_INITIAL}
           animate={MENU_ANIMATE}
           exit={MENU_EXIT}
-          transition={MENU_TRANSITION}
+          transition={transition}
           className="absolute right-0 top-full mt-1 bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 min-w-[140px]">
           <Inner />
         </motion.div>

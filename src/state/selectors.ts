@@ -23,6 +23,7 @@ export const useLayoutChromeState = () =>
       showSearch: state.showSearch,
       calmUiSettings: state.calmUiSettings,
       chromeTemporarilyVisible: state.chromeTemporarilyVisible,
+      reduceMotion: state.reduceMotion,
     })),
   );
 
@@ -407,6 +408,9 @@ export const useCalmUiActions = () =>
       revealChromeTemporarily: state.revealChromeTemporarily,
     })),
   );
+
+export const useReduceMotionState = () =>
+  useLayoutStore(useShallow((state) => ({ reduceMotion: state.reduceMotion, setReduceMotion: state.setReduceMotion })));
 
 export type SidebarStateReturn = ReturnType<typeof useSidebarState>;
 export type ToolbarStateReturn = ReturnType<typeof useToolbarState>;

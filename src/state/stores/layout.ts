@@ -36,6 +36,7 @@ export const getInitialLayoutChromeState = (): LayoutChromeState => ({
   showSearch: false,
   calmUiSettings: { enabled: true, focusMode: true },
   chromeTemporarilyVisible: false,
+  reduceMotion: false,
 });
 
 export const getInitialEditorPresentationState = (): EditorPresentationState => ({
@@ -100,6 +101,7 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   setCalmUiFocusMode: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, focusMode: value } })),
   setChromeTemporarilyVisible: (value) => set({ chromeTemporarilyVisible: value }),
   revealChromeTemporarily: () => set({ chromeTemporarilyVisible: true }),
+  setReduceMotion: (value) => set({ reduceMotion: value }),
 
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),

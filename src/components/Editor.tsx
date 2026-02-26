@@ -511,4 +511,12 @@ export function Editor(
   );
 }
 
+export const EditorWithContainer = (
+  { container, ...props }: EditorProps & { container: { className?: string; style?: CSSProperties } },
+) => (
+  <div className={`${container.className}`} style={container.style}>
+    <Editor {...props} />
+  </div>
+);
+
 export default Editor;

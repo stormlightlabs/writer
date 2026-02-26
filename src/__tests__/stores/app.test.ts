@@ -3,6 +3,7 @@ import {
   useEditorPresentationStateRaw,
   useLayoutChromeActions,
   useLayoutChromeState,
+  useReduceMotionState,
   useTabsActions,
   useTabsState,
   useViewModeActions,
@@ -418,5 +419,45 @@ describe("Calm UI state", () => {
     });
 
     expect(result.current.chromeTemporarilyVisible).toBe(true);
+  });
+});
+
+describe("reduceMotion state", () => {
+  beforeEach(() => {
+    resetAppStore();
+  });
+
+  it("should have reduceMotion default to false", () => {
+    const { result } = renderHook(() => useReduceMotionState());
+
+    expect(result.current.reduceMotion).toBe(false);
+  });
+
+  it("should toggle reduceMotion via setReduceMotion", () => {
+    const { result } = renderHook(() => useReduceMotionState());
+
+    act(() => {
+      result.current.setReduceMotion(true);
+    });
+
+    expect(result.current.reduceMotion).toBe(true);
+
+    act(() => {
+      result.current.setReduceMotion(false);
+    });
+
+    expect(result.current.reduceMotion).toBe(false);
+  });
+
+  it("should include reduceMotion in layout chrome state", () => {
+    const { result: chromeState } = renderHook(() => useLayoutChromeState());
+
+    expect(chromeState.current.reduceMotion).toBe(false);
+
+    act(() => {
+      useAppStore.getState().setReduceMotion(true);
+    });
+
+    expect(chromeState.current.reduceMotion).toBe(true);
   });
 });

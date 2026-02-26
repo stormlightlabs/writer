@@ -17,7 +17,7 @@ export function DocumentItem(
   return (
     <TreeItem
       key={doc.rel_path}
-      icon={fileTextIcon}
+      Icon={fileTextIcon}
       label={doc.title || doc.rel_path.split("/").pop() || "Untitled"}
       isSelected={isSelected && selectedDocPath === doc.rel_path}
       level={1}

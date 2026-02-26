@@ -28,7 +28,7 @@ const FolderItem = (
       label={name}
       isSelected={isSelected && !selectedDocPath}
       isExpanded={isExpanded}
-      hasChildren
+      hasChildItems
       level={0}
       onClick={onItemClick}
       onToggle={onToggleClick}>

@@ -43,6 +43,7 @@ export default defineConfig({
       "$state": resolveFromRoot("./src/state"),
       "$hooks": resolveFromRoot("./src/hooks"),
       "$utils": resolveFromRoot("./src/utils"),
+      "$constants": resolveFromRoot("./src/constants.ts"),
     },
   },
 });

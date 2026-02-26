@@ -410,6 +410,12 @@ body,
     color: #f2f4f8;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .animate-spin {
+        animation: none;
+    }
+}
+
 @media (prefers-color-scheme: light) {
     :root {
         color-scheme: light;

@@ -1,8 +1,10 @@
 import { Button } from "$components/Button";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "$editor/constants";
 import type { StyleMatch } from "$editor/style-check";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { XIcon } from "$icons";
 import { PatternCategory } from "$types";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useMemo } from "react";
 
 type DiagnosticsPanelProps = {
@@ -15,6 +17,12 @@ type DiagnosticsPanelProps = {
 };
 
 type GroupedMatches = Record<PatternCategory, StyleMatch[]>;
+
+const PANEL_INITIAL = { opacity: 0, x: -16 } as const;
+const PANEL_ANIMATE = { opacity: 1, x: 0 } as const;
+const PANEL_EXIT = { opacity: 0, x: -12 } as const;
+const PANEL_TRANSITION = { duration: 0.18, ease: "easeOut" } as const;
+const NO_MOTION_TRANSITION = { duration: 0 } as const;
 
 const groupMatches = (matches: StyleMatch[]): GroupedMatches => ({
   filler: matches.filter((m) => m.category === "filler"),
@@ -76,7 +84,7 @@ function CategorySection(
 }
 
 const DiagnosticsPanelHeader = ({ totalCount, onClose }: { totalCount: number; onClose: () => void }) => (
-  <>
+  <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
     <div>
       <h2 className="m-0 text-sm font-medium text-text-primary">Style Check</h2>
       <p className="m-0 text-xs text-text-secondary">
@@ -86,7 +94,7 @@ const DiagnosticsPanelHeader = ({ totalCount, onClose }: { totalCount: number; o
     <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label="Close diagnostics panel">
       <XIcon className="w-4 h-4" />
     </Button>
-  </>
+  </div>
 );
 
 const DiagnosticsPanelContent = (
@@ -120,6 +128,8 @@ export function DiagnosticsPanel(
 ) {
   const grouped = useMemo(() => groupMatches(matches), [matches]);
   const totalCount = useMemo(() => matches.length, [matches]);
+  const skipAnimation = useSkipAnimation();
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : PANEL_TRANSITION, [skipAnimation]);
   const panelStyle = useMemo(
     () => ({
       left: sidebarCollapsed ? 16 : 256 + 16,
@@ -130,19 +140,20 @@ export function DiagnosticsPanel(
     [sidebarCollapsed, topOffset],
   );
 
-  if (!isVisible) {
-    return null;
-  }
-
   return (
-    <div
-      className="fixed z-40 bg-layer-01 border border-border-subtle rounded-lg shadow-xl flex flex-col"
-      style={panelStyle}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-        <DiagnosticsPanelHeader totalCount={totalCount} onClose={onClose} />
-      </div>
-
-      <DiagnosticsPanelContent grouped={grouped} totalCount={totalCount} onSelectMatch={onSelectMatch} />
-    </div>
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={PANEL_INITIAL}
+          animate={PANEL_ANIMATE}
+          exit={PANEL_EXIT}
+          transition={transition}
+          className="fixed z-40 bg-layer-01 border border-border-subtle rounded-lg shadow-xl flex flex-col"
+          style={panelStyle}>
+          <DiagnosticsPanelHeader totalCount={totalCount} onClose={onClose} />
+          <DiagnosticsPanelContent grouped={grouped} totalCount={totalCount} onSelectMatch={onSelectMatch} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -1,16 +1,24 @@
 import { Button } from "$components/Button";
-import { Editor } from "$components/Editor";
+import { EditorWithContainer } from "$components/Editor";
 import type { EditorProps } from "$components/Editor";
 import { StatusBar } from "$components/StatusBar";
 import type { StatusBarProps } from "$components/StatusBar";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { FocusIcon } from "$icons";
 import { useFocusModePanelState } from "$state/selectors";
-import { useCallback } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useMemo } from "react";
 
 type FocusModePanelProps = {
   editor: Pick<EditorProps, "initialText" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange">;
   statusBar: Pick<StatusBarProps, "docMeta" | "stats">;
 };
+
+const PANEL_INITIAL = { opacity: 0 } as const;
+const PANEL_ANIMATE = { opacity: 1 } as const;
+const PANEL_EXIT = { opacity: 0 } as const;
+const PANEL_TRANSITION = { duration: 0.25, ease: "easeOut" } as const;
+const NO_MOTION_TRANSITION = { duration: 0 } as const;
 
 const FocusHeader = ({ onExit }: { onExit: () => void }) => (
   <div className="px-6 py-4 flex items-center justify-between">
@@ -26,20 +34,25 @@ const FocusHeader = ({ onExit }: { onExit: () => void }) => (
 
 export const FocusModePanel = ({ editor, statusBar }: FocusModePanelProps) => {
   const { statusBarCollapsed, setFocusMode } = useFocusModePanelState();
-
+  const skipAnimation = useSkipAnimation();
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : PANEL_TRANSITION, [skipAnimation]);
   const handleExit = useCallback(() => {
     setFocusMode(false);
   }, [setFocusMode]);
+  const container = useMemo(() => ({ className: "flex-1 max-w-3xl mx-auto w-full", style: {} }), []);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
-      <FocusHeader onExit={handleExit} />
-
-      <div className="flex-1 max-w-3xl mx-auto w-full">
-        <Editor {...editor} />
-      </div>
-
-      {statusBarCollapsed ? null : <StatusBar {...statusBar} />}
-    </div>
+    <AnimatePresence>
+      <motion.div
+        initial={PANEL_INITIAL}
+        animate={PANEL_ANIMATE}
+        exit={PANEL_EXIT}
+        transition={transition}
+        className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
+        <FocusHeader onExit={handleExit} />
+        <EditorWithContainer {...editor} container={container} />
+        {statusBarCollapsed ? null : <StatusBar {...statusBar} />}
+      </motion.div>
+    </AnimatePresence>
   );
 };

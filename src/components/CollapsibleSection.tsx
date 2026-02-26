@@ -1,6 +1,7 @@
 import { Button } from "$components/Button";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { cn } from "$utils/tw";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
 
 type CollapsibleSectionProps = {
@@ -23,6 +24,22 @@ const PANEL_EXPANDED = { height: "auto", opacity: 1 } as const;
 const PANEL_COLLAPSED = { height: 0, opacity: 0 } as const;
 const PANEL_TRANSITION = { duration: 0.2, ease: "easeOut" } as const;
 
+function getPanelAnimationProps(skipAnimation: boolean = false) {
+  return {
+    initial: skipAnimation ? { height: "auto", opacity: 1 } : PANEL_INITIAL,
+    animate: skipAnimation ? { height: "auto", opacity: 1 } : PANEL_EXPANDED,
+    exit: skipAnimation ? { height: "auto", opacity: 1 } : PANEL_COLLAPSED,
+    transition: skipAnimation ? NO_MOTION_TRANSITION : PANEL_TRANSITION,
+  };
+}
+
+function getChevronAnimationProps(skipAnimation: boolean = false, isOpen: boolean = false) {
+  return {
+    animate: isOpen ? CHEVRON_OPEN : CHEVRON_CLOSED,
+    transition: skipAnimation ? NO_MOTION_TRANSITION : CHEVRON_TRANSITION,
+  };
+}
+
 const SectionHeader = ({ title, description }: { title: string; description?: string }) => (
   <span className="min-w-0 flex-1">
     <span className="block text-[0.8125rem] text-text-primary">{title}</span>
@@ -36,18 +53,11 @@ export const CollapsibleSection = (
 ) => {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const sectionId = useId();
-  const prefersReducedMotion = useReducedMotion();
+  const skipAnimation = useSkipAnimation();
   const buttonId = useMemo(() => `${sectionId}-trigger`, [sectionId]);
   const panelId = useMemo(() => `${sectionId}-panel`, [sectionId]);
   const isControlled = useMemo(() => typeof open === "boolean", [open]);
   const isOpen = useMemo(() => isControlled ? open : internalOpen, [isControlled, internalOpen, open]);
-  const chevronAnimate = useMemo(() => isOpen ? CHEVRON_OPEN : CHEVRON_CLOSED, [isOpen]);
-  const chevronTransition = useMemo(() => prefersReducedMotion ? NO_MOTION_TRANSITION : CHEVRON_TRANSITION, [
-    prefersReducedMotion,
-  ]);
-  const panelTransition = useMemo(() => prefersReducedMotion ? NO_MOTION_TRANSITION : PANEL_TRANSITION, [
-    prefersReducedMotion,
-  ]);
 
   const handleToggle = useCallback(() => {
     const next = !isOpen;
@@ -70,8 +80,7 @@ export const CollapsibleSection = (
         <motion.i
           aria-hidden="true"
           className="i-ri-arrow-down-s-line mt-0.5 shrink-0 text-sm text-icon-secondary"
-          animate={chevronAnimate}
-          transition={chevronTransition} />
+          {...getChevronAnimationProps(skipAnimation, isOpen)} />
       </Button>
       <AnimatePresence initial={false}>
         {isOpen
@@ -81,10 +90,7 @@ export const CollapsibleSection = (
               role="region"
               aria-labelledby={buttonId}
               className={cn("overflow-hidden pb-1", contentClassName)}
-              initial={PANEL_INITIAL}
-              animate={PANEL_EXPANDED}
-              exit={PANEL_COLLAPSED}
-              transition={panelTransition}>
+              {...getPanelAnimationProps(skipAnimation)}>
               {children}
             </motion.div>
           )

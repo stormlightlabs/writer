@@ -1,6 +1,7 @@
+import { useSkipAnimation } from "$hooks/useMotion";
 import { cn } from "$utils/tw";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 export type DialogMotionPreset = "scale" | "slideUp" | "slideRight";
@@ -35,6 +36,7 @@ const DIALOG_MOTION_PRESETS: Record<
 
 const BACKDROP_FADE_MOTION = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } } as const;
 const BACKDROP_FADE_TRANSITION = { duration: 0.16, ease: "easeOut" } as const;
+const NO_MOTION_TRANSITION = { duration: 0 } as const;
 const DIALOG_SURFACE_TRANSITION = { duration: 0.2, ease: "easeOut" } as const;
 const FOCUSABLE_SELECTOR =
   "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -61,8 +63,15 @@ export function Dialog(
     motionPreset = "scale",
   }: DialogProps,
 ) {
+  const skipAnimation = useSkipAnimation();
   const motionConfig = DIALOG_MOTION_PRESETS[motionPreset];
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const backdropTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : BACKDROP_FADE_TRANSITION, [
+    skipAnimation,
+  ]);
+  const surfaceTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : DIALOG_SURFACE_TRANSITION, [
+    skipAnimation,
+  ]);
 
   const handleBackdropClick = closeOnBackdrop ? onClose : undefined;
 
@@ -140,7 +149,7 @@ export function Dialog(
               initial={BACKDROP_FADE_MOTION.initial}
               animate={BACKDROP_FADE_MOTION.animate}
               exit={BACKDROP_FADE_MOTION.exit}
-              transition={BACKDROP_FADE_TRANSITION} />
+              transition={backdropTransition} />
           )}
 
           <motion.div
@@ -154,7 +163,7 @@ export function Dialog(
             initial={motionConfig.initial}
             animate={motionConfig.animate}
             exit={motionConfig.exit}
-            transition={DIALOG_SURFACE_TRANSITION}>
+            transition={surfaceTransition}>
             {children}
           </motion.div>
         </div>

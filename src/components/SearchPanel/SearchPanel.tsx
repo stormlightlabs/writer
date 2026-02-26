@@ -1,12 +1,63 @@
 import { Button } from "$components/Button";
 import { Dialog } from "$components/Dialog";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { FileTextIcon, SearchIcon, XIcon } from "$icons";
 import type { SearchFilters } from "$state/types";
 import type { SearchHit } from "$types";
 import { cn } from "$utils/tw";
+import { AnimatePresence, motion } from "motion/react";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClearAllFiltersButton, CloseButton, FilterLocationButton, ToggleButton } from "./Buttons";
+
+type VisibleFiltersProps = {
+  showFilters: boolean;
+  locations: Array<{ id: number; name: string }>;
+  filters: SearchFilters;
+  handleToggleLocation: (locationId: number) => void;
+  activeFilterCount: number;
+  handleClearFilters: () => void;
+  skipAnimation: boolean;
+};
+
+type SearchInputProps = {
+  query: string;
+  handleQueryChange: ChangeEventHandler<HTMLInputElement>;
+  clearQuery: MouseEventHandler<HTMLButtonElement>;
+  compact?: boolean;
+};
+
+type ResultsProps = {
+  isSearching: boolean;
+  results: SearchHit[];
+  query: string;
+  onSelectResult: (hit: SearchHit) => void;
+};
+
+type LocationListProps = {
+  locations: Array<{ id: number; name: string }>;
+  filters: SearchFilters;
+  toggler: (locationId: number) => void;
+};
+
+type SearchResultsHeaderProps = {
+  query: string;
+  isSearching: boolean;
+  results: SearchHit[];
+  showFilters: boolean;
+  locations: Array<{ id: number; name: string }>;
+  filters: SearchFilters;
+  handleToggleLocation: (locationId: number) => void;
+  activeFilterCount: number;
+  handleClearFilters: () => void;
+  onClose: () => void;
+  handleQueryChange: ChangeEventHandler<HTMLInputElement>;
+  clearQuery: MouseEventHandler<HTMLButtonElement>;
+  toggleFilters: MouseEventHandler<HTMLButtonElement>;
+  compact: boolean;
+  skipAnimation: boolean;
+};
 
 type SearchPanelProps = {
   isOpen: boolean;
@@ -77,30 +128,22 @@ function SearchResult({ hit, onSelectResult }: SearchResultProps) {
   );
 }
 
-type RenderedLocationsProps = {
-  locations: Array<{ id: number; name: string }>;
-  filters: SearchFilters;
-  handleToggleLocation: (locationId: number) => void;
-};
-
-const RenderedLocations = ({ locations, filters, handleToggleLocation }: RenderedLocationsProps) => (
-  <div className="flex flex-wrap gap-2">
-    {locations.map((location) => (
-      <FilterLocation
-        key={location.id}
-        location={location}
-        filters={filters}
-        handleToggleLocation={handleToggleLocation} />
-    ))}
-  </div>
-);
-
-type ResultsProps = {
-  isSearching: boolean;
-  results: SearchHit[];
-  query: string;
-  onSelectResult: (hit: SearchHit) => void;
-};
+function LocationList({ locations, filters, toggler }: LocationListProps) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2">Locations</label>
+      <div className="flex flex-wrap gap-2">
+        {locations.map((location) => (
+          <FilterLocationButton
+            key={location.id}
+            location={location}
+            filters={filters}
+            handleToggleLocation={toggler} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Results({ isSearching, results, query, onSelectResult }: ResultsProps) {
   if (isSearching) {
@@ -136,146 +179,59 @@ function Results({ isSearching, results, query, onSelectResult }: ResultsProps) 
   );
 }
 
-type SearchInputProps = {
-  query: string;
-  handleQueryChange: ChangeEventHandler<HTMLInputElement>;
-  clearQuery: MouseEventHandler<HTMLButtonElement>;
-  compact?: boolean;
-};
-
-const SearchInput = ({ query, handleQueryChange, clearQuery, compact = false }: SearchInputProps) => (
-  <div className="min-w-0 flex-1 basis-[16rem] relative">
-    <SearchIcon
-      size="xl"
-      className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-secondary pointer-events-none" />
-    <input
-      type="text"
-      value={query}
-      onChange={handleQueryChange}
-      placeholder="Search across all documents..."
-      autoFocus
-      className={`w-full pl-10 pr-3 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
-        compact ? "py-2" : "py-2.5"
-      }`} />
-    {query && (
-      <Button
-        onClick={clearQuery}
-        className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
-        <XIcon size="sm" />
-      </Button>
-    )}
-  </div>
-);
-
-type FilterLocationProps = {
-  location: { id: number; name: string };
-  filters: SearchFilters;
-  handleToggleLocation: (locationId: number) => void;
-};
-
-function FilterLocation({ location, filters, handleToggleLocation }: FilterLocationProps) {
-  const handleClick = useCallback(() => handleToggleLocation(location.id), [handleToggleLocation, location.id]);
-  const classes = useMemo(() => {
-    const base = [
-      "px-3 py-1.5",
-      "border border-border-subtle rounded",
-      "text-[0.8125rem] cursor-pointer transition-all duration-150",
-    ];
-
-    if (filters.locations?.includes(location.id)) {
-      base.push("bg-accent-blue text-white");
-    } else {
-      base.push("bg-layer-02 text-text-primary");
-    }
-
-    return base.join(" ");
-  }, [filters.locations, location.id]);
-  return <Button onClick={handleClick} className={classes}>{location.name}</Button>;
-}
-
-const CloseButton = ({ onClose, compact = false }: { onClose: () => void; compact?: boolean }) => (
-  <Button
-    onClick={onClose}
-    className={`bg-transparent border-none text-icon-secondary cursor-pointer rounded-md ${compact ? "p-2" : "p-2.5"}`}>
-    <XIcon size="xl" />
-  </Button>
-);
-
-const ClearAllFilters = ({ handleClearFilters }: { handleClearFilters: () => void }) => (
-  <Button
-    onClick={handleClearFilters}
-    className="self-start px-3 py-1.5 bg-transparent border-none text-link-primary text-[0.8125rem] cursor-pointer underline underline-offset-2">
-    Clear all filters
-  </Button>
-);
-
-type ToggleButtonProps = {
-  toggleFilters: MouseEventHandler<HTMLButtonElement>;
-  showFilters: boolean;
-  activeFilterCount: number;
-  compact?: boolean;
-};
-
-function ToggleButton({ toggleFilters, showFilters, activeFilterCount, compact = false }: ToggleButtonProps) {
-  const classes = useMemo(() => {
-    const base = [
-      compact ? "px-3 py-2" : "px-4 py-2.5",
-      "border border-border-subtle rounded-md",
-      "text-sm cursor-pointer flex items-center gap-1.5 transition-all duration-150",
-    ];
-
-    if (showFilters) {
-      base.push("bg-layer-accent-01");
-    } else {
-      base.push("bg-layer-01");
-    }
-
-    if (activeFilterCount > 0) {
-      base.push("text-accent-blue");
-    } else {
-      base.push("text-text-secondary");
-    }
-
-    return base.join(" ");
-  }, [showFilters, activeFilterCount, compact]);
+function SearchInput({ query, handleQueryChange, clearQuery, compact = false }: SearchInputProps) {
   return (
-    <Button onClick={toggleFilters} className={classes}>
-      Filters
-      {activeFilterCount > 0 && (
-        <span className="bg-accent-blue text-white text-xs px-1.5 py-0.5 rounded-[10px] font-semibold">
-          {activeFilterCount}
-        </span>
+    <div className="min-w-0 flex-1 basis-[16rem] relative">
+      <SearchIcon
+        size="xl"
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-secondary pointer-events-none" />
+      <input
+        type="text"
+        value={query}
+        onChange={handleQueryChange}
+        placeholder="Search across all documents..."
+        autoFocus
+        className={`w-full pl-10 pr-3 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
+          compact ? "py-2" : "py-2.5"
+        }`} />
+      {query && (
+        <Button
+          onClick={clearQuery}
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
+          <XIcon size="sm" />
+        </Button>
       )}
-    </Button>
+    </div>
   );
 }
 
-type VisibleFiltersProps = {
-  showFilters: boolean;
-  locations: Array<{ id: number; name: string }>;
-  filters: SearchFilters;
-  handleToggleLocation: (locationId: number) => void;
-  activeFilterCount: number;
-  handleClearFilters: () => void;
-};
+function getAnimationProps(skipAnimation: boolean) {
+  const filters = { duration: 0.2, ease: "easeOut" } as const;
+  const noMotion = { duration: 0 } as const;
+  return {
+    initial: { height: 0, opacity: 0 },
+    animate: { height: "auto", opacity: 1 },
+    exit: { height: 0, opacity: 0 },
+    transition: skipAnimation ? noMotion : filters,
+  };
+}
 
 function VisibleFilters(
-  { showFilters, locations, filters, handleToggleLocation, activeFilterCount, handleClearFilters }: VisibleFiltersProps,
+  { showFilters, locations, filters, handleToggleLocation, activeFilterCount, handleClearFilters, skipAnimation }:
+    VisibleFiltersProps,
 ) {
-  if (showFilters) {
-    return (
-      <div className="p-4 bg-layer-01 rounded-md border border-border-subtle flex flex-col gap-4">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2">
-            Locations
-          </label>
-          <RenderedLocations locations={locations} filters={filters} handleToggleLocation={handleToggleLocation} />
-        </div>
-        {activeFilterCount > 0 && <ClearAllFilters handleClearFilters={handleClearFilters} />}
-      </div>
-    );
-  }
-  return null;
+  return (
+    <AnimatePresence initial={false}>
+      {showFilters && (
+        <motion.div
+          {...getAnimationProps(skipAnimation)}
+          className="p-4 bg-layer-01 rounded-md border border-border-subtle flex flex-col gap-4">
+          <LocationList locations={locations} filters={filters} toggler={handleToggleLocation} />
+          {activeFilterCount > 0 && <ClearAllFiltersButton handleClearFilters={handleClearFilters} />}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 function SearchResultsHeader(
@@ -294,22 +250,8 @@ function SearchResultsHeader(
     clearQuery,
     toggleFilters,
     compact,
-  }: {
-    query: string;
-    isSearching: boolean;
-    results: SearchHit[];
-    showFilters: boolean;
-    locations: Array<{ id: number; name: string }>;
-    filters: SearchFilters;
-    handleToggleLocation: (locationId: number) => void;
-    activeFilterCount: number;
-    handleClearFilters: () => void;
-    onClose: () => void;
-    handleQueryChange: ChangeEventHandler<HTMLInputElement>;
-    clearQuery: MouseEventHandler<HTMLButtonElement>;
-    toggleFilters: MouseEventHandler<HTMLButtonElement>;
-    compact: boolean;
-  },
+    skipAnimation,
+  }: SearchResultsHeaderProps,
 ) {
   return (
     <div className={`border-b border-border-subtle flex flex-col gap-3 ${compact ? "px-3 py-3" : "px-6 py-4"}`}>
@@ -329,7 +271,8 @@ function SearchResultsHeader(
         filters={filters}
         handleToggleLocation={handleToggleLocation}
         activeFilterCount={activeFilterCount}
-        handleClearFilters={handleClearFilters} />
+        handleClearFilters={handleClearFilters}
+        skipAnimation={skipAnimation} />
 
       {query && !isSearching && (
         <div className="text-[0.8125rem] text-text-secondary">
@@ -357,6 +300,7 @@ export function SearchPanel(
 ) {
   const { viewportWidth, isCompact } = useViewportTier();
   const [showFilters, setShowFilters] = useState(false);
+  const skipAnimation = useSkipAnimation();
 
   useEffect(() => {
     if (!isOpen) {
@@ -444,7 +388,8 @@ export function SearchPanel(
         handleQueryChange={handleQueryChange}
         clearQuery={clearQuery}
         toggleFilters={toggleFilters}
-        compact={isCompact || viewportWidth < 900} />
+        compact={isCompact || viewportWidth < 900}
+        skipAnimation={skipAnimation} />
 
       <div className={panelBodyClassName}>
         <Results isSearching={isSearching} results={results} query={query} onSelectResult={onSelectResult} />
