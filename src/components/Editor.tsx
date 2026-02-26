@@ -1,14 +1,14 @@
 import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
 import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
 import { styleCheck, styleCheckTheme, type StyleMatch } from "$editor/style-check";
+import { oxocarbonDark } from "$editor/themes/oxocarbon-dark";
+import { oxocarbonLight } from "$editor/themes/oxocarbon-light";
 import { typewriterScroll } from "$editor/typewriter-scroll";
 import { useEditorPresentationState } from "$state/selectors";
-import { oxocarbonDark } from "$themes/oxocarbon-dark";
-import { oxocarbonLight } from "$themes/oxocarbon-light";
 import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { EditorState as CMEditorState } from "@codemirror/state";
+import { Compartment, EditorState as CMEditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import type { ViewUpdate } from "@codemirror/view";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,19 +52,37 @@ type EditorCallbacks = Pick<
 
 type CreateEditorStateOptions = {
   doc: string;
+  presentation: PresentationSnapshot;
+  placeholder?: string;
+  updateListener: ReturnType<typeof EditorView.updateListener.of>;
+  onSave: () => void;
+  onStyleMatchesChange: (matches: StyleMatch[]) => void;
+  compartments: EditorCompartments;
+};
+
+type PresentationSnapshot = {
   theme: EditorTheme;
   disabled: boolean;
   showLineNumbers: boolean;
   textWrappingEnabled: boolean;
   syntaxHighlightingEnabled: boolean;
-  placeholder?: string;
-  updateListener: ReturnType<typeof EditorView.updateListener.of>;
-  onSave: () => void;
   typewriterScrollingEnabled: boolean;
   focusDimmingMode: FocusDimmingMode;
   posHighlightingEnabled: boolean;
   styleCheckSettings: StyleCheckSettings;
-  onStyleMatchesChange?: (matches: StyleMatch[]) => void;
+};
+
+type EditorCompartments = {
+  theme: Compartment;
+  editable: Compartment;
+  lineNumbers: Compartment;
+  wrapping: Compartment;
+  syntax: Compartment;
+  placeholder: Compartment;
+  typewriter: Compartment;
+  focusDimming: Compartment;
+  posHighlighting: Compartment;
+  styleCheck: Compartment;
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
@@ -79,26 +97,62 @@ const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
   "Monaspace Xenon": "\"Writer Monaspace Xenon\", \"Writer IBM Plex Mono\", monospace",
 };
 
-function createEditorState(
-  {
-    doc,
-    theme,
-    disabled,
-    showLineNumbers,
-    textWrappingEnabled,
-    syntaxHighlightingEnabled,
-    placeholder,
-    updateListener,
-    onSave,
-    typewriterScrollingEnabled,
-    focusDimmingMode,
-    posHighlightingEnabled,
-    styleCheckSettings,
-    onStyleMatchesChange,
-  }: CreateEditorStateOptions,
-): CMEditorState {
+function getThemeExtension(theme: EditorTheme): Extension {
   const themeExtension = theme === "dark" ? oxocarbonDark : oxocarbonLight;
+  return themeExtension;
+}
 
+function getSyntaxExtension(enabled: boolean): Extension {
+  if (!enabled) {
+    return [];
+  }
+
+  return markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true });
+}
+
+function getFocusDimmingExtension(mode: FocusDimmingMode): Extension {
+  if (mode === "off") {
+    return [];
+  }
+
+  return [focusDimming(mode), focusDimmingTheme];
+}
+
+function getStyleCheckExtension(
+  settings: StyleCheckSettings,
+  onStyleMatchesChange: (matches: StyleMatch[]) => void,
+): Extension {
+  if (!settings.enabled) {
+    return [];
+  }
+
+  return [
+    styleCheck({
+      enabled: settings.enabled,
+      categories: settings.categories,
+      customPatterns: settings.customPatterns.map((p) => ({
+        text: p.text,
+        category: p.category,
+        replacement: p.replacement,
+      })),
+      onMatchesChange: onStyleMatchesChange,
+    }),
+    styleCheckTheme,
+  ];
+}
+
+function getPlaceholderExtension(placeholder?: string): Extension {
+  if (!placeholder) {
+    return [];
+  }
+
+  return EditorView.theme({ ".cm-placeholder": { color: "#888" } });
+}
+
+function createEditorState(
+  { doc, presentation, placeholder, updateListener, onSave, onStyleMatchesChange, compartments }:
+    CreateEditorStateOptions,
+): CMEditorState {
   const saveKeymap = keymap.of([{
     key: "Mod-s",
     preventDefault: true,
@@ -108,39 +162,25 @@ function createEditorState(
     },
   }]);
 
-  const styleCheckExtensions = styleCheckSettings.enabled
-    ? [
-      styleCheck({
-        enabled: styleCheckSettings.enabled,
-        categories: styleCheckSettings.categories,
-        customPatterns: styleCheckSettings.customPatterns.map((p) => ({
-          text: p.text,
-          category: p.category,
-          replacement: p.replacement,
-        })),
-        onMatchesChange: onStyleMatchesChange,
-      }),
-      styleCheckTheme,
-    ]
-    : [];
-
   return CMEditorState.create({
     doc,
     extensions: [
-      ...(showLineNumbers ? [lineNumbers()] : []),
-      ...(textWrappingEnabled ? [EditorView.lineWrapping] : []),
       history(),
-      ...(syntaxHighlightingEnabled ? [markdown({ base: markdownLanguage, codeLanguages: [], addKeymap: true })] : []),
-      themeExtension,
       updateListener,
       keymap.of([...defaultKeymap, ...historyKeymap]),
       saveKeymap,
-      EditorView.editable.of(!disabled),
-      placeholder ? EditorView.theme({ ".cm-placeholder": { color: "#888" } }) : [],
-      ...(typewriterScrollingEnabled ? [typewriterScroll()] : []),
-      ...(focusDimmingMode === "off" ? [] : [focusDimming(focusDimmingMode), focusDimmingTheme]),
-      ...(posHighlightingEnabled ? [posHighlighting(), posHighlightingTheme] : []),
-      ...styleCheckExtensions,
+      compartments.theme.of(getThemeExtension(presentation.theme)),
+      compartments.editable.of(EditorView.editable.of(!presentation.disabled)),
+      compartments.lineNumbers.of(presentation.showLineNumbers ? lineNumbers() : []),
+      compartments.wrapping.of(presentation.textWrappingEnabled ? EditorView.lineWrapping : []),
+      compartments.syntax.of(getSyntaxExtension(presentation.syntaxHighlightingEnabled)),
+      compartments.placeholder.of(getPlaceholderExtension(placeholder)),
+      compartments.typewriter.of(presentation.typewriterScrollingEnabled ? typewriterScroll() : []),
+      compartments.focusDimming.of(getFocusDimmingExtension(presentation.focusDimmingMode)),
+      compartments.posHighlighting.of(
+        presentation.posHighlightingEnabled ? [posHighlighting(), posHighlightingTheme] : [],
+      ),
+      compartments.styleCheck.of(getStyleCheckExtension(presentation.styleCheckSettings, onStyleMatchesChange)),
     ],
   });
 }
@@ -215,6 +255,18 @@ export function Editor(
     posHighlightingEnabled,
     styleCheckSettings,
   });
+  const compartmentsRef = useRef<EditorCompartments>({
+    theme: new Compartment(),
+    editable: new Compartment(),
+    lineNumbers: new Compartment(),
+    wrapping: new Compartment(),
+    syntax: new Compartment(),
+    placeholder: new Compartment(),
+    typewriter: new Compartment(),
+    focusDimming: new Compartment(),
+    posHighlighting: new Compartment(),
+    styleCheck: new Compartment(),
+  });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -270,19 +322,12 @@ export function Editor(
     const currentPresentation = presentationRef.current;
     const state = createEditorState({
       doc,
-      theme: currentPresentation.theme,
-      disabled: currentPresentation.disabled,
-      showLineNumbers: currentPresentation.showLineNumbers,
-      textWrappingEnabled: currentPresentation.textWrappingEnabled,
-      syntaxHighlightingEnabled: currentPresentation.syntaxHighlightingEnabled,
+      presentation: currentPresentation,
       placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
       onSave: () => callbacksRef.current.onSave?.(),
-      onStyleMatchesChange: callbacksRef.current.onStyleMatchesChange,
-      typewriterScrollingEnabled: currentPresentation.typewriterScrollingEnabled,
-      focusDimmingMode: currentPresentation.focusDimmingMode,
-      posHighlightingEnabled: currentPresentation.posHighlightingEnabled,
-      styleCheckSettings: currentPresentation.styleCheckSettings,
+      onStyleMatchesChange: (matches) => callbacksRef.current.onStyleMatchesChange?.(matches),
+      compartments: compartmentsRef.current,
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
@@ -360,21 +405,60 @@ export function Editor(
     if (!view) {
       return;
     }
+    const effects = [];
+    const compartments = compartmentsRef.current;
 
-    const currentText = view.state.doc.toString();
-    const currentSelection = view.state.selection;
-
-    view.destroy();
-
-    const nextView = createView(currentText, currentSelection);
-    if (!nextView) {
-      viewRef.current = null;
-      return;
+    if (previousPresentation.theme !== theme) {
+      effects.push(compartments.theme.reconfigure(getThemeExtension(theme)));
+    }
+    if (previousPresentation.disabled !== disabled) {
+      effects.push(compartments.editable.reconfigure(EditorView.editable.of(!disabled)));
+    }
+    if (previousPresentation.showLineNumbers !== showLineNumbers) {
+      effects.push(compartments.lineNumbers.reconfigure(showLineNumbers ? lineNumbers() : []));
+    }
+    if (previousPresentation.textWrappingEnabled !== textWrappingEnabled) {
+      effects.push(compartments.wrapping.reconfigure(textWrappingEnabled ? EditorView.lineWrapping : []));
+    }
+    if (previousPresentation.syntaxHighlightingEnabled !== syntaxHighlightingEnabled) {
+      effects.push(compartments.syntax.reconfigure(getSyntaxExtension(syntaxHighlightingEnabled)));
+    }
+    if (previousPresentation.placeholder !== placeholder) {
+      effects.push(compartments.placeholder.reconfigure(getPlaceholderExtension(placeholder)));
+    }
+    if (previousPresentation.typewriterScrollingEnabled !== typewriterScrollingEnabled) {
+      effects.push(compartments.typewriter.reconfigure(typewriterScrollingEnabled ? typewriterScroll() : []));
+    }
+    if (previousPresentation.focusDimmingMode !== focusDimmingMode) {
+      effects.push(compartments.focusDimming.reconfigure(getFocusDimmingExtension(focusDimmingMode)));
+    }
+    if (previousPresentation.posHighlightingEnabled !== posHighlightingEnabled) {
+      effects.push(
+        compartments.posHighlighting.reconfigure(
+          posHighlightingEnabled ? [posHighlighting(), posHighlightingTheme] : [],
+        ),
+      );
+    }
+    if (
+      previousPresentation.styleCheckSettings.enabled !== styleCheckSettings.enabled
+      || previousPresentation.styleCheckSettings.categories.filler !== styleCheckSettings.categories.filler
+      || previousPresentation.styleCheckSettings.categories.redundancy !== styleCheckSettings.categories.redundancy
+      || previousPresentation.styleCheckSettings.categories.cliche !== styleCheckSettings.categories.cliche
+      || !areCustomPatternsEqual(
+        previousPresentation.styleCheckSettings.customPatterns,
+        styleCheckSettings.customPatterns,
+      )
+    ) {
+      effects.push(
+        compartments.styleCheck.reconfigure(getStyleCheckExtension(styleCheckSettings, (matches) =>
+          callbacksRef.current.onStyleMatchesChange?.(matches))),
+      );
     }
 
-    viewRef.current = nextView;
+    if (effects.length > 0) {
+      view.dispatch({ effects });
+    }
   }, [
-    createView,
     disabled,
     placeholder,
     showLineNumbers,

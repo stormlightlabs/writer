@@ -1,6 +1,11 @@
 import type { CalmUiSettings, StyleCheckSettings } from "$types";
 import { useShallow } from "zustand/react/shallow";
-import { useAppStore } from "./stores/app";
+import { useLayoutStore } from "./stores/layout";
+import { usePdfExportStore } from "./stores/pdf-export";
+import { useSearchStore } from "./stores/search";
+import { useTabsStore } from "./stores/tabs";
+import { useUiStore } from "./stores/ui";
+import { useWorkspaceStore } from "./stores/workspace";
 import type { EditorPresentation } from "./types";
 
 const FOCUS_MODE_STYLE_CHECK_SETTINGS: StyleCheckSettings = {
@@ -10,7 +15,7 @@ const FOCUS_MODE_STYLE_CHECK_SETTINGS: StyleCheckSettings = {
 };
 
 export const useLayoutChromeState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
       topBarsCollapsed: state.topBarsCollapsed,
@@ -22,7 +27,7 @@ export const useLayoutChromeState = () =>
   );
 
 export const useLayoutChromeActions = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       setSidebarCollapsed: state.setSidebarCollapsed,
       toggleSidebarCollapsed: state.toggleSidebarCollapsed,
@@ -41,7 +46,7 @@ export const useLayoutChromeActions = () =>
   );
 
 export const useEditorPresentationStateRaw = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       lineNumbersVisible: state.lineNumbersVisible,
       textWrappingEnabled: state.textWrappingEnabled,
@@ -53,7 +58,7 @@ export const useEditorPresentationStateRaw = () =>
   );
 
 export const useEditorPresentationActions = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       setLineNumbersVisible: state.setLineNumbersVisible,
       toggleLineNumbersVisible: state.toggleLineNumbersVisible,
@@ -67,7 +72,7 @@ export const useEditorPresentationActions = () =>
   );
 
 export const useViewModeState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       isSplitView: state.isSplitView,
       isFocusMode: state.isFocusMode,
@@ -77,7 +82,7 @@ export const useViewModeState = () =>
   );
 
 export const useViewModeActions = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       setSplitView: state.setSplitView,
       toggleSplitView: state.toggleSplitView,
@@ -94,7 +99,7 @@ export const useViewModeActions = () =>
   );
 
 export const useWriterToolsState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       posHighlightingEnabled: state.posHighlightingEnabled,
       styleCheckSettings: state.styleCheckSettings,
@@ -102,7 +107,7 @@ export const useWriterToolsState = () =>
   );
 
 export const useWriterToolsActions = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       setPosHighlightingEnabled: state.setPosHighlightingEnabled,
       togglePosHighlighting: state.togglePosHighlighting,
@@ -115,7 +120,7 @@ export const useWriterToolsActions = () =>
   );
 
 export const useWorkspaceLocationsState = () =>
-  useAppStore(
+  useWorkspaceStore(
     useShallow((state) => ({
       locations: state.locations,
       isLoadingLocations: state.isLoadingLocations,
@@ -125,7 +130,7 @@ export const useWorkspaceLocationsState = () =>
   );
 
 export const useWorkspaceLocationsActions = () =>
-  useAppStore(
+  useWorkspaceStore(
     useShallow((state) => ({
       setSidebarFilter: state.setSidebarFilter,
       setLocations: state.setLocations,
@@ -137,7 +142,7 @@ export const useWorkspaceLocationsActions = () =>
   );
 
 export const useWorkspaceDocumentsState = () =>
-  useAppStore(
+  useWorkspaceStore(
     useShallow((state) => ({
       selectedDocPath: state.selectedDocPath,
       documents: state.documents,
@@ -148,7 +153,7 @@ export const useWorkspaceDocumentsState = () =>
   );
 
 export const useWorkspaceDocumentsActions = () =>
-  useAppStore(
+  useWorkspaceStore(
     useShallow((state) => ({
       setSelectedDocPath: state.setSelectedDocPath,
       setDocuments: state.setDocuments,
@@ -158,10 +163,10 @@ export const useWorkspaceDocumentsActions = () =>
   );
 
 export const useTabsState = () =>
-  useAppStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
+  useTabsStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
 
 export const useTabsActions = () =>
-  useAppStore(
+  useTabsStore(
     useShallow((state) => ({
       openDocumentTab: state.openDocumentTab,
       selectTab: state.selectTab,
@@ -172,10 +177,12 @@ export const useTabsActions = () =>
   );
 
 export const usePdfExportState = () =>
-  useAppStore(useShallow((state) => ({ isExportingPdf: state.isExportingPdf, pdfExportError: state.pdfExportError })));
+  usePdfExportStore(
+    useShallow((state) => ({ isExportingPdf: state.isExportingPdf, pdfExportError: state.pdfExportError })),
+  );
 
 export const usePdfExportActions = () =>
-  useAppStore(
+  usePdfExportStore(
     useShallow((state) => ({
       startPdfExport: state.startPdfExport,
       finishPdfExport: state.finishPdfExport,
@@ -185,7 +192,7 @@ export const usePdfExportActions = () =>
   );
 
 export const useSearchState = () =>
-  useAppStore(
+  useSearchStore(
     useShallow((state) => ({
       searchQuery: state.searchQuery,
       searchResults: state.searchResults,
@@ -195,7 +202,7 @@ export const useSearchState = () =>
   );
 
 export const useSearchActions = () =>
-  useAppStore(
+  useSearchStore(
     useShallow((state) => ({
       setSearchQuery: state.setSearchQuery,
       setSearchResults: state.setSearchResults,
@@ -206,16 +213,16 @@ export const useSearchActions = () =>
   );
 
 export const useActiveSearchFilterCount = () =>
-  useAppStore((state) => {
+  useSearchStore((state) => {
     const filters = state.searchFilters;
     return (filters.locations?.length ?? 0) + (filters.fileTypes?.length ?? 0) + (filters.dateRange ? 1 : 0);
   });
 
 export const useLayoutSettingsUiState = () =>
-  useAppStore(useShallow((state) => ({ isOpen: state.layoutSettingsOpen, setOpen: state.setLayoutSettingsOpen })));
+  useUiStore(useShallow((state) => ({ isOpen: state.layoutSettingsOpen, setOpen: state.setLayoutSettingsOpen })));
 
 export const usePdfDialogUiState = () =>
-  useAppStore(
+  useUiStore(
     useShallow((state) => ({
       isOpen: state.pdfExportDialogOpen,
       setOpen: state.setPdfExportDialogOpen,
@@ -232,7 +239,7 @@ export const usePdfDialogUiState = () =>
   );
 
 export const useGlobalCaptureSettingsState = () =>
-  useAppStore(
+  useUiStore(
     useShallow((state) => ({
       settings: state.globalCaptureSettings,
       setSettings: state.setGlobalCaptureSettings,
@@ -241,7 +248,7 @@ export const useGlobalCaptureSettingsState = () =>
   );
 
 export const useLayoutSettingsChromeState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
       topBarsCollapsed: state.topBarsCollapsed,
@@ -253,7 +260,7 @@ export const useLayoutSettingsChromeState = () =>
   );
 
 export const useLayoutSettingsEditorState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       lineNumbersVisible: state.lineNumbersVisible,
       textWrappingEnabled: state.textWrappingEnabled,
@@ -269,7 +276,7 @@ export const useLayoutSettingsEditorState = () =>
   );
 
 export const useLayoutSettingsFocusState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       focusModeSettings: state.focusModeSettings,
       setTypewriterScrollingEnabled: state.setTypewriterScrollingEnabled,
@@ -278,7 +285,7 @@ export const useLayoutSettingsFocusState = () =>
   );
 
 export const useLayoutSettingsWriterToolsState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       posHighlightingEnabled: state.posHighlightingEnabled,
       styleCheckSettings: state.styleCheckSettings,
@@ -291,7 +298,7 @@ export const useLayoutSettingsWriterToolsState = () =>
   );
 
 export const useAppHeaderBarState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       tabBarCollapsed: state.topBarsCollapsed,
       statusBarCollapsed: state.statusBarCollapsed,
@@ -303,42 +310,58 @@ export const useAppHeaderBarState = () =>
   );
 
 export const useWorkspacePanelSidebarState = () =>
-  useAppStore(useShallow((state) => ({ sidebarCollapsed: state.sidebarCollapsed })));
+  useLayoutStore(useShallow((state) => ({ sidebarCollapsed: state.sidebarCollapsed })));
 
 export const useWorkspacePanelModeState = () =>
-  useAppStore(useShallow((state) => ({ isSplitView: state.isSplitView, isPreviewVisible: state.isPreviewVisible })));
+  useLayoutStore(useShallow((state) => ({ isSplitView: state.isSplitView, isPreviewVisible: state.isPreviewVisible })));
 
-export const useWorkspacePanelTopBarsCollapsed = () => useAppStore((state) => state.topBarsCollapsed);
+export const useWorkspacePanelTopBarsCollapsed = () => useLayoutStore((state) => state.topBarsCollapsed);
 
-export const useWorkspacePanelStatusBarCollapsed = () => useAppStore((state) => state.statusBarCollapsed);
+export const useWorkspacePanelStatusBarCollapsed = () => useLayoutStore((state) => state.statusBarCollapsed);
 
 export const useSearchOverlayState = () =>
-  useAppStore(useShallow((state) => ({ isVisible: state.showSearch, setShowSearch: state.setShowSearch })));
+  useLayoutStore(useShallow((state) => ({ isVisible: state.showSearch, setShowSearch: state.setShowSearch })));
 
 export const useFocusModePanelState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({ statusBarCollapsed: state.statusBarCollapsed, setFocusMode: state.setFocusMode })),
   );
 
-export const useSidebarState = () =>
-  useAppStore(
+export const useSidebarState = () => {
+  const layoutState = useLayoutStore(useShallow((state) => ({ toggleSidebarCollapsed: state.toggleSidebarCollapsed })));
+  const workspaceState = useWorkspaceStore(
     useShallow((state) => ({
       locations: state.locations,
       selectedLocationId: state.selectedLocationId,
       selectedDocPath: state.selectedDocPath,
       documents: state.documents,
-      isLoading: state.isLoadingLocations || state.isLoadingDocuments,
+      isLoadingLocations: state.isLoadingLocations,
+      isLoadingDocuments: state.isLoadingDocuments,
       refreshingLocationId: state.refreshingLocationId,
       sidebarRefreshReason: state.sidebarRefreshReason,
       filterText: state.sidebarFilter,
       setFilterText: state.setSidebarFilter,
       selectLocation: state.setSelectedLocation,
-      toggleSidebarCollapsed: state.toggleSidebarCollapsed,
     })),
   );
 
+  return {
+    locations: workspaceState.locations,
+    selectedLocationId: workspaceState.selectedLocationId,
+    selectedDocPath: workspaceState.selectedDocPath,
+    documents: workspaceState.documents,
+    isLoading: workspaceState.isLoadingLocations || workspaceState.isLoadingDocuments,
+    refreshingLocationId: workspaceState.refreshingLocationId,
+    sidebarRefreshReason: workspaceState.sidebarRefreshReason,
+    filterText: workspaceState.filterText,
+    setFilterText: workspaceState.setFilterText,
+    selectLocation: workspaceState.selectLocation,
+    toggleSidebarCollapsed: layoutState.toggleSidebarCollapsed,
+  };
+};
+
 export const useToolbarState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       isSplitView: state.isSplitView,
       isFocusMode: state.isFocusMode,
@@ -351,7 +374,7 @@ export const useToolbarState = () =>
   );
 
 export const useEditorPresentationState = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state): EditorPresentation => ({
       theme: state.theme,
       showLineNumbers: state.isFocusMode ? false : state.lineNumbersVisible,
@@ -367,7 +390,7 @@ export const useEditorPresentationState = () =>
   );
 
 export const useCalmUiSettings = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state): CalmUiSettings & { chromeTemporarilyVisible: boolean } => ({
       ...state.calmUiSettings,
       chromeTemporarilyVisible: state.chromeTemporarilyVisible,
@@ -375,7 +398,7 @@ export const useCalmUiSettings = () =>
   );
 
 export const useCalmUiActions = () =>
-  useAppStore(
+  useLayoutStore(
     useShallow((state) => ({
       setCalmUiSettings: state.setCalmUiSettings,
       toggleCalmUi: state.toggleCalmUi,

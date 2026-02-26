@@ -170,7 +170,7 @@ describe(Editor, () => {
       expect(container.querySelector(".cm-editor")).toBe(firstEditorRoot);
     });
 
-    it("recreates the editor view when presentation props change", () => {
+    it("keeps the editor view instance when presentation props change", () => {
       const { container, rerender } = render(<Editor initialText="Persistent" presentation={{ theme: "dark" }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
@@ -179,11 +179,11 @@ describe(Editor, () => {
 
       expect(screen.getByTestId("editor-container")).toHaveAttribute("data-theme", "light");
       expect(secondEditorRoot).toBeInTheDocument();
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
     });
 
-    it("recreates the editor view when line number visibility changes", () => {
+    it("keeps the editor view instance when line number visibility changes", () => {
       const { container, rerender } = render(
         <Editor initialText="Persistent" presentation={{ showLineNumbers: true }} />,
       );
@@ -192,12 +192,12 @@ describe(Editor, () => {
 
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).toBeInTheDocument();
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
       expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
     });
 
-    it("recreates the editor view when text wrapping changes", () => {
+    it("keeps the editor view instance when text wrapping changes", () => {
       const { container, rerender } = render(
         <Editor initialText="Persistent" presentation={{ textWrappingEnabled: true }} />,
       );
@@ -206,12 +206,12 @@ describe(Editor, () => {
 
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).toBeInTheDocument();
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
       expect(container.querySelector(".cm-lineWrapping")).not.toBeInTheDocument();
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
     });
 
-    it("recreates the editor view when syntax highlighting mode changes", () => {
+    it("keeps the editor view instance when syntax highlighting mode changes", () => {
       const { container, rerender } = render(
         <Editor initialText="# Heading" presentation={{ syntaxHighlightingEnabled: true }} />,
       );
@@ -220,7 +220,7 @@ describe(Editor, () => {
 
       const secondEditorRoot = container.querySelector(".cm-editor");
       expect(secondEditorRoot).toBeInTheDocument();
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
       expect(container.querySelector(".cm-content")).toHaveTextContent("# Heading");
     });
 
@@ -250,22 +250,22 @@ describe(Editor, () => {
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
-    it("should recreate editor when typewriterScrollingEnabled changes", () => {
+    it("should keep editor when typewriterScrollingEnabled changes", () => {
       const { container, rerender } = render(<Editor presentation={{ typewriterScrollingEnabled: false }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
       rerender(<Editor presentation={{ typewriterScrollingEnabled: true }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
     });
 
-    it("should recreate editor when focusDimmingMode changes", () => {
+    it("should keep editor when focusDimmingMode changes", () => {
       const { container, rerender } = render(<Editor presentation={{ focusDimmingMode: "off" }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
       rerender(<Editor presentation={{ focusDimmingMode: "sentence" }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
     });
 
     it("should apply POS highlighting when enabled", () => {
@@ -278,13 +278,13 @@ describe(Editor, () => {
       expect(container.querySelector(".cm-editor")).toBeInTheDocument();
     });
 
-    it("should recreate editor when posHighlightingEnabled changes", () => {
+    it("should keep editor when posHighlightingEnabled changes", () => {
       const { container, rerender } = render(<Editor presentation={{ posHighlightingEnabled: false }} />);
       const firstEditorRoot = container.querySelector(".cm-editor");
 
       rerender(<Editor presentation={{ posHighlightingEnabled: true }} />);
       const secondEditorRoot = container.querySelector(".cm-editor");
-      expect(secondEditorRoot).not.toBe(firstEditorRoot);
+      expect(secondEditorRoot).toBe(firstEditorRoot);
     });
   });
 });

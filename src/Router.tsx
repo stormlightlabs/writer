@@ -1,7 +1,7 @@
 import { QuickCaptureApp } from "$components/capture";
 import { Route, Router, Switch } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
-import App from "../App";
+import App from "./App";
 
 const NotFoundRoute = () => (
   <main className="flex h-dvh items-center justify-center bg-bg-primary text-text-primary">

@@ -8,7 +8,8 @@ import {
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
 } from "$state/selectors";
-import { useAppStore } from "$state/stores/app";
+import { useTabsStore } from "$state/stores/tabs";
+import { useWorkspaceStore } from "$state/stores/workspace";
 import type { SidebarRefreshReason } from "$state/types";
 import type { DocMeta, DocRef } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
@@ -74,7 +75,7 @@ export function useWorkspaceController() {
   }, [removeLocation]);
 
   const handleSelectDocument = useCallback((locationId: number, path: string) => {
-    const docTitle = useAppStore.getState().documents.find((doc) =>
+    const docTitle = useWorkspaceStore.getState().documents.find((doc) =>
       doc.location_id === locationId && doc.rel_path === path
     )?.title;
 
@@ -93,15 +94,16 @@ export function useWorkspaceController() {
   }, [openDocumentTab]);
 
   const handleCreateNewDocument = useCallback((locationId?: number) => {
-    const state = useAppStore.getState();
-    const targetLocationId = locationId ?? state.selectedLocationId ?? state.locations[0]?.id;
+    const workspaceState = useWorkspaceStore.getState();
+    const tabsState = useTabsStore.getState();
+    const targetLocationId = locationId ?? workspaceState.selectedLocationId ?? workspaceState.locations[0]?.id;
 
     if (!targetLocationId) {
       logger.warn("Cannot create draft without a selected location.");
       return null;
     }
 
-    const relPath = buildDraftRelPath(targetLocationId, state.documents, state.tabs);
+    const relPath = buildDraftRelPath(targetLocationId, workspaceState.documents, tabsState.tabs);
     const docRef: DocRef = { location_id: targetLocationId, rel_path: relPath };
     openDocumentTab(docRef, getDraftTitle(relPath));
     return docRef;
@@ -110,17 +112,17 @@ export function useWorkspaceController() {
   const handleRefreshSidebar = useCallback((locationId?: number, options: RefreshSidebarOptions = {}) => {
     const source = options.source ?? "manual";
     const attempt = options.attempt ?? 0;
-    const state = useAppStore.getState();
-    const targetLocationId = locationId ?? state.selectedLocationId ?? state.locations[0]?.id;
+    const workspaceState = useWorkspaceStore.getState();
+    const targetLocationId = locationId ?? workspaceState.selectedLocationId ?? workspaceState.locations[0]?.id;
 
-    if (!targetLocationId || state.selectedLocationId !== targetLocationId) {
+    if (!targetLocationId || workspaceState.selectedLocationId !== targetLocationId) {
       return;
     }
 
     setSidebarRefreshState(targetLocationId, source);
 
     runCmd(docList(targetLocationId, (nextDocuments) => {
-      const latestState = useAppStore.getState();
+      const latestState = useWorkspaceStore.getState();
       if (latestState.selectedLocationId !== targetLocationId) {
         if (latestState.refreshingLocationId === targetLocationId) {
           latestState.setSidebarRefreshState(undefined, null);
@@ -128,8 +130,6 @@ export function useWorkspaceController() {
         return;
       }
 
-      // Atomic save operations can emit a brief empty listing between fs events.
-      // Retry once to avoid flashing an empty list in the sidebar.
       if (nextDocuments.length === 0 && latestState.documents.length > 0 && attempt === 0) {
         setTimeout(() => {
           handleRefreshSidebar(targetLocationId, { source, attempt: attempt + 1 });
@@ -153,7 +153,7 @@ export function useWorkspaceController() {
       }
 
       logger.error("Failed to refresh sidebar documents", { locationId: targetLocationId, error });
-      const latestState = useAppStore.getState();
+      const latestState = useWorkspaceStore.getState();
       if (latestState.refreshingLocationId === targetLocationId) {
         latestState.setSidebarRefreshState(undefined, null);
       }

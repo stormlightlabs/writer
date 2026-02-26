@@ -14,11 +14,11 @@
  * - Clichés: https://github.com/dundalek/no-cliches (MIT)
  */
 
-import styleDictionaries from "$data/style-dictionaries.json";
 import { PatternCategory } from "$types";
 import { RangeSetBuilder } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
+import styleDictionaries from "./data/style-dictionaries.json";
 import type { Pattern } from "./pattern-matcher";
 import { PatternMatcher } from "./pattern-matcher";
 

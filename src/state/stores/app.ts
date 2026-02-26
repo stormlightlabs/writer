@@ -1,487 +1,56 @@
-import { logger } from "$logger";
-import { DEFAULT_OPTIONS } from "$pdf/constants";
-import { globalCaptureSet, runCmd } from "$ports";
-import type {
-  AppStore,
-  EditorPresentationActions,
-  EditorPresentationState,
-  LayoutChromeActions,
-  LayoutChromeState,
-  LayoutState,
-  PdfExportActions,
-  PdfExportState,
-  SearchActions,
-  SearchState,
-  TabsActions,
-  TabsState,
-  UiActions,
-  UiState,
-  ViewModeActions,
-  ViewModeState,
-  WorkspaceDocumentsActions,
-  WorkspaceDocumentsState,
-  WorkspaceLocationsActions,
-  WorkspaceLocationsState,
-  WorkspaceState,
-  WriterToolsActions,
-  WriterToolsState,
-} from "$state/types";
-import type { GlobalCaptureSettings, Tab } from "$types";
-import { create, type StateCreator } from "zustand";
+import type { AppStore } from "$state/types";
+import { useMemo } from "react";
+import { resetLayoutStore, useLayoutStore } from "./layout";
+import { resetPdfExportStore, usePdfExportStore } from "./pdf-export";
+import { resetSearchStore, useSearchStore } from "./search";
+import { resetTabsStore, useTabsStore } from "./tabs";
+import { resetUiStore, useUiStore } from "./ui";
+import { resetWorkspaceStore, useWorkspaceStore } from "./workspace";
 
-function generateTabId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+function getMergedState(): AppStore {
+  return {
+    ...useLayoutStore.getState(),
+    ...useWorkspaceStore.getState(),
+    ...useTabsStore.getState(),
+    ...usePdfExportStore.getState(),
+    ...useSearchStore.getState(),
+    ...useUiStore.getState(),
+  } as AppStore;
 }
 
-function getInitialTheme(): "dark" | "light" {
-  if (typeof globalThis.matchMedia === "function") {
-    return globalThis.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+export function useAppStore(): AppStore;
+export function useAppStore<T>(selector: (state: AppStore) => T): T;
+export function useAppStore<T>(selector?: (state: AppStore) => T): AppStore | T {
+  const layout = useLayoutStore();
+  const workspace = useWorkspaceStore();
+  const tabs = useTabsStore();
+  const pdfExport = usePdfExportStore();
+  const search = useSearchStore();
+  const ui = useUiStore();
+
+  const state = useMemo(() => ({ ...layout, ...workspace, ...tabs, ...pdfExport, ...search, ...ui }) as AppStore, [
+    layout,
+    workspace,
+    tabs,
+    pdfExport,
+    search,
+    ui,
+  ]);
+
+  if (!selector) {
+    return state;
   }
 
-  return "dark";
+  return selector(state);
 }
 
-const DEFAULT_GLOBAL_CAPTURE_SETTINGS: GlobalCaptureSettings = {
-  enabled: true,
-  shortcut: "CommandOrControl+Shift+Space",
-  paused: false,
-  defaultMode: "QuickNote",
-  targetLocationId: null,
-  inboxRelativeDir: "inbox",
-  appendTarget: null,
-  closeAfterSave: true,
-  showTrayIcon: true,
-  lastCaptureTarget: null,
-};
-
-const getInitialLayoutChromeState = (): LayoutChromeState => ({
-  sidebarCollapsed: false,
-  topBarsCollapsed: false,
-  statusBarCollapsed: false,
-  showSearch: false,
-  calmUiSettings: { enabled: true, focusMode: true },
-  chromeTemporarilyVisible: false,
-});
-
-const getInitialEditorPresentationState = (): EditorPresentationState => ({
-  lineNumbersVisible: true,
-  textWrappingEnabled: true,
-  syntaxHighlightingEnabled: true,
-  editorFontSize: 16,
-  editorFontFamily: "IBM Plex Mono",
-  theme: getInitialTheme(),
-});
-
-const getInitialViewModeState = (): ViewModeState => ({
-  isSplitView: false,
-  isFocusMode: false,
-  isPreviewVisible: false,
-  focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
-});
-
-const getInitialWriterToolsState = (): WriterToolsState => ({
-  posHighlightingEnabled: false,
-  styleCheckSettings: {
-    enabled: false,
-    categories: { filler: true, redundancy: true, cliche: true },
-    customPatterns: [],
-  },
-});
-
-const getInitialLayoutState = (): LayoutState => ({
-  ...getInitialLayoutChromeState(),
-  ...getInitialEditorPresentationState(),
-  ...getInitialViewModeState(),
-  ...getInitialWriterToolsState(),
-});
-
-const getInitialWorkspaceLocationsState = (): WorkspaceLocationsState => ({
-  locations: [],
-  isLoadingLocations: true,
-  selectedLocationId: undefined,
-  sidebarFilter: "",
-});
-
-const getInitialWorkspaceDocumentsState = (): WorkspaceDocumentsState => ({
-  selectedDocPath: undefined,
-  documents: [],
-  isLoadingDocuments: false,
-  refreshingLocationId: undefined,
-  sidebarRefreshReason: null,
-});
-
-const getInitialWorkspaceState = (): WorkspaceState => ({
-  ...getInitialWorkspaceLocationsState(),
-  ...getInitialWorkspaceDocumentsState(),
-});
-
-const getInitialTabsState = (): TabsState => ({ tabs: [], activeTabId: null });
-
-const getInitialPdfExportState = (): PdfExportState => ({ isExportingPdf: false, pdfExportError: null });
-
-const getInitialSearchState = (): SearchState => ({
-  searchQuery: "",
-  searchResults: [],
-  isSearching: false,
-  searchFilters: {},
-});
-
-const getInitialUiState = (): UiState => ({
-  layoutSettingsOpen: false,
-  pdfExportDialogOpen: false,
-  pdfExportOptions: DEFAULT_OPTIONS,
-  globalCaptureSettings: DEFAULT_GLOBAL_CAPTURE_SETTINGS,
-});
-
-const createLayoutChromeSlice: StateCreator<AppStore, [], [], LayoutChromeState & LayoutChromeActions> = (set) => ({
-  ...getInitialLayoutChromeState(),
-
-  setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
-  toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-
-  setTopBarsCollapsed: (value) => set({ topBarsCollapsed: value }),
-  toggleTabBarCollapsed: () => set((state) => ({ topBarsCollapsed: !state.topBarsCollapsed })),
-
-  setStatusBarCollapsed: (value) => set({ statusBarCollapsed: value }),
-  toggleStatusBarCollapsed: () => set((state) => ({ statusBarCollapsed: !state.statusBarCollapsed })),
-
-  setShowSearch: (value) => set({ showSearch: value }),
-  toggleShowSearch: () => set((state) => ({ showSearch: !state.showSearch })),
-
-  setCalmUiSettings: (settings) => set({ calmUiSettings: settings }),
-  toggleCalmUi: () =>
-    set((state) => {
-      const nextEnabled = !state.calmUiSettings.enabled;
-      return {
-        calmUiSettings: { ...state.calmUiSettings, enabled: nextEnabled },
-        sidebarCollapsed: nextEnabled,
-        topBarsCollapsed: nextEnabled,
-        statusBarCollapsed: nextEnabled,
-        chromeTemporarilyVisible: false,
-      };
-    }),
-  setCalmUiFocusMode: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, focusMode: value } })),
-  setChromeTemporarilyVisible: (value) => set({ chromeTemporarilyVisible: value }),
-  revealChromeTemporarily: () => set({ chromeTemporarilyVisible: true }),
-});
-
-const createEditorPresentationSlice: StateCreator<
-  AppStore,
-  [],
-  [],
-  EditorPresentationState & EditorPresentationActions
-> = (set) => ({
-  ...getInitialEditorPresentationState(),
-
-  setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
-  toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),
-
-  setTextWrappingEnabled: (value) => set({ textWrappingEnabled: value }),
-  toggleTextWrappingEnabled: () => set((state) => ({ textWrappingEnabled: !state.textWrappingEnabled })),
-
-  setSyntaxHighlightingEnabled: (value) => set({ syntaxHighlightingEnabled: value }),
-  toggleSyntaxHighlightingEnabled: () =>
-    set((state) => ({ syntaxHighlightingEnabled: !state.syntaxHighlightingEnabled })),
-
-  setEditorFontSize: (value) => set({ editorFontSize: Math.max(12, Math.min(24, Math.round(value))) }),
-  setEditorFontFamily: (value) => set({ editorFontFamily: value }),
-});
-
-const createViewModeSlice: StateCreator<AppStore, [], [], ViewModeState & ViewModeActions> = (set) => ({
-  ...getInitialViewModeState(),
-
-  setSplitView: (value) =>
-    set((state) => ({ isSplitView: value, isPreviewVisible: value ? true : state.isPreviewVisible })),
-  toggleSplitView: () =>
-    set((state) => ({
-      isSplitView: !state.isSplitView,
-      isPreviewVisible: state.isSplitView ? state.isPreviewVisible : true,
-    })),
-  setEditorOnlyMode: () => set({ isSplitView: false, isPreviewVisible: false }),
-
-  setFocusMode: (value) => set({ isFocusMode: value }),
-  toggleFocusMode: () => set((state) => ({ isFocusMode: !state.isFocusMode })),
-
-  setFocusModeSettings: (settings) => set({ focusModeSettings: settings }),
-  setTypewriterScrollingEnabled: (enabled) =>
-    set((state) => ({ focusModeSettings: { ...state.focusModeSettings, typewriterScrollingEnabled: enabled } })),
-  setFocusDimmingMode: (mode) =>
-    set((state) => ({ focusModeSettings: { ...state.focusModeSettings, dimmingMode: mode } })),
-  toggleTypewriterScrolling: () =>
-    set((state) => ({
-      focusModeSettings: {
-        ...state.focusModeSettings,
-        typewriterScrollingEnabled: !state.focusModeSettings.typewriterScrollingEnabled,
-      },
-    })),
-
-  setPreviewVisible: (value) => set({ isPreviewVisible: value }),
-  togglePreviewVisible: () => set((state) => ({ isPreviewVisible: !state.isPreviewVisible })),
-});
-
-const createWriterToolsSlice: StateCreator<AppStore, [], [], WriterToolsState & WriterToolsActions> = (set) => ({
-  ...getInitialWriterToolsState(),
-
-  setPosHighlightingEnabled: (value) => set({ posHighlightingEnabled: value }),
-  togglePosHighlighting: () => set((state) => ({ posHighlightingEnabled: !state.posHighlightingEnabled })),
-
-  setStyleCheckSettings: (settings) => set({ styleCheckSettings: settings }),
-  toggleStyleCheck: () =>
-    set((state) => ({
-      styleCheckSettings: { ...state.styleCheckSettings, enabled: !state.styleCheckSettings.enabled },
-    })),
-  setStyleCheckCategory: (category, enabled) =>
-    set((state) => ({
-      styleCheckSettings: {
-        ...state.styleCheckSettings,
-        categories: { ...state.styleCheckSettings.categories, [category]: enabled },
-      },
-    })),
-  addCustomPattern: (pattern) =>
-    set((state) => ({
-      styleCheckSettings: {
-        ...state.styleCheckSettings,
-        customPatterns: [...state.styleCheckSettings.customPatterns, pattern],
-      },
-    })),
-  removeCustomPattern: (index) =>
-    set((state) => ({
-      styleCheckSettings: {
-        ...state.styleCheckSettings,
-        customPatterns: state.styleCheckSettings.customPatterns.filter((_, i) => i !== index),
-      },
-    })),
-});
-
-const createWorkspaceLocationsSlice: StateCreator<
-  AppStore,
-  [],
-  [],
-  WorkspaceLocationsState & WorkspaceLocationsActions
-> = (set) => ({
-  ...getInitialWorkspaceLocationsState(),
-
-  setSidebarFilter: (value) => set({ sidebarFilter: value }),
-
-  setLocations: (locations) => {
-    set((state) => ({ locations, selectedLocationId: state.selectedLocationId ?? locations[0]?.id }));
-  },
-
-  setLoadingLocations: (value) => set({ isLoadingLocations: value }),
-
-  setSelectedLocation: (locationId) => set({ selectedLocationId: locationId, selectedDocPath: undefined }),
-
-  addLocation: (location) => {
-    set((state) => ({
-      locations: [...state.locations, location],
-      selectedLocationId: location.id,
-      selectedDocPath: undefined,
-    }));
-  },
-
-  removeLocation: (locationId) => {
-    set((state) => {
-      const locations = state.locations.filter((location) => location.id !== locationId);
-      const tabs = state.tabs.filter((tab) => tab.docRef.location_id !== locationId);
-      const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
-      const activeTabRemoved = activeTab?.docRef.location_id === locationId;
-
-      return {
-        locations,
-        tabs,
-        selectedLocationId: state.selectedLocationId === locationId ? undefined : state.selectedLocationId,
-        selectedDocPath: state.selectedLocationId === locationId ? undefined : state.selectedDocPath,
-        activeTabId: activeTabRemoved ? null : state.activeTabId,
-      };
-    });
-  },
-});
-
-const createWorkspaceDocumentsSlice: StateCreator<
-  AppStore,
-  [],
-  [],
-  WorkspaceDocumentsState & WorkspaceDocumentsActions
-> = (set) => ({
-  ...getInitialWorkspaceDocumentsState(),
-
-  setSelectedDocPath: (path) => set({ selectedDocPath: path }),
-  setDocuments: (documents) => set({ documents }),
-  setLoadingDocuments: (value) => set({ isLoadingDocuments: value }),
-  setSidebarRefreshState: (locationId, reason = null) =>
-    set({ refreshingLocationId: locationId, sidebarRefreshReason: locationId === undefined ? null : reason }),
-});
-
-const createTabsSlice: StateCreator<AppStore, [], [], TabsState & TabsActions> = (set, get) => ({
-  ...getInitialTabsState(),
-
-  openDocumentTab: (docRef, title) => {
-    const existingTab = get().tabs.find((tab) =>
-      tab.docRef.location_id === docRef.location_id && tab.docRef.rel_path === docRef.rel_path
-    );
-
-    if (existingTab) {
-      set({ activeTabId: existingTab.id, selectedLocationId: docRef.location_id, selectedDocPath: docRef.rel_path });
-
-      return { tabId: existingTab.id, didCreateTab: false };
-    }
-
-    const newTab: Tab = { id: generateTabId(), docRef, title, isModified: false };
-
-    set((state) => ({
-      tabs: [...state.tabs, newTab],
-      activeTabId: newTab.id,
-      selectedLocationId: docRef.location_id,
-      selectedDocPath: docRef.rel_path,
-    }));
-
-    return { tabId: newTab.id, didCreateTab: true };
-  },
-
-  selectTab: (tabId) => {
-    const tab = get().tabs.find((item) => item.id === tabId);
-    if (!tab) {
-      return null;
-    }
-
-    set({ activeTabId: tab.id, selectedLocationId: tab.docRef.location_id, selectedDocPath: tab.docRef.rel_path });
-
-    return tab.docRef;
-  },
-
-  closeTab: (tabId) => {
-    const state = get();
-    const tabIndex = state.tabs.findIndex((item) => item.id === tabId);
-
-    if (tabIndex === -1) {
-      return null;
-    }
-
-    const tabs = state.tabs.filter((item) => item.id !== tabId);
-
-    if (state.activeTabId !== tabId) {
-      set({ tabs });
-      return null;
-    }
-
-    if (tabs.length === 0) {
-      set({ tabs, activeTabId: null, selectedDocPath: undefined });
-      return null;
-    }
-
-    const nextIndex = Math.min(tabIndex, tabs.length - 1);
-    const nextActiveTab = tabs[nextIndex];
-
-    set({
-      tabs,
-      activeTabId: nextActiveTab.id,
-      selectedLocationId: nextActiveTab.docRef.location_id,
-      selectedDocPath: nextActiveTab.docRef.rel_path,
-    });
-
-    return nextActiveTab.docRef;
-  },
-
-  reorderTabs: (tabs) => set({ tabs }),
-
-  markActiveTabModified: (isModified) => {
-    set((state) => {
-      if (!state.activeTabId) {
-        return state;
-      }
-
-      const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
-      if (!activeTab || activeTab.isModified === isModified) {
-        return state;
-      }
-
-      return { tabs: state.tabs.map((tab) => (tab.id === state.activeTabId ? { ...tab, isModified } : tab)) };
-    });
-  },
-});
-
-const createPdfExportSlice: StateCreator<AppStore, [], [], PdfExportState & PdfExportActions> = (set) => ({
-  ...getInitialPdfExportState(),
-
-  startPdfExport: () => set({ isExportingPdf: true, pdfExportError: null }),
-  finishPdfExport: () => set({ isExportingPdf: false, pdfExportError: null }),
-  failPdfExport: (message) => set({ isExportingPdf: false, pdfExportError: message }),
-  resetPdfExport: () => set({ ...getInitialPdfExportState() }),
-});
-
-const createSearchSlice: StateCreator<AppStore, [], [], SearchState & SearchActions> = (set) => ({
-  ...getInitialSearchState(),
-
-  setSearchQuery: (value) => set({ searchQuery: value }),
-  setSearchResults: (value) => set({ searchResults: value }),
-  setIsSearching: (value) => set({ isSearching: value }),
-  setSearchFilters: (value) => set({ searchFilters: value }),
-  resetSearch: () => set({ ...getInitialSearchState() }),
-});
-
-const createUiSlice: StateCreator<AppStore, [], [], UiState & UiActions> = (set, get) => ({
-  ...getInitialUiState(),
-
-  setLayoutSettingsOpen: (value) => set({ layoutSettingsOpen: value }),
-  setPdfExportDialogOpen: (value) => set({ pdfExportDialogOpen: value }),
-  setPdfExportOptions: (value) => set({ pdfExportOptions: value }),
-  resetPdfExportOptions: () => set({ pdfExportOptions: DEFAULT_OPTIONS }),
-  setPdfPageSize: (value) => set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, pageSize: value } })),
-  setPdfOrientation: (value) =>
-    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, orientation: value } })),
-  setPdfFontSize: (value) => set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, fontSize: value } })),
-  setPdfMargin: (side, value) =>
-    set((state) => ({
-      pdfExportOptions: {
-        ...state.pdfExportOptions,
-        margins: { ...state.pdfExportOptions.margins, [side]: Number.isNaN(value) ? 0 : value },
-      },
-    })),
-  setPdfIncludeHeader: (value) =>
-    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, includeHeader: value } })),
-  setPdfIncludeFooter: (value) =>
-    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, includeFooter: value } })),
-  setGlobalCaptureSettings: (value) => set({ globalCaptureSettings: value }),
-  setQuickCaptureEnabled: async (enabled) => {
-    const previous = get().globalCaptureSettings;
-    if (previous.enabled === enabled) {
-      return;
-    }
-
-    const next = { ...previous, enabled };
-    set({ globalCaptureSettings: next });
-
-    await runCmd(globalCaptureSet(next, () => {}, (error) => {
-      logger.error("Failed to persist quick capture enabled state", error);
-      set({ globalCaptureSettings: previous });
-    }));
-  },
-});
-
-export const useAppStore = create<AppStore>()((...params) => ({
-  ...createLayoutChromeSlice(...params),
-  ...createEditorPresentationSlice(...params),
-  ...createViewModeSlice(...params),
-  ...createWriterToolsSlice(...params),
-  ...createWorkspaceLocationsSlice(...params),
-  ...createWorkspaceDocumentsSlice(...params),
-  ...createTabsSlice(...params),
-  ...createPdfExportSlice(...params),
-  ...createSearchSlice(...params),
-  ...createUiSlice(...params),
-}));
+useAppStore.getState = getMergedState;
 
 export function resetAppStore(): void {
-  useAppStore.setState({
-    ...getInitialLayoutState(),
-    ...getInitialWorkspaceState(),
-    ...getInitialTabsState(),
-    ...getInitialPdfExportState(),
-    ...getInitialSearchState(),
-    ...getInitialUiState(),
-  });
+  resetLayoutStore();
+  resetWorkspaceStore();
+  resetTabsStore();
+  resetPdfExportStore();
+  resetSearchStore();
+  resetUiStore();
 }

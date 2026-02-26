@@ -24,8 +24,6 @@
       "$editor/*": ["./editor/*"],
       "$pdf/*": ["./pdf/*"],
       "$components/*": ["./components/*"],
-      "$themes/*": ["./themes/*"],
-      "$data/*": ["./data/*"],
       "$state/*": ["./state/*"],
       "$hooks/*": ["./hooks/*"],
       "$utils/*": ["./utils/*"]

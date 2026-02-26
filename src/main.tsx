@@ -2,7 +2,7 @@ import { logger } from "$logger";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { applyInitialRoute, AppRouter } from "./routes/AppRouter";
+import { applyInitialRoute, AppRouter } from "./Router";
 import "@fontsource-variable/ibm-plex-sans";
 import "./App.css";
 
@@ -27,7 +27,9 @@ globalThis.addEventListener("unhandledrejection", (event) => {
   logger.error("Unhandled promise rejection", { reason: String(event.reason) });
 });
 
-// Detect window label and render appropriate app
+/**
+ * Detects window label and render appropriate app
+ */
 const windowLabel = getCurrentWindow().label;
 logger.info(`Rendering app for window: ${windowLabel}`);
 applyInitialRoute(windowLabel);

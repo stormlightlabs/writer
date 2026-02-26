@@ -320,6 +320,29 @@
     --spacing-sidebar-collapsed: 48px;
     --spacing-header: 48px;
     --spacing-tab: 40px;
+    --spacing-preview-content-max-width: 46rem;
+    --spacing-preview-block-gap: 1em;
+    --spacing-preview-heading-top: 1.5em;
+    --spacing-preview-heading-bottom: 0.5em;
+    --spacing-preview-list-indent: 2em;
+    --spacing-preview-list-item-gap: 0.25em;
+    --spacing-preview-hr-gap: 1.5em;
+    --spacing-preview-inline-code-x: 0.4em;
+    --spacing-preview-inline-code-y: 0.2em;
+    --spacing-preview-code-block: 1em;
+    --spacing-preview-table-cell: 0.5em;
+    --spacing-preview-checkbox-gap: 0.5em;
+    --font-size-preview-body: 1rem;
+    --font-size-preview-h1: 2em;
+    --font-size-preview-h2: 1.5em;
+    --font-size-preview-h3: 1.25em;
+    --font-size-preview-inline-code: 0.9em;
+    --line-height-preview-body: 1.7;
+    --line-height-preview-heading: 1.25;
+    --border-width-preview-heading: 1px;
+    --border-width-preview-blockquote: 4px;
+    --weight-preview-heading: 600;
+    --weight-preview-table-heading: 600;
 
     --radius-none: 0;
     --radius-sm: 2px;
@@ -485,38 +508,38 @@ body,
 
 /* Markdown Preview Styles */
 .preview-content {
-    max-width: 46rem;
+    max-width: var(--spacing-preview-content-max-width);
     margin: 0 auto;
-    line-height: 1.7;
-    font-size: 1rem;
+    line-height: var(--line-height-preview-body);
+    font-size: var(--font-size-preview-body);
 }
 
 .preview-content :is(h1, h2, h3, h4, h5, h6) {
     color: var(--color-text-primary);
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-weight: 600;
-    line-height: 1.25;
+    margin-top: var(--spacing-preview-heading-top);
+    margin-bottom: var(--spacing-preview-heading-bottom);
+    font-weight: var(--weight-preview-heading);
+    line-height: var(--line-height-preview-heading);
 }
 
 .preview-content h1 {
-    font-size: 2em;
-    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--font-size-preview-h1);
+    border-bottom: var(--border-width-preview-heading) solid var(--color-border-subtle);
     padding-bottom: 0.3em;
 }
 
 .preview-content h2 {
-    font-size: 1.5em;
-    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--font-size-preview-h2);
+    border-bottom: var(--border-width-preview-heading) solid var(--color-border-subtle);
     padding-bottom: 0.3em;
 }
 
 .preview-content h3 {
-    font-size: 1.25em;
+    font-size: var(--font-size-preview-h3);
 }
 
 .preview-content p {
-    margin: 0 0 1em 0;
+    margin: 0 0 var(--spacing-preview-block-gap) 0;
 }
 
 .preview-content a {
@@ -530,18 +553,18 @@ body,
 
 .preview-content code {
     background: var(--color-layer-01);
-    padding: 0.2em 0.4em;
+    padding: var(--spacing-preview-inline-code-y) var(--spacing-preview-inline-code-x);
     border-radius: var(--radius-md);
     font-family: var(--font-mono);
-    font-size: 0.9em;
+    font-size: var(--font-size-preview-inline-code);
 }
 
 .preview-content pre {
     background: var(--color-layer-01);
-    padding: 1em;
+    padding: var(--spacing-preview-code-block);
     border-radius: var(--radius-lg);
     overflow-x: auto;
-    margin: 0 0 1em 0;
+    margin: 0 0 var(--spacing-preview-block-gap) 0;
 }
 
 .preview-content pre code {
@@ -550,42 +573,42 @@ body,
 }
 
 .preview-content blockquote {
-    border-left: 4px solid var(--color-border-subtle);
-    margin: 0 0 1em 0;
+    border-left: var(--border-width-preview-blockquote) solid var(--color-border-subtle);
+    margin: 0 0 var(--spacing-preview-block-gap) 0;
     padding: 0 1em;
     color: var(--color-text-secondary);
 }
 
 .preview-content :is(ul, ol) {
-    margin: 0 0 1em 0;
-    padding-left: 2em;
+    margin: 0 0 var(--spacing-preview-block-gap) 0;
+    padding-left: var(--spacing-preview-list-indent);
 }
 
 .preview-content li {
-    margin: 0.25em 0;
+    margin: var(--spacing-preview-list-item-gap) 0;
 }
 
 .preview-content table {
     width: 100%;
     border-collapse: collapse;
-    margin: 0 0 1em 0;
+    margin: 0 0 var(--spacing-preview-block-gap) 0;
 }
 
 .preview-content :is(th, td) {
     border: 1px solid var(--color-border-subtle);
-    padding: 0.5em;
+    padding: var(--spacing-preview-table-cell);
     text-align: left;
 }
 
 .preview-content th {
     background: var(--color-layer-01);
-    font-weight: 600;
+    font-weight: var(--weight-preview-table-heading);
 }
 
 .preview-content hr {
     border: none;
     border-top: 1px solid var(--color-border-subtle);
-    margin: 1.5em 0;
+    margin: var(--spacing-preview-hr-gap) 0;
 }
 
 .preview-content img {
@@ -598,5 +621,5 @@ body,
 }
 
 .preview-content input[type="checkbox"] {
-    margin-right: 0.5em;
+    margin-right: var(--spacing-preview-checkbox-gap);
 }

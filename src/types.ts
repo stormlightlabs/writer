@@ -128,3 +128,5 @@ export type CaptureSubmitInput = {
   destination?: { locationId: number; relPath: string };
   openMainAfterSave?: boolean;
 };
+
+export type Maybe<T> = T | null | undefined;

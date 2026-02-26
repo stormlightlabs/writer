@@ -7,7 +7,8 @@ import {
   useViewModeState,
   useWriterToolsState,
 } from "$state/selectors";
-import { useAppStore } from "$state/stores/app";
+import { useLayoutStore } from "$state/stores/layout";
+import { useUiStore } from "$state/stores/ui";
 import { useEffect, useState } from "react";
 
 export function useSettingsSync(): void {
@@ -25,7 +26,7 @@ export function useSettingsSync(): void {
         return;
       }
 
-      const state = useAppStore.getState();
+      const state = useLayoutStore.getState();
       state.setSidebarCollapsed(settings.sidebar_collapsed);
       state.setTopBarsCollapsed(settings.top_bars_collapsed);
       state.setStatusBarCollapsed(settings.status_bar_collapsed);
@@ -48,7 +49,7 @@ export function useSettingsSync(): void {
         return;
       }
 
-      useAppStore.getState().setStyleCheckSettings({
+      useLayoutStore.getState().setStyleCheckSettings({
         enabled: settings.enabled,
         categories: settings.categories,
         customPatterns: settings.custom_patterns,
@@ -60,7 +61,7 @@ export function useSettingsSync(): void {
         return;
       }
 
-      useAppStore.getState().setGlobalCaptureSettings(settings);
+      useUiStore.getState().setGlobalCaptureSettings(settings);
     }, (error) => {
       logger.error("Failed to load global capture settings", error);
     }));

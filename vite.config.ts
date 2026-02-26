@@ -7,11 +7,11 @@ import type { ViteUserConfig } from "vitest/config";
 const test: ViteUserConfig["test"] = {
   environment: "jsdom",
   globals: true,
-  setupFiles: ["./src/test/setup.ts"],
+  setupFiles: ["./src/__tests__/setup.ts"],
   coverage: {
     provider: "v8",
     reporter: ["text", "json", "html"],
-    exclude: ["node_modules/", "src/test/", "**/*.d.ts", "**/*.config.*", "**/dist/**"],
+    exclude: ["node_modules/", "src/__tests__/", "**/*.d.ts", "**/*.config.*", "**/dist/**"],
   },
   include: ["src/**/*.{test,spec}.{js,ts,tsx}"],
   watch: false,
@@ -40,8 +40,6 @@ export default defineConfig({
       "$pdf": resolveFromRoot("./src/pdf"),
       "$components": resolveFromRoot("./src/components"),
       "$editor": resolveFromRoot("./src/editor"),
-      "$themes": resolveFromRoot("./src/themes"),
-      "$data": resolveFromRoot("./src/data"),
       "$state": resolveFromRoot("./src/state"),
       "$hooks": resolveFromRoot("./src/hooks"),
       "$utils": resolveFromRoot("./src/utils"),

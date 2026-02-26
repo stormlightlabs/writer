@@ -12,30 +12,19 @@ import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
 import { usePreview } from "$hooks/usePreview";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions } from "$pdf/types";
-import {
-  useCalmUiSettings,
-  useEditorPresentationStateRaw,
-  useLayoutChromeActions,
-  useLayoutChromeState,
-  useViewModeState,
-} from "$state/selectors";
-import type { AppTheme, DocRef } from "$types";
-import { useCallback, useMemo } from "react";
+import { useCalmUiSettings, useEditorPresentationStateRaw } from "$state/selectors";
+import type { DocRef, Maybe } from "$types";
+import { useMemo } from "react";
 
 export type FocusModePanelProps = { editor: WorkspaceEditorProps; statusBar: StatusBarProps };
 
-export type AppController = {
-  theme: AppTheme;
-  isFocusMode: boolean;
-  isSidebarCollapsed: boolean;
-  showToggleControls: boolean;
+export type WorkspaceViewController = {
   workspacePanelProps: WorkspacePanelProps;
   focusModePanelProps: FocusModePanelProps;
-  handleShowSidebar: () => void;
   handleExportPdf: (options: PdfExportOptions) => Promise<void>;
 };
 
-function isSameDocRef(left: DocRef | null | undefined, right: DocRef | null | undefined): boolean {
+function isSameDocRef(left: Maybe<DocRef>, right: Maybe<DocRef>): boolean {
   if (!left || !right) {
     return false;
   }
@@ -43,7 +32,7 @@ function isSameDocRef(left: DocRef | null | undefined, right: DocRef | null | un
   return left.location_id === right.location_id && left.rel_path === right.rel_path;
 }
 
-export function useAppController(): AppController {
+export function useWorkspaceViewController(): WorkspaceViewController {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const exportPdf = usePdfExport();
@@ -51,11 +40,8 @@ export function useAppController(): AppController {
   useWorkspaceSync();
   useLayoutHotkeys();
 
-  const layoutChrome = useLayoutChromeState();
   const calmUiSettings = useCalmUiSettings();
-  const { setSidebarCollapsed } = useLayoutChromeActions();
   const editorPresentation = useEditorPresentationStateRaw();
-  const { isFocusMode } = useViewModeState();
   const {
     locations,
     documents,
@@ -131,8 +117,6 @@ export function useAppController(): AppController {
     );
     return activeDoc ?? null;
   }, [activeTab, documents]);
-
-  const handleShowSidebar = useCallback(() => setSidebarCollapsed(false), [setSidebarCollapsed]);
 
   const activeDocRef = activeTab?.docRef ?? null;
 
@@ -248,14 +232,5 @@ export function useAppController(): AppController {
     [toolbarProps, editorProps, previewProps, statusBarProps, calmUiEffectiveVisibility],
   );
 
-  return {
-    theme: editorPresentation.theme,
-    isFocusMode,
-    isSidebarCollapsed: layoutChrome.sidebarCollapsed,
-    showToggleControls: layoutChrome.sidebarCollapsed,
-    workspacePanelProps,
-    focusModePanelProps,
-    handleShowSidebar,
-    handleExportPdf,
-  };
+  return { workspacePanelProps, focusModePanelProps, handleExportPdf };
 }
