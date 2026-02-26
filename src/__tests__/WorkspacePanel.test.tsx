@@ -1,5 +1,4 @@
 /* oxlint-disable eslint-plugin-react-perf/jsx-no-new-object-as-prop */
-import { DocumentTabsProps } from "$components/DocumentTabs";
 import { EditorProps } from "$components/Editor";
 import { WorkspacePanel } from "$components/layout/WorkspacePanel";
 import type { CalmUiVisibility, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
@@ -50,9 +49,7 @@ type SelectorOverrides = {
 };
 
 type WorkspacePanelPropOverrides = {
-  sidebar?: Partial<WorkspacePanelProps["sidebar"]>;
   toolbar?: Partial<WorkspacePanelProps["toolbar"]>;
-  tabs?: Partial<DocumentTabsProps>;
   editor?: Partial<EditorProps>;
   preview?: Partial<PreviewProps>;
   statusBar?: Partial<StatusBarProps>;
@@ -127,22 +124,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
 };
 
 const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}): WorkspacePanelProps => ({
-  sidebar: {
-    handleAddLocation: vi.fn(),
-    handleRemoveLocation: vi.fn(),
-    handleSelectDocument: vi.fn(),
-    handleCreateNewDocument: vi.fn(),
-    ...overrides.sidebar,
-  },
   toolbar: { saveStatus: "Idle", onSave: vi.fn(), onOpenSettings: vi.fn(), ...overrides.toolbar },
-  tabs: {
-    tabs: [],
-    activeTabId: null,
-    handleSelectTab: vi.fn(),
-    handleCloseTab: vi.fn(),
-    handleReorderTabs: vi.fn(),
-    ...overrides.tabs,
-  },
   editor: {
     initialText: "# Document",
     onChange: vi.fn(),

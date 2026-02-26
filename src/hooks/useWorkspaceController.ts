@@ -12,7 +12,7 @@ import type { DocRef, Tab } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useMemo } from "react";
 
-export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
+export function useWorkspaceController() {
   const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();
   const { selectedDocPath, documents, isLoadingDocuments } = useWorkspaceDocumentsState();
   const { setSidebarFilter, setSelectedLocation, addLocation, removeLocation } = useWorkspaceLocationsActions();
@@ -53,26 +53,16 @@ export function useWorkspaceController(openDoc: (docRef: DocRef) => void) {
 
     const title = docTitle || path.split("/").pop() || "Untitled";
     const docRef = { location_id: locationId, rel_path: path };
-
-    const { didCreateTab } = openDocumentTab(docRef, title);
-    if (didCreateTab) {
-      openDoc(docRef);
-    }
-  }, [openDoc, openDocumentTab]);
+    openDocumentTab(docRef, title);
+  }, [openDocumentTab]);
 
   const handleSelectTab = useCallback((tabId: string) => {
-    const docRef = selectTab(tabId);
-    if (docRef) {
-      openDoc(docRef);
-    }
-  }, [openDoc, selectTab]);
+    selectTab(tabId);
+  }, [selectTab]);
 
   const handleCloseTab = useCallback((tabId: string) => {
-    const docRef = closeTab(tabId);
-    if (docRef) {
-      openDoc(docRef);
-    }
-  }, [closeTab, openDoc]);
+    closeTab(tabId);
+  }, [closeTab]);
 
   const handleReorderTabs = useCallback((newTabs: Tab[]) => {
     reorderTabs(newTabs);

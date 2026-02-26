@@ -1,25 +1,17 @@
-import { type SearchFilters, SearchPanel } from "$components/SearchPanel";
+import { SearchPanel } from "$components/SearchPanel";
+import { useSearchController } from "$hooks/useSearchController";
+import { useWorkspaceController } from "$hooks/useWorkspaceController";
 import { useSearchOverlayState } from "$state/panel-selectors";
-import type { LocationDescriptor } from "$types";
-import type { SearchHit } from "$types";
+import { useWorkspaceLocationsState } from "$state/stores/app";
 import { useCallback, useMemo } from "react";
 
-type SearchOverlayProps = {
-  searchQuery: string;
-  searchResults: SearchHit[];
-  isSearching: boolean;
-  locations: LocationDescriptor[];
-  filters: SearchFilters;
-  handleSearch: (query: string) => void;
-  setFilters: (filters: SearchFilters) => void;
-  handleSelectSearchResult: (hit: SearchHit) => void;
-};
-
-export function SearchOverlay(
-  { searchQuery, searchResults, isSearching, locations, filters, handleSearch, setFilters, handleSelectSearchResult }:
-    SearchOverlayProps,
-) {
+export function SearchOverlay() {
   const { isVisible, setShowSearch } = useSearchOverlayState();
+  const { locations } = useWorkspaceLocationsState();
+  const { handleSelectDocument } = useWorkspaceController();
+  const { searchQuery, searchResults, isSearching, filters, setFilters, handleSearch, handleSelectSearchResult } =
+    useSearchController(handleSelectDocument);
+
   const handleClose = useCallback(() => {
     setShowSearch(false);
   }, [setShowSearch]);

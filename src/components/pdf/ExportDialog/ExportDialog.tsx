@@ -2,6 +2,7 @@ import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import type { MarginSide, PdfExportOptions, StandardPageSize } from "$pdf/types";
+import { usePdfExportState } from "$state/stores/app";
 import { useCallback, useState } from "react";
 import { PdfExportDialogFooter } from "./ExportFooter";
 import { PdfExportDialogHeader } from "./ExportHeader";
@@ -10,8 +11,6 @@ import { PdfExportDialogOptions } from "./ExportOptions";
 export type PdfExportDialogProps = {
   isOpen: boolean;
   title?: string;
-  isExporting?: boolean;
-  errorMessage?: string | null;
   onExport: (options: PdfExportOptions) => Promise<void>;
   onCancel: () => void;
 };
@@ -24,9 +23,9 @@ const PdfTitle = ({ title }: { title?: string }) => (title
   )
   : null);
 
-export function PdfExportDialog(
-  { isOpen, title, isExporting = false, errorMessage, onExport, onCancel }: PdfExportDialogProps,
-) {
+export function PdfExportDialog({ isOpen, title, onExport, onCancel }: PdfExportDialogProps) {
+  const { isExportingPdf, pdfExportError } = usePdfExportState();
+
   const { isCompact, viewportWidth } = useViewportTier();
   const [options, setOptions] = useState<PdfExportOptions>(DEFAULT_OPTIONS);
 
@@ -92,12 +91,12 @@ export function PdfExportDialog(
       <div className={`flex h-full flex-col ${compactPanel ? "p-4" : "p-6"}`}>
         <PdfExportDialogHeader handleCancel={onCancel} />
         <PdfTitle title={title} />
-        {errorMessage ? <p className="text-sm text-support-error mb-4">{errorMessage}</p> : null}
+        {pdfExportError ? <p className="text-sm text-support-error mb-4">{pdfExportError}</p> : null}
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">{optionsContent}</div>
         <PdfExportDialogFooter
           handleCancel={onCancel}
           handleExportClick={handleExportClick}
-          isExporting={isExporting} />
+          isExporting={isExportingPdf} />
       </div>
     </Dialog>
   );

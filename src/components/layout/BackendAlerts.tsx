@@ -1,8 +1,5 @@
+import { useBackendEvents } from "$hooks/useBackendEvents";
 import { AnimatePresence, motion } from "motion/react";
-
-type MissingLocation = { location_id: number; path: string };
-type Conflict = { location_id: number; rel_path: string; conflict_filename: string };
-type BackendAlertsProps = { missingLocations: MissingLocation[]; conflicts: Conflict[] };
 
 const ALERT_INITIAL = { opacity: 0, y: 12 } as const;
 const ALERT_ANIMATE = { opacity: 1, y: 0 } as const;
@@ -37,7 +34,9 @@ const ConflictsAlert = ({ count }: { count: number }) => (
   </motion.div>
 );
 
-export const BackendAlerts = ({ missingLocations, conflicts }: BackendAlertsProps) => {
+export const BackendAlerts = () => {
+  const { missingLocations, conflicts } = useBackendEvents();
+
   const hasMissingLocations = missingLocations.length > 0;
   const hasConflicts = conflicts.length > 0;
 

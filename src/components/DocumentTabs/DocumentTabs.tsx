@@ -1,7 +1,8 @@
 import { Button } from "$components/Button";
+import { useWorkspaceController } from "$hooks/useWorkspaceController";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { PlusIcon } from "$icons";
-import type { Tab } from "$types";
+import { useTabsState, useWorkspaceLocationsState } from "$state/stores/app";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
@@ -41,17 +42,13 @@ const NewButton = ({ onNewDocument, hasTabs }: { onNewDocument?: () => void; has
 };
 
 export type DocumentTabsProps = {
-  tabs: Tab[];
-  activeTabId: string | null;
-  handleSelectTab: (tabId: string) => void;
-  handleCloseTab: (tabId: string) => void;
-  handleReorderTabs?: (tabs: Tab[]) => void;
   onNewDocument?: () => void;
 };
 
-export function DocumentTabs(
-  { tabs, activeTabId, handleSelectTab, handleCloseTab, handleReorderTabs, onNewDocument }: DocumentTabsProps,
-) {
+export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
+  const { tabs, activeTabId } = useTabsState();
+  const { locations } = useWorkspaceLocationsState();
+  const { handleSelectTab, handleCloseTab, handleReorderTabs, handleCreateNewDocument } = useWorkspaceController();
   const { viewportWidth, isCompact, isNarrow } = useViewportTier();
   const [draggingTab, setDraggingTab] = useState<string | null>(null);
   const [dragOverTab, setDragOverTab] = useState<string | null>(null);
@@ -129,12 +126,16 @@ export function DocumentTabs(
   ]);
   const compactTabs = useMemo(() => isCompact || viewportWidth < 860, [isCompact, viewportWidth]);
   const compactContextMenu = useMemo(() => isNarrow, [isNarrow]);
+  const handleNewDocument = useMemo(
+    () => (locations.length > 0 ? onNewDocument ?? (() => handleCreateNewDocument()) : void 0),
+    [locations.length, onNewDocument, handleCreateNewDocument],
+  );
 
   if (tabs.length === 0) {
     return (
       <div className="h-tab bg-bg-primary border-b border-border-subtle flex items-center justify-between pl-4 pr-3 text-text-placeholder text-[0.8125rem]">
         <span>No documents open</span>
-        <NewButton onNewDocument={onNewDocument} hasTabs={false} />
+        <NewButton onNewDocument={handleNewDocument} hasTabs={false} />
       </div>
     );
   }
@@ -159,7 +160,7 @@ export function DocumentTabs(
           onCloseTab={handleCloseTab}
           compact={compactTabs} />
       ))}
-      <NewButton onNewDocument={onNewDocument} hasTabs />
+      <NewButton onNewDocument={handleNewDocument} hasTabs />
 
       {contextMenu && (
         <div

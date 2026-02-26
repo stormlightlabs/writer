@@ -1,4 +1,5 @@
 import { Button } from "$components/Button";
+import { useWorkspaceController } from "$hooks/useWorkspaceController";
 import { CollapseIcon, FileAddIcon, FolderAddIcon } from "$icons";
 import { useSidebarState } from "$state/panel-selectors";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
@@ -10,10 +11,7 @@ import { SidebarLocationItem } from "./SidebarLocationItem";
 import { Title } from "./Title";
 
 export type SidebarProps = {
-  handleAddLocation: () => void;
-  handleRemoveLocation: (locationId: number) => void;
-  handleSelectDocument: (locationId: number, path: string) => void;
-  handleCreateNewDocument: (locationId?: number) => void;
+  onNewDocument?: (locationId?: number) => void;
 };
 
 type SidebarActionsProps = {
@@ -61,8 +59,10 @@ const SidebarActions = (
 );
 
 export function Sidebar(
-  { handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument }: SidebarProps,
+  { onNewDocument }: SidebarProps,
 ) {
+  const { handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument } =
+    useWorkspaceController();
   const {
     locations,
     selectedLocationId,
@@ -143,8 +143,9 @@ export function Sidebar(
       return;
     }
 
-    handleCreateNewDocument(selectedLocationId);
-  }, [handleCreateNewDocument, selectedLocationId]);
+    const createNewDocument = onNewDocument ?? handleCreateNewDocument;
+    createNewDocument(selectedLocationId);
+  }, [handleCreateNewDocument, onNewDocument, selectedLocationId]);
 
   return (
     <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">

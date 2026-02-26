@@ -1,7 +1,7 @@
-import { DocumentTabs, type DocumentTabsProps } from "$components/DocumentTabs";
+import { DocumentTabs } from "$components/DocumentTabs";
 import { Editor, type EditorProps } from "$components/Editor";
 import { Preview, type PreviewProps } from "$components/Preview";
-import { Sidebar, type SidebarProps } from "$components/Sidebar";
+import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
 import { Toolbar, type ToolbarProps } from "$components/Toolbar";
 import { useResizable } from "$hooks/useResizable";
@@ -24,10 +24,6 @@ export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 export type CalmUiVisibility = { sidebar: boolean; statusBar: boolean; tabBar: boolean };
 
 export type WorkspacePanelProps = {
-  sidebar: Pick<
-    SidebarProps,
-    "handleAddLocation" | "handleRemoveLocation" | "handleSelectDocument" | "handleCreateNewDocument"
-  >;
   toolbar: Pick<
     ToolbarProps,
     | "saveStatus"
@@ -41,7 +37,6 @@ export type WorkspacePanelProps = {
     | "isPdfExportDisabled"
     | "onRefresh"
   >;
-  tabs: DocumentTabsProps;
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
   statusBar: StatusBarProps;
@@ -115,7 +110,7 @@ function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMod
 }
 
 export function WorkspacePanel(
-  { sidebar, toolbar, tabs, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps,
+  { toolbar, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps,
 ) {
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
@@ -185,13 +180,14 @@ export function WorkspacePanel(
   }, [startSplitResizing]);
 
   const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
+  const handleNewDocument = toolbar.isNewDocumentDisabled ? void 0 : toolbar.onNewDocument;
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
       {effectiveSidebarVisible
         ? (
           <div className="relative flex h-full shrink-0" style={sidebarStyle}>
-            <Sidebar {...sidebar} />
+            <Sidebar onNewDocument={handleNewDocument} />
             <div
               role="separator"
               aria-label="Resize sidebar"
@@ -206,7 +202,7 @@ export function WorkspacePanel(
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Toolbar {...toolbar} />
-        {effectiveTabBarVisible ? <DocumentTabs {...tabs} /> : null}
+        {effectiveTabBarVisible ? <DocumentTabs onNewDocument={handleNewDocument} /> : null}
         <MainPanel
           panelMode={effectivePanelMode}
           editor={editor}

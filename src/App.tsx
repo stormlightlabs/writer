@@ -25,12 +25,10 @@ import { LayoutSettingsPanel } from "./components/layout/LayoutSettingsPanel";
 import { SearchOverlay } from "./components/layout/SearchOverlay";
 import { WorkspacePanel } from "./components/layout/WorkspacePanel";
 import { PdfExportDialog } from "./components/pdf/ExportDialog/ExportDialog";
-import { useBackendEvents } from "./hooks/useBackendEvents";
 import { useEditor } from "./hooks/useEditor";
 import { useLayoutHotkeys } from "./hooks/useLayoutHotkeys";
 import { usePdfExport } from "./hooks/usePdfExport";
 import { usePreview } from "./hooks/usePreview";
-import { useSearchController } from "./hooks/useSearchController";
 import { useTypingActivity } from "./hooks/useTypingActivity";
 import { useWorkspaceController } from "./hooks/useWorkspaceController";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
@@ -40,7 +38,6 @@ import {
   useLayoutChromeActions,
   useLayoutChromeState,
   usePdfExportActions,
-  usePdfExportState,
   useViewModeActions,
   useViewModeState,
   useWriterToolsActions,
@@ -73,9 +70,7 @@ function App() {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const exportPdf = usePdfExport();
-  const { isExportingPdf, pdfExportError } = usePdfExportState();
   const { resetPdfExport } = usePdfExportActions();
-  const { missingLocations, conflicts } = useBackendEvents();
   const [isLayoutSettingsOpen, setIsLayoutSettingsOpen] = useState(false);
   const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
@@ -111,16 +106,10 @@ function App() {
     tabs,
     activeTabId,
     markActiveTabModified,
-    handleAddLocation,
-    handleRemoveLocation,
     handleSelectDocument,
-    handleSelectTab,
-    handleCloseTab,
-    handleReorderTabs,
     handleCreateDraftTab,
     handleCreateNewDocument,
-  } = useWorkspaceController(openDoc);
-  const search = useSearchController(handleSelectDocument);
+  } = useWorkspaceController();
   const { isTyping, handleTypingActivity } = useTypingActivity({ idleTimeout: 1500 });
 
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [activeTabId, tabs]);
@@ -257,11 +246,6 @@ function App() {
     return { sidebar: !hideWhileTyping, statusBar: !hideWhileTyping, tabBar: !hideWhileTyping };
   }, [layoutChrome, isTyping]);
 
-  const sidebarProps = useMemo(
-    () => ({ handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument }),
-    [handleAddLocation, handleRemoveLocation, handleSelectDocument, handleCreateNewDocument],
-  );
-
   const toolbarProps = useMemo(
     () => ({
       saveStatus: editorModel.saveStatus,
@@ -270,7 +254,6 @@ function App() {
       onNewDocument: handleNewDocument,
       isNewDocumentDisabled: !hasLocations,
       onExportPdf: handleOpenPdfExport,
-      isExportingPdf: isExportingPdf,
       isPdfExportDisabled: !activeTab,
       onOpenSettings: handleOpenSettings,
     }),
@@ -278,7 +261,6 @@ function App() {
       editorModel.saveStatus,
       activeTab,
       handleOpenPdfExport,
-      isExportingPdf,
       handleNewDocument,
       hasLocations,
       handleSave,
@@ -286,19 +268,7 @@ function App() {
     ],
   );
 
-  const tabProps = useMemo(
-    () => ({
-      tabs,
-      activeTabId,
-      handleSelectTab,
-      handleCloseTab,
-      handleReorderTabs,
-      onNewDocument: hasLocations ? handleNewDocument : void 0,
-    }),
-    [tabs, activeTabId, handleSelectTab, handleCloseTab, handleReorderTabs, hasLocations, handleNewDocument],
-  );
-
-  const activeDocRef = useMemo(() => activeTab?.docRef ?? null, [activeTab]);
+  const activeDocRef = activeTab?.docRef ?? null;
 
   const startupDocumentReadyRef = useRef(false);
   const startupDocumentRestoredRef = useRef(false);
@@ -352,6 +322,14 @@ function App() {
   }, [isSidebarLoading, locations, selectedLocationId, tabs.length, handleSelectDocument, handleNewDocument]);
 
   useEffect(() => {
+    if (!activeDocRef) {
+      return;
+    }
+
+    openDoc(activeDocRef);
+  }, [activeDocRef, openDoc]);
+
+  useEffect(() => {
     if (!startupDocumentRestoredRef.current) {
       return;
     }
@@ -385,29 +363,6 @@ function App() {
       onScrollToLine: syncPreviewLine,
     }),
     [previewModel.renderResult, editorPresentation.theme, editorModel.cursorLine, syncPreviewLine],
-  );
-
-  const searchProps = useMemo(
-    () => ({
-      locations,
-      searchQuery: search.searchQuery,
-      searchResults: search.searchResults,
-      isSearching: search.isSearching,
-      filters: search.filters,
-      setFilters: search.setFilters,
-      handleSearch: search.handleSearch,
-      handleSelectSearchResult: search.handleSelectSearchResult,
-    }),
-    [
-      locations,
-      search.searchQuery,
-      search.searchResults,
-      search.isSearching,
-      search.filters,
-      search.setFilters,
-      search.handleSearch,
-      search.handleSelectSearchResult,
-    ],
   );
 
   const handleSettingsClose = useCallback(() => {
@@ -569,15 +524,13 @@ function App() {
 
   const workspacePanelProps = useMemo(
     () => ({
-      sidebar: sidebarProps,
       toolbar: toolbarProps,
-      tabs: tabProps,
       editor: editorProps,
       preview: previewProps,
       statusBar: statusBarProps,
       calmUiVisibility: calmUiEffectiveVisibility,
     }),
-    [sidebarProps, toolbarProps, tabProps, editorProps, previewProps, statusBarProps, calmUiEffectiveVisibility],
+    [toolbarProps, editorProps, previewProps, statusBarProps, calmUiEffectiveVisibility],
   );
 
   if (isFocusMode) {
@@ -609,12 +562,10 @@ function App() {
       <PdfExportDialog
         isOpen={isPdfExportDialogOpen}
         title={activeDocMeta?.title}
-        isExporting={isExportingPdf}
-        errorMessage={pdfExportError}
         onExport={handleExportPdf}
         onCancel={handleCancelPdfExport} />
-      <SearchOverlay {...searchProps} />
-      <BackendAlerts missingLocations={missingLocations} conflicts={conflicts} />
+      <SearchOverlay />
+      <BackendAlerts />
     </div>
   );
 }
