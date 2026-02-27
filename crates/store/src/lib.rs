@@ -852,6 +852,130 @@ impl Store {
         Ok(())
     }
 
+    /// Renames a document to a new name within the same directory
+    pub fn doc_rename(&self, doc_id: &DocId, new_name: &str) -> Result<DocMeta, AppError> {
+        let location = self
+            .location_get(doc_id.location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", doc_id.location_id)))?;
+
+        let old_path = doc_id.resolve(&location.root_path);
+
+        if !old_path.exists() {
+            return Err(AppError::not_found(format!("Document not found: {:?}", old_path)));
+        }
+
+        let parent = old_path
+            .parent()
+            .ok_or_else(|| AppError::invalid_path("Document has no parent directory"))?;
+        let new_path = parent.join(new_name);
+
+        if new_path.exists() {
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file with that name already exists",
+            ));
+        }
+
+        std::fs::rename(&old_path, &new_path).map_err(|e| AppError::io(format!("Failed to rename file: {}", e)))?;
+
+        let new_rel_path = new_path
+            .strip_prefix(&location.root_path)
+            .map_err(|_| AppError::invalid_path("New path not within location root"))?
+            .to_path_buf();
+
+        let new_doc_id = DocId::new(doc_id.location_id, new_rel_path.clone())?;
+
+        self.remove_document_from_index(doc_id)?;
+
+        let filename = new_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let new_meta = self.read_doc_metadata(&new_path, doc_id.location_id, new_rel_path, &filename)?;
+
+        if file_utils::is_indexable_text_path(&new_path) {
+            let text = std::fs::read_to_string(&new_path)
+                .map_err(|e| AppError::io(format!("Failed to read renamed file: {}", e)))?;
+            self.index_document_text(&new_doc_id, &new_meta, &text)?;
+        }
+
+        tracing::info!("Renamed document: {:?} -> {:?}", doc_id.rel_path, new_doc_id.rel_path);
+
+        Ok(new_meta)
+    }
+
+    /// Moves a document to a new relative path within the same location
+    pub fn doc_move(&self, doc_id: &DocId, new_rel_path: &Path) -> Result<DocMeta, AppError> {
+        let location = self
+            .location_get(doc_id.location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", doc_id.location_id)))?;
+
+        let old_path = doc_id.resolve(&location.root_path);
+
+        if !old_path.exists() {
+            return Err(AppError::not_found(format!("Document not found: {:?}", old_path)));
+        }
+
+        let new_path = location.root_path.join(new_rel_path);
+
+        if new_path.exists() {
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file at the destination already exists",
+            ));
+        }
+
+        if let Some(parent) = new_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| AppError::io(format!("Failed to create destination directory: {}", e)))?;
+        }
+
+        std::fs::rename(&old_path, &new_path).map_err(|e| AppError::io(format!("Failed to move file: {}", e)))?;
+
+        let new_doc_id = DocId::new(doc_id.location_id, new_rel_path.to_path_buf())?;
+
+        self.remove_document_from_index(doc_id)?;
+
+        let filename = new_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let new_meta = self.read_doc_metadata(&new_path, doc_id.location_id, new_rel_path.to_path_buf(), &filename)?;
+
+        if file_utils::is_indexable_text_path(&new_path) {
+            let text = std::fs::read_to_string(&new_path)
+                .map_err(|e| AppError::io(format!("Failed to read moved file: {}", e)))?;
+            self.index_document_text(&new_doc_id, &new_meta, &text)?;
+        }
+
+        tracing::info!("Moved document: {:?} -> {:?}", doc_id.rel_path, new_doc_id.rel_path);
+
+        Ok(new_meta)
+    }
+
+    /// Deletes a document from disk and removes it from the index
+    pub fn doc_delete(&self, doc_id: &DocId) -> Result<bool, AppError> {
+        let location = self
+            .location_get(doc_id.location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", doc_id.location_id)))?;
+
+        let full_path = doc_id.resolve(&location.root_path);
+
+        if !full_path.exists() {
+            return Ok(false);
+        }
+
+        std::fs::remove_file(&full_path).map_err(|e| AppError::io(format!("Failed to delete file: {}", e)))?;
+
+        self.remove_document_from_index(doc_id)?;
+
+        tracing::info!("Deleted document: {:?}", doc_id.rel_path);
+
+        Ok(true)
+    }
+
     /// Updates document entry in catalog
     fn update_doc_in_catalog(&self, doc_id: &DocId, meta: &DocMeta) -> Result<(), AppError> {
         let conn = self
@@ -1564,6 +1688,7 @@ mod tests {
             calm_ui_focus_mode: false,
             focus_typewriter_scrolling_enabled: false,
             focus_dimming_mode: FocusDimmingMode::Paragraph,
+            show_filenames_instead_of_titles: false,
         };
 
         store.ui_layout_set(&settings).unwrap();

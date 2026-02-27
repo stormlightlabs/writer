@@ -104,12 +104,16 @@ type SidebarLocationItemProps = {
   onRemove: (id: number) => void;
   onRefresh: (id: number) => void;
   onSelectDocument: (id: number, path: string) => void;
+  onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
+  onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
+  onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
   setShowLocationMenu: Dispatch<SetStateAction<number | null>>;
   documents: DocMeta[];
   isRefreshing: boolean;
   refreshReason: SidebarRefreshReason | null;
   filterText: string;
   isMenuOpen: boolean;
+  showFilenamesInsteadOfTitles: boolean;
 };
 
 function SidebarLocationItemComponent(
@@ -123,12 +127,16 @@ function SidebarLocationItemComponent(
     onRemove,
     onRefresh,
     onSelectDocument,
+    onRenameDocument,
+    onMoveDocument,
+    onDeleteDocument,
     setShowLocationMenu,
     documents,
     isRefreshing,
     refreshReason,
     filterText,
     isMenuOpen,
+    showFilenamesInsteadOfTitles,
   }: SidebarLocationItemProps,
 ) {
   const handleRemoveClick = useCallback(() => {
@@ -183,6 +191,10 @@ function SidebarLocationItemComponent(
                 doc={doc}
                 isSelected={isSelected && selectedDocPath === doc.rel_path}
                 onSelectDocument={onSelectDocument}
+                onRenameDocument={onRenameDocument}
+                onMoveDocument={onMoveDocument}
+                onDeleteDocument={onDeleteDocument}
+                showFilenamesInsteadOfTitles={showFilenamesInsteadOfTitles}
                 id={location.id} />
             )))}
         </div>

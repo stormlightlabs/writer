@@ -43,6 +43,7 @@ export type UiLayoutSettings = {
   calm_ui_focus_mode: boolean;
   focus_typewriter_scrolling_enabled: boolean;
   focus_dimming_mode: FocusDimmingMode;
+  show_filenames_instead_of_titles: boolean;
 };
 
 export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };
@@ -88,6 +89,13 @@ export type LocationPathTextParams = Parameters<(locationId: LocationId, relPath
 export type DocListParams<T> = [...LocationIdParams, ...LocParams<T>];
 export type DocOpenParams<T> = [...LocationPathParams, ...LocParams<T>];
 export type DocSaveParams<T> = [...LocationPathTextParams, ...LocParams<T>];
+export type DocRenameParams<T> = Parameters<
+  (locationId: LocationId, relPath: string, newName: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+export type DocMoveParams<T> = Parameters<
+  (locationId: LocationId, relPath: string, newRelPath: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+export type DocDeleteParams<T> = [...LocationPathParams, ...LocParams<T>];
 
 export type SearchDateRangePayload = { from?: string; to?: string };
 export type SearchFiltersPayload = {

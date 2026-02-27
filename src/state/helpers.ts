@@ -20,6 +20,7 @@ export const stateToLayoutSettings = (
   calm_ui_focus_mode: layoutChrome.calmUiSettings.focusMode,
   focus_typewriter_scrolling_enabled: focusModeSettings.typewriterScrollingEnabled,
   focus_dimming_mode: focusModeSettings.dimmingMode,
+  show_filenames_instead_of_titles: layoutChrome.showFilenamesInsteadOfTitles,
 });
 
 export const uiSettingsToCalmUI: (uiSettings: UiLayoutSettings) => CalmUiSettings = (uiSettings) => ({

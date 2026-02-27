@@ -473,6 +473,112 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
     }
 }
 
+/// Renames a document to a new filename within the same directory
+#[tauri::command]
+pub fn doc_rename(
+    state: State<'_, AppState>, location_id: i64, rel_path: String, new_name: String,
+) -> Result<CommandResult<DocMeta>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!(
+        "Renaming document: location={:?}, path={:?}, new_name={}",
+        location_id,
+        rel_path,
+        new_name
+    );
+
+    match DocId::new(location_id, rel_path) {
+        Ok(doc_id) => match state.store.doc_rename(&doc_id, &new_name) {
+            Ok(new_meta) => {
+                tracing::info!("Document renamed successfully: {:?}", doc_id.rel_path);
+                Ok(CommandResult::ok(new_meta))
+            }
+            Err(e) => {
+                tracing::error!("Failed to rename document: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Invalid document reference: {}", e);
+            Ok(CommandResult::err(AppError::invalid_path(format!(
+                "Invalid path: {}",
+                e
+            ))))
+        }
+    }
+}
+
+/// Moves a document to a new relative path within the same location
+#[tauri::command]
+pub fn doc_move(
+    state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
+) -> Result<CommandResult<DocMeta>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+    let new_rel_path = PathBuf::from(&new_rel_path);
+
+    tracing::debug!(
+        "Moving document: location={:?}, path={:?}, new_path={:?}",
+        location_id,
+        rel_path,
+        new_rel_path
+    );
+
+    match DocId::new(location_id, rel_path) {
+        Ok(doc_id) => match state.store.doc_move(&doc_id, &new_rel_path) {
+            Ok(new_meta) => {
+                tracing::info!("Document moved successfully: {:?}", doc_id.rel_path);
+                Ok(CommandResult::ok(new_meta))
+            }
+            Err(e) => {
+                tracing::error!("Failed to move document: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Invalid document reference: {}", e);
+            Ok(CommandResult::err(AppError::invalid_path(format!(
+                "Invalid path: {}",
+                e
+            ))))
+        }
+    }
+}
+
+/// Deletes a document from disk and removes it from the index
+#[tauri::command]
+pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>, ()> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!("Deleting document: location={:?}, path={:?}", location_id, rel_path);
+
+    match DocId::new(location_id, rel_path) {
+        Ok(doc_id) => match state.store.doc_delete(&doc_id) {
+            Ok(deleted) => {
+                if deleted {
+                    tracing::info!("Document deleted successfully: {:?}", doc_id.rel_path);
+                } else {
+                    tracing::warn!("Document not found for deletion: {:?}", doc_id.rel_path);
+                }
+                Ok(CommandResult::ok(deleted))
+            }
+            Err(e) => {
+                tracing::error!("Failed to delete document: {}", e);
+                Ok(CommandResult::err(e))
+            }
+        },
+        Err(e) => {
+            tracing::error!("Invalid document reference: {}", e);
+            Ok(CommandResult::err(AppError::invalid_path(format!(
+                "Invalid path: {}",
+                e
+            ))))
+        }
+    }
+}
+
 /// Enables filesystem watching for a location and reindexes changed files.
 #[tauri::command]
 pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {

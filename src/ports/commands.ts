@@ -19,8 +19,11 @@ import type {
   BackendCaptureSubmitInput,
   BackendGlobalCaptureSettings,
   Cmd,
+  DocDeleteParams,
   DocListParams,
+  DocMoveParams,
   DocOpenParams,
+  DocRenameParams,
   DocSaveParams,
   GlobalCaptureGetParams,
   GlobalCapturePauseParams,
@@ -104,6 +107,22 @@ export function docSave(...[locationId, relPath, text, onOk, onErr]: DocSavePara
 
 export function docExists(...[locationId, relPath, onOk, onErr]: DocOpenParams<boolean>): Cmd {
   return invokeCmd<boolean>("doc_exists", { locationId, relPath }, onOk, onErr);
+}
+
+export function docRename(
+  ...[locationId, relPath, newName, onOk, onErr]: DocRenameParams<DocMeta>
+): Cmd {
+  return invokeCmd<DocMeta>("doc_rename", { locationId, relPath, newName }, onOk, onErr);
+}
+
+export function docMove(
+  ...[locationId, relPath, newRelPath, onOk, onErr]: DocMoveParams<DocMeta>
+): Cmd {
+  return invokeCmd<DocMeta>("doc_move", { locationId, relPath, newRelPath }, onOk, onErr);
+}
+
+export function docDelete(...[locationId, relPath, onOk, onErr]: DocDeleteParams<boolean>): Cmd {
+  return invokeCmd<boolean>("doc_delete", { locationId, relPath }, onOk, onErr);
 }
 
 export function searchDocuments(...[query, filters, limit, onOk, onErr]: SearchParams<SearchHit[]>): Cmd {

@@ -37,6 +37,7 @@ export const getInitialLayoutChromeState = (): LayoutChromeState => ({
   calmUiSettings: { enabled: true, focusMode: true },
   chromeTemporarilyVisible: false,
   reduceMotion: false,
+  showFilenamesInsteadOfTitles: false,
 });
 
 export const getInitialEditorPresentationState = (): EditorPresentationState => ({
@@ -102,6 +103,8 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   setChromeTemporarilyVisible: (value) => set({ chromeTemporarilyVisible: value }),
   revealChromeTemporarily: () => set({ chromeTemporarilyVisible: true }),
   setReduceMotion: (value) => set({ reduceMotion: value }),
+  setShowFilenamesInsteadOfTitles: (value) => set({ showFilenamesInsteadOfTitles: value }),
+  toggleShowFilenamesInsteadOfTitles: () => set((state) => ({ showFilenamesInsteadOfTitles: !state.showFilenamesInsteadOfTitles })),
 
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),

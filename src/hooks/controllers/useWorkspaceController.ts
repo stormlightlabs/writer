@@ -1,5 +1,5 @@
 import { logger } from "$logger";
-import { docList, locationAddViaDialog, locationRemove, runCmd } from "$ports";
+import { docDelete, docList, docMove, docRename, locationAddViaDialog, locationRemove, runCmd } from "$ports";
 import {
   useTabsActions,
   useTabsState,
@@ -11,7 +11,7 @@ import {
 import { useTabsStore } from "$state/stores/tabs";
 import { useWorkspaceStore } from "$state/stores/workspace";
 import type { SidebarRefreshReason } from "$state/types";
-import type { DocMeta, DocRef } from "$types";
+import type { AppError, DocMeta, DocRef } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { useCallback, useMemo } from "react";
 
@@ -160,6 +160,126 @@ export function useWorkspaceController() {
     }));
   }, [setSidebarRefreshState]);
 
+  const handleRenameDocument = useCallback(
+    (locationId: number, relPath: string, newName: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        runCmd(
+          docRename(locationId, relPath, newName, (newMeta) => {
+            const workspaceState = useWorkspaceStore.getState();
+            const tabsState = useTabsStore.getState();
+
+            const affectedTab = tabsState.tabs.find(
+              (tab) => tab.docRef.location_id === locationId && tab.docRef.rel_path === relPath,
+            );
+
+            if (affectedTab) {
+              const newDocRef: DocRef = { location_id: locationId, rel_path: newMeta.rel_path };
+              const updatedTabs = tabsState.tabs.map((tab) =>
+                tab.id === affectedTab.id
+                  ? { ...tab, docRef: newDocRef, title: newMeta.title }
+                  : tab,
+              );
+              tabsState.reorderTabs(updatedTabs);
+            }
+
+            const updatedDocuments = workspaceState.documents.map((doc) =>
+              doc.location_id === locationId && doc.rel_path === relPath
+                ? newMeta
+                : doc,
+            );
+            workspaceState.setDocuments(updatedDocuments);
+
+            logger.info("Document renamed", { locationId, oldPath: relPath, newPath: newMeta.rel_path });
+            resolve(true);
+          }, (error: AppError) => {
+            logger.error("Failed to rename document", { locationId, relPath, newName, error });
+            resolve(false);
+          }),
+        );
+      });
+    },
+    [],
+  );
+
+  const handleMoveDocument = useCallback(
+    (locationId: number, relPath: string, newRelPath: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        runCmd(
+          docMove(locationId, relPath, newRelPath, (newMeta) => {
+            const workspaceState = useWorkspaceStore.getState();
+            const tabsState = useTabsStore.getState();
+
+            const affectedTab = tabsState.tabs.find(
+              (tab) => tab.docRef.location_id === locationId && tab.docRef.rel_path === relPath,
+            );
+
+            if (affectedTab) {
+              const newDocRef: DocRef = { location_id: locationId, rel_path: newMeta.rel_path };
+              const updatedTabs = tabsState.tabs.map((tab) =>
+                tab.id === affectedTab.id
+                  ? { ...tab, docRef: newDocRef, title: newMeta.title }
+                  : tab,
+              );
+              tabsState.reorderTabs(updatedTabs);
+            }
+
+            const updatedDocuments = workspaceState.documents.map((doc) =>
+              doc.location_id === locationId && doc.rel_path === relPath
+                ? newMeta
+                : doc,
+            );
+            workspaceState.setDocuments(updatedDocuments);
+
+            logger.info("Document moved", { locationId, oldPath: relPath, newPath: newMeta.rel_path });
+            resolve(true);
+          }, (error: AppError) => {
+            logger.error("Failed to move document", { locationId, relPath, newRelPath, error });
+            resolve(false);
+          }),
+        );
+      });
+    },
+    [],
+  );
+
+  const handleDeleteDocument = useCallback(
+    (locationId: number, relPath: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        runCmd(
+          docDelete(locationId, relPath, (deleted) => {
+            if (!deleted) {
+              resolve(false);
+              return;
+            }
+
+            const workspaceState = useWorkspaceStore.getState();
+            const tabsState = useTabsStore.getState();
+
+            const affectedTab = tabsState.tabs.find(
+              (tab) => tab.docRef.location_id === locationId && tab.docRef.rel_path === relPath,
+            );
+
+            if (affectedTab) {
+              tabsState.closeTab(affectedTab.id);
+            }
+
+            const updatedDocuments = workspaceState.documents.filter(
+              (doc) => !(doc.location_id === locationId && doc.rel_path === relPath),
+            );
+            workspaceState.setDocuments(updatedDocuments);
+
+            logger.info("Document deleted", { locationId, relPath });
+            resolve(true);
+          }, (error: AppError) => {
+            logger.error("Failed to delete document", { locationId, relPath, error });
+            resolve(false);
+          }),
+        );
+      });
+    },
+    [],
+  );
+
   return useMemo(
     () => ({
       locations,
@@ -186,6 +306,9 @@ export function useWorkspaceController() {
       handleCreateDraftTab,
       handleCreateNewDocument,
       handleRefreshSidebar,
+      handleRenameDocument,
+      handleMoveDocument,
+      handleDeleteDocument,
     }),
     [
       locations,
@@ -213,6 +336,9 @@ export function useWorkspaceController() {
       handleCreateDraftTab,
       handleCreateNewDocument,
       handleRefreshSidebar,
+      handleRenameDocument,
+      handleMoveDocument,
+      handleDeleteDocument,
     ],
   );
 }

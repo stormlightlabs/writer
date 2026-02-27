@@ -24,6 +24,7 @@ export const useLayoutChromeState = () =>
       calmUiSettings: state.calmUiSettings,
       chromeTemporarilyVisible: state.chromeTemporarilyVisible,
       reduceMotion: state.reduceMotion,
+      showFilenamesInsteadOfTitles: state.showFilenamesInsteadOfTitles,
     })),
   );
 
@@ -43,6 +44,8 @@ export const useLayoutChromeActions = () =>
       setCalmUiFocusMode: state.setCalmUiFocusMode,
       setChromeTemporarilyVisible: state.setChromeTemporarilyVisible,
       revealChromeTemporarily: state.revealChromeTemporarily,
+      setShowFilenamesInsteadOfTitles: state.setShowFilenamesInsteadOfTitles,
+      toggleShowFilenamesInsteadOfTitles: state.toggleShowFilenamesInsteadOfTitles,
     })),
   );
 
@@ -330,7 +333,12 @@ export const useFocusModePanelState = () =>
   );
 
 export const useSidebarState = () => {
-  const layoutState = useLayoutStore(useShallow((state) => ({ toggleSidebarCollapsed: state.toggleSidebarCollapsed })));
+  const layoutState = useLayoutStore(
+    useShallow((state) => ({
+      toggleSidebarCollapsed: state.toggleSidebarCollapsed,
+      showFilenamesInsteadOfTitles: state.showFilenamesInsteadOfTitles,
+    })),
+  );
   const workspaceState = useWorkspaceStore(
     useShallow((state) => ({
       locations: state.locations,
@@ -359,6 +367,7 @@ export const useSidebarState = () => {
     setFilterText: workspaceState.setFilterText,
     selectLocation: workspaceState.selectLocation,
     toggleSidebarCollapsed: layoutState.toggleSidebarCollapsed,
+    showFilenamesInsteadOfTitles: layoutState.showFilenamesInsteadOfTitles,
   };
 };
 
@@ -412,6 +421,15 @@ export const useCalmUiActions = () =>
 
 export const useReduceMotionState = () =>
   useLayoutStore(useShallow((state) => ({ reduceMotion: state.reduceMotion, setReduceMotion: state.setReduceMotion })));
+
+export const useShowFilenamesState = () =>
+  useLayoutStore(
+    useShallow((state) => ({
+      showFilenamesInsteadOfTitles: state.showFilenamesInsteadOfTitles,
+      setShowFilenamesInsteadOfTitles: state.setShowFilenamesInsteadOfTitles,
+      toggleShowFilenamesInsteadOfTitles: state.toggleShowFilenamesInsteadOfTitles,
+    })),
+  );
 
 export type SidebarStateReturn = ReturnType<typeof useSidebarState>;
 export type ToolbarStateReturn = ReturnType<typeof useToolbarState>;

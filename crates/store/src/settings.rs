@@ -94,6 +94,8 @@ pub struct UiLayoutSettings {
     pub focus_typewriter_scrolling_enabled: bool,
     #[serde(default = "default_focus_dimming_mode")]
     pub focus_dimming_mode: FocusDimmingMode,
+    #[serde(default)]
+    pub show_filenames_instead_of_titles: bool,
 }
 
 impl Default for UiLayoutSettings {
@@ -112,6 +114,7 @@ impl Default for UiLayoutSettings {
             calm_ui_focus_mode: default_calm_ui_focus_mode(),
             focus_typewriter_scrolling_enabled: default_focus_typewriter_scrolling_enabled(),
             focus_dimming_mode: default_focus_dimming_mode(),
+            show_filenames_instead_of_titles: false,
         }
     }
 }

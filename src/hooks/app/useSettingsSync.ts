@@ -38,6 +38,7 @@ export function useSettingsSync(): void {
       state.setEditorFontFamily(settings.editor_font_family);
       state.setCalmUiSettings(uiSettingsToCalmUI(settings));
       state.setFocusModeSettings(uiSettingsToFocusMode(settings));
+      state.setShowFilenamesInsteadOfTitles(settings.show_filenames_instead_of_titles);
       setLayoutSettingsHydrated(true);
     }, () => {
       if (!isCancelled) {

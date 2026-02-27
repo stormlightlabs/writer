@@ -72,6 +72,7 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   setFilterText: vi.fn(),
   selectLocation: vi.fn(),
   toggleSidebarCollapsed: vi.fn(),
+  showFilenamesInsteadOfTitles: false,
   ...overrides,
 });
 
@@ -154,6 +155,9 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
     handleCreateDraftTab: vi.fn(),
     handleCreateNewDocument: vi.fn(),
     handleRefreshSidebar: vi.fn(),
+    handleRenameDocument: vi.fn(),
+    handleMoveDocument: vi.fn(),
+    handleDeleteDocument: vi.fn(),
   });
 };
 

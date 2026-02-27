@@ -56,6 +56,9 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     handleSelectDocument,
     handleCreateNewDocument,
     handleRefreshSidebar,
+    handleRenameDocument,
+    handleMoveDocument,
+    handleDeleteDocument,
   } = useWorkspaceController();
   const {
     locations,
@@ -69,6 +72,7 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     setFilterText,
     selectLocation,
     toggleSidebarCollapsed,
+    showFilenamesInsteadOfTitles,
   } = useSidebarState();
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
   const [showLocationMenu, setShowLocationMenu] = useState<number | null>(null);
@@ -170,12 +174,16 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
               onRemove={handleRemoveLocation}
               onRefresh={handleRefreshSidebar}
               onSelectDocument={handleSelectDocument}
+              onRenameDocument={handleRenameDocument}
+              onMoveDocument={handleMoveDocument}
+              onDeleteDocument={handleDeleteDocument}
               setShowLocationMenu={setShowLocationMenu}
               isMenuOpen={showLocationMenu === location.id}
               documents={locationDocs}
               isRefreshing={isRefreshingLocation}
               refreshReason={sidebarRefreshReason}
-              filterText={filterText} />
+              filterText={filterText}
+              showFilenamesInsteadOfTitles={showFilenamesInsteadOfTitles} />
           );
         })}
       </div>

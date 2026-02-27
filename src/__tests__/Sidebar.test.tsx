@@ -19,6 +19,7 @@ const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState
   setFilterText: vi.fn(),
   selectLocation: vi.fn(),
   toggleSidebarCollapsed: vi.fn(),
+  showFilenamesInsteadOfTitles: false,
   ...overrides,
 });
 
@@ -49,6 +50,9 @@ const createWorkspaceControllerState = (
   handleCreateDraftTab: vi.fn(),
   handleCreateNewDocument: vi.fn(),
   handleRefreshSidebar: vi.fn(),
+  handleRenameDocument: vi.fn(),
+  handleMoveDocument: vi.fn(),
+  handleDeleteDocument: vi.fn(),
   ...overrides,
 });
 

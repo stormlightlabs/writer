@@ -13,6 +13,7 @@ import {
   useLayoutSettingsUiState,
   useLayoutSettingsWriterToolsState,
   useReduceMotionState,
+  useShowFilenamesState,
 } from "$state/selectors";
 import type { EditorFontFamily } from "$types";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
@@ -106,6 +107,7 @@ function ChromeSettingsSection() {
     toggleTabBarCollapsed,
     toggleStatusBarCollapsed,
   } = useLayoutSettingsChromeState();
+  const { showFilenamesInsteadOfTitles, toggleShowFilenamesInsteadOfTitles } = useShowFilenamesState();
 
   return (
     <>
@@ -124,6 +126,11 @@ function ChromeSettingsSection() {
         description="Show or hide the editor status row."
         isVisible={!statusBarCollapsed}
         onToggle={toggleStatusBarCollapsed} />
+      <ToggleRow
+        label="Show Filenames"
+        description="Display filenames instead of document titles in the sidebar."
+        isVisible={showFilenamesInsteadOfTitles}
+        onToggle={toggleShowFilenamesInsteadOfTitles} />
     </>
   );
 }

@@ -768,6 +768,7 @@ describe("ui layout Commands", () => {
           calm_ui_focus_mode: true,
           focus_typewriter_scrolling_enabled: true,
           focus_dimming_mode: "sentence",
+          show_filenames_instead_of_titles: false,
         },
         onOk,
         onErr,
@@ -790,6 +791,7 @@ describe("ui layout Commands", () => {
           calm_ui_focus_mode: true,
           focus_typewriter_scrolling_enabled: true,
           focus_dimming_mode: "sentence",
+          show_filenames_instead_of_titles: false,
         },
       });
     });

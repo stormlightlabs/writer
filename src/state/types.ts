@@ -27,6 +27,7 @@ export type LayoutChromeState = {
   calmUiSettings: CalmUiSettings;
   chromeTemporarilyVisible: boolean;
   reduceMotion: boolean;
+  showFilenamesInsteadOfTitles: boolean;
 };
 
 export type EditorPresentationState = {
@@ -62,6 +63,8 @@ export type LayoutChromeActions = {
   setChromeTemporarilyVisible: (value: boolean) => void;
   revealChromeTemporarily: () => void;
   setReduceMotion: (value: boolean) => void;
+  setShowFilenamesInsteadOfTitles: (value: boolean) => void;
+  toggleShowFilenamesInsteadOfTitles: () => void;
 };
 
 export type EditorPresentationActions = {
