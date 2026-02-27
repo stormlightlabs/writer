@@ -1,5 +1,6 @@
 import { PatternMatcher } from "$editor/pattern-matcher";
-import { collectStyleMatches, resolveStyleMatchAtPosition, styleCheck, type StyleMatch } from "$editor/style-check";
+import { collectStyleMatches, resolveStyleMatchAtPosition, styleCheck } from "$editor/style-check";
+import type { StyleMatch } from "$editor/types";
 import { EditorState, Text } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { describe, expect, it, vi } from "vitest";

@@ -14,53 +14,15 @@
  * - Clichés: https://github.com/dundalek/no-cliches (MIT)
  */
 
-import { PatternCategory, StyleMarkerStyle } from "$types";
+import { StyleMarkerStyle } from "$types";
 import { RangeSetBuilder, Text } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, hoverTooltip, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import { CATEGORY_LABELS } from "./constants";
+import { CATEGORY_LABELS, DEFAULT_CONFIG, DICTIONARY_CATEGORY_MAP } from "./constants";
 import styleDictionaries from "./data/style-dictionaries.json";
 import type { Pattern } from "./pattern-matcher";
 import { PatternMatcher } from "./pattern-matcher";
-
-export type StyleCategory = PatternCategory;
-
-export type StyleMatch = {
-  from: number;
-  to: number;
-  text: string;
-  category: StyleCategory;
-  replacement?: string;
-  line: number;
-  column: number;
-};
-
-export type StyleCheckConfig = {
-  enabled: boolean;
-  categories: { filler: boolean; redundancy: boolean; cliche: boolean };
-  customPatterns: Pattern[];
-  markerStyle: StyleMarkerStyle;
-  onMatchesChange?: (matches: StyleMatch[]) => void;
-};
-
-const DEFAULT_CONFIG: StyleCheckConfig = {
-  enabled: true,
-  categories: { filler: true, redundancy: true, cliche: true },
-  customPatterns: [],
-  markerStyle: "highlight",
-};
-
-type DictionaryEntry = {
-  label: string;
-  enabled: boolean;
-  patterns: Array<{ text: string; replacement: string | null; source?: string }>;
-};
-
-const DICTIONARY_CATEGORY_MAP: Record<string, PatternCategory> = {
-  fillers: "filler",
-  redundancies: "redundancy",
-  cliches: "cliche",
-};
+import type { DictionaryEntry, StyleCheckConfig, StyleMatch } from "./types";
 
 function loadBuiltinPatterns(): Pattern[] {
   const patterns: Pattern[] = [];

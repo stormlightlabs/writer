@@ -1,4 +1,5 @@
 import { LayoutSettingsPanel, RoutedSettingsSheet } from "$components/layout/LayoutSettingsPanel";
+import { resetLayoutStore } from "$state/stores/layout";
 import { resetUiStore, useUiStore } from "$state/stores/ui";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ function renderSettingsSheets() {
 
 describe("Layout settings routing", () => {
   beforeEach(() => {
+    resetLayoutStore();
     resetUiStore();
     globalThis.history.replaceState(null, "", "#/");
   });
@@ -48,5 +50,27 @@ describe("Layout settings routing", () => {
     );
 
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("shows POS color legend only when parts of speech highlighting is enabled", () => {
+    globalThis.history.replaceState(null, "", "#/settings");
+
+    render(
+      <Router hook={useHashLocation}>
+        <RoutedSettingsSheet />
+      </Router>,
+    );
+
+    expect(screen.queryByText("Part of Speech Colors")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Writer's Tools/ }));
+    fireEvent.click(screen.getByRole("switch", { name: "Parts of Speech Highlighting" }));
+
+    expect(screen.getByText("Part of Speech Colors")).toBeInTheDocument();
+    expect(screen.getByText("Noun")).toBeInTheDocument();
+    expect(screen.getByText("Verb")).toBeInTheDocument();
+    expect(screen.getByText("Adjective")).toBeInTheDocument();
+    expect(screen.getByText("Adverb")).toBeInTheDocument();
+    expect(screen.getByText("Conjunction")).toBeInTheDocument();
   });
 });
