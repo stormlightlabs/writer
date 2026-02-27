@@ -109,4 +109,28 @@ describe("Sidebar", () => {
     expect(screen.getByText("Updating after save...")).toBeInTheDocument();
     expect(screen.getByTitle("Refresh Sidebar")).toBeDisabled();
   });
+
+  it("renders nested directories as expandable tree nodes", () => {
+    vi.mocked(useSidebarState).mockReturnValue(
+      createSidebarState({
+        documents: [{
+          location_id: 1,
+          rel_path: "inbox/2026/2026_02_27_1740683700000.md",
+          title: "Quick capture note",
+          updated_at: "2026-02-27T10:15:00Z",
+          word_count: 12,
+        }],
+      }),
+    );
+
+    render(<Sidebar />);
+
+    expect(screen.getByText("inbox")).toBeInTheDocument();
+    expect(screen.queryByText("Quick capture note")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("inbox"));
+    fireEvent.click(screen.getByText("2026"));
+
+    expect(screen.getByText("Quick capture note")).toBeInTheDocument();
+  });
 });

@@ -3,10 +3,10 @@ use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
-use writer_core::{AppError, DocId, ErrorCode, LocationId};
+use writer_core::{AppError, BackendEvent, DocId, ErrorCode, LocationId};
 use writer_store::{CaptureMode, GlobalCaptureSettings};
 
 const QUICK_CAPTURE_WINDOW_LABEL: &str = "quick_capture";
@@ -253,6 +253,13 @@ pub fn reconcile_capture_runtime(app: &AppHandle, settings: &GlobalCaptureSettin
     Ok(())
 }
 
+fn emit_capture_saved_event(app: &AppHandle, doc_id: &DocId, mtime: chrono::DateTime<chrono::Utc>) {
+    let event = BackendEvent::DocModifiedExternally { doc_id: doc_id.clone(), new_mtime: mtime };
+    if let Err(error) = app.emit("backend-event", event) {
+        tracing::warn!("Failed to emit DocModifiedExternally event for capture save: {}", error);
+    }
+}
+
 /// Parses a shortcut string into a Shortcut object.
 fn parse_shortcut(shortcut_str: &str) -> Result<Shortcut, AppError> {
     shortcut_str.parse().map_err(|e| {
@@ -265,9 +272,9 @@ fn parse_shortcut(shortcut_str: &str) -> Result<Shortcut, AppError> {
 
 /// Generates a filename for a quick note capture.
 pub fn generate_quick_note_path(inbox_dir: &str) -> PathBuf {
-    let now = chrono::Local::now();
+    let now = chrono::Utc::now();
     let year = now.format("%Y").to_string();
-    let filename = now.format("%Y-%m-%d_%H-%M-%S%.3f.md").to_string();
+    let filename = format!("{}_{}.md", now.format("%Y_%m_%d"), now.timestamp_millis());
 
     PathBuf::from(inbox_dir).join(year).join(filename)
 }
@@ -317,6 +324,14 @@ pub async fn handle_capture_submit(
             let rel_path = generate_quick_note_path(inbox_dir);
             let doc_id = DocId::new(location_id, rel_path.clone())?;
             let result = state.store.doc_save(&doc_id, &text, None)?;
+            if result.success {
+                let new_mtime = result
+                    .new_meta
+                    .as_ref()
+                    .map(|meta| meta.mtime)
+                    .unwrap_or_else(chrono::Utc::now);
+                emit_capture_saved_event(app, &doc_id, new_mtime);
+            }
             let target_str = format!("{}/{}", location_id.0, rel_path.to_string_lossy());
 
             Ok(CaptureSubmitResult {
@@ -341,6 +356,14 @@ pub async fn handle_capture_submit(
             let existing_text = state.store.doc_open(&doc_id).map(|c| c.text).unwrap_or_default();
             let new_text = if existing_text.is_empty() { text } else { format!("{}\n\n{}", existing_text, text) };
             let result = state.store.doc_save(&doc_id, &new_text, None)?;
+            if result.success {
+                let new_mtime = result
+                    .new_meta
+                    .as_ref()
+                    .map(|meta| meta.mtime)
+                    .unwrap_or_else(chrono::Utc::now);
+                emit_capture_saved_event(app, &doc_id, new_mtime);
+            }
             let target_str = format!("{}/{}", target.location_id, target.rel_path);
 
             Ok(CaptureSubmitResult {
@@ -355,6 +378,14 @@ pub async fn handle_capture_submit(
             let rel_path = generate_quick_note_path(inbox_dir);
             let doc_id = DocId::new(location_id, rel_path.clone())?;
             let result = state.store.doc_save(&doc_id, &text, None)?;
+            if result.success {
+                let new_mtime = result
+                    .new_meta
+                    .as_ref()
+                    .map(|meta| meta.mtime)
+                    .unwrap_or_else(chrono::Utc::now);
+                emit_capture_saved_event(app, &doc_id, new_mtime);
+            }
             let target_str = format!("{}/{}", location_id.0, rel_path.to_string_lossy());
 
             Ok(CaptureSubmitResult {
@@ -414,5 +445,6 @@ mod tests {
         assert_eq!(parts[0], "inbox");
         assert_eq!(parts[1].len(), 4);
         assert!(parts[2].ends_with(".md"));
+        assert!(parts[2].starts_with(&format!("{}_", chrono::Utc::now().format("%Y_%m_%d"))));
     }
 }

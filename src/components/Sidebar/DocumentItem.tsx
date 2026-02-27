@@ -1,3 +1,6 @@
+// TODO: context menu for nested directories
+// TODO: nested directory creation
+// TODO: drag + drop to move
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
 import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, TrashIcon } from "$icons";
 import type { DocMeta } from "$types";
@@ -7,12 +10,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { type DialogAnchor, OperationDialog } from "./OperationDialog";
 import { TreeItem } from "./TreeItem";
 
-const fileTextIcon = { Component: FileTextIcon, size: "sm" as const };
+const FILE_TEXT_ICON = { Component: FileTextIcon, size: "sm" as const };
 
 type DocumentItemProps = {
   doc: DocMeta;
   isSelected: boolean;
   selectedDocPath?: string;
+  level?: number;
   onSelectDocument: (id: number, path: string) => void;
   onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
   onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
@@ -21,15 +25,31 @@ type DocumentItemProps = {
   id: number;
 };
 
-function RenameDialog(
-  { isOpen, onClose, currentName, onRename, anchor }: {
-    isOpen: boolean;
-    onClose: () => void;
-    currentName: string;
-    onRename: (newName: string) => Promise<boolean>;
-    anchor?: DialogAnchor;
-  },
-) {
+type RenameDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  currentName: string;
+  onRename: (newName: string) => Promise<boolean>;
+  anchor?: DialogAnchor;
+};
+
+type MoveDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  currentPath: string;
+  onMove: (newPath: string) => Promise<boolean>;
+  anchor?: DialogAnchor;
+};
+
+type DeleteConfirmDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  documentName: string;
+  onDelete: () => Promise<boolean>;
+  anchor?: DialogAnchor;
+};
+
+function RenameDialog({ isOpen, onClose, currentName, onRename, anchor }: RenameDialogProps) {
   const [name, setName] = useState(currentName);
   const [isRenaming, setIsRenaming] = useState(false);
   const formId = "rename-document-form";
@@ -93,15 +113,7 @@ function RenameDialog(
   );
 }
 
-function MoveDialog(
-  { isOpen, onClose, currentPath, onMove, anchor }: {
-    isOpen: boolean;
-    onClose: () => void;
-    currentPath: string;
-    onMove: (newPath: string) => Promise<boolean>;
-    anchor?: DialogAnchor;
-  },
-) {
+function MoveDialog({ isOpen, onClose, currentPath, onMove, anchor }: MoveDialogProps) {
   const [path, setPath] = useState(currentPath);
   const [isMoving, setIsMoving] = useState(false);
   const formId = "move-document-form";
@@ -167,15 +179,7 @@ function MoveDialog(
   );
 }
 
-function DeleteConfirmDialog(
-  { isOpen, onClose, documentName, onDelete, anchor }: {
-    isOpen: boolean;
-    onClose: () => void;
-    documentName: string;
-    onDelete: () => Promise<boolean>;
-    anchor?: DialogAnchor;
-  },
-) {
+function DeleteConfirmDialog({ isOpen, onClose, documentName, onDelete, anchor }: DeleteConfirmDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(async () => {
@@ -216,11 +220,12 @@ export function DocumentItem(
     doc,
     isSelected,
     selectedDocPath,
+    level = 1,
     onSelectDocument,
     onRenameDocument,
     onMoveDocument,
     onDeleteDocument,
-    filenameVisibility: filenameVisibility,
+    filenameVisibility,
     id,
   }: DocumentItemProps,
 ) {
@@ -321,10 +326,10 @@ export function DocumentItem(
     <>
       <TreeItem
         key={doc.rel_path}
-        icon={fileTextIcon}
+        icon={FILE_TEXT_ICON}
         label={displayLabel}
         isSelected={isSelected && selectedDocPath === doc.rel_path}
-        level={1}
+        level={level}
         onClick={handleClick}
         onContextMenu={handleContextMenu} />
       <ContextMenu isOpen={isOpen} position={position} onClose={close} items={contextMenuItems} />

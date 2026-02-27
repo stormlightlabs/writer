@@ -5,6 +5,7 @@
   "windows": ["main", "quick_capture"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
     "log:default",
     "opener:default",
     "dialog:allow-open",

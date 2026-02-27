@@ -47,7 +47,9 @@ export function QuickCaptureApp() {
 
             if (result.shouldClose) {
               windowRef.current.close().catch((err) => {
-                logger.error("Failed to close window", err);
+                logger.error(
+                  f("Failed to close window", { message: err instanceof Error ? err.message : String(err) }),
+                );
               });
             }
           } else {
@@ -65,7 +67,7 @@ export function QuickCaptureApp() {
 
   const handleClose = useCallback(() => {
     windowRef.current.close().catch((err) => {
-      logger.error(f("Failed to close window", { err }));
+      logger.error(f("Failed to close window", { message: err instanceof Error ? err.message : String(err) }));
     });
   }, []);
 

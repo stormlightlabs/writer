@@ -2,6 +2,7 @@ use tauri::Manager;
 
 mod capture;
 mod commands;
+mod locations;
 
 use commands as cmd;
 
@@ -38,7 +39,7 @@ pub fn run() {
             let app_state = AppState::new(store);
             app.manage(app_state);
 
-            if let Err(e) = commands::reconcile_locations(app.handle()) {
+            if let Err(e) = locations::reconcile(app.handle()) {
                 tracing::error!("Location reconciliation failed: {}", e);
             }
 

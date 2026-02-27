@@ -15,6 +15,23 @@ export function useWorkspaceSync(): void {
   const { setDocuments, setLoadingDocuments } = useWorkspaceDocumentsActions();
 
   const hasLoadedLocationsRef = useRef(false);
+  const loadLocations = useCallback((showLoading = true) => {
+    if (showLoading) {
+      setLoadingLocations(true);
+    }
+
+    runCmd(locationList((nextLocations) => {
+      setLocations(nextLocations);
+      if (showLoading) {
+        setLoadingLocations(false);
+      }
+    }, (error) => {
+      logger.error(f("Failed to load locations", { error }));
+      if (showLoading) {
+        setLoadingLocations(false);
+      }
+    }));
+  }, [setLoadingLocations, setLocations]);
 
   useEffect(() => {
     if (hasLoadedLocationsRef.current) {
@@ -22,16 +39,8 @@ export function useWorkspaceSync(): void {
     }
 
     hasLoadedLocationsRef.current = true;
-
-    setLoadingLocations(true);
-    runCmd(locationList((nextLocations) => {
-      setLocations(nextLocations);
-      setLoadingLocations(false);
-    }, (error) => {
-      logger.error(f("Failed to load locations", { error }));
-      setLoadingLocations(false);
-    }));
-  }, [setLoadingLocations, setLocations]);
+    loadLocations(true);
+  }, [loadLocations]);
 
   const documentRequestRef = useRef(0);
   const selectedLocationRef = useRef<number | null>(selectedLocationId);
@@ -88,7 +97,10 @@ export function useWorkspaceSync(): void {
       const currentLocationId = selectedLocationRef.current;
       if (currentLocationId && docRef.location_id === currentLocationId) {
         loadDocuments(currentLocationId);
+        return;
       }
+
+      loadLocations(false);
     },
   });
 }

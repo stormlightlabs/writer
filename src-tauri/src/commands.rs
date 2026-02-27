@@ -1,9 +1,10 @@
 use super::capture;
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use super::locations::*;
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
 use writer_core::{
@@ -12,6 +13,8 @@ use writer_core::{
 };
 use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult};
 use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
+
+type Result<T> = std::result::Result<T, ()>;
 
 /// Application state shared across commands
 pub struct AppState {
@@ -25,70 +28,11 @@ impl AppState {
     }
 }
 
-fn emit_doc_modified_event(app: &AppHandle, doc_id: DocId, mtime: chrono::DateTime<chrono::Utc>) {
-    let event = BackendEvent::DocModifiedExternally { doc_id, new_mtime: mtime };
-    if let Err(error) = app.emit("backend-event", event) {
-        tracing::error!("Failed to emit DocModifiedExternally event: {}", error);
-    }
-}
-
-fn handle_watcher_event(
-    app: &AppHandle, store: &Arc<Store>, location_id: LocationId, root_path: &PathBuf, event: Event,
-) {
-    let should_process = matches!(
-        event.kind,
-        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-    );
-
-    if !should_process {
-        return;
-    }
-
-    for path in event.paths {
-        let rel_path = match path.strip_prefix(root_path) {
-            Ok(rel_path) if !rel_path.as_os_str().is_empty() => rel_path.to_path_buf(),
-            _ => continue,
-        };
-
-        let doc_id = match DocId::new(location_id, rel_path) {
-            Ok(doc_id) => doc_id,
-            Err(error) => {
-                tracing::warn!("Ignoring watcher path that failed validation: {}", error);
-                continue;
-            }
-        };
-
-        if path.exists() && path.is_file() {
-            match store.reindex_document(&doc_id) {
-                Ok(()) => {
-                    let new_mtime = std::fs::metadata(&path)
-                        .and_then(|metadata| metadata.modified())
-                        .map(chrono::DateTime::<chrono::Utc>::from)
-                        .unwrap_or_else(|_| chrono::Utc::now());
-                    emit_doc_modified_event(app, doc_id, new_mtime);
-                }
-                Err(error) => {
-                    tracing::error!("Failed to reindex changed file {:?}: {}", path, error);
-                }
-            }
-        } else if !path.exists() {
-            match store.remove_document_from_index(&doc_id) {
-                Ok(()) => {
-                    emit_doc_modified_event(app, doc_id, chrono::Utc::now());
-                }
-                Err(error) => {
-                    tracing::error!("Failed to remove deleted file {:?} from index: {}", path, error);
-                }
-            }
-        }
-    }
-}
-
 /// Adds a new location via the folder picker dialog
 #[tauri::command]
 pub async fn location_add_via_dialog(
     app: AppHandle, state: State<'_, AppState>,
-) -> Result<CommandResult<LocationDescriptor>, ()> {
+) -> Result<CommandResult<LocationDescriptor>> {
     tracing::debug!("Opening folder picker dialog");
 
     let folder_path = app.dialog().file().blocking_pick_folder();
@@ -136,7 +80,7 @@ pub async fn location_add_via_dialog(
 
 /// Lists all registered locations
 #[tauri::command]
-pub fn location_list(state: State<'_, AppState>) -> Result<CommandResult<Vec<LocationDescriptor>>, ()> {
+pub fn location_list(state: State<'_, AppState>) -> Result<CommandResult<Vec<LocationDescriptor>>> {
     tracing::debug!("Listing all locations");
 
     match state.store.location_list() {
@@ -153,7 +97,7 @@ pub fn location_list(state: State<'_, AppState>) -> Result<CommandResult<Vec<Loc
 
 /// Removes a location by ID
 #[tauri::command]
-pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {
+pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
     let id = LocationId(location_id);
     tracing::info!("Removing location: id={}", location_id);
 
@@ -179,7 +123,7 @@ pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> Result<C
 
 /// Validates all locations and returns those that no longer exist
 #[tauri::command]
-pub fn location_validate(state: State<'_, AppState>) -> Result<CommandResult<Vec<(i64, String)>>, ()> {
+pub fn location_validate(state: State<'_, AppState>) -> Result<CommandResult<Vec<(i64, String)>>> {
     tracing::debug!("Validating all locations");
 
     match state.store.validate_locations() {
@@ -205,7 +149,7 @@ pub fn location_validate(state: State<'_, AppState>) -> Result<CommandResult<Vec
 }
 
 #[tauri::command]
-pub fn ui_layout_get(state: State<'_, AppState>) -> Result<CommandResult<UiLayoutSettings>, ()> {
+pub fn ui_layout_get(state: State<'_, AppState>) -> Result<CommandResult<UiLayoutSettings>> {
     tracing::debug!("Loading persisted UI layout settings");
 
     match state.store.ui_layout_get() {
@@ -218,7 +162,7 @@ pub fn ui_layout_get(state: State<'_, AppState>) -> Result<CommandResult<UiLayou
 }
 
 #[tauri::command]
-pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> Result<CommandResult<bool>, ()> {
+pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> Result<CommandResult<bool>> {
     tracing::debug!("Persisting UI layout settings");
 
     match state.store.ui_layout_set(&settings) {
@@ -231,9 +175,7 @@ pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> 
 }
 
 #[tauri::command]
-pub fn session_last_doc_get(
-    state: State<'_, AppState>,
-) -> Result<CommandResult<Option<writer_store::CaptureDocRef>>, ()> {
+pub fn session_last_doc_get(state: State<'_, AppState>) -> Result<CommandResult<Option<writer_store::CaptureDocRef>>> {
     tracing::debug!("Loading last opened document session state");
 
     match state.store.last_open_doc_get() {
@@ -248,7 +190,7 @@ pub fn session_last_doc_get(
 #[tauri::command]
 pub fn session_last_doc_set(
     state: State<'_, AppState>, doc_ref: Option<writer_store::CaptureDocRef>,
-) -> Result<CommandResult<bool>, ()> {
+) -> Result<CommandResult<bool>> {
     tracing::debug!("Persisting last opened document session state");
 
     match state.store.last_open_doc_set(doc_ref.as_ref()) {
@@ -260,65 +202,16 @@ pub fn session_last_doc_set(
     }
 }
 
-/// Reconciles locations on startup and emits events for any issues
-pub fn reconcile_locations(app: &AppHandle) -> Result<(), AppError> {
-    tracing::info!("Starting location reconciliation");
-
-    let state = app.state::<AppState>();
-    let locations = state.store.location_list()?;
-
-    let mut missing = Vec::new();
-    let mut checked = 0;
-
-    for location in locations {
-        checked += 1;
-
-        if !location.root_path.exists() {
-            tracing::warn!(
-                "Location root missing: id={}, path={:?}",
-                location.id.0,
-                location.root_path
-            );
-
-            missing.push(location.id);
-
-            let event = BackendEvent::LocationMissing { location_id: location.id, path: location.root_path.clone() };
-
-            if let Err(e) = app.emit("backend-event", event) {
-                tracing::error!("Failed to emit location missing event: {}", e);
-            }
-        }
-    }
-
-    match state.store.reconcile_indexes() {
-        Ok(indexed) => tracing::info!("Startup index reconciliation complete: indexed_files={}", indexed),
-        Err(error) => tracing::error!("Startup index reconciliation failed: {}", error),
-    }
-
-    let completion_event = BackendEvent::ReconciliationComplete { checked, missing: missing.clone() };
-
-    if let Err(e) = app.emit("backend-event", completion_event) {
-        tracing::error!("Failed to emit reconciliation complete event: {}", e);
-    }
-
-    tracing::info!(
-        "Location reconciliation complete: checked={}, missing={}",
-        checked,
-        missing.len()
-    );
-
-    Ok(())
-}
-
 /// Lists documents in a location
 #[tauri::command]
 pub fn doc_list(
     state: State<'_, AppState>, location_id: i64, options: Option<DocListOptions>,
-) -> Result<CommandResult<Vec<DocMeta>>, ()> {
+) -> Result<CommandResult<Vec<DocMeta>>> {
     let id = LocationId(location_id);
+    let list_options = Some(options.unwrap_or(DocListOptions { recursive: true, ..Default::default() }));
     tracing::debug!("Listing documents for location: id={}", location_id);
 
-    match state.store.doc_list(id, options) {
+    match state.store.doc_list(id, list_options) {
         Ok(docs) => {
             tracing::debug!("Found {} documents in location {}", docs.len(), location_id);
             Ok(CommandResult::ok(docs))
@@ -332,9 +225,7 @@ pub fn doc_list(
 
 /// Opens a document by location_id and relative path
 #[tauri::command]
-pub fn doc_open(
-    state: State<'_, AppState>, location_id: i64, rel_path: String,
-) -> Result<CommandResult<DocContent>, ()> {
+pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<DocContent>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -369,7 +260,7 @@ pub fn doc_open(
 #[tauri::command]
 pub fn doc_save(
     app: AppHandle, state: State<'_, AppState>, location_id: i64, rel_path: String, text: String,
-) -> Result<CommandResult<SaveResult>, ()> {
+) -> Result<CommandResult<SaveResult>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -437,7 +328,7 @@ pub fn doc_save(
 
 /// Checks if a document exists in a location
 #[tauri::command]
-pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>, ()> {
+pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -477,7 +368,7 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
 #[tauri::command]
 pub fn doc_rename(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_name: String,
-) -> Result<CommandResult<DocMeta>, ()> {
+) -> Result<CommandResult<DocMeta>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -513,7 +404,7 @@ pub fn doc_rename(
 #[tauri::command]
 pub fn doc_move(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
-) -> Result<CommandResult<DocMeta>, ()> {
+) -> Result<CommandResult<DocMeta>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
@@ -548,7 +439,7 @@ pub fn doc_move(
 
 /// Deletes a document from disk and removes it from the index
 #[tauri::command]
-pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>, ()> {
+pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -581,7 +472,7 @@ pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
 
 /// Enables filesystem watching for a location and reindexes changed files.
 #[tauri::command]
-pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {
+pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
     let location_id_wrapped = LocationId(location_id);
 
     let location = match state.store.location_get(location_id_wrapped) {
@@ -639,7 +530,7 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
 
 /// Disables filesystem watching for a location.
 #[tauri::command]
-pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>, ()> {
+pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
     let mut watchers = match state.watchers.lock() {
         Ok(guard) => guard,
         Err(_) => return Ok(CommandResult::err(AppError::io("Failed to lock watchers map"))),
@@ -652,7 +543,7 @@ pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> Result<Com
 #[tauri::command]
 pub fn search(
     state: State<'_, AppState>, query: String, filters: Option<SearchFilters>, limit: Option<usize>,
-) -> Result<CommandResult<Vec<SearchHit>>, ()> {
+) -> Result<CommandResult<Vec<SearchHit>>> {
     let limit = limit.unwrap_or(50);
 
     match state.store.search(&query, filters, limit) {
@@ -668,7 +559,7 @@ pub fn search(
 #[tauri::command]
 pub fn markdown_render(
     _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> Result<CommandResult<RenderResult>, ()> {
+) -> Result<CommandResult<RenderResult>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -709,7 +600,7 @@ pub fn markdown_render(
 #[tauri::command]
 pub fn markdown_render_for_pdf(
     _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> Result<CommandResult<PdfRenderResult>, ()> {
+) -> Result<CommandResult<PdfRenderResult>> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -744,7 +635,7 @@ pub fn markdown_render_for_pdf(
 }
 
 #[tauri::command]
-pub fn style_check_get(state: State<'_, AppState>) -> Result<CommandResult<StyleCheckSettings>, ()> {
+pub fn style_check_get(state: State<'_, AppState>) -> Result<CommandResult<StyleCheckSettings>> {
     tracing::debug!("Loading persisted style check settings");
 
     match state.store.style_check_get() {
@@ -757,7 +648,7 @@ pub fn style_check_get(state: State<'_, AppState>) -> Result<CommandResult<Style
 }
 
 #[tauri::command]
-pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings) -> Result<CommandResult<bool>, ()> {
+pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings) -> Result<CommandResult<bool>> {
     tracing::debug!("Persisting style check settings");
 
     match state.store.style_check_set(&settings) {
@@ -771,9 +662,7 @@ pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings)
 
 /// Gets global capture settings
 #[tauri::command]
-pub fn global_capture_get(
-    state: State<'_, AppState>,
-) -> Result<CommandResult<writer_store::GlobalCaptureSettings>, ()> {
+pub fn global_capture_get(state: State<'_, AppState>) -> Result<CommandResult<writer_store::GlobalCaptureSettings>> {
     tracing::debug!("Loading global capture settings");
 
     match state.store.global_capture_get() {
@@ -789,7 +678,7 @@ pub fn global_capture_get(
 #[tauri::command]
 pub fn global_capture_set(
     app: AppHandle, state: State<'_, AppState>, settings: writer_store::GlobalCaptureSettings,
-) -> Result<CommandResult<bool>, ()> {
+) -> Result<CommandResult<bool>> {
     tracing::debug!("Persisting global capture settings");
 
     if let Err(e) = capture::validate_shortcut_format(&settings.shortcut) {
@@ -813,7 +702,7 @@ pub fn global_capture_set(
 
 /// Opens the quick capture window
 #[tauri::command]
-pub fn global_capture_open(app: AppHandle) -> Result<CommandResult<bool>, ()> {
+pub fn global_capture_open(app: AppHandle) -> Result<CommandResult<bool>> {
     tracing::debug!("Opening quick capture window");
 
     match capture::show_quick_capture_window(&app) {
@@ -830,7 +719,7 @@ pub fn global_capture_open(app: AppHandle) -> Result<CommandResult<bool>, ()> {
 pub async fn global_capture_submit(
     app: AppHandle, state: State<'_, AppState>, mode: writer_store::CaptureMode, text: String,
     destination: Option<writer_store::CaptureDocRef>, open_main_after_save: Option<bool>,
-) -> Result<CommandResult<capture::CaptureSubmitResult>, ()> {
+) -> Result<CommandResult<capture::CaptureSubmitResult>> {
     tracing::debug!("Submitting capture: mode={:?}, text_len={}", mode, text.len());
 
     let settings = match state.store.global_capture_get() {
@@ -838,10 +727,10 @@ pub async fn global_capture_submit(
         Err(e) => return Ok(CommandResult::err(e)),
     };
 
-    let target_location = destination
-        .as_ref()
-        .map(|d| d.location_id)
-        .or(settings.target_location_id);
+    let target_location = match resolve_capture_target_location(&app, &state, &destination) {
+        Ok(location_id) => Some(location_id.0),
+        Err(e) => return Ok(CommandResult::err(e)),
+    };
 
     let append_target = if let Some(ref dest) = destination {
         Some(writer_store::CaptureDocRef { location_id: dest.location_id, rel_path: dest.rel_path.clone() })
@@ -879,9 +768,7 @@ pub async fn global_capture_submit(
 
 /// Pauses or resumes the global shortcut
 #[tauri::command]
-pub fn global_capture_pause(
-    app: AppHandle, state: State<'_, AppState>, paused: bool,
-) -> Result<CommandResult<bool>, ()> {
+pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: bool) -> Result<CommandResult<bool>> {
     tracing::debug!("Setting global capture pause state: {}", paused);
 
     let mut settings = match state.store.global_capture_get() {
@@ -908,7 +795,7 @@ pub fn global_capture_pause(
 
 /// Validates a shortcut format
 #[tauri::command]
-pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResult<bool>, ()> {
+pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResult<bool>> {
     tracing::debug!("Validating shortcut: {}", shortcut);
 
     match capture::validate_shortcut_format(&shortcut) {
@@ -919,7 +806,7 @@ pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResul
 
 /// Returns the markdown help guide content
 #[tauri::command]
-pub fn markdown_help_get() -> Result<CommandResult<String>, ()> {
+pub fn markdown_help_get() -> Result<CommandResult<String>> {
     tracing::debug!("Fetching markdown help content");
     Ok(CommandResult::ok(writer_store::get_markdown_help().to_string()))
 }

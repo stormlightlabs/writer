@@ -4,13 +4,92 @@ import { FolderIcon, MoreVerticalIcon, RefreshIcon, TrashIcon } from "$icons";
 import type { SidebarRefreshReason } from "$state/types";
 import { DocMeta, LocationDescriptor } from "$types";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentItem } from "./DocumentItem";
 import { EmptyDocuments } from "./EmptyDocuments";
 import { RemoveButton } from "./RemoveButton";
 import { TreeItem } from "./TreeItem";
 
 const folderIcon = { Component: FolderIcon, size: "md" as const };
+const nestedFolderIcon = { Component: FolderIcon, size: "sm" as const };
+
+type DirectoryTreeNode = { type: "directory"; name: string; path: string; children: TreeNode[] };
+
+type FileTreeNode = { type: "file"; name: string; path: string; doc: DocMeta };
+
+type TreeNode = DirectoryTreeNode | FileTreeNode;
+
+function splitPathSegments(relPath: string): string[] {
+  return relPath.split(/[\\/]+/).filter(Boolean);
+}
+
+function ensureDirectoryNode(parent: DirectoryTreeNode, name: string, path: string): DirectoryTreeNode {
+  const existing = parent.children.find((node) => node.type === "directory" && node.path === path);
+  if (existing && existing.type === "directory") {
+    return existing;
+  }
+
+  const directoryNode: DirectoryTreeNode = { type: "directory", name, path, children: [] };
+  parent.children.push(directoryNode);
+  return directoryNode;
+}
+
+function sortTreeNodes(children: TreeNode[]): TreeNode[] {
+  return children.toSorted((left, right) => {
+    if (left.type !== right.type) {
+      return left.type === "directory" ? -1 : 1;
+    }
+
+    return left.name.localeCompare(right.name, void 0, { sensitivity: "base" });
+  });
+}
+
+function normalizeTree(node: DirectoryTreeNode): DirectoryTreeNode {
+  const normalizedChildren = sortTreeNodes(node.children).map((child) =>
+    child.type === "directory" ? normalizeTree(child) : child
+  );
+  return { ...node, children: normalizedChildren };
+}
+
+function buildDocumentTree(documents: DocMeta[]): DirectoryTreeNode {
+  const root: DirectoryTreeNode = { type: "directory", name: "", path: "", children: [] };
+
+  for (const doc of documents) {
+    const segments = splitPathSegments(doc.rel_path);
+    if (segments.length === 0) {
+      continue;
+    }
+
+    const fileName = segments.at(-1) ?? doc.rel_path;
+    const parentSegments = segments.slice(0, -1);
+
+    let currentParent = root;
+    let currentPath = "";
+
+    for (const segment of parentSegments) {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+      currentParent = ensureDirectoryNode(currentParent, segment, currentPath);
+    }
+
+    currentParent.children.push({ type: "file", name: fileName, path: doc.rel_path, doc });
+  }
+
+  return normalizeTree(root);
+}
+
+function parentDirectoryPaths(relPath: string): string[] {
+  const parts = splitPathSegments(relPath);
+  const directories = parts.slice(0, -1);
+  const paths: string[] = [];
+  let currentPath = "";
+
+  for (const directory of directories) {
+    currentPath = currentPath ? `${currentPath}/${directory}` : directory;
+    paths.push(currentPath);
+  }
+
+  return paths;
+}
 
 type FolderItemProps = {
   name: string;
@@ -116,6 +195,93 @@ type SidebarLocationItemProps = {
   filenameVisibility: boolean;
 };
 
+type NestedDirectoryItemProps = {
+  node: DirectoryTreeNode;
+  level: number;
+  selectedDocPath?: string;
+  expandedDirectories: Set<string>;
+  onToggleDirectory: (path: string) => void;
+  onSelectDocument: (id: number, path: string) => void;
+  onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
+  onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
+  onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
+  filenameVisibility: boolean;
+  locationId: number;
+};
+
+function NestedDirectoryItem(
+  {
+    node,
+    level,
+    selectedDocPath,
+    expandedDirectories,
+    onToggleDirectory,
+    onSelectDocument,
+    onRenameDocument,
+    onMoveDocument,
+    onDeleteDocument,
+    filenameVisibility,
+    locationId,
+  }: NestedDirectoryItemProps,
+) {
+  const isExpanded = expandedDirectories.has(node.path);
+
+  const handleToggle = useCallback(() => {
+    onToggleDirectory(node.path);
+  }, [node.path, onToggleDirectory]);
+
+  return (
+    <div>
+      <TreeItem
+        icon={nestedFolderIcon}
+        label={node.name}
+        isExpanded={isExpanded}
+        hasChildItems
+        level={level}
+        onClick={handleToggle}
+        onToggle={handleToggle} />
+      {isExpanded
+        ? (
+          <div>
+            {node.children.map((child) =>
+              child.type === "directory"
+                ? (
+                  <NestedDirectoryItem
+                    key={child.path}
+                    node={child}
+                    level={level + 1}
+                    selectedDocPath={selectedDocPath}
+                    expandedDirectories={expandedDirectories}
+                    onToggleDirectory={onToggleDirectory}
+                    onSelectDocument={onSelectDocument}
+                    onRenameDocument={onRenameDocument}
+                    onMoveDocument={onMoveDocument}
+                    onDeleteDocument={onDeleteDocument}
+                    filenameVisibility={filenameVisibility}
+                    locationId={locationId} />
+                )
+                : (
+                  <DocumentItem
+                    key={child.path}
+                    doc={child.doc}
+                    isSelected={selectedDocPath === child.doc.rel_path}
+                    selectedDocPath={selectedDocPath}
+                    onSelectDocument={onSelectDocument}
+                    onRenameDocument={onRenameDocument}
+                    onMoveDocument={onMoveDocument}
+                    onDeleteDocument={onDeleteDocument}
+                    filenameVisibility={filenameVisibility}
+                    id={locationId}
+                    level={level + 1} />
+                )
+            )}
+          </div>
+        )
+        : null}
+    </div>
+  );
+}
+
 function SidebarLocationItemComponent(
   {
     location,
@@ -139,6 +305,8 @@ function SidebarLocationItemComponent(
     filenameVisibility,
   }: SidebarLocationItemProps,
 ) {
+  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
+
   const handleRemoveClick = useCallback(() => {
     onRemove(location.id);
     setShowLocationMenu(null);
@@ -166,6 +334,42 @@ function SidebarLocationItemComponent(
     handleMenuClick,
     handleRemoveClick,
   ]);
+  const documentTree = useMemo(() => buildDocumentTree(documents), [documents]);
+
+  useEffect(() => {
+    if (!selectedDocPath) {
+      return;
+    }
+
+    const parentPaths = parentDirectoryPaths(selectedDocPath);
+    if (parentPaths.length === 0) {
+      return;
+    }
+
+    setExpandedDirectories((previous) => {
+      const next = new Set(previous);
+      let changed = false;
+      for (const path of parentPaths) {
+        if (!next.has(path)) {
+          next.add(path);
+          changed = true;
+        }
+      }
+      return changed ? next : previous;
+    });
+  }, [selectedDocPath]);
+
+  const handleToggleDirectory = useCallback((path: string) => {
+    setExpandedDirectories((previous) => {
+      const next = new Set(previous);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <div>
@@ -185,18 +389,42 @@ function SidebarLocationItemComponent(
           {isRefreshing ? <RefreshStatus reason={refreshReason} /> : null}
           {documents.length === 0
             ? <EmptyDocuments filterText={filterText} />
-            : (documents.map((doc) => (
-              <DocumentItem
-                key={doc.rel_path}
-                doc={doc}
-                isSelected={isSelected && selectedDocPath === doc.rel_path}
-                onSelectDocument={onSelectDocument}
-                onRenameDocument={onRenameDocument}
-                onMoveDocument={onMoveDocument}
-                onDeleteDocument={onDeleteDocument}
-                filenameVisibility={filenameVisibility}
-                id={location.id} />
-            )))}
+            : (
+              <div>
+                {documentTree.children.map((node) =>
+                  node.type === "directory"
+                    ? (
+                      <NestedDirectoryItem
+                        key={node.path}
+                        node={node}
+                        level={1}
+                        selectedDocPath={selectedDocPath}
+                        expandedDirectories={expandedDirectories}
+                        onToggleDirectory={handleToggleDirectory}
+                        onSelectDocument={onSelectDocument}
+                        onRenameDocument={onRenameDocument}
+                        onMoveDocument={onMoveDocument}
+                        onDeleteDocument={onDeleteDocument}
+                        filenameVisibility={filenameVisibility}
+                        locationId={location.id} />
+                    )
+                    : (
+                      <DocumentItem
+                        key={node.path}
+                        doc={node.doc}
+                        isSelected={selectedDocPath === node.doc.rel_path}
+                        selectedDocPath={selectedDocPath}
+                        onSelectDocument={onSelectDocument}
+                        onRenameDocument={onRenameDocument}
+                        onMoveDocument={onMoveDocument}
+                        onDeleteDocument={onDeleteDocument}
+                        filenameVisibility={filenameVisibility}
+                        id={location.id}
+                        level={1} />
+                    )
+                )}
+              </div>
+            )}
         </div>
       )}
     </div>
