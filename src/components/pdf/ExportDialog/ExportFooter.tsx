@@ -13,7 +13,7 @@ export const PdfExportDialogFooter = ({ handleExportClick }: { handleExportClick
   }, [resetPdfExport, setIsOpen]);
 
   return (
-    <div className="mt-6 pt-4 border-t border-border-subtle flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+    <div className="mt-4 pt-4 border-t border-border-subtle flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
       <Button
         type="button"
         variant="secondary"

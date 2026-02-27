@@ -12,7 +12,8 @@ import { useWorkspaceViewController } from "./hooks/controllers/useWorkspaceView
 import { useHelpSheetState } from "./state/selectors";
 
 const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
-  const { workspacePanelProps, focusModePanelProps, handleExportPdf } = useWorkspaceViewController();
+  const { workspacePanelProps, focusModePanelProps, handleExportPdf, previewResult, editorFontFamily } =
+    useWorkspaceViewController();
   const { isOpen: isHelpSheetOpen, setOpen: setHelpSheetOpen } = useHelpSheetState();
   const closeHelpSheet = useCallback(() => setHelpSheetOpen(false), [setHelpSheetOpen]);
 
@@ -29,7 +30,7 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
     <>
       <WorkspacePanel {...workspacePanelProps} />
       <LayoutSettingsPanel />
-      <PdfExportDialog onExport={handleExportPdf} />
+      <PdfExportDialog onExport={handleExportPdf} previewResult={previewResult} editorFontFamily={editorFontFamily} />
       <SearchOverlay />
       <BackendAlerts />
       <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />

@@ -15,7 +15,8 @@
     "no-warning-comments": "off",
     "unicorn/no-array-for-each": "warn",
     "react/exhaustive-deps": "warn",
-    "react/jsx-max-depth": ["warn", { "max": 3 }]
+    "react/jsx-max-depth": ["warn", { "max": 3 }],
+    "no-await-in-loop": "off"
   },
   "settings": {
     "jsx-a11y": { "polymorphicPropName": null, "components": {}, "attributes": {} },

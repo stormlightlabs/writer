@@ -14,9 +14,9 @@ import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
 import { usePreview } from "$hooks/usePreview";
 import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
-import type { PdfExportOptions } from "$pdf/types";
+import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useEditorPresentationState } from "$state/selectors";
-import type { DocRef, Maybe } from "$types";
+import type { DocRef, EditorFontFamily, Maybe } from "$types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type FocusModePanelProps = { editor: WorkspaceEditorProps; statusBar: StatusBarProps };
@@ -25,6 +25,8 @@ export type WorkspaceViewController = {
   workspacePanelProps: WorkspacePanelProps;
   focusModePanelProps: FocusModePanelProps;
   handleExportPdf: (options: PdfExportOptions) => Promise<void>;
+  previewResult: PdfRenderResult | null;
+  editorFontFamily: EditorFontFamily;
 };
 
 function isSameDocRef(left: Maybe<DocRef>, right: Maybe<DocRef>): boolean {
@@ -76,7 +78,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     dispatchEditor: editorDispatch,
     syncPreviewLine,
   });
-  const { handleOpenPdfExport, handleExportPdf } = usePdfExportUI({
+  const { handleOpenPdfExport, handleExportPdf, previewResult } = usePdfExportUI({
     activeTab,
     text: editorModel.text,
     editorFontFamily: editorPresentation.fontFamily,
@@ -278,5 +280,11 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     ],
   );
 
-  return { workspacePanelProps, focusModePanelProps, handleExportPdf };
+  return {
+    workspacePanelProps,
+    focusModePanelProps,
+    handleExportPdf,
+    previewResult,
+    editorFontFamily: editorPresentation.fontFamily,
+  };
 }

@@ -1,5 +1,3 @@
-// oxlint-disable no-await-in-loop
-
 import { Font } from "@react-pdf/renderer";
 import { PdfFontRegistrationError, PdfFontSourceFetchError } from "./errors";
 import type {

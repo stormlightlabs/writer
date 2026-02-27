@@ -10,7 +10,7 @@ import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import * as logger from "@tauri-apps/plugin-log";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 export type ExportPdfFn = (
   result: PdfRenderResult,
@@ -143,6 +143,31 @@ type UsePdfExportUIArgs = {
 export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }: UsePdfExportUIArgs) {
   const { setOpen: setPdfExportDialogOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
+  const [previewResult, setPreviewResult] = useState<PdfRenderResult | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  const loadPreviewResult = useCallback(async () => {
+    if (!activeTab) {
+      setPreviewResult(null);
+      return;
+    }
+
+    setIsLoadingPreview(true);
+
+    try {
+      const docRef = activeTab.docRef;
+      const renderResult = await new Promise<PdfRenderResult>((resolve, reject) => {
+        void runCmd(renderMarkdownForPdf(docRef.location_id, docRef.rel_path, text, void 0, resolve, reject));
+      });
+
+      setPreviewResult(renderResult);
+    } catch (error) {
+      logger.error(f("Failed to load preview", { error: error instanceof Error ? error.message : String(error) }));
+      setPreviewResult(null);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  }, [activeTab, text]);
 
   const handleOpenPdfExport = useCallback(() => {
     if (!activeTab) {
@@ -152,7 +177,8 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }:
 
     resetPdfExport();
     setPdfExportDialogOpen(true);
-  }, [activeTab, resetPdfExport, setPdfExportDialogOpen]);
+    void loadPreviewResult();
+  }, [activeTab, loadPreviewResult, resetPdfExport, setPdfExportDialogOpen]);
 
   const handleExportPdf = useCallback(async (options: PdfExportOptions) => {
     if (!activeTab) {
@@ -177,5 +203,5 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }:
     }
   }, [activeTab, editorFontFamily, exportPdf, resetPdfExport, setPdfExportDialogOpen, text]);
 
-  return { handleOpenPdfExport, handleExportPdf };
+  return { handleOpenPdfExport, handleExportPdf, previewResult, isLoadingPreview };
 }
