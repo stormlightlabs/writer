@@ -23,6 +23,7 @@ export const useLayoutChromeState = () =>
       showSearch: state.showSearch,
       reduceMotion: state.reduceMotion,
       showFilenames: state.showFilenames,
+      createReadmeInNewLocations: state.createReadmeInNewLocations,
     })),
   );
 
@@ -403,6 +404,14 @@ export const useShowFilenamesState = () =>
       filenameVisibility: state.showFilenames,
       setFilenameVisibility: state.setFilenameVisibility,
       toggleFilenameVisibility: state.toggleFilenameVisibility,
+    })),
+  );
+
+export const useCreateReadmeState = () =>
+  useLayoutStore(
+    useShallow((state) => ({
+      createReadmeInNewLocations: state.createReadmeInNewLocations,
+      setCreateReadmeInNewLocations: state.setCreateReadmeInNewLocations,
     })),
   );
 

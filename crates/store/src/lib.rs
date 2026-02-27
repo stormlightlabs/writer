@@ -25,6 +25,8 @@ const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
 const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
 const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
 
+const README_TEMPLATE: &str = include_str!("../assets/README_TEMPLATE.md");
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StyleCheckPattern {
     pub text: String,
@@ -403,6 +405,18 @@ impl Store {
         })?;
 
         let id = conn.last_insert_rowid();
+        drop(conn);
+
+        let settings = self.ui_layout_get()?;
+        if settings.create_readme_in_new_locations {
+            let readme_path = root_path.join("README.md");
+            if !readme_path.exists()
+                && let Err(e) = std::fs::write(&readme_path, README_TEMPLATE)
+            {
+                tracing::warn!("Failed to create README.md in new location: {}", e);
+            }
+        }
+
         tracing::info!("Location added successfully: id={}, name={}", id, name);
 
         Ok(LocationDescriptor { id: LocationId(id), name, root_path, added_at })
@@ -1452,6 +1466,12 @@ mod tests {
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
 
+        let settings = UiLayoutSettings {
+            create_readme_in_new_locations: false,
+            ..UiLayoutSettings::default()
+        };
+        store.ui_layout_set(&settings).unwrap();
+
         let location = store
             .location_add("Test Location".to_string(), location_path.clone())
             .unwrap();
@@ -1468,6 +1488,12 @@ mod tests {
         let (store, _temp) = create_test_store();
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
+
+        let settings = UiLayoutSettings {
+            create_readme_in_new_locations: false,
+            ..UiLayoutSettings::default()
+        };
+        store.ui_layout_set(&settings).unwrap();
 
         let location = store
             .location_add("Test Location".to_string(), location_path.clone())
@@ -1487,6 +1513,12 @@ mod tests {
         let (store, _temp) = create_test_store();
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
+
+        let settings = UiLayoutSettings {
+            create_readme_in_new_locations: false,
+            ..UiLayoutSettings::default()
+        };
+        store.ui_layout_set(&settings).unwrap();
 
         let location = store
             .location_add("Test Location".to_string(), location_path.clone())
@@ -1613,6 +1645,13 @@ mod tests {
         let (store, _temp) = create_test_store();
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
+
+        let settings = UiLayoutSettings {
+            create_readme_in_new_locations: false,
+            ..UiLayoutSettings::default()
+        };
+        store.ui_layout_set(&settings).unwrap();
+
         let location = store
             .location_add("Reconcile Location".to_string(), location_path.clone())
             .unwrap();
@@ -1688,6 +1727,7 @@ mod tests {
             focus_dimming_mode: FocusDimmingMode::Paragraph,
             focus_auto_enter_focus_mode: false,
             filename_visibility: false,
+            create_readme_in_new_locations: false,
         };
 
         store.ui_layout_set(&settings).unwrap();
@@ -1823,5 +1863,75 @@ mod tests {
         let loaded = store.last_open_doc_get().unwrap();
 
         assert!(loaded.is_none());
+    }
+
+    #[test]
+    fn test_readme_created_in_new_location_by_default() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location_path = location_dir.path().to_path_buf();
+
+        let _location = store
+            .location_add("Test Location".to_string(), location_path.clone())
+            .unwrap();
+
+        let readme_path = location_path.join("README.md");
+        assert!(readme_path.exists(), "README.md should be created by default");
+
+        let content = std::fs::read_to_string(&readme_path).unwrap();
+        assert!(content.starts_with("# Markdown Guide for Writer"));
+    }
+
+    #[test]
+    fn test_readme_not_created_when_setting_disabled() {
+        let (store, _temp) = create_test_store();
+
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
+        store.ui_layout_set(&settings).unwrap();
+
+        let location_dir = TempDir::new().unwrap();
+        let location_path = location_dir.path().to_path_buf();
+
+        let _location = store
+            .location_add("Test Location".to_string(), location_path.clone())
+            .unwrap();
+
+        let readme_path = location_path.join("README.md");
+        assert!(
+            !readme_path.exists(),
+            "README.md should not be created when setting is disabled"
+        );
+    }
+
+    #[test]
+    fn test_existing_readme_not_overwritten() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location_path = location_dir.path().to_path_buf();
+
+        let existing_content = "# My Custom README\n\nThis is my content.";
+        std::fs::write(location_path.join("README.md"), existing_content).unwrap();
+
+        let _location = store
+            .location_add("Test Location".to_string(), location_path.clone())
+            .unwrap();
+
+        let readme_path = location_path.join("README.md");
+        let content = std::fs::read_to_string(&readme_path).unwrap();
+        assert_eq!(
+            content, existing_content,
+            "Existing README.md should not be overwritten"
+        );
+    }
+
+    #[test]
+    fn test_ui_layout_settings_includes_readme_flag() {
+        let (store, _temp) = create_test_store();
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
+
+        store.ui_layout_set(&settings).unwrap();
+        let loaded = store.ui_layout_get().unwrap();
+
+        assert!(!loaded.create_readme_in_new_locations);
     }
 }

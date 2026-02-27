@@ -20,6 +20,7 @@ export const stateToLayoutSettings = (
   focus_dimming_mode: focusModeSettings.dimmingMode,
   focus_auto_enter_focus_mode: focusModeSettings.autoEnterFocusMode,
   filename_visibility: layoutChrome.showFilenames,
+  create_readme_in_new_locations: layoutChrome.createReadmeInNewLocations,
 });
 
 export const uiSettingsToFocusMode: (uiSettings: UiLayoutSettings) => FocusModeSettings = (uiSettings) => ({

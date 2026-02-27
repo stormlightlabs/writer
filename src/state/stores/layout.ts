@@ -36,6 +36,7 @@ export const getInitialLayoutChromeState = (): LayoutChromeState => ({
   showSearch: false,
   reduceMotion: false,
   showFilenames: false,
+  createReadmeInNewLocations: true,
 });
 
 export const getInitialEditorPresentationState = (): EditorPresentationState => ({
@@ -88,6 +89,7 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   setReduceMotion: (value) => set({ reduceMotion: value }),
   setFilenameVisibility: (value) => set({ showFilenames: value }),
   toggleFilenameVisibility: () => set((state) => ({ showFilenames: !state.showFilenames })),
+  setCreateReadmeInNewLocations: (value) => set({ createReadmeInNewLocations: value }),
 
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),

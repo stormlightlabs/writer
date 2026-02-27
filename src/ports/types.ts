@@ -43,6 +43,7 @@ export type UiLayoutSettings = {
   focus_dimming_mode: FocusDimmingMode;
   focus_auto_enter_focus_mode: boolean;
   filename_visibility: boolean;
+  create_readme_in_new_locations: boolean;
 };
 
 export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };

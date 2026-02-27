@@ -38,6 +38,7 @@ export function useSettingsSync(): void {
       state.setEditorFontFamily(settings.editor_font_family);
       state.setFocusModeSettings(uiSettingsToFocusMode(settings));
       state.setFilenameVisibility(settings.filename_visibility);
+      state.setCreateReadmeInNewLocations(settings.create_readme_in_new_locations);
       setLayoutSettingsHydrated(true);
     }, () => {
       if (!isCancelled) {

@@ -25,6 +25,7 @@ export type LayoutChromeState = {
   showSearch: boolean;
   reduceMotion: boolean;
   showFilenames: boolean;
+  createReadmeInNewLocations: boolean;
 };
 
 export type EditorPresentationState = {
@@ -57,6 +58,7 @@ export type LayoutChromeActions = {
   setReduceMotion: (value: boolean) => void;
   setFilenameVisibility: (value: boolean) => void;
   toggleFilenameVisibility: () => void;
+  setCreateReadmeInNewLocations: (value: boolean) => void;
 };
 
 export type EditorPresentationActions = {

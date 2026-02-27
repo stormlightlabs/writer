@@ -33,6 +33,10 @@ fn default_focus_auto_enter_focus_mode() -> bool {
     true
 }
 
+fn default_create_readme_in_new_locations() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum FocusDimmingMode {
@@ -90,6 +94,8 @@ pub struct UiLayoutSettings {
     pub focus_auto_enter_focus_mode: bool,
     #[serde(default)]
     pub filename_visibility: bool,
+    #[serde(default = "default_create_readme_in_new_locations")]
+    pub create_readme_in_new_locations: bool,
 }
 
 impl Default for UiLayoutSettings {
@@ -108,6 +114,7 @@ impl Default for UiLayoutSettings {
             focus_dimming_mode: default_focus_dimming_mode(),
             focus_auto_enter_focus_mode: default_focus_auto_enter_focus_mode(),
             filename_visibility: false,
+            create_readme_in_new_locations: default_create_readme_in_new_locations(),
         }
     }
 }

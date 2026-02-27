@@ -768,6 +768,7 @@ describe("ui layout Commands", () => {
           focus_dimming_mode: "sentence",
           focus_auto_enter_focus_mode: true,
           filename_visibility: false,
+          create_readme_in_new_locations: true,
         },
         onOk,
         onErr,
@@ -790,6 +791,7 @@ describe("ui layout Commands", () => {
           focus_dimming_mode: "sentence",
           focus_auto_enter_focus_mode: true,
           filename_visibility: false,
+          create_readme_in_new_locations: true,
         },
       });
     });

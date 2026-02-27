@@ -4,6 +4,7 @@ import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
 import {
+  useCreateReadmeState,
   useGlobalCaptureSettingsState,
   useLayoutSettingsChromeState,
   useLayoutSettingsEditorState,
@@ -107,6 +108,7 @@ function ChromeSettingsSection() {
   } = useLayoutSettingsChromeState();
   const { filenameVisibility: filenameVisibility, toggleFilenameVisibility: toggleFilenameVisibility } =
     useShowFilenamesState();
+  const { createReadmeInNewLocations, setCreateReadmeInNewLocations } = useCreateReadmeState();
 
   return (
     <>
@@ -130,6 +132,11 @@ function ChromeSettingsSection() {
         description="Display filenames instead of document titles in the sidebar."
         isVisible={filenameVisibility}
         onToggle={toggleFilenameVisibility} />
+      <ToggleRow
+        label="Add README to New Folders"
+        description="Create a Markdown guide when adding a new folder."
+        isVisible={createReadmeInNewLocations}
+        onToggle={setCreateReadmeInNewLocations} />
     </>
   );
 }
