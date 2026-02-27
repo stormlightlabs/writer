@@ -12,9 +12,10 @@ import { useHelpSheetHotkey } from "$hooks/useHelpSheetHotkey";
 import { useLayoutHotkeys } from "$hooks/useLayoutHotkeys";
 import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
 import { usePreview } from "$hooks/usePreview";
+import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions } from "$pdf/types";
-import { useEditorPresentationState, useStyleDiagnosticsUiState } from "$state/selectors";
+import { useEditorPresentationState } from "$state/selectors";
 import type { DocRef, Maybe } from "$types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -44,7 +45,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   useHelpSheetHotkey();
 
   const editorPresentation = useEditorPresentationState();
-  const { isOpen: diagnosticsVisible, setOpen: setDiagnosticsVisible } = useStyleDiagnosticsUiState();
+  const { isOpen: diagnosticsVisible, close: closeDiagnostics } = useRoutedSheet("/diagnostics");
+  const { open: openSettingsRoute } = useRoutedSheet("/settings");
   const [styleMatches, setStyleMatches] = useState<StyleMatch[]>([]);
   const [styleSelection, setStyleSelection] = useState<{ from: number; to: number; requestId: number } | null>(null);
   const {
@@ -169,10 +171,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     setStyleSelection((previous) => ({ from: match.from, to: match.to, requestId: (previous?.requestId ?? 0) + 1 }));
   }, []);
 
-  const handleCloseDiagnostics = useCallback(() => {
-    setDiagnosticsVisible(false);
-  }, [setDiagnosticsVisible]);
-
   const toolbarProps = useMemo(
     () => ({
       saveStatus: editorModel.saveStatus,
@@ -258,10 +256,12 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       preview: previewProps,
       statusBar: statusBarProps,
       diagnostics: {
-        isVisible: diagnosticsVisible && editorPresentation.styleCheckSettings.enabled,
+        isVisible: diagnosticsVisible,
+        styleCheckEnabled: editorPresentation.styleCheckSettings.enabled,
         matches: styleMatches,
         onSelectMatch: handleSelectStyleMatch,
-        onClose: handleCloseDiagnostics,
+        onClose: closeDiagnostics,
+        onOpenSettings: openSettingsRoute,
       },
     }),
     [
@@ -273,7 +273,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       editorPresentation.styleCheckSettings.enabled,
       styleMatches,
       handleSelectStyleMatch,
-      handleCloseDiagnostics,
+      closeDiagnostics,
+      openSettingsRoute,
     ],
   );
 

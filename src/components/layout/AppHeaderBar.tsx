@@ -1,7 +1,8 @@
 import { Button } from "$components/Button";
+import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { CheckIcon, ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
-import { useAppHeaderBarState, useHelpSheetState, useStyleDiagnosticsUiState } from "$state/selectors";
+import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
 import { useCallback, useMemo } from "react";
 
 const AppTitle = ({ hideTitle }: { hideTitle: boolean }) => (
@@ -146,7 +147,9 @@ const SearchRow = (
 
 export const AppHeaderBar = () => {
   const { setOpen: setHelpSheetOpen } = useHelpSheetState();
-  const { isOpen: styleDiagnosticsOpen, toggle: toggleStyleDiagnostics } = useStyleDiagnosticsUiState();
+  const { isOpen: styleDiagnosticsOpen, open: openStyleDiagnostics, close: closeStyleDiagnostics } = useRoutedSheet(
+    "/diagnostics",
+  );
   const {
     sidebarCollapsed,
     tabBarCollapsed,
@@ -167,6 +170,14 @@ export const AppHeaderBar = () => {
   const handleOpenHelp = useCallback(() => {
     setHelpSheetOpen(true);
   }, [setHelpSheetOpen]);
+  const handleToggleStyleDiagnostics = useCallback(() => {
+    if (styleDiagnosticsOpen) {
+      closeStyleDiagnostics();
+      return;
+    }
+
+    openStyleDiagnostics();
+  }, [closeStyleDiagnostics, openStyleDiagnostics, styleDiagnosticsOpen]);
 
   return (
     <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
@@ -177,7 +188,7 @@ export const AppHeaderBar = () => {
         onToggleSidebar={toggleSidebarCollapsed}
         onToggleTabBar={toggleTabBarCollapsed}
         onToggleStatusBar={toggleStatusBarCollapsed}
-        onToggleStyleDiagnostics={toggleStyleDiagnostics}
+        onToggleStyleDiagnostics={handleToggleStyleDiagnostics}
         sidebarCollapsed={sidebarCollapsed}
         tabBarCollapsed={tabBarCollapsed}
         statusBarCollapsed={statusBarCollapsed}

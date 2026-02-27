@@ -35,9 +35,11 @@ export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
 export type WorkspaceDiagnosticsProps = {
   isVisible: boolean;
+  styleCheckEnabled: boolean;
   matches: StyleMatch[];
   onSelectMatch: (match: StyleMatch) => void;
   onClose: () => void;
+  onOpenSettings: () => void;
 };
 
 export type WorkspacePanelProps = {
@@ -263,8 +265,6 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostic
     [sectionTransition],
   );
 
-  const diagnosticsTopOffset = useMemo(() => 96 + (effectiveTabBarVisible ? 32 : 0), [effectiveTabBarVisible]);
-
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
       <Section
@@ -303,11 +303,11 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostic
 
       <DiagnosticsPanel
         isVisible={diagnostics.isVisible}
+        styleCheckEnabled={diagnostics.styleCheckEnabled}
         matches={diagnostics.matches}
-        sidebarCollapsed={sidebarCollapsed}
-        topOffset={diagnosticsTopOffset}
         onSelectMatch={diagnostics.onSelectMatch}
-        onClose={diagnostics.onClose} />
+        onClose={diagnostics.onClose}
+        onOpenSettings={diagnostics.onOpenSettings} />
     </div>
   );
 }

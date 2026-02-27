@@ -1,28 +1,21 @@
 import { Button } from "$components/Button";
+import { Sheet } from "$components/Sheet";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "$editor/constants";
 import type { StyleMatch } from "$editor/style-check";
-import { useSkipAnimation } from "$hooks/useMotion";
 import { XIcon } from "$icons";
 import { PatternCategory } from "$types";
-import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useMemo } from "react";
 
 type DiagnosticsPanelProps = {
   isVisible: boolean;
+  styleCheckEnabled: boolean;
   matches: StyleMatch[];
-  sidebarCollapsed: boolean;
-  topOffset: number;
   onSelectMatch: (match: StyleMatch) => void;
   onClose: () => void;
+  onOpenSettings: () => void;
 };
 
 type GroupedMatches = Record<PatternCategory, StyleMatch[]>;
-
-const PANEL_INITIAL = { opacity: 0, x: -16 } as const;
-const PANEL_ANIMATE = { opacity: 1, x: 0 } as const;
-const PANEL_EXIT = { opacity: 0, x: -12 } as const;
-const PANEL_TRANSITION = { duration: 0.18, ease: "easeOut" } as const;
-const NO_MOTION_TRANSITION = { duration: 0 } as const;
 
 const groupMatches = (matches: StyleMatch[]): GroupedMatches => ({
   filler: matches.filter((m) => m.category === "filler"),
@@ -83,27 +76,54 @@ function CategorySection(
   );
 }
 
-const DiagnosticsPanelHeader = ({ totalCount, onClose }: { totalCount: number; onClose: () => void }) => (
-  <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-    <div>
-      <h2 className="m-0 text-sm font-medium text-text-primary">Style Check</h2>
-      <p className="m-0 text-xs text-text-secondary">
-        {totalCount === 0 ? "No issues found" : `${totalCount} issue${totalCount === 1 ? "" : "s"} found`}
-      </p>
+const DiagnosticsPanelHeader = (
+  { totalCount, onClose, styleCheckEnabled }: { totalCount: number; onClose: () => void; styleCheckEnabled: boolean },
+) => {
+  const subtitle = useMemo(() => {
+    if (!styleCheckEnabled) {
+      return "Style Check is disabled";
+    }
+
+    if (totalCount === 0) {
+      return "No issues found";
+    }
+
+    return `${totalCount} issue${totalCount === 1 ? "" : "s"} found`;
+  }, [styleCheckEnabled, totalCount]);
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+      <div>
+        <h2 className="m-0 text-sm font-medium text-text-primary">Style Check</h2>
+        <p className="m-0 text-xs text-text-secondary">{subtitle}</p>
+      </div>
+      <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label="Close diagnostics panel">
+        <XIcon className="w-4 h-4" />
+      </Button>
     </div>
-    <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label="Close diagnostics panel">
-      <XIcon className="w-4 h-4" />
-    </Button>
+  );
+};
+
+const DiagnosticsDisabledState = ({ onOpenSettings }: { onOpenSettings: () => void }) => (
+  <div className="flex-1 overflow-y-auto px-4 py-6">
+    <p className="m-0 text-sm text-text-secondary mb-3">Enable Style Check in Settings to populate diagnostics.</p>
+    <Button type="button" variant="outline" size="sm" onClick={onOpenSettings}>Open Settings</Button>
   </div>
 );
 
 const DiagnosticsPanelContent = (
-  { grouped, totalCount, onSelectMatch }: {
+  { grouped, totalCount, onSelectMatch, styleCheckEnabled, onOpenSettings }: {
     grouped: GroupedMatches;
     totalCount: number;
     onSelectMatch: (match: StyleMatch) => void;
+    styleCheckEnabled: boolean;
+    onOpenSettings: () => void;
   },
 ) => {
+  if (!styleCheckEnabled) {
+    return <DiagnosticsDisabledState onOpenSettings={onOpenSettings} />;
+  }
+
   if (totalCount === 0) {
     return (
       <div className="flex-1 overflow-y-auto">
@@ -124,36 +144,29 @@ const DiagnosticsPanelContent = (
 };
 
 export function DiagnosticsPanel(
-  { isVisible, matches, sidebarCollapsed, topOffset, onSelectMatch, onClose }: DiagnosticsPanelProps,
+  { isVisible, styleCheckEnabled, matches, onSelectMatch, onClose, onOpenSettings }: DiagnosticsPanelProps,
 ) {
   const grouped = useMemo(() => groupMatches(matches), [matches]);
   const totalCount = useMemo(() => matches.length, [matches]);
-  const skipAnimation = useSkipAnimation();
-  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : PANEL_TRANSITION, [skipAnimation]);
-  const panelStyle = useMemo(
-    () => ({
-      left: sidebarCollapsed ? 16 : 256 + 16,
-      top: topOffset + 16,
-      width: 320,
-      maxHeight: "calc(100vh - 80px)",
-    }),
-    [sidebarCollapsed, topOffset],
-  );
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={PANEL_INITIAL}
-          animate={PANEL_ANIMATE}
-          exit={PANEL_EXIT}
-          transition={transition}
-          className="fixed z-40 bg-layer-01 border border-border-subtle rounded-lg shadow-xl flex flex-col"
-          style={panelStyle}>
-          <DiagnosticsPanelHeader totalCount={totalCount} onClose={onClose} />
-          <DiagnosticsPanelContent grouped={grouped} totalCount={totalCount} onSelectMatch={onSelectMatch} />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Sheet
+      isOpen={isVisible}
+      onClose={onClose}
+      position="r"
+      size="sm"
+      ariaLabel="Style diagnostics"
+      backdropClassName="bg-black/25"
+      className="right-4 top-14 bottom-4 rounded-lg border">
+      <div className="flex min-h-0 h-full flex-col overflow-hidden">
+        <DiagnosticsPanelHeader totalCount={totalCount} onClose={onClose} styleCheckEnabled={styleCheckEnabled} />
+        <DiagnosticsPanelContent
+          grouped={grouped}
+          totalCount={totalCount}
+          onSelectMatch={onSelectMatch}
+          styleCheckEnabled={styleCheckEnabled}
+          onOpenSettings={onOpenSettings} />
+      </div>
+    </Sheet>
   );
 }

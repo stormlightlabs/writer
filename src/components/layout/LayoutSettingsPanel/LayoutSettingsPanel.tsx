@@ -1,6 +1,7 @@
 import { Button } from "$components/Button";
 import { CollapsibleSection } from "$components/CollapsibleSection";
-import { Dialog } from "$components/Dialog";
+import { Sheet, type SheetPosition } from "$components/Sheet";
+import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
 import {
@@ -15,34 +16,41 @@ import {
   useShowFilenamesState,
 } from "$state/selectors";
 import type { EditorFontFamily, StyleMarkerStyle } from "$types";
-import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CustomPatternControls } from "./CustomPatternControls";
 import { DimmingModeRow } from "./DimmingModeRow";
 import { FontFamilyRow, FontSizeRow } from "./FontRows";
 import { ToggleRow } from "./ToggleRow";
 
-const SettingsHeader = () => {
-  const { setOpen } = useLayoutSettingsUiState();
-
-  const handleClose = useCallback(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  return (
-    <div className="flex items-center justify-between mb-2">
-      <h2 className="m-0 text-sm font-medium text-text-primary">Layout Settings</h2>
-      <Button type="button" variant="iconSubtle" size="iconLg" onClick={handleClose} aria-label="Close layout settings">
-        <XIcon size="sm" />
-      </Button>
-    </div>
-  );
-};
+type SettingsScope = "basic" | "full";
+type SettingsSheetLayout = { position: SheetPosition; className: string; backdropClassName: string };
 
 const STYLE_MARKER_OPTIONS: Array<{ value: StyleMarkerStyle; label: string }> = [
   { value: "highlight", label: "Highlight" },
   { value: "strikethrough", label: "Strikethrough" },
   { value: "underline", label: "Underline" },
 ];
+
+function SettingsHeader(
+  { title, onClose, closeAriaLabel, onViewMore }: {
+    title: string;
+    onClose: () => void;
+    closeAriaLabel: string;
+    onViewMore?: () => void;
+  },
+) {
+  return (
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <h2 className="m-0 text-sm font-medium text-text-primary">{title}</h2>
+      <div className="flex items-center gap-2">
+        {onViewMore && <Button type="button" variant="outline" size="sm" onClick={onViewMore}>View more</Button>}
+        <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label={closeAriaLabel}>
+          <XIcon size="sm" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 const StyleMarkerRow = (
   { value, onChange }: { value: StyleMarkerStyle; onChange: (event: ChangeEvent<HTMLSelectElement>) => void },
@@ -281,7 +289,7 @@ function AccessibilitySection() {
   );
 }
 
-const SettingsBody = () => (
+const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
   <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
     <CollapsibleSection title="Accessibility" description="Configure motion and display preferences.">
       <AccessibilitySection />
@@ -292,43 +300,116 @@ const SettingsBody = () => (
     <CollapsibleSection title="Editor" description="Tune text presentation, wrapping, and typography." defaultOpen>
       <EditorSettingsSection />
     </CollapsibleSection>
-    <CollapsibleSection title="Focus Mode" description="Configure centered writing and dimming behavior.">
-      <FocusModeSection />
-    </CollapsibleSection>
-    <CollapsibleSection title="Writer's Tools" description="Adjust writing analysis and guidance features.">
-      <WriterToolsSection />
-    </CollapsibleSection>
-    <CollapsibleSection title="Quick Capture" description="Toggle global quick-note capture behavior.">
-      <QuickCaptureSection />
-    </CollapsibleSection>
+    {scope === "full" && (
+      <>
+        <CollapsibleSection title="Focus Mode" description="Configure centered writing and dimming behavior.">
+          <FocusModeSection />
+        </CollapsibleSection>
+        <CollapsibleSection title="Writer's Tools" description="Adjust writing analysis and guidance features.">
+          <WriterToolsSection />
+        </CollapsibleSection>
+        <CollapsibleSection title="Quick Capture" description="Toggle global quick-note capture behavior.">
+          <QuickCaptureSection />
+        </CollapsibleSection>
+      </>
+    )}
   </div>
 );
 
-export const LayoutSettingsPanel = () => {
-  const { isOpen: isVisible, setOpen } = useLayoutSettingsUiState();
+function SettingsPanel(
+  { title, scope, onClose, closeAriaLabel, onViewMore }: {
+    title: string;
+    scope: SettingsScope;
+    onClose: () => void;
+    closeAriaLabel: string;
+    onViewMore?: () => void;
+  },
+) {
+  return (
+    <section className="flex min-h-0 h-full flex-col overflow-hidden p-4">
+      <SettingsHeader title={title} onClose={onClose} closeAriaLabel={closeAriaLabel} onViewMore={onViewMore} />
+      <SettingsBody scope={scope} />
+    </section>
+  );
+}
+
+function useSettingsSheetLayout(scope: SettingsScope): SettingsSheetLayout {
   const { isCompact, viewportWidth } = useViewportTier();
   const compactPanel = useMemo(() => isCompact || viewportWidth < 920, [isCompact, viewportWidth]);
+
+  return useMemo(() => {
+    if (compactPanel) {
+      return {
+        position: "b",
+        className: scope === "basic"
+          ? "left-3 right-3 bottom-3 max-h-[calc(100vh-5rem)] rounded-lg border"
+          : "left-3 right-3 bottom-3 max-h-[calc(100vh-2.5rem)] rounded-lg border",
+        backdropClassName: "bg-black/35",
+      };
+    }
+
+    return {
+      position: "r",
+      className: scope === "basic"
+        ? "right-4 top-14 bottom-4 w-[360px] rounded-lg border"
+        : "right-4 top-4 bottom-4 w-[420px] rounded-lg border",
+      backdropClassName: scope === "basic" ? "bg-black/30" : "bg-black/35",
+    };
+  }, [compactPanel, scope]);
+}
+
+export const LayoutSettingsPanel = () => {
+  const { isOpen: isVisible, setOpen } = useLayoutSettingsUiState();
+  const { isOpen: isSettingsRouteOpen, open: openSettingsRoute } = useRoutedSheet("/settings");
+  const layout = useSettingsSheetLayout("basic");
+
+  useEffect(() => {
+    if (isVisible && isSettingsRouteOpen) {
+      setOpen(false);
+    }
+  }, [isSettingsRouteOpen, isVisible, setOpen]);
+
   const handleClose = useCallback(() => {
     setOpen(false);
   }, [setOpen]);
 
+  const handleViewMore = useCallback(() => {
+    setOpen(false);
+    openSettingsRoute();
+  }, [openSettingsRoute, setOpen]);
+
   return (
-    <Dialog
+    <Sheet
       isOpen={isVisible}
       onClose={handleClose}
+      position={layout.position}
       ariaLabel="Layout settings"
-      motionPreset={compactPanel ? "slideUp" : "slideRight"}
-      backdropClassName={compactPanel ? "bg-black/35" : "bg-black/30"}
-      containerClassName="z-50 pointer-events-none"
-      panelClassName={`absolute flex min-h-0 flex-col overflow-hidden bg-layer-01 border border-border-subtle shadow-xl ${
-        compactPanel
-          ? "left-3 right-3 bottom-3 max-h-[calc(100vh-5rem)] rounded-lg"
-          : "right-4 top-14 w-[360px] max-h-[calc(100vh-4.5rem)] rounded-lg"
-      }`}>
-      <section className="flex min-h-0 h-full flex-col overflow-hidden p-4">
-        <SettingsHeader />
-        <SettingsBody />
-      </section>
-    </Dialog>
+      backdropClassName={layout.backdropClassName}
+      className={layout.className}>
+      <SettingsPanel
+        title="Layout Settings"
+        scope="basic"
+        onClose={handleClose}
+        closeAriaLabel="Close layout settings"
+        onViewMore={handleViewMore} />
+    </Sheet>
+  );
+};
+
+export const RoutedSettingsSheet = () => {
+  const { isOpen, close } = useRoutedSheet("/settings");
+  const layout = useSettingsSheetLayout("full");
+
+  return (
+    <Sheet
+      isOpen={isOpen}
+      onClose={close}
+      position={layout.position}
+      ariaLabel="Settings"
+      size="xl"
+      backdropClassName={layout.backdropClassName}
+      className={layout.className}>
+      <SettingsPanel title="Settings" scope="full" onClose={close} closeAriaLabel="Close settings panel" />
+    </Sheet>
   );
 };

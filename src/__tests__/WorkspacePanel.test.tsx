@@ -183,7 +183,15 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     ...overrides.preview,
   },
   statusBar: { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 }, ...overrides.statusBar },
-  diagnostics: { isVisible: false, matches: [], onSelectMatch: vi.fn(), onClose: vi.fn(), ...overrides.diagnostics },
+  diagnostics: {
+    isVisible: false,
+    styleCheckEnabled: true,
+    matches: [],
+    onSelectMatch: vi.fn(),
+    onClose: vi.fn(),
+    onOpenSettings: vi.fn(),
+    ...overrides.diagnostics,
+  },
 });
 
 const renderWorkspacePanel = (
@@ -274,6 +282,7 @@ describe("WorkspacePanel", () => {
   it("renders diagnostics panel and routes match actions", () => {
     const onSelectMatch = vi.fn();
     const onClose = vi.fn();
+    const onOpenSettings = vi.fn();
     const match = {
       from: 6,
       to: 15,
@@ -284,8 +293,15 @@ describe("WorkspacePanel", () => {
       column: 6,
     };
 
-    renderWorkspacePanel({ diagnostics: { isVisible: true, matches: [match], onSelectMatch, onClose } }, {
-      workspacePanelSidebarState: { sidebarCollapsed: false },
+    renderWorkspacePanel({
+      diagnostics: {
+        isVisible: true,
+        styleCheckEnabled: true,
+        matches: [match],
+        onSelectMatch,
+        onClose,
+        onOpenSettings,
+      },
     });
 
     expect(screen.getByText("Style Check")).toBeInTheDocument();
@@ -294,5 +310,6 @@ describe("WorkspacePanel", () => {
 
     fireEvent.click(screen.getByLabelText("Close diagnostics panel"));
     expect(onClose).toHaveBeenCalledOnce();
+    expect(onOpenSettings).not.toHaveBeenCalled();
   });
 });

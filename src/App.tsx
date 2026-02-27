@@ -3,7 +3,7 @@ import { HelpSheet } from "./components/HelpSheet";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
 import { FocusModePanel } from "./components/layout/FocusModePanel";
-import { LayoutSettingsPanel } from "./components/layout/LayoutSettingsPanel";
+import { LayoutSettingsPanel, RoutedSettingsSheet } from "./components/layout/LayoutSettingsPanel";
 import { SearchOverlay } from "./components/layout/SearchOverlay";
 import { WorkspacePanel } from "./components/layout/WorkspacePanel";
 import { PdfExportDialog } from "./components/pdf/ExportDialog/ExportDialog";
@@ -46,6 +46,7 @@ function App() {
       className="relative h-screen overflow-hidden flex flex-col bg-bg-primary text-text-primary font-sans">
       {isFocusMode ? null : <AppHeaderBar />}
       <AppContent isFocusMode={isFocusMode} />
+      <RoutedSettingsSheet />
     </div>
   );
 }

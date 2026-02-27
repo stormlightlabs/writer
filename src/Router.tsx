@@ -1,5 +1,5 @@
 import { QuickCaptureApp } from "$components/capture";
-import { Route, Router, Switch } from "wouter";
+import { Route, Router, Switch, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import App from "./App";
 
@@ -9,12 +9,21 @@ const NotFoundRoute = () => (
   </main>
 );
 
+const AppShellRoute = () => {
+  const [location] = useLocation();
+
+  if (location === "/" || location === "/settings" || location === "/diagnostics") {
+    return <App />;
+  }
+
+  return <NotFoundRoute />;
+};
+
 export const AppRouter = () => (
   <Router hook={useHashLocation}>
     <Switch>
-      <Route path="/" component={App} />
       <Route path="/quick-capture" component={QuickCaptureApp} />
-      <Route component={NotFoundRoute} />
+      <Route component={AppShellRoute} />
     </Switch>
   </Router>
 );
