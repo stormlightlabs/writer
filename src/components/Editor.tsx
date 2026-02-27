@@ -1,11 +1,11 @@
 import { focusDimming, focusDimmingTheme } from "$editor/focus-dimming";
 import { posHighlighting, posHighlightingTheme } from "$editor/pos-highlighting";
-import { styleCheck, styleCheckTheme, type StyleMatch } from "$editor/style-check";
-import { oxocarbonDark } from "$editor/themes/oxocarbon-dark";
-import { oxocarbonLight } from "$editor/themes/oxocarbon-light";
+import { styleCheck, styleCheckTheme } from "$editor/style-check";
+import { oxocarbonDark, oxocarbonLight } from "$editor/themes";
+import type { StyleMatch } from "$editor/types";
 import { typewriterScroll } from "$editor/typewriter-scroll";
 import { useEditorPresentationState } from "$state/selectors";
-import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckSettings } from "$types";
+import type { AppTheme, EditorFontFamily, FocusDimmingMode, StyleCheckPattern, StyleCheckSettings } from "$types";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Compartment, EditorState as CMEditorState, type Extension } from "@codemirror/state";
@@ -187,10 +187,7 @@ function createEditorState(
   });
 }
 
-function areCustomPatternsEqual(
-  left: StyleCheckSettings["customPatterns"],
-  right: StyleCheckSettings["customPatterns"],
-): boolean {
+function areCustomPatternsEqual(left: StyleCheckPattern[], right: StyleCheckPattern[]): boolean {
   if (left.length !== right.length) {
     return false;
   }

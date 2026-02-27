@@ -41,6 +41,7 @@ function TabButton(
       className={cn(
         "px-4 py-2 text-sm font-medium transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50",
         isActive ? "text-text-primary" : "text-text-secondary hover:text-text-primary",
+        "hover:bg-layer-02 hover:cursor-pointer",
       )}>
       {tab.label}
       {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-primary" />}

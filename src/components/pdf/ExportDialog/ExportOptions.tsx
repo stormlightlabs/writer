@@ -1,5 +1,5 @@
 import { ORIENTATIONS, PAGE_SIZES } from "$pdf/constants";
-import { MarginSide, type PdfExportOptions } from "$pdf/types";
+import { MarginSide, Orientation, PageSize, type PdfExportOptions } from "$pdf/types";
 import { usePdfDialogUiState } from "$state/selectors";
 import { useCallback } from "react";
 
@@ -7,7 +7,7 @@ const PdfExportDialogPageSize = ({ options }: { options: PdfExportOptions }) => 
   const { setPageSize } = usePdfDialogUiState();
 
   const handlePageSizeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setPageSize(event.target.value as PdfExportOptions["pageSize"]);
+    setPageSize(event.target.value as PageSize);
   }, [setPageSize]);
 
   return (
@@ -27,7 +27,7 @@ const PdfExportDialogOrientation = ({ options }: { options: PdfExportOptions }) 
   const { setOrientation } = usePdfDialogUiState();
 
   const handleOrientationChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setOrientation(event.target.value as PdfExportOptions["orientation"]);
+    setOrientation(event.target.value as Orientation);
   }, [setOrientation]);
 
   return (

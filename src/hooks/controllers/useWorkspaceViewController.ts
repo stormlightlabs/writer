@@ -1,6 +1,6 @@
 import type { WorkspaceEditorProps, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
 import { StatusBarProps } from "$components/StatusBar";
-import type { StyleMatch } from "$editor/style-check";
+import type { StyleMatch } from "$editor/types";
 import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects";
 import { useEditorPreviewEffects } from "$hooks/app/useEditorPreviewEffects";
 import { useSettingsSync } from "$hooks/app/useSettingsSync";

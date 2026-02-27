@@ -1,7 +1,7 @@
 /* oxlint-disable eslint-plugin-react-perf/jsx-no-new-object-as-prop */
 import { EditorProps } from "$components/Editor";
 import { WorkspacePanel } from "$components/layout/WorkspacePanel";
-import type { WorkspacePanelProps } from "$components/layout/WorkspacePanel";
+import type { WorkspaceDiagnosticsProps, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
 import { PreviewProps } from "$components/Preview";
 import { StatusBarProps } from "$components/StatusBar";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
@@ -57,7 +57,7 @@ type WorkspacePanelPropOverrides = {
   editor?: Partial<EditorProps>;
   preview?: Partial<PreviewProps>;
   statusBar?: Partial<StatusBarProps>;
-  diagnostics?: Partial<WorkspacePanelProps["diagnostics"]>;
+  diagnostics?: Partial<WorkspaceDiagnosticsProps>;
 };
 
 const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => ({

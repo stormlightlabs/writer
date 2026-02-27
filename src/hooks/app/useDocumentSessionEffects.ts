@@ -89,7 +89,7 @@ export function useDocumentSessionEffects(
   }, [activeDocRef, openDoc]);
 
   useEffect(() => {
-    if (isSidebarLoading || !selectedLocationId || documentsCount > 0) {
+    if (!startupDocumentRestoredRef.current || isSidebarLoading || !selectedLocationId || documentsCount > 0) {
       return;
     }
 

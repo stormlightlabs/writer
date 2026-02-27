@@ -1,7 +1,7 @@
 import { Button } from "$components/Button";
 import { Sheet } from "$components/Sheet";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "$editor/constants";
-import type { StyleMatch } from "$editor/style-check";
+import type { StyleMatch } from "$editor/types";
 import { XIcon } from "$icons";
 import { PatternCategory } from "$types";
 import { useCallback, useMemo } from "react";

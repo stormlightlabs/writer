@@ -27,6 +27,8 @@ import {
   renderMarkdownForPdf,
   runCmd,
   searchDocuments,
+  sessionLastDocGet,
+  sessionLastDocSet,
   startWatch,
   stopWatch,
   SubscriptionManager,
@@ -795,6 +797,44 @@ describe("ui layout Commands", () => {
           create_readme_in_new_locations: true,
         },
       });
+    });
+  });
+});
+
+describe("session Commands", () => {
+  describe(sessionLastDocGet, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = sessionLastDocGet(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("session_last_doc_get");
+      expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe(sessionLastDocSet, () => {
+    it("should create command with docRef payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = sessionLastDocSet({ location_id: 7, rel_path: "notes/start.md" }, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("session_last_doc_set");
+      expect(cmd.payload).toStrictEqual({
+        docRef: { location_id: 7, rel_path: "notes/start.md" },
+      });
+    });
+
+    it("should support clearing the persisted docRef", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = sessionLastDocSet(null, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("session_last_doc_set");
+      expect(cmd.payload).toStrictEqual({ docRef: null });
     });
   });
 });

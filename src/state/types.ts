@@ -1,4 +1,4 @@
-import type { PdfExportOptions } from "$pdf/types";
+import type { MarginSide, Orientation, PageSize, PdfExportOptions } from "$pdf/types";
 import type {
   AppTheme,
   DocMeta,
@@ -186,10 +186,10 @@ export type UiActions = {
   setPdfExportDialogOpen: (value: boolean) => void;
   setPdfExportOptions: (value: PdfExportOptions) => void;
   resetPdfExportOptions: () => void;
-  setPdfPageSize: (value: PdfExportOptions["pageSize"]) => void;
-  setPdfOrientation: (value: PdfExportOptions["orientation"]) => void;
+  setPdfPageSize: (value: PageSize) => void;
+  setPdfOrientation: (value: Orientation) => void;
   setPdfFontSize: (value: number) => void;
-  setPdfMargin: (side: "top" | "right" | "bottom" | "left", value: number) => void;
+  setPdfMargin: (side: MarginSide, value: number) => void;
   setPdfIncludeHeader: (value: boolean) => void;
   setPdfIncludeFooter: (value: boolean) => void;
   setGlobalCaptureSettings: (value: GlobalCaptureSettings) => void;
