@@ -53,4 +53,39 @@ describe("useDocumentSessionEffects", () => {
 
     expect(openDoc).toHaveBeenCalledWith(activeDocRef);
   });
+
+  it("does not reopen when active doc ref identity changes but points to same file", () => {
+    const openDoc = vi.fn();
+    const activeDocRef: DocRef = { location_id: LOCATION.id, rel_path: "notes/today.md" };
+
+    const { rerender } = renderHook((args: UseDocumentSessionEffectsArgs) => useDocumentSessionEffects(args), {
+      initialProps: createArgs({
+        tabs: [{ id: "tab-1", docRef: activeDocRef, title: "Today", isModified: false }],
+        activeTab: { id: "tab-1", docRef: activeDocRef, title: "Today", isModified: false },
+        activeDocRef,
+        openDoc,
+      }),
+    });
+
+    rerender(
+      createArgs({
+        tabs: [{
+          id: "tab-1",
+          docRef: { location_id: LOCATION.id, rel_path: "notes/today.md" },
+          title: "Today",
+          isModified: true,
+        }],
+        activeTab: {
+          id: "tab-1",
+          docRef: { location_id: LOCATION.id, rel_path: "notes/today.md" },
+          title: "Today",
+          isModified: true,
+        },
+        activeDocRef: { location_id: LOCATION.id, rel_path: "notes/today.md" },
+        openDoc,
+      }),
+    );
+
+    expect(openDoc).toHaveBeenCalledTimes(1);
+  });
 });

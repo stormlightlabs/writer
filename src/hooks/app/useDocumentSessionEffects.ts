@@ -32,6 +32,7 @@ export function useDocumentSessionEffects(
 ): void {
   const startupDocumentReadyRef = useRef(false);
   const startupDocumentRestoredRef = useRef(false);
+  const lastOpenedDocRef = useRef<DocRef | null>(null);
 
   useEffect(() => {
     if (startupDocumentReadyRef.current) {
@@ -52,9 +53,18 @@ export function useDocumentSessionEffects(
 
   useEffect(() => {
     if (!activeDocRef) {
+      lastOpenedDocRef.current = null;
       return;
     }
 
+    if (
+      lastOpenedDocRef.current?.location_id === activeDocRef.location_id
+      && lastOpenedDocRef.current.rel_path === activeDocRef.rel_path
+    ) {
+      return;
+    }
+
+    lastOpenedDocRef.current = activeDocRef;
     openDoc(activeDocRef);
   }, [activeDocRef, openDoc]);
 
