@@ -1,11 +1,10 @@
-import { Button } from "$components/Button";
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
-import { Dialog } from "$components/Dialog";
 import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, TrashIcon } from "$icons";
 import type { DocMeta } from "$types";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { type DialogAnchor, OperationDialog } from "./OperationDialog";
 import { TreeItem } from "./TreeItem";
 
 const fileTextIcon = { Component: FileTextIcon, size: "sm" as const };
@@ -23,15 +22,18 @@ type DocumentItemProps = {
 };
 
 function RenameDialog(
-  { isOpen, onClose, currentName, onRename }: {
+  { isOpen, onClose, currentName, onRename, anchor }: {
     isOpen: boolean;
     onClose: () => void;
     currentName: string;
-    onRename: (newName: string) => Promise<void>;
+    onRename: (newName: string) => Promise<boolean>;
+    anchor?: DialogAnchor;
   },
 ) {
   const [name, setName] = useState(currentName);
   const [isRenaming, setIsRenaming] = useState(false);
+  const formId = "rename-document-form";
+  const inputId = "rename-document-input";
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,57 +42,70 @@ function RenameDialog(
       return;
     }
     setIsRenaming(true);
-    await onRename(name.trim());
-    setIsRenaming(false);
-    onClose();
+    try {
+      const renamed = await onRename(name.trim());
+      if (renamed) {
+        onClose();
+      }
+    } finally {
+      setIsRenaming(false);
+    }
   }, [name, currentName, onRename, onClose]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
   }, []);
 
-  useMemo(() => {
+  useEffect(() => {
     if (isOpen) {
       setName(currentName);
     }
   }, [isOpen, currentName]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} ariaLabel="Rename document">
-      <form onSubmit={handleSubmit} className="p-4 min-w-[300px]">
-        <h3 className="text-sm font-medium text-text-primary mb-3">Rename Document</h3>
+    <OperationDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Rename document"
+      title="Rename Document"
+      description="Update the filename in the current location."
+      anchor={anchor}
+      confirmLabel="Rename"
+      pendingLabel="Renaming..."
+      confirmButtonType="submit"
+      confirmFormId={formId}
+      confirmDisabled={!name.trim() || name === currentName}
+      isPending={isRenaming}>
+      <form id={formId} onSubmit={handleSubmit} className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-wide text-text-secondary" htmlFor={inputId}>
+          New name
+        </label>
         <input
+          id={inputId}
           type="text"
           value={name}
           onChange={handleInputChange}
-          className="w-full px-3 py-2 bg-layer-02 border border-border-subtle rounded text-sm text-text-primary focus:outline-none focus:border-border-focus"
+          className="w-full rounded-md border border-border-subtle bg-layer-02 px-3 py-2 text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
           autoFocus
           disabled={isRenaming} />
-        <div className="flex justify-end gap-2 mt-4">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isRenaming}>Cancel</Button>
-          <Button
-            type="submit"
-            variant="primary"
-            size="sm"
-            disabled={isRenaming || !name.trim() || name === currentName}>
-            Rename
-          </Button>
-        </div>
       </form>
-    </Dialog>
+    </OperationDialog>
   );
 }
 
 function MoveDialog(
-  { isOpen, onClose, currentPath, onMove }: {
+  { isOpen, onClose, currentPath, onMove, anchor }: {
     isOpen: boolean;
     onClose: () => void;
     currentPath: string;
-    onMove: (newPath: string) => Promise<void>;
+    onMove: (newPath: string) => Promise<boolean>;
+    anchor?: DialogAnchor;
   },
 ) {
   const [path, setPath] = useState(currentPath);
   const [isMoving, setIsMoving] = useState(false);
+  const formId = "move-document-form";
+  const inputId = "move-document-input";
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,77 +114,100 @@ function MoveDialog(
       return;
     }
     setIsMoving(true);
-    await onMove(path.trim());
-    setIsMoving(false);
-    onClose();
+    try {
+      const moved = await onMove(path.trim());
+      if (moved) {
+        onClose();
+      }
+    } finally {
+      setIsMoving(false);
+    }
   }, [path, currentPath, onMove, onClose]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPath(e.target.value);
   }, []);
 
-  useMemo(() => {
+  useEffect(() => {
     if (isOpen) {
       setPath(currentPath);
     }
   }, [isOpen, currentPath]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} ariaLabel="Move document">
-      <form onSubmit={handleSubmit} className="p-4 min-w-[400px]">
-        <h3 className="text-sm font-medium text-text-primary mb-3">Move Document</h3>
+    <OperationDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Move document"
+      title="Move Document"
+      description="Provide the destination relative path."
+      anchor={anchor}
+      confirmLabel="Move"
+      pendingLabel="Moving..."
+      confirmButtonType="submit"
+      confirmFormId={formId}
+      confirmDisabled={!path.trim() || path === currentPath}
+      isPending={isMoving}
+      widthClassName="w-[min(94vw,460px)]">
+      <form id={formId} onSubmit={handleSubmit} className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-wide text-text-secondary" htmlFor={inputId}>
+          New path
+        </label>
         <input
+          id={inputId}
           type="text"
           value={path}
           onChange={handleInputChange}
-          className="w-full px-3 py-2 bg-layer-02 border border-border-subtle rounded text-sm text-text-primary focus:outline-none focus:border-border-focus font-mono"
+          className="w-full rounded-md border border-border-subtle bg-layer-02 px-3 py-2 font-mono text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
           autoFocus
           disabled={isMoving} />
         <p className="text-xs text-text-secondary mt-2">Enter the new relative path for the document.</p>
-        <div className="flex justify-end gap-2 mt-4">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isMoving}>Cancel</Button>
-          <Button type="submit" variant="primary" size="sm" disabled={isMoving || !path.trim() || path === currentPath}>
-            Move
-          </Button>
-        </div>
       </form>
-    </Dialog>
+    </OperationDialog>
   );
 }
 
 function DeleteConfirmDialog(
-  { isOpen, onClose, documentName, onDelete }: {
+  { isOpen, onClose, documentName, onDelete, anchor }: {
     isOpen: boolean;
     onClose: () => void;
     documentName: string;
-    onDelete: () => Promise<void>;
+    onDelete: () => Promise<boolean>;
+    anchor?: DialogAnchor;
   },
 ) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
-    await onDelete();
-    setIsDeleting(false);
-    onClose();
+    try {
+      const deleted = await onDelete();
+      if (deleted) {
+        onClose();
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   }, [onDelete, onClose]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} ariaLabel="Delete document">
-      <div className="p-4 min-w-[300px]">
-        <h3 className="text-sm font-medium text-text-primary mb-3">Delete Document</h3>
-        <p className="text-sm text-text-secondary mb-4">
-          Are you sure you want to delete{" "}
-          <span className="text-text-primary font-medium">{documentName}</span>? This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isDeleting}>Cancel</Button>
-          <Button type="button" variant="dangerGhost" size="sm" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
-      </div>
-    </Dialog>
+    <OperationDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Delete document"
+      title="Delete Document"
+      description="This cannot be undone."
+      anchor={anchor}
+      confirmLabel="Delete"
+      pendingLabel="Deleting..."
+      isPending={isDeleting}
+      onConfirm={handleDelete}
+      tone="danger">
+      <p className="m-0 text-sm text-text-secondary">
+        Are you sure you want to delete{" "}
+        <span className="text-text-primary font-medium">{documentName}</span>? This action cannot be undone.
+      </p>
+    </OperationDialog>
   );
 }
 
@@ -190,6 +228,7 @@ export function DocumentItem(
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [operationAnchor, setOperationAnchor] = useState<DialogAnchor | undefined>();
 
   const displayLabel = useMemo(() => {
     if (filenameVisibility) {
@@ -219,35 +258,49 @@ export function DocumentItem(
   }, [doc.rel_path]);
 
   const handleRename = useCallback(() => {
+    setOperationAnchor({ x: position.x, y: position.y });
     close();
     setShowRenameDialog(true);
-  }, [close]);
+  }, [close, position.x, position.y]);
 
   const handleMove = useCallback(() => {
+    setOperationAnchor({ x: position.x, y: position.y });
     close();
     setShowMoveDialog(true);
-  }, [close]);
+  }, [close, position.x, position.y]);
 
   const handleDeleteClick = useCallback(() => {
+    setOperationAnchor({ x: position.x, y: position.y });
     close();
     setShowDeleteDialog(true);
-  }, [close]);
+  }, [close, position.x, position.y]);
 
-  const performRename = useCallback(async (newName: string) => {
-    await onRenameDocument(id, doc.rel_path, newName);
+  const performRename = useCallback((newName: string) => {
+    return onRenameDocument(id, doc.rel_path, newName);
   }, [id, doc.rel_path, onRenameDocument]);
 
-  const performMove = useCallback(async (newRelPath: string) => {
-    await onMoveDocument(id, doc.rel_path, newRelPath);
+  const performMove = useCallback((newRelPath: string) => {
+    return onMoveDocument(id, doc.rel_path, newRelPath);
   }, [id, doc.rel_path, onMoveDocument]);
 
-  const performDelete = useCallback(async () => {
-    await onDeleteDocument(id, doc.rel_path);
+  const performDelete = useCallback(() => {
+    return onDeleteDocument(id, doc.rel_path);
   }, [id, doc.rel_path, onDeleteDocument]);
 
-  const closeRenameDialog = useCallback(() => setShowRenameDialog(false), []);
-  const closeMoveDialog = useCallback(() => setShowMoveDialog(false), []);
-  const closeDeleteDialog = useCallback(() => setShowDeleteDialog(false), []);
+  const closeRenameDialog = useCallback(() => {
+    setShowRenameDialog(false);
+    setOperationAnchor(undefined);
+  }, []);
+
+  const closeMoveDialog = useCallback(() => {
+    setShowMoveDialog(false);
+    setOperationAnchor(undefined);
+  }, []);
+
+  const closeDeleteDialog = useCallback(() => {
+    setShowDeleteDialog(false);
+    setOperationAnchor(undefined);
+  }, []);
 
   const contextMenuItems = useMemo<(ContextMenuItem | ContextMenuDivider)[]>(
     () => [
@@ -279,13 +332,20 @@ export function DocumentItem(
         isOpen={showRenameDialog}
         onClose={closeRenameDialog}
         currentName={currentFilename}
-        onRename={performRename} />
-      <MoveDialog isOpen={showMoveDialog} onClose={closeMoveDialog} currentPath={doc.rel_path} onMove={performMove} />
+        onRename={performRename}
+        anchor={operationAnchor} />
+      <MoveDialog
+        isOpen={showMoveDialog}
+        onClose={closeMoveDialog}
+        currentPath={doc.rel_path}
+        onMove={performMove}
+        anchor={operationAnchor} />
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
         onClose={closeDeleteDialog}
         documentName={displayLabel}
-        onDelete={performDelete} />
+        onDelete={performDelete}
+        anchor={operationAnchor} />
     </>
   );
 }

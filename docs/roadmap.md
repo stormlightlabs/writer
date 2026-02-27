@@ -1,7 +1,31 @@
 ---
 title: "Roadmap"
-last_updated: 2026-02-24
+last_updated: 2026-02-27
 ---
+
+## Export
+
+Multi-format document export with live preview, building on the existing `@react-pdf/renderer` pipeline and adding DOCX and plaintext output.
+
+### Tasks
+
+1. **PDF preview**
+   - Render the existing `MarkdownPdfDocument` component into an in-dialog preview pane (re-use `pdf().toBlob()` → `URL.createObjectURL`)
+   - Live-update preview when export options (page size, margins, font, header/footer) change; debounce re-renders
+   - Add page navigation controls (prev / next / page indicator) over the preview
+   - Show a loading skeleton while the preview is generating
+   - Wire preview into `PdfExportDialog` alongside the existing `ExportOptions` panel
+2. **DOCX export**
+   - Add [`docx-rs`](https://github.com/bokuweb/docx-rs) as a Cargo dependency in `src-tauri/Cargo.toml`
+   - Implement a `markdown_to_docx` Tauri command that accepts the Markdown AST (or raw text), converts it to a `.docx` byte buffer using `docx-rs` (`Docx`, `Paragraph`, `Run`, heading levels, code blocks, lists, blockquotes), and returns `Vec<u8>` to the frontend
+   - Support basic formatting: bold, italic, code font, ordered/unordered lists, blockquotes, headings 1-3
+   - Frontend receives the blob, prompts the Tauri `save` dialog with `.docx` filter, and writes with `writeFile`
+   - Add "DOCX" option to the export dialog alongside "PDF"
+3. **Plaintext export**
+   - Strip all Markdown formatting from the raw document text (headings → plain text, remove `**`, `_`, `` ` ``, link syntax, etc.)
+   - Preserve logical structure: blank lines between paragraphs, indentation for list items, `---` for horizontal rules
+   - Save via Tauri `save` dialog with `.txt` filter
+   - Add "Plain Text" option to the export dialog
 
 ## Content blocks (transclusion)
 

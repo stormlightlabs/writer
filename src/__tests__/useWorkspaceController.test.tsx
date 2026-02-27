@@ -4,23 +4,31 @@ import { resetAppStore, useAppStore } from "$state/stores/app";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$ports", () => ({
-  runCmd: vi.fn(async () => {}),
-  docList: vi.fn((_locationId: number, _onOk: (docs: unknown[]) => void, _onErr: (error: unknown) => void) => ({
-    type: "None",
-  })),
-  docDelete: vi.fn(() => ({ type: "None" })),
-  docMove: vi.fn(() => ({ type: "None" })),
-  docRename: vi.fn(() => ({ type: "None" })),
-  locationAddViaDialog: vi.fn(() => ({ type: "None" })),
-  locationRemove: vi.fn(() => ({ type: "None" })),
-}));
+vi.mock(
+  "$ports",
+  () => ({
+    runCmd: vi.fn(async () => {}),
+    docList: vi.fn((_locationId: number, _onOk: (docs: unknown[]) => void, _onErr: (error: unknown) => void) => ({
+      type: "None",
+    })),
+    docDelete: vi.fn(() => ({ type: "None" })),
+    docMove: vi.fn(() => ({ type: "None" })),
+    docRename: vi.fn(() => ({ type: "None" })),
+    locationAddViaDialog: vi.fn(() => ({ type: "None" })),
+    locationRemove: vi.fn(() => ({ type: "None" })),
+  }),
+);
 
 describe("useWorkspaceController", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetAppStore();
-    useAppStore.getState().setLocations([{ id: 1, name: "Workspace", root_path: "/workspace", added_at: "2024-01-01" }]);
+    useAppStore.getState().setLocations([{
+      id: 1,
+      name: "Workspace",
+      root_path: "/workspace",
+      added_at: "2024-01-01",
+    }]);
   });
 
   it("ignores non-numeric locationId values in handleCreateNewDocument", () => {

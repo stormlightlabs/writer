@@ -111,6 +111,36 @@ describe("DocumentItem", () => {
       expect(screen.getByDisplayValue("test.md")).toBeInTheDocument();
     });
 
+    it("pins rename dialog near the operation trigger location", async () => {
+      const props = createProps();
+      render(<DocumentItem {...props} />);
+
+      const item = screen.getByText("Test Document");
+      fireEvent.contextMenu(item, { clientX: 120, clientY: 180 });
+      fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+
+      await waitFor(() => {
+        const dialog = screen.getByRole("dialog", { name: "Rename document" });
+        expect(dialog).toHaveStyle({ left: "132px", top: "192px" });
+      });
+    });
+
+    it("closes rename dialog on outside click", async () => {
+      const props = createProps();
+      render(<DocumentItem {...props} />);
+
+      const item = screen.getByText("Test Document");
+      fireEvent.contextMenu(item);
+      fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+
+      expect(screen.getByText("Rename Document")).toBeInTheDocument();
+      fireEvent.pointerDown(document.body);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Rename Document")).not.toBeInTheDocument();
+      });
+    });
+
     it("calls onRenameDocument with new name", async () => {
       const onRenameDocument = vi.fn().mockResolvedValue(true);
       const props = createProps({ onRenameDocument });

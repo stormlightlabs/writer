@@ -17,7 +17,8 @@ describe("useDocumentActions", () => {
         dispatchEditor,
         createDraftTab: vi.fn(),
         createNewDocument,
-      }));
+      })
+    );
 
     act(() => {
       result.current.handleNewDocument({ type: "click" } as unknown as number);

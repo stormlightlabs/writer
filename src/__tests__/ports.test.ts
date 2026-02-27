@@ -536,13 +536,13 @@ describe(runCmd, () => {
 
   describe("unknown command type", () => {
     it("should warn on unknown command type", async () => {
-      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation((_: string) => Promise.resolve());
       const unknownCmd = { type: "Unknown" } as unknown as Cmd;
 
       await runCmd(unknownCmd);
 
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown command type"));
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"cmd":{"type":"Unknown"}'));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("\"cmd\":{\"type\":\"Unknown\"}"));
     });
   });
 });
@@ -569,13 +569,13 @@ describe(SubscriptionManager, () => {
     });
 
     it("should warn on unknown subscription type", async () => {
-      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation((_: string) => Promise.resolve());
       const unknownSub = { type: "Unknown" } as unknown as Parameters<typeof manager.subscribe>[0];
 
       await manager.subscribe(unknownSub);
 
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown subscription type"));
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"sub":{"type":"Unknown"}'));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("\"sub\":{\"type\":\"Unknown\"}"));
     });
   });
 
