@@ -4,6 +4,7 @@ import { Preview, type PreviewProps } from "$components/Preview";
 import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
 import { Toolbar, type ToolbarProps } from "$components/Toolbar";
+import type { StyleMatch } from "$editor/style-check";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useResizable } from "$hooks/useResizable";
 import { useViewportTier } from "$hooks/useViewportTier";
@@ -16,12 +17,28 @@ import {
 import { PanelMode } from "$types";
 import { AnimatePresence, EasingDefinition, motion } from "motion/react";
 import { type PointerEventHandler, useCallback, useEffect, useMemo } from "react";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
 
-type K = "initialText" | "presentation" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange";
+type K =
+  | "initialText"
+  | "presentation"
+  | "onChange"
+  | "onSave"
+  | "onCursorMove"
+  | "onSelectionChange"
+  | "onStyleMatchesChange"
+  | "styleSelection";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
 type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
+
+export type WorkspaceDiagnosticsProps = {
+  isVisible: boolean;
+  matches: StyleMatch[];
+  onSelectMatch: (match: StyleMatch) => void;
+  onClose: () => void;
+};
 
 export type WorkspacePanelProps = {
   toolbar: Pick<
@@ -39,6 +56,7 @@ export type WorkspacePanelProps = {
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
   statusBar: StatusBarProps;
+  diagnostics: WorkspaceDiagnosticsProps;
 };
 
 const SPLIT_PANEL_MIN_WIDTH = 280;
@@ -135,7 +153,7 @@ function Section({ children, initial, animate, exit, transition, className, styl
   );
 }
 
-export function WorkspacePanel({ toolbar, editor, preview, statusBar }: WorkspacePanelProps) {
+export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostics }: WorkspacePanelProps) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
@@ -245,6 +263,8 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar }: Workspac
     [sectionTransition],
   );
 
+  const diagnosticsTopOffset = useMemo(() => 96 + (effectiveTabBarVisible ? 32 : 0), [effectiveTabBarVisible]);
+
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
       <Section
@@ -280,6 +300,14 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar }: Workspac
           <StatusBar {...statusBar} />
         </Section>
       </div>
+
+      <DiagnosticsPanel
+        isVisible={diagnostics.isVisible}
+        matches={diagnostics.matches}
+        sidebarCollapsed={sidebarCollapsed}
+        topOffset={diagnosticsTopOffset}
+        onSelectMatch={diagnostics.onSelectMatch}
+        onClose={diagnostics.onClose} />
     </div>
   );
 }

@@ -55,6 +55,7 @@ export function useSettingsSync(): void {
         enabled: settings.enabled,
         categories: settings.categories,
         customPatterns: settings.custom_patterns,
+        markerStyle: settings.marker_style,
       });
     }, () => {}));
 
@@ -94,6 +95,7 @@ export function useSettingsSync(): void {
           categories: styleCheckSettings.categories,
           enabled: styleCheckSettings.enabled,
           custom_patterns: styleCheckSettings.customPatterns,
+          marker_style: styleCheckSettings.markerStyle,
         },
         () => {},
         () => {},

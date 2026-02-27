@@ -61,6 +61,7 @@ export const getInitialWriterToolsState = (): WriterToolsState => ({
     enabled: false,
     categories: { filler: true, redundancy: true, cliche: true },
     customPatterns: [],
+    markerStyle: "highlight",
   },
 });
 

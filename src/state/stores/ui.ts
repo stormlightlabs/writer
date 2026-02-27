@@ -26,6 +26,7 @@ export const getInitialUiState = (): UiState => ({
   pdfExportOptions: DEFAULT_OPTIONS,
   globalCaptureSettings: DEFAULT_GLOBAL_CAPTURE_SETTINGS,
   helpSheetOpen: false,
+  styleDiagnosticsOpen: false,
 });
 
 export const useUiStore = create<UiStore>()((set, get) => ({
@@ -67,6 +68,8 @@ export const useUiStore = create<UiStore>()((set, get) => ({
   },
   setHelpSheetOpen: (value) => set({ helpSheetOpen: value }),
   toggleHelpSheet: () => set((state) => ({ helpSheetOpen: !state.helpSheetOpen })),
+  setStyleDiagnosticsOpen: (value) => set({ styleDiagnosticsOpen: value }),
+  toggleStyleDiagnostics: () => set((state) => ({ styleDiagnosticsOpen: !state.styleDiagnosticsOpen })),
 }));
 
 export function resetUiStore(): void {

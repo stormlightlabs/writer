@@ -57,6 +57,7 @@ type WorkspacePanelPropOverrides = {
   editor?: Partial<EditorProps>;
   preview?: Partial<PreviewProps>;
   statusBar?: Partial<StatusBarProps>;
+  diagnostics?: Partial<WorkspacePanelProps["diagnostics"]>;
 };
 
 const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => ({
@@ -102,6 +103,7 @@ const createEditorPresentationState = (
     enabled: false,
     categories: { filler: true, redundancy: true, cliche: true },
     customPatterns: [],
+    markerStyle: "highlight",
   },
   ...overrides,
 });
@@ -181,6 +183,7 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     ...overrides.preview,
   },
   statusBar: { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 }, ...overrides.statusBar },
+  diagnostics: { isVisible: false, matches: [], onSelectMatch: vi.fn(), onClose: vi.fn(), ...overrides.diagnostics },
 });
 
 const renderWorkspacePanel = (
@@ -266,5 +269,30 @@ describe("WorkspacePanel", () => {
     act(() => {
       globalThis.dispatchEvent(new Event("resize"));
     });
+  });
+
+  it("renders diagnostics panel and routes match actions", () => {
+    const onSelectMatch = vi.fn();
+    const onClose = vi.fn();
+    const match = {
+      from: 6,
+      to: 15,
+      text: "basically",
+      category: "filler" as const,
+      replacement: "remove",
+      line: 1,
+      column: 6,
+    };
+
+    renderWorkspacePanel({ diagnostics: { isVisible: true, matches: [match], onSelectMatch, onClose } }, {
+      workspacePanelSidebarState: { sidebarCollapsed: false },
+    });
+
+    expect(screen.getByText("Style Check")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("basically"));
+    expect(onSelectMatch).toHaveBeenCalledWith(match);
+
+    fireEvent.click(screen.getByLabelText("Close diagnostics panel"));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

@@ -14,7 +14,7 @@ import {
   useReduceMotionState,
   useShowFilenamesState,
 } from "$state/selectors";
-import type { EditorFontFamily } from "$types";
+import type { EditorFontFamily, StyleMarkerStyle } from "$types";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { CustomPatternControls } from "./CustomPatternControls";
 import { DimmingModeRow } from "./DimmingModeRow";
@@ -38,6 +38,29 @@ const SettingsHeader = () => {
   );
 };
 
+const STYLE_MARKER_OPTIONS: Array<{ value: StyleMarkerStyle; label: string }> = [
+  { value: "highlight", label: "Highlight" },
+  { value: "strikethrough", label: "Strikethrough" },
+  { value: "underline", label: "Underline" },
+];
+
+const StyleMarkerRow = (
+  { value, onChange }: { value: StyleMarkerStyle; onChange: (event: ChangeEvent<HTMLSelectElement>) => void },
+) => (
+  <div className="py-2.5">
+    <label className="m-0 text-[0.8125rem] text-text-primary block mb-1.5" htmlFor="style-marker-style">
+      Marker Style
+    </label>
+    <select
+      id="style-marker-style"
+      value={value}
+      onChange={onChange}
+      className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
+      {STYLE_MARKER_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  </div>
+);
+
 function StyleCheckSection() {
   const { styleCheckSettings, setStyleCheckSettings, setStyleCheckCategory, addCustomPattern, removeCustomPattern } =
     useLayoutSettingsWriterToolsState();
@@ -57,6 +80,10 @@ function StyleCheckSection() {
 
   const handleStyleCheckEnabled = useCallback((enabled: boolean) => {
     setStyleCheckSettings({ ...styleCheckSettings, enabled });
+  }, [setStyleCheckSettings, styleCheckSettings]);
+
+  const handleMarkerStyleChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    setStyleCheckSettings({ ...styleCheckSettings, markerStyle: event.target.value as StyleMarkerStyle });
   }, [setStyleCheckSettings, styleCheckSettings]);
 
   return (
@@ -85,6 +112,7 @@ function StyleCheckSection() {
             description="Flag overused expressions like 'at the end of the day'."
             isVisible={styleCheckSettings.categories.cliche}
             onToggle={toggleCliche} />
+          <StyleMarkerRow value={styleCheckSettings.markerStyle} onChange={handleMarkerStyleChange} />
           <CustomPatternControls
             showCustom={showCustom}
             setShowCustom={setShowCustom}

@@ -1470,10 +1470,7 @@ mod tests {
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
 
-        let settings = UiLayoutSettings {
-            create_readme_in_new_locations: false,
-            ..UiLayoutSettings::default()
-        };
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
         store.ui_layout_set(&settings).unwrap();
 
         let location = store
@@ -1493,10 +1490,7 @@ mod tests {
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
 
-        let settings = UiLayoutSettings {
-            create_readme_in_new_locations: false,
-            ..UiLayoutSettings::default()
-        };
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
         store.ui_layout_set(&settings).unwrap();
 
         let location = store
@@ -1518,10 +1512,7 @@ mod tests {
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
 
-        let settings = UiLayoutSettings {
-            create_readme_in_new_locations: false,
-            ..UiLayoutSettings::default()
-        };
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
         store.ui_layout_set(&settings).unwrap();
 
         let location = store
@@ -1650,10 +1641,7 @@ mod tests {
         let location_dir = TempDir::new().unwrap();
         let location_path = location_dir.path().to_path_buf();
 
-        let settings = UiLayoutSettings {
-            create_readme_in_new_locations: false,
-            ..UiLayoutSettings::default()
-        };
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
         store.ui_layout_set(&settings).unwrap();
 
         let location = store
@@ -1769,6 +1757,59 @@ mod tests {
         assert!(loaded.focus_auto_enter_focus_mode);
         assert!(loaded.focus_typewriter_scrolling_enabled);
         assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);
+    }
+
+    #[test]
+    fn test_style_check_settings_defaults() {
+        let (store, _temp) = create_test_store();
+        let settings = store.style_check_get().unwrap();
+
+        assert_eq!(settings, StyleCheckSettings::default());
+        assert_eq!(settings.marker_style, settings::StyleMarkerStyle::Highlight);
+    }
+
+    #[test]
+    fn test_style_check_settings_round_trip() {
+        let (store, _temp) = create_test_store();
+        let settings = StyleCheckSettings {
+            enabled: true,
+            categories: settings::StyleCheckCategorySettings { filler: true, redundancy: false, cliche: true },
+            custom_patterns: vec![StyleCheckPattern {
+                text: "in this day and age".to_string(),
+                category: "cliche".to_string(),
+                replacement: Some("today".to_string()),
+            }],
+            marker_style: settings::StyleMarkerStyle::Underline,
+        };
+
+        store.style_check_set(&settings).unwrap();
+        let loaded = store.style_check_get().unwrap();
+
+        assert_eq!(loaded, settings);
+    }
+
+    #[test]
+    fn test_style_check_settings_backfills_marker_style() {
+        let (store, _temp) = create_test_store();
+        let conn = store
+            .conn
+            .lock()
+            .expect("expected to lock database connection for test");
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![
+                STYLE_CHECK_SETTINGS_KEY,
+                "{\"enabled\":true,\"categories\":{\"filler\":true,\"redundancy\":true,\"cliche\":true},\"custom_patterns\":[]}",
+                Utc::now().to_rfc3339(),
+            ],
+        )
+        .unwrap();
+        drop(conn);
+
+        let loaded = store.style_check_get().unwrap();
+        assert!(loaded.enabled);
+        assert_eq!(loaded.marker_style, settings::StyleMarkerStyle::Highlight);
     }
 
     #[test]

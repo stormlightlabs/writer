@@ -90,6 +90,7 @@ export type PosHighlightingEnabled = boolean;
 export type StyleCheckCategorySettings = Record<PatternCategory, boolean>;
 
 export type PatternCategory = "filler" | "redundancy" | "cliche";
+export type StyleMarkerStyle = "highlight" | "strikethrough" | "underline";
 
 export type StyleCheckPattern = { text: string; category: PatternCategory; replacement?: string };
 
@@ -97,6 +98,7 @@ export type StyleCheckSettings = {
   enabled: boolean;
   categories: StyleCheckCategorySettings;
   customPatterns: StyleCheckPattern[];
+  markerStyle: StyleMarkerStyle;
 };
 
 export type CaptureMode = "QuickNote" | "WritingSession" | "Append";

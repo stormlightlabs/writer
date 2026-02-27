@@ -79,6 +79,12 @@ function buildAutomaton(patterns: Pattern[]): Node {
   return root;
 }
 
+const WORD_CHAR_PATTERN = /[\p{L}\p{N}]/u;
+
+function isWordChar(char: string | undefined): boolean {
+  return typeof char === "string" && WORD_CHAR_PATTERN.test(char);
+}
+
 function isWordBoundary(text: string, pos: number): boolean {
   if (pos <= 0 || pos >= text.length) {
     return true;
@@ -86,9 +92,7 @@ function isWordBoundary(text: string, pos: number): boolean {
 
   const prev = text[pos - 1];
   const next = text[pos];
-  const isPrevLetter = /[a-zA-Z]/.test(prev);
-  const isNextLetter = /[a-zA-Z]/.test(next);
-  return !isPrevLetter || !isNextLetter;
+  return !isWordChar(prev) || !isWordChar(next);
 }
 
 /**

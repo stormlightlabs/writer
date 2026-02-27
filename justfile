@@ -13,7 +13,7 @@ compile:
 # Overall code quality check
 check: format lint compile test
 
-# Finds comments
+# Finds comments in rust code
 find-comments:
     rg -n --pcre2 '^\s*//(?![!/])' -g '*.rs'
 

@@ -15,6 +15,7 @@ import type {
   SaveStatus,
   SearchHit,
   StyleCheckPattern,
+  StyleMarkerStyle,
 } from "$types";
 
 export type EditorState = {
@@ -52,6 +53,7 @@ export type PersistedStyleCheckSettings = {
   enabled: boolean;
   categories: StyleCheckCategorySettings;
   custom_patterns: StyleCheckPattern[];
+  marker_style: StyleMarkerStyle;
 };
 
 export type BackendEvent =

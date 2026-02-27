@@ -36,6 +36,7 @@ export type EditorProps = {
   disabled?: boolean;
   placeholder?: string;
   debounceMs?: number;
+  styleSelection?: { from: number; to: number; requestId: number } | null;
   presentation?: EditorPresentationOverrides;
   onChange?: (text: string) => void;
   onSave?: () => void;
@@ -135,6 +136,7 @@ function getStyleCheckExtension(
         category: p.category,
         replacement: p.replacement,
       })),
+      markerStyle: settings.markerStyle,
       onMatchesChange: onStyleMatchesChange,
     }),
     styleCheckTheme,
@@ -210,6 +212,7 @@ export function Editor(
     disabled = false,
     placeholder,
     debounceMs = 500,
+    styleSelection = null,
     presentation,
     onChange,
     onSave,
@@ -380,6 +383,7 @@ export function Editor(
       && previousPresentation.styleCheckSettings.categories.filler === styleCheckSettings.categories.filler
       && previousPresentation.styleCheckSettings.categories.redundancy === styleCheckSettings.categories.redundancy
       && previousPresentation.styleCheckSettings.categories.cliche === styleCheckSettings.categories.cliche
+      && previousPresentation.styleCheckSettings.markerStyle === styleCheckSettings.markerStyle
       && areCustomPatternsEqual(
         previousPresentation.styleCheckSettings.customPatterns,
         styleCheckSettings.customPatterns,
@@ -444,6 +448,7 @@ export function Editor(
       || previousPresentation.styleCheckSettings.categories.filler !== styleCheckSettings.categories.filler
       || previousPresentation.styleCheckSettings.categories.redundancy !== styleCheckSettings.categories.redundancy
       || previousPresentation.styleCheckSettings.categories.cliche !== styleCheckSettings.categories.cliche
+      || previousPresentation.styleCheckSettings.markerStyle !== styleCheckSettings.markerStyle
       || !areCustomPatternsEqual(
         previousPresentation.styleCheckSettings.customPatterns,
         styleCheckSettings.customPatterns,
@@ -484,6 +489,22 @@ export function Editor(
 
     view.dispatch({ changes: { from: 0, to: currentText.length, insert: initialText } });
   }, [initialText]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    const styleSelectionFrom = styleSelection?.from ?? null;
+    const styleSelectionTo = styleSelection?.to ?? null;
+    if (!view || styleSelectionFrom === null || styleSelectionTo === null) {
+      return;
+    }
+
+    const docLength = view.state.doc.length;
+    const from = Math.max(0, Math.min(docLength, styleSelectionFrom));
+    const to = Math.max(from, Math.min(docLength, styleSelectionTo));
+
+    view.dispatch({ selection: { anchor: from, head: to }, scrollIntoView: true });
+    view.focus();
+  }, [styleSelection, styleSelection?.requestId]);
 
   const focus = useCallback(() => {
     viewRef.current?.focus();

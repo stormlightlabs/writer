@@ -14,10 +14,11 @@
  * - Clichés: https://github.com/dundalek/no-cliches (MIT)
  */
 
-import { PatternCategory } from "$types";
-import { RangeSetBuilder } from "@codemirror/state";
+import { PatternCategory, StyleMarkerStyle } from "$types";
+import { RangeSetBuilder, Text } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
-import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
+import { Decoration, DecorationSet, EditorView, hoverTooltip, ViewPlugin, ViewUpdate } from "@codemirror/view";
+import { CATEGORY_LABELS } from "./constants";
 import styleDictionaries from "./data/style-dictionaries.json";
 import type { Pattern } from "./pattern-matcher";
 import { PatternMatcher } from "./pattern-matcher";
@@ -38,6 +39,7 @@ export type StyleCheckConfig = {
   enabled: boolean;
   categories: { filler: boolean; redundancy: boolean; cliche: boolean };
   customPatterns: Pattern[];
+  markerStyle: StyleMarkerStyle;
   onMatchesChange?: (matches: StyleMatch[]) => void;
 };
 
@@ -45,6 +47,7 @@ const DEFAULT_CONFIG: StyleCheckConfig = {
   enabled: true,
   categories: { filler: true, redundancy: true, cliche: true },
   customPatterns: [],
+  markerStyle: "highlight",
 };
 
 type DictionaryEntry = {
@@ -53,12 +56,21 @@ type DictionaryEntry = {
   patterns: Array<{ text: string; replacement: string | null; source?: string }>;
 };
 
+const DICTIONARY_CATEGORY_MAP: Record<string, PatternCategory> = {
+  fillers: "filler",
+  redundancies: "redundancy",
+  cliches: "cliche",
+};
+
 function loadBuiltinPatterns(): Pattern[] {
   const patterns: Pattern[] = [];
 
-  for (const [category, dict] of Object.entries(styleDictionaries)) {
-    if (category.startsWith("_")) continue;
-    const cat = category as PatternCategory;
+  for (const [dictionaryCategory, dict] of Object.entries(styleDictionaries)) {
+    if (dictionaryCategory.startsWith("_")) continue;
+    const cat = DICTIONARY_CATEGORY_MAP[dictionaryCategory];
+    if (!cat) {
+      continue;
+    }
     const entry = dict as DictionaryEntry;
     for (const pattern of entry.patterns) {
       patterns.push({ text: pattern.text, category: cat, replacement: pattern.replacement ?? undefined });
@@ -75,49 +87,130 @@ function createMatcher(config: StyleCheckConfig): PatternMatcher {
   return new PatternMatcher(patterns);
 }
 
-function scanViewport(
-  view: EditorView,
-  matcher: PatternMatcher,
-): { matches: StyleMatch[]; decorations: DecorationSet } {
+export function collectStyleMatches(doc: Text, matcher: PatternMatcher): StyleMatch[] {
+  const text = doc.toString();
+  const scannedMatches = matcher.scan(text);
   const matches: StyleMatch[] = [];
-  const builder = new RangeSetBuilder<Decoration>();
+  const seenMatches = new Set<string>();
 
-  for (const { from, to } of view.visibleRanges) {
-    const text = view.state.doc.sliceString(from, to);
-    const scannedMatches = matcher.scan(text);
-
-    for (const match of scannedMatches) {
-      const matchFrom = from + match.start;
-      const matchTo = from + match.end;
-
-      const line = view.state.doc.lineAt(matchFrom);
-      const column = matchFrom - line.from;
-
-      matches.push({
-        from: matchFrom,
-        to: matchTo,
-        text: match.pattern.text,
-        category: match.pattern.category,
-        replacement: match.pattern.replacement,
-        line: line.number,
-        column,
-      });
-
-      builder.add(
-        matchFrom,
-        matchTo,
-        Decoration.mark({
-          class: `style-flag style-${match.pattern.category}`,
-          attributes: {
-            "data-category": match.pattern.category,
-            ...(match.pattern.replacement && { "data-replacement": match.pattern.replacement }),
-          },
-        }),
-      );
+  for (const match of scannedMatches) {
+    const matchFrom = match.start;
+    const matchTo = match.end;
+    const dedupeKey = `${matchFrom}:${matchTo}:${match.pattern.category}:${match.pattern.replacement ?? ""}`;
+    if (seenMatches.has(dedupeKey)) {
+      continue;
     }
+    seenMatches.add(dedupeKey);
+
+    const line = doc.lineAt(matchFrom);
+    const column = matchFrom - line.from;
+
+    matches.push({
+      from: matchFrom,
+      to: matchTo,
+      text: text.slice(matchFrom, matchTo),
+      category: match.pattern.category,
+      replacement: match.pattern.replacement,
+      line: line.number,
+      column,
+    });
   }
 
-  return { matches, decorations: builder.finish() };
+  matches.sort((left, right) =>
+    left.from - right.from || left.to - right.to || left.category.localeCompare(right.category)
+  );
+
+  return matches;
+}
+
+function buildDecorations(matches: StyleMatch[], markerStyle: StyleMarkerStyle): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+
+  for (const match of matches) {
+    builder.add(
+      match.from,
+      match.to,
+      Decoration.mark({
+        class: `style-flag style-${match.category} style-marker-${markerStyle}`,
+        attributes: {
+          "data-category": match.category,
+          "data-marker-style": markerStyle,
+          ...(match.replacement && { "data-replacement": match.replacement }),
+        },
+      }),
+    );
+  }
+
+  return builder.finish();
+}
+
+function runStyleScan(
+  view: EditorView,
+  matcher: PatternMatcher,
+  markerStyle: StyleMarkerStyle,
+): { matches: StyleMatch[]; decorations: DecorationSet } {
+  const matches = collectStyleMatches(view.state.doc, matcher);
+  const decorations = buildDecorations(matches, markerStyle);
+  return { matches, decorations };
+}
+
+export function resolveStyleMatchAtPosition(matches: StyleMatch[], position: number, side: number): StyleMatch | null {
+  const normalizedPosition = side < 0 && position > 0 ? position - 1 : position;
+  for (const match of matches) {
+    if (match.from > normalizedPosition) {
+      break;
+    }
+    if (normalizedPosition >= match.from && normalizedPosition < match.to) {
+      return match;
+    }
+  }
+  return null;
+}
+
+function createTooltipContent(match: StyleMatch): HTMLDivElement {
+  const container = document.createElement("div");
+  container.className = "cm-style-check-tooltip-content";
+
+  const title = document.createElement("div");
+  title.className = "cm-style-check-tooltip-title";
+  title.textContent = CATEGORY_LABELS[match.category];
+  container.append(title);
+
+  const flagged = document.createElement("div");
+  flagged.className = "cm-style-check-tooltip-flagged";
+  flagged.textContent = `Flagged: "${match.text}"`;
+  container.append(flagged);
+
+  if (match.replacement) {
+    const suggestion = document.createElement("div");
+    suggestion.className = "cm-style-check-tooltip-suggestion";
+    suggestion.textContent = `Suggestion: ${match.replacement}`;
+    container.append(suggestion);
+  }
+
+  return container;
+}
+
+function createStyleCheckTooltip(stylePlugin: ReturnType<typeof createStyleCheckPlugin>): Extension {
+  return hoverTooltip((view, pos, side) => {
+    const plugin = view.plugin(stylePlugin);
+    if (!plugin || plugin.matches.length === 0) {
+      return null;
+    }
+
+    const match = resolveStyleMatchAtPosition(plugin.matches, pos, side);
+    if (!match) {
+      return null;
+    }
+
+    return {
+      pos: match.from,
+      end: match.to,
+      above: true,
+      create: () => ({ dom: createTooltipContent(match) }),
+      class: "cm-style-check-tooltip",
+    };
+  });
 }
 
 function createStyleCheckPlugin(config: StyleCheckConfig) {
@@ -131,7 +224,7 @@ function createStyleCheckPlugin(config: StyleCheckConfig) {
         this.matcher = createMatcher(config);
 
         if (config.enabled) {
-          const result = scanViewport(view, this.matcher);
+          const result = runStyleScan(view, this.matcher, config.markerStyle);
           this.decorations = result.decorations;
           this.matches = result.matches;
           config.onMatchesChange?.(this.matches);
@@ -148,8 +241,8 @@ function createStyleCheckPlugin(config: StyleCheckConfig) {
           return;
         }
 
-        if (update.docChanged || update.viewportChanged) {
-          const result = scanViewport(this.view, this.matcher);
+        if (update.docChanged) {
+          const result = runStyleScan(this.view, this.matcher, config.markerStyle);
           this.decorations = result.decorations;
           this.matches = result.matches;
           config.onMatchesChange?.(this.matches);
@@ -166,22 +259,33 @@ function createStyleCheckPlugin(config: StyleCheckConfig) {
 
 export function styleCheck(config: Partial<StyleCheckConfig> = {}): Extension {
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
-  return createStyleCheckPlugin(fullConfig);
+  const stylePlugin = createStyleCheckPlugin(fullConfig);
+  return [stylePlugin, createStyleCheckTooltip(stylePlugin)];
 }
 
 export const styleCheckTheme = EditorView.theme({
-  ".style-flag": {
-    textDecoration: "line-through",
+  ".style-flag": { cursor: "help", transition: "opacity 0.15s ease-in-out" },
+  ".style-marker-strikethrough": { textDecorationLine: "line-through", textDecorationThickness: "1.5px" },
+  ".style-marker-underline": {
+    textDecorationLine: "underline",
     textDecorationThickness: "1.5px",
-    cursor: "help",
-    transition: "opacity 0.15s ease-in-out",
+    textUnderlineOffset: "0.18em",
   },
+  ".style-marker-highlight": { textDecorationLine: "none", borderRadius: "2px", padding: "0 1px" },
   ".style-filler": { textDecorationColor: "#f97316" },
   ".style-redundancy": { textDecorationColor: "#eab308" },
   ".style-cliche": { textDecorationColor: "#ef4444" },
+  ".style-marker-highlight.style-filler": { backgroundColor: "#f9731633" },
+  ".style-marker-highlight.style-redundancy": { backgroundColor: "#eab30833" },
+  ".style-marker-highlight.style-cliche": { backgroundColor: "#ef444433" },
+  ".cm-tooltip.cm-style-check-tooltip": { maxWidth: "320px", padding: "8px 10px" },
+  ".cm-style-check-tooltip-content": { display: "flex", flexDirection: "column", gap: "4px" },
+  ".cm-style-check-tooltip-title": { fontWeight: "600", fontSize: "12px" },
+  ".cm-style-check-tooltip-flagged": { fontSize: "12px", opacity: "0.9" },
+  ".cm-style-check-tooltip-suggestion": { fontSize: "12px", opacity: "0.9" },
 });
 
 export function getStyleMatches(view: EditorView): StyleMatch[] {
-  const plugin = view.plugin(createStyleCheckPlugin(DEFAULT_CONFIG));
-  return plugin?.getMatches() ?? [];
+  const matcher = createMatcher(DEFAULT_CONFIG);
+  return collectStyleMatches(view.state.doc, matcher);
 }

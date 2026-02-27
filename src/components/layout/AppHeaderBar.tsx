@@ -1,7 +1,7 @@
 import { Button } from "$components/Button";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
-import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
+import { CheckIcon, ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
+import { useAppHeaderBarState, useHelpSheetState, useStyleDiagnosticsUiState } from "$state/selectors";
 import { useCallback, useMemo } from "react";
 
 const AppTitle = ({ hideTitle }: { hideTitle: boolean }) => (
@@ -20,9 +20,11 @@ const SearchRow = (
     onToggleSidebar,
     onToggleTabBar,
     onToggleStatusBar,
+    onToggleStyleDiagnostics,
     sidebarCollapsed,
     tabBarCollapsed,
     statusBarCollapsed,
+    styleDiagnosticsOpen,
     iconOnly,
     showSearchShortcut,
     showHelpShortcut,
@@ -33,9 +35,11 @@ const SearchRow = (
     onToggleSidebar: () => void;
     onToggleTabBar: () => void;
     onToggleStatusBar: () => void;
+    onToggleStyleDiagnostics: () => void;
     sidebarCollapsed: boolean;
     tabBarCollapsed: boolean;
     statusBarCollapsed: boolean;
+    styleDiagnosticsOpen: boolean;
     iconOnly: boolean;
     showSearchShortcut: boolean;
     showHelpShortcut: boolean;
@@ -96,6 +100,16 @@ const SearchRow = (
           <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Cmd+/</kbd>
         )}
       </Button>
+      <Button
+        onClick={onToggleStyleDiagnostics}
+        variant={styleDiagnosticsOpen ? "surface" : "outline"}
+        size="sm"
+        className={`flex items-center gap-1.5 ${iconOnly ? "w-8 h-8 p-0 justify-center" : ""}`}
+        title={styleDiagnosticsOpen ? "Hide style diagnostics" : "Show style diagnostics"}
+        aria-label="Toggle style diagnostics">
+        <CheckIcon size="sm" />
+        {iconOnly ? null : <span>Style</span>}
+      </Button>
 
       <Button
         onClick={onToggleSidebar}
@@ -132,6 +146,7 @@ const SearchRow = (
 
 export const AppHeaderBar = () => {
   const { setOpen: setHelpSheetOpen } = useHelpSheetState();
+  const { isOpen: styleDiagnosticsOpen, toggle: toggleStyleDiagnostics } = useStyleDiagnosticsUiState();
   const {
     sidebarCollapsed,
     tabBarCollapsed,
@@ -162,9 +177,11 @@ export const AppHeaderBar = () => {
         onToggleSidebar={toggleSidebarCollapsed}
         onToggleTabBar={toggleTabBarCollapsed}
         onToggleStatusBar={toggleStatusBarCollapsed}
+        onToggleStyleDiagnostics={toggleStyleDiagnostics}
         sidebarCollapsed={sidebarCollapsed}
         tabBarCollapsed={tabBarCollapsed}
         statusBarCollapsed={statusBarCollapsed}
+        styleDiagnosticsOpen={styleDiagnosticsOpen}
         iconOnly={iconOnly}
         showSearchShortcut={showSearchShortcut}
         showHelpShortcut={showHelpShortcut}

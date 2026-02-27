@@ -42,6 +42,18 @@ describe("PatternMatcher", () => {
     expect(matches[0].end).toBe(12);
   });
 
+  it("should respect unicode word boundaries", () => {
+    const patterns = [{ text: "just", category: "filler" as const }];
+    const matcher = new PatternMatcher(patterns);
+    const text = "éjust should not match, but just should.";
+    const matches = matcher.scan(text);
+    const expectedStart = text.lastIndexOf("just");
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0].start).toBe(expectedStart);
+    expect(matches[0].end).toBe(matches[0].start + 4);
+  });
+
   it("should be case-insensitive", () => {
     const patterns = [{ text: "basically", category: "filler" as const }];
     const matcher = new PatternMatcher(patterns);

@@ -1,5 +1,6 @@
 import type { WorkspaceEditorProps, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
 import { StatusBarProps } from "$components/StatusBar";
+import type { StyleMatch } from "$editor/style-check";
 import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects";
 import { useEditorPreviewEffects } from "$hooks/app/useEditorPreviewEffects";
 import { useSettingsSync } from "$hooks/app/useSettingsSync";
@@ -13,9 +14,9 @@ import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
 import { usePreview } from "$hooks/usePreview";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions } from "$pdf/types";
-import { useEditorPresentationStateRaw } from "$state/selectors";
+import { useEditorPresentationState, useStyleDiagnosticsUiState } from "$state/selectors";
 import type { DocRef, Maybe } from "$types";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type FocusModePanelProps = { editor: WorkspaceEditorProps; statusBar: StatusBarProps };
 
@@ -42,7 +43,10 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   useLayoutHotkeys();
   useHelpSheetHotkey();
 
-  const editorPresentation = useEditorPresentationStateRaw();
+  const editorPresentation = useEditorPresentationState();
+  const { isOpen: diagnosticsVisible, setOpen: setDiagnosticsVisible } = useStyleDiagnosticsUiState();
+  const [styleMatches, setStyleMatches] = useState<StyleMatch[]>([]);
+  const [styleSelection, setStyleSelection] = useState<{ from: number; to: number; requestId: number } | null>(null);
   const {
     locations,
     documents,
@@ -73,7 +77,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   const { handleOpenPdfExport, handleExportPdf } = usePdfExportUI({
     activeTab,
     text: editorModel.text,
-    editorFontFamily: editorPresentation.editorFontFamily,
+    editorFontFamily: editorPresentation.fontFamily,
     exportPdf,
   });
 
@@ -121,6 +125,17 @@ export function useWorkspaceViewController(): WorkspaceViewController {
 
   const activeDocRef = activeTab?.docRef ?? null;
 
+  useEffect(() => {
+    setStyleMatches([]);
+    setStyleSelection(null);
+  }, [activeTab?.id]);
+
+  useEffect(() => {
+    if (!editorPresentation.styleCheckSettings.enabled) {
+      setStyleMatches([]);
+    }
+  }, [editorPresentation.styleCheckSettings.enabled]);
+
   useDocumentSessionEffects({
     isSidebarLoading,
     locations,
@@ -145,6 +160,18 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   });
 
   useSettingsSync();
+
+  const handleStyleMatchesChange = useCallback((matches: StyleMatch[]) => {
+    setStyleMatches(matches);
+  }, []);
+
+  const handleSelectStyleMatch = useCallback((match: StyleMatch) => {
+    setStyleSelection((previous) => ({ from: match.from, to: match.to, requestId: (previous?.requestId ?? 0) + 1 }));
+  }, []);
+
+  const handleCloseDiagnostics = useCallback(() => {
+    setDiagnosticsVisible(false);
+  }, [setDiagnosticsVisible]);
 
   const toolbarProps = useMemo(
     () => ({
@@ -176,8 +203,18 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       onSave: handleSave,
       onCursorMove: handleCursorMove,
       onSelectionChange: handleSelectionChange,
+      onStyleMatchesChange: handleStyleMatchesChange,
+      styleSelection,
     }),
-    [editorModel.text, handleEditorChange, handleSave, handleCursorMove, handleSelectionChange],
+    [
+      editorModel.text,
+      handleEditorChange,
+      handleSave,
+      handleCursorMove,
+      handleSelectionChange,
+      handleStyleMatchesChange,
+      styleSelection,
+    ],
   );
 
   const statusBarProps = useMemo(() => ({ docMeta: activeDocMeta, stats: editorStats }), [activeDocMeta, editorStats]);
@@ -215,8 +252,29 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   );
 
   const workspacePanelProps = useMemo(
-    () => ({ toolbar: toolbarProps, editor: editorProps, preview: previewProps, statusBar: statusBarProps }),
-    [toolbarProps, editorProps, previewProps, statusBarProps],
+    () => ({
+      toolbar: toolbarProps,
+      editor: editorProps,
+      preview: previewProps,
+      statusBar: statusBarProps,
+      diagnostics: {
+        isVisible: diagnosticsVisible && editorPresentation.styleCheckSettings.enabled,
+        matches: styleMatches,
+        onSelectMatch: handleSelectStyleMatch,
+        onClose: handleCloseDiagnostics,
+      },
+    }),
+    [
+      toolbarProps,
+      editorProps,
+      previewProps,
+      statusBarProps,
+      diagnosticsVisible,
+      editorPresentation.styleCheckSettings.enabled,
+      styleMatches,
+      handleSelectStyleMatch,
+      handleCloseDiagnostics,
+    ],
   );
 
   return { workspacePanelProps, focusModePanelProps, handleExportPdf };

@@ -12,6 +12,7 @@ const FOCUS_MODE_STYLE_CHECK_SETTINGS: StyleCheckSettings = {
   enabled: false,
   categories: { filler: true, redundancy: true, cliche: true },
   customPatterns: [],
+  markerStyle: "highlight",
 };
 
 export const useLayoutChromeState = () =>
@@ -421,6 +422,15 @@ export const useHelpSheetState = () =>
       isOpen: state.helpSheetOpen,
       setOpen: state.setHelpSheetOpen,
       toggle: state.toggleHelpSheet,
+    })),
+  );
+
+export const useStyleDiagnosticsUiState = () =>
+  useUiStore(
+    useShallow((state) => ({
+      isOpen: state.styleDiagnosticsOpen,
+      setOpen: state.setStyleDiagnosticsOpen,
+      toggle: state.toggleStyleDiagnostics,
     })),
   );
 

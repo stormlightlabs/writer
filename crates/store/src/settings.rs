@@ -37,6 +37,10 @@ fn default_create_readme_in_new_locations() -> bool {
     true
 }
 
+fn default_style_marker_style() -> StyleMarkerStyle {
+    StyleMarkerStyle::default()
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum FocusDimmingMode {
@@ -53,6 +57,15 @@ pub struct StyleCheckCategorySettings {
     pub cliche: bool,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum StyleMarkerStyle {
+    #[default]
+    Highlight,
+    Strikethrough,
+    Underline,
+}
+
 impl Default for StyleCheckCategorySettings {
     fn default() -> Self {
         Self { filler: true, redundancy: true, cliche: true }
@@ -67,6 +80,8 @@ pub struct StyleCheckSettings {
     pub categories: StyleCheckCategorySettings,
     #[serde(default)]
     pub custom_patterns: Vec<StyleCheckPattern>,
+    #[serde(default = "default_style_marker_style")]
+    pub marker_style: StyleMarkerStyle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
