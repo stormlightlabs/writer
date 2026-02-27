@@ -1,5 +1,6 @@
 import { Button } from "$components/Button";
-import { FolderIcon, MoreVerticalIcon, RefreshIcon } from "$icons";
+import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
+import { FolderIcon, MoreVerticalIcon, RefreshIcon, TrashIcon } from "$icons";
 import type { SidebarRefreshReason } from "$state/types";
 import { DocMeta, LocationDescriptor } from "$types";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
@@ -11,31 +12,62 @@ import { TreeItem } from "./TreeItem";
 
 const folderIcon = { Component: FolderIcon, size: "md" as const };
 
-const FolderItem = (
-  { name, isSelected, selectedDocPath, isExpanded, onItemClick, onToggleClick, actionProps }: {
-    name: string;
-    isSelected: boolean;
-    selectedDocPath?: string;
-    isExpanded: boolean;
-    onItemClick: () => void;
-    onToggleClick: () => void;
-    actionProps: LocationActionProps;
-  },
-) => (
-  <div className="relative">
-    <TreeItem
-      icon={folderIcon}
-      label={name}
-      isSelected={isSelected && !selectedDocPath}
-      isExpanded={isExpanded}
-      hasChildItems
-      level={0}
-      onClick={onItemClick}
-      onToggle={onToggleClick}>
-      <LocationActions {...actionProps} />
-    </TreeItem>
-  </div>
-);
+type FolderItemProps = {
+  name: string;
+  isSelected: boolean;
+  selectedDocPath?: string;
+  isExpanded: boolean;
+  isRefreshing: boolean;
+  onItemClick: () => void;
+  onToggleClick: () => void;
+  onRefresh: () => void;
+  actionProps: LocationActionProps;
+};
+
+function FolderItem(
+  { name, isSelected, selectedDocPath, isExpanded, isRefreshing, onItemClick, onToggleClick, onRefresh, actionProps }:
+    FolderItemProps,
+) {
+  const { isOpen, position, open, close } = useContextMenu();
+
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    open(e);
+  }, [open]);
+
+  const contextMenuItems = useMemo<(ContextMenuItem | ContextMenuDivider)[]>(
+    () => [{ label: "Refresh", onClick: onRefresh, icon: <RefreshIcon size="sm" />, disabled: isRefreshing }, {
+      divider: true,
+    }, {
+      label: "Remove Location",
+      onClick: actionProps.handleRemoveClick,
+      icon: <TrashIcon size="sm" />,
+      danger: true,
+    }],
+    [onRefresh, isRefreshing, actionProps.handleRemoveClick],
+  );
+
+  return (
+    <>
+      <div className="relative">
+        <TreeItem
+          icon={folderIcon}
+          label={name}
+          isSelected={isSelected && !selectedDocPath}
+          isExpanded={isExpanded}
+          hasChildItems
+          level={0}
+          onClick={onItemClick}
+          onToggle={onToggleClick}
+          onContextMenu={handleContextMenu}>
+          <LocationActions {...actionProps} />
+        </TreeItem>
+      </div>
+      <ContextMenu isOpen={isOpen} position={position} onClose={close} items={contextMenuItems} />
+    </>
+  );
+}
 
 type LocationActionProps = {
   isMenuOpen: boolean;
@@ -70,6 +102,7 @@ type SidebarLocationItemProps = {
   onSelect: (id: number) => void;
   onToggle: (id: number) => void;
   onRemove: (id: number) => void;
+  onRefresh: (id: number) => void;
   onSelectDocument: (id: number, path: string) => void;
   setShowLocationMenu: Dispatch<SetStateAction<number | null>>;
   documents: DocMeta[];
@@ -88,6 +121,7 @@ function SidebarLocationItemComponent(
     onSelect,
     onToggle,
     onRemove,
+    onRefresh,
     onSelectDocument,
     setShowLocationMenu,
     documents,
@@ -106,6 +140,10 @@ function SidebarLocationItemComponent(
     event.stopPropagation();
     setShowLocationMenu((current) => current === location.id ? null : location.id);
   }, [location.id, setShowLocationMenu]);
+
+  const handleRefresh = useCallback(() => {
+    onRefresh(location.id);
+  }, [location.id, onRefresh]);
 
   const onItemClick = useCallback(() => {
     onSelect(location.id);
@@ -128,8 +166,10 @@ function SidebarLocationItemComponent(
         isSelected={isSelected && !selectedDocPath}
         selectedDocPath={selectedDocPath}
         isExpanded={isExpanded}
+        isRefreshing={isRefreshing}
         onItemClick={onItemClick}
         onToggleClick={onToggleClick}
+        onRefresh={handleRefresh}
         actionProps={actionProps} />
 
       {isExpanded && isSelected && (

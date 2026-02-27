@@ -168,6 +168,7 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
               onSelect={selectLocation}
               onToggle={toggleLocation}
               onRemove={handleRemoveLocation}
+              onRefresh={handleRefreshSidebar}
               onSelectDocument={handleSelectDocument}
               setShowLocationMenu={setShowLocationMenu}
               isMenuOpen={showLocationMenu === location.id}

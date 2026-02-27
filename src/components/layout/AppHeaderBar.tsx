@@ -1,13 +1,13 @@
 import { Button } from "$components/Button";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { ChevronDownIcon, LibraryIcon, SearchIcon } from "$icons";
+import { ChevronDownIcon, PenIcon, SearchIcon } from "$icons";
 import { useAppHeaderBarState } from "$state/selectors";
 import { useCallback, useMemo } from "react";
 
 const AppTitle = ({ hideTitle }: { hideTitle: boolean }) => (
   <div className="flex items-center gap-3">
     <div className={`h-8 ${hideTitle ? "w-8" : "px-2.5"} flex items-center justify-center`}>
-      <LibraryIcon size="lg" />
+      <PenIcon size="lg" />
     </div>
     {hideTitle ? null : <h1 className="m-0 text-[0.9375rem] font-semibold text-text-primary">Writer</h1>}
   </div>

@@ -1,58 +1,12 @@
-import { Button } from "$components/Button";
+import { ContextMenu, useContextMenu } from "$components/ContextMenu";
 import { EMPTY_NEW_DOC_TRANSITION, NO_MOTION_TRANSITION } from "$constants";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { useTabsState, useWorkspaceLocationsState } from "$state/selectors";
-import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
 import { NewButton } from "./NewButton";
-
-const CONTEXT_MENU_INITIAL = { opacity: 0, scale: 0.96 };
-const CONTEXT_MENU_ANIMATE = { opacity: 1, scale: 1 };
-const CONTEXT_MENU_EXIT = { opacity: 0, scale: 0.96 };
-const CONTEXT_MENU_TRANSITION = { duration: 0.12, ease: "easeOut" as const };
-
-type ContextMenuProps = {
-  style: React.CSSProperties;
-  close: () => void;
-  closeOthers: () => void;
-  closeAll: () => void;
-};
-
-function ContextMenu({ style, close, closeOthers, closeAll }: ContextMenuProps) {
-  const { isNarrow } = useViewportTier();
-  const skipAnimation = useSkipAnimation();
-  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : CONTEXT_MENU_TRANSITION, [skipAnimation]);
-  return (
-    <motion.div
-      initial={CONTEXT_MENU_INITIAL}
-      animate={CONTEXT_MENU_ANIMATE}
-      exit={CONTEXT_MENU_EXIT}
-      transition={transition}
-      className={`fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 p-1 ${
-        isNarrow ? "min-w-[140px]" : "min-w-[160px]"
-      }`}
-      style={style}>
-      <Button
-        onClick={close}
-        className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
-        Close
-      </Button>
-      <Button
-        onClick={closeOthers}
-        className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
-        Close Others
-      </Button>
-      <Button
-        onClick={closeAll}
-        className="w-full px-3 py-2 bg-transparent border-none text-text-primary text-[0.8125rem] cursor-pointer text-left rounded hover:bg-layer-hover-02">
-        Close All
-      </Button>
-    </motion.div>
-  );
-}
 
 export type DocumentTabsProps = { onNewDocument?: () => void };
 
@@ -64,18 +18,13 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
   const skipAnimation = useSkipAnimation();
   const [draggingTab, setDraggingTab] = useState<string | null>(null);
   const [dragOverTab, setDragOverTab] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
+  const [contextMenuTabId, setContextMenuTabId] = useState<string | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : EMPTY_NEW_DOC_TRANSITION, [skipAnimation]);
+  const { isOpen: isContextMenuOpen, position: contextMenuPosition, open: openContextMenu, close: closeContextMenu } =
+    useContextMenu();
 
-  useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
-    if (contextMenu) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [contextMenu]);
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : EMPTY_NEW_DOC_TRANSITION, [skipAnimation]);
 
   const handleDragStart = useCallback((e: React.DragEvent, tabId: string) => {
     setDraggingTab(tabId);
@@ -106,38 +55,39 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
   }, [draggingTab, handleReorderTabs, tabs]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
-    e.preventDefault();
-    setContextMenu({ tabId, x: e.clientX, y: e.clientY });
-  }, []);
+    setContextMenuTabId(tabId);
+    openContextMenu(e);
+  }, [openContextMenu]);
 
-  const closeContextMenu = useCallback(() => {
-    if (contextMenu) {
-      handleCloseTab(contextMenu.tabId);
-      setContextMenu(null);
+  const closeCurrentTab = useCallback(() => {
+    if (contextMenuTabId) {
+      handleCloseTab(contextMenuTabId);
     }
-  }, [contextMenu, handleCloseTab]);
+  }, [contextMenuTabId, handleCloseTab]);
 
-  const closeOthers = useCallback(() => {
-    if (contextMenu) {
+  const closeOtherTabs = useCallback(() => {
+    if (contextMenuTabId) {
       for (const t of tabs) {
-        if (t.id !== contextMenu.tabId) {
+        if (t.id !== contextMenuTabId) {
           handleCloseTab(t.id);
         }
       }
-      setContextMenu(null);
     }
-  }, [contextMenu, handleCloseTab, tabs]);
+  }, [contextMenuTabId, handleCloseTab, tabs]);
 
-  const closeAll = useCallback(() => {
+  const closeAllTabs = useCallback(() => {
     for (const t of tabs) {
       handleCloseTab(t.id);
     }
-    setContextMenu(null);
   }, [tabs, handleCloseTab]);
 
-  const contextMenuStyle = useMemo(() => contextMenu ? ({ left: contextMenu.x, top: contextMenu.y }) : {}, [
-    contextMenu,
-  ]);
+  const contextMenuItems = useMemo(
+    () => [{ label: "Close", onClick: closeCurrentTab }, { label: "Close Others", onClick: closeOtherTabs }, {
+      label: "Close All",
+      onClick: closeAllTabs,
+    }],
+    [closeCurrentTab, closeOtherTabs, closeAllTabs],
+  );
 
   const compactTabs = useMemo(() => isCompact || viewportWidth < 860, [isCompact, viewportWidth]);
 
@@ -177,15 +127,11 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
       ))}
       <NewButton onNewDocument={handleNewDocument} hasTabs transition={transition} />
 
-      <AnimatePresence>
-        {contextMenu && (
-          <ContextMenu
-            style={contextMenuStyle}
-            close={closeContextMenu}
-            closeOthers={closeOthers}
-            closeAll={closeAll} />
-        )}
-      </AnimatePresence>
+      <ContextMenu
+        isOpen={isContextMenuOpen}
+        position={contextMenuPosition}
+        onClose={closeContextMenu}
+        items={contextMenuItems} />
     </div>
   );
 }

@@ -14,6 +14,7 @@ type TreeItemProps = {
   level?: number;
   onClick?: () => void;
   onToggle?: () => void;
+  onContextMenu?: MouseEventHandler<HTMLDivElement>;
   children?: React.ReactNode;
 };
 
@@ -27,6 +28,7 @@ export function TreeItem(
     level = 0,
     onClick,
     onToggle,
+    onContextMenu,
     children,
   }: TreeItemProps,
 ) {
@@ -81,6 +83,7 @@ export function TreeItem(
       className={containerClasses}
       style={containerStyle}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
       {hasChildItems

@@ -150,3 +150,33 @@ export const ExpandIcon = ({ size = "md", className = "", style }: IconProps) =>
     <i className="i-ri-menu-fold-2-fill" />
   </span>
 );
+
+export const EditIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-edit-line" />
+  </span>
+);
+
+export const CopyIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-file-copy-line" />
+  </span>
+);
+
+export const ClipboardIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-clipboard-line" />
+  </span>
+);
+
+export const ExternalLinkIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-external-link-line" />
+  </span>
+);
+
+export const PenIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-pen-nib-line" />
+  </span>
+);
