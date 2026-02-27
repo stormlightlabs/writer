@@ -20,6 +20,10 @@ import type {
   BackendCaptureSubmitInput,
   BackendGlobalCaptureSettings,
   Cmd,
+  DirCreateParams,
+  DirDeleteParams,
+  DirMoveParams,
+  DirRenameParams,
   DocDeleteParams,
   DocListParams,
   DocMoveParams,
@@ -160,6 +164,22 @@ export function docMove(...[locationId, relPath, newRelPath, onOk, onErr]: DocMo
 
 export function docDelete(...[locationId, relPath, onOk, onErr]: DocDeleteParams<boolean>): Cmd {
   return invokeCmd<boolean>("doc_delete", { locationId, relPath }, onOk, onErr);
+}
+
+export function dirCreate(...[locationId, relPath, onOk, onErr]: DirCreateParams<boolean>): Cmd {
+  return invokeCmd<boolean>("dir_create", { locationId, relPath }, onOk, onErr);
+}
+
+export function dirRename(...[locationId, relPath, newName, onOk, onErr]: DirRenameParams<string>): Cmd {
+  return invokeCmd<string>("dir_rename", { locationId, relPath, newName }, onOk, onErr);
+}
+
+export function dirMove(...[locationId, relPath, newRelPath, onOk, onErr]: DirMoveParams<string>): Cmd {
+  return invokeCmd<string>("dir_move", { locationId, relPath, newRelPath }, onOk, onErr);
+}
+
+export function dirDelete(...[locationId, relPath, onOk, onErr]: DirDeleteParams<boolean>): Cmd {
+  return invokeCmd<boolean>("dir_delete", { locationId, relPath }, onOk, onErr);
 }
 
 export function searchDocuments(...[query, filters, limit, onOk, onErr]: SearchParams<SearchHit[]>): Cmd {

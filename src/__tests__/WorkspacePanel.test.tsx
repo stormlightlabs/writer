@@ -159,6 +159,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
     handleRenameDocument: vi.fn(),
     handleMoveDocument: vi.fn(),
     handleDeleteDocument: vi.fn(),
+    handleCreateDirectory: vi.fn(),
   });
 };
 

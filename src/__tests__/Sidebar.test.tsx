@@ -53,6 +53,7 @@ const createWorkspaceControllerState = (
   handleRenameDocument: vi.fn(),
   handleMoveDocument: vi.fn(),
   handleDeleteDocument: vi.fn(),
+  handleCreateDirectory: vi.fn(),
   ...overrides,
 });
 

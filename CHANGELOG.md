@@ -4,6 +4,7 @@
 
 ### 2026-02-27
 
+- Added PDF Preview on Export
 - Implemented file operations (move, rename, delete) with sidebar context menu support.
 - Added a draggable "Help" sheet and integrated diagnostics/style checking into routed sheets.
 - Added automatic "Markdown Tutorial" file added for new locations.

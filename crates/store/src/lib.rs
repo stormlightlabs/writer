@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use writer_core::{
     AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
     LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
-    is_conflicted_filename,
+    is_conflicted_filename, normalize_relative_path,
 };
 
 mod file_utils;
@@ -994,6 +994,213 @@ impl Store {
         Ok(true)
     }
 
+    pub fn dir_create(&self, location_id: LocationId, rel_path: &Path) -> Result<bool, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        let normalized_rel_path = normalize_relative_path(rel_path)?;
+        let full_path = location.root_path.join(&normalized_rel_path);
+
+        if full_path.exists() {
+            if full_path.is_dir() {
+                return Ok(false);
+            }
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file already exists at the target directory path",
+            ));
+        }
+
+        std::fs::create_dir_all(&full_path).map_err(|e| AppError::io(format!("Failed to create directory: {}", e)))?;
+
+        tracing::info!("Created directory: {:?}", normalized_rel_path);
+        Ok(true)
+    }
+
+    pub fn dir_rename(&self, location_id: LocationId, rel_path: &Path, new_name: &str) -> Result<PathBuf, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+        let normalized_rel_path = normalize_relative_path(rel_path)?;
+        let new_name_path = normalize_relative_path(Path::new(new_name))
+            .map_err(|_| AppError::invalid_path("New directory name is invalid"))?;
+
+        if new_name_path.components().count() != 1 {
+            return Err(AppError::invalid_path(
+                "New directory name must be a single path segment",
+            ));
+        }
+
+        let current_parent = normalized_rel_path.parent().unwrap_or(Path::new(""));
+        let next_rel_path = normalize_relative_path(&current_parent.join(&new_name_path))?;
+
+        let current_full_path = location.root_path.join(&normalized_rel_path);
+        let next_full_path = location.root_path.join(&next_rel_path);
+
+        if !current_full_path.exists() {
+            return Err(AppError::not_found("Directory not found"));
+        }
+        if !current_full_path.is_dir() {
+            return Err(AppError::invalid_path("Path is not a directory"));
+        }
+        if next_full_path.exists() {
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file or directory already exists at the destination",
+            ));
+        }
+
+        std::fs::rename(&current_full_path, &next_full_path)
+            .map_err(|e| AppError::io(format!("Failed to rename directory: {}", e)))?;
+
+        self.update_directory_paths_in_index(location_id, &normalized_rel_path, &next_rel_path)?;
+
+        tracing::info!("Renamed directory: {:?} -> {:?}", normalized_rel_path, next_rel_path);
+        Ok(next_rel_path)
+    }
+
+    pub fn dir_move(&self, location_id: LocationId, rel_path: &Path, new_rel_path: &Path) -> Result<PathBuf, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+        let normalized_rel_path = normalize_relative_path(rel_path)?;
+        let normalized_new_rel_path = normalize_relative_path(new_rel_path)?;
+
+        let old_str = normalized_rel_path.to_string_lossy();
+        let new_str = normalized_new_rel_path.to_string_lossy();
+        if new_str == old_str || new_str.starts_with(&format!("{}/", old_str)) {
+            return Err(AppError::invalid_path(
+                "Cannot move a directory into itself or one of its descendants",
+            ));
+        }
+
+        let current_full_path = location.root_path.join(&normalized_rel_path);
+        let next_full_path = location.root_path.join(&normalized_new_rel_path);
+
+        if !current_full_path.exists() {
+            return Err(AppError::not_found("Directory not found"));
+        }
+        if !current_full_path.is_dir() {
+            return Err(AppError::invalid_path("Path is not a directory"));
+        }
+        if next_full_path.exists() {
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file or directory already exists at the destination",
+            ));
+        }
+
+        if let Some(parent) = next_full_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| AppError::io(format!("Failed to create destination directory: {}", e)))?;
+        }
+
+        std::fs::rename(&current_full_path, &next_full_path)
+            .map_err(|e| AppError::io(format!("Failed to move directory: {}", e)))?;
+
+        self.update_directory_paths_in_index(location_id, &normalized_rel_path, &normalized_new_rel_path)?;
+
+        tracing::info!(
+            "Moved directory: {:?} -> {:?}",
+            normalized_rel_path,
+            normalized_new_rel_path
+        );
+        Ok(normalized_new_rel_path)
+    }
+
+    pub fn dir_delete(&self, location_id: LocationId, rel_path: &Path) -> Result<bool, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+        let normalized_rel_path = normalize_relative_path(rel_path)?;
+        let full_path = location.root_path.join(&normalized_rel_path);
+
+        if !full_path.exists() {
+            return Ok(false);
+        }
+        if !full_path.is_dir() {
+            return Err(AppError::invalid_path("Path is not a directory"));
+        }
+
+        std::fs::remove_dir_all(&full_path).map_err(|e| AppError::io(format!("Failed to delete directory: {}", e)))?;
+
+        self.remove_directory_from_index(location_id, &normalized_rel_path)?;
+
+        tracing::info!("Deleted directory: {:?}", normalized_rel_path);
+        Ok(true)
+    }
+
+    fn update_directory_paths_in_index(
+        &self, location_id: LocationId, old_rel_path: &Path, new_rel_path: &Path,
+    ) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let old_prefix = old_rel_path.to_string_lossy().to_string();
+        let new_prefix = new_rel_path.to_string_lossy().to_string();
+        let escaped_old_prefix = old_prefix.replace('\\', r"\\").replace('%', r"\%").replace('_', r"\_");
+        let old_like = format!("{}/%", escaped_old_prefix);
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "UPDATE documents
+             SET rel_path = ?2 || substr(rel_path, length(?1) + 1), updated_at = ?5
+             WHERE location_id = ?3 AND (rel_path = ?1 OR rel_path LIKE ?4 ESCAPE '\\')",
+            params![old_prefix, new_prefix, location_id.0, old_like, updated_at],
+        )
+        .map_err(|e| {
+            AppError::new(
+                ErrorCode::Index,
+                format!("Failed to update directory document rows: {}", e),
+            )
+        })?;
+
+        conn.execute(
+            "UPDATE docs_fts
+             SET rel_path = ?2 || substr(rel_path, length(?1) + 1)
+             WHERE location_id = ?3 AND (rel_path = ?1 OR rel_path LIKE ?4 ESCAPE '\\')",
+            params![old_prefix, new_prefix, location_id.0, old_like],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to update directory FTS rows: {}", e)))?;
+
+        Ok(())
+    }
+
+    fn remove_directory_from_index(&self, location_id: LocationId, rel_path: &Path) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let prefix = rel_path.to_string_lossy().to_string();
+        let escaped_prefix = prefix.replace('\\', r"\\").replace('%', r"\%").replace('_', r"\_");
+        let prefix_like = format!("{}/%", escaped_prefix);
+
+        conn.execute(
+            "DELETE FROM documents
+             WHERE location_id = ?1 AND (rel_path = ?2 OR rel_path LIKE ?3 ESCAPE '\\')",
+            params![location_id.0, prefix, prefix_like],
+        )
+        .map_err(|e| {
+            AppError::new(
+                ErrorCode::Index,
+                format!("Failed to delete directory document rows: {}", e),
+            )
+        })?;
+
+        conn.execute(
+            "DELETE FROM docs_fts
+             WHERE location_id = ?1 AND (rel_path = ?2 OR rel_path LIKE ?3 ESCAPE '\\')",
+            params![location_id.0, prefix, prefix_like],
+        )
+        .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to delete directory FTS rows: {}", e)))?;
+
+        Ok(())
+    }
+
     /// Updates document entry in catalog
     fn update_doc_in_catalog(&self, doc_id: &DocId, meta: &DocMeta) -> Result<(), AppError> {
         let conn = self
@@ -1613,6 +1820,55 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(location_path.join("level1/level2/file.md").exists());
+    }
+
+    #[test]
+    fn test_directory_create_and_delete() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location = store
+            .location_add("Directory Ops".to_string(), location_dir.path().to_path_buf())
+            .unwrap();
+
+        let created = store.dir_create(location.id, Path::new("nested/notes")).unwrap();
+        assert!(created);
+        assert!(location_dir.path().join("nested/notes").is_dir());
+
+        let created_again = store.dir_create(location.id, Path::new("nested/notes")).unwrap();
+        assert!(!created_again);
+
+        let deleted = store.dir_delete(location.id, Path::new("nested")).unwrap();
+        assert!(deleted);
+        assert!(!location_dir.path().join("nested").exists());
+    }
+
+    #[test]
+    fn test_directory_move_updates_catalog_paths() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location = store
+            .location_add("Directory Move".to_string(), location_dir.path().to_path_buf())
+            .unwrap();
+
+        let doc_a = DocId::new(location.id, PathBuf::from("old/sub/a.md")).unwrap();
+        let doc_b = DocId::new(location.id, PathBuf::from("old/sub/deep/b.md")).unwrap();
+        store.doc_save(&doc_a, "# A\n\nalphatoken", None).unwrap();
+        store.doc_save(&doc_b, "# B\n\ndeeptoken", None).unwrap();
+
+        let moved = store
+            .dir_move(location.id, Path::new("old/sub"), Path::new("new/archive"))
+            .unwrap();
+        assert_eq!(moved, PathBuf::from("new/archive"));
+        assert!(location_dir.path().join("new/archive/a.md").exists());
+        assert!(location_dir.path().join("new/archive/deep/b.md").exists());
+
+        let alpha_hits = store.search("alphatoken", None, 10).unwrap();
+        assert_eq!(alpha_hits.len(), 1);
+        assert_eq!(alpha_hits[0].rel_path, "new/archive/a.md");
+
+        let deep_hits = store.search("deeptoken", None, 10).unwrap();
+        assert_eq!(deep_hits.len(), 1);
+        assert_eq!(deep_hits[0].rel_path, "new/archive/deep/b.md");
     }
 
     #[test]

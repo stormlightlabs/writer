@@ -1,4 +1,13 @@
-import { docDelete, docList, docMove, docRename, locationAddViaDialog, locationRemove, runCmd } from "$ports";
+import {
+  dirCreate,
+  docDelete,
+  docList,
+  docMove,
+  docRename,
+  locationAddViaDialog,
+  locationRemove,
+  runCmd,
+} from "$ports";
 import {
   useTabsActions,
   useTabsState,
@@ -269,6 +278,30 @@ export function useWorkspaceController() {
     });
   }, []);
 
+  const handleCreateDirectory = useCallback(
+    (locationId: number, parentRelPath: string, newDirectoryName: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        const trimmedName = newDirectoryName.trim();
+        if (!trimmedName) {
+          resolve(false);
+          return;
+        }
+
+        const normalizedParent = parentRelPath.trim().replaceAll(/[/\\]+$/g, "");
+        const directoryRelPath = normalizedParent ? `${normalizedParent}/${trimmedName}` : trimmedName;
+
+        runCmd(dirCreate(locationId, directoryRelPath, (created) => {
+          logger.info(f("Directory create command completed", { locationId, directoryRelPath, created }));
+          resolve(created);
+        }, (error: AppError) => {
+          logger.error(f("Failed to create nested directory", { locationId, directoryRelPath, error }));
+          resolve(false);
+        }));
+      });
+    },
+    [],
+  );
+
   return useMemo(
     () => ({
       locations,
@@ -298,6 +331,7 @@ export function useWorkspaceController() {
       handleRenameDocument,
       handleMoveDocument,
       handleDeleteDocument,
+      handleCreateDirectory,
     }),
     [
       locations,
@@ -328,6 +362,7 @@ export function useWorkspaceController() {
       handleRenameDocument,
       handleMoveDocument,
       handleDeleteDocument,
+      handleCreateDirectory,
     ],
   );
 }

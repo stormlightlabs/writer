@@ -470,6 +470,89 @@ pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
     }
 }
 
+/// Creates a directory at a relative path within a location
+#[tauri::command]
+pub fn dir_create(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!("Creating directory: location={:?}, path={:?}", location_id, rel_path);
+
+    match state.store.dir_create(location_id, &rel_path) {
+        Ok(created) => Ok(CommandResult::ok(created)),
+        Err(e) => {
+            tracing::error!("Failed to create directory: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Renames a directory to a new name within the same parent directory
+#[tauri::command]
+pub fn dir_rename(
+    state: State<'_, AppState>, location_id: i64, rel_path: String, new_name: String,
+) -> Result<CommandResult<String>> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!(
+        "Renaming directory: location={:?}, path={:?}, new_name={}",
+        location_id,
+        rel_path,
+        new_name
+    );
+
+    match state.store.dir_rename(location_id, &rel_path, &new_name) {
+        Ok(next_path) => Ok(CommandResult::ok(next_path.to_string_lossy().to_string())),
+        Err(e) => {
+            tracing::error!("Failed to rename directory: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Moves a directory to a new relative path within the same location
+#[tauri::command]
+pub fn dir_move(
+    state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
+) -> Result<CommandResult<String>> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+    let new_rel_path = PathBuf::from(&new_rel_path);
+
+    tracing::debug!(
+        "Moving directory: location={:?}, path={:?}, new_path={:?}",
+        location_id,
+        rel_path,
+        new_rel_path
+    );
+
+    match state.store.dir_move(location_id, &rel_path, &new_rel_path) {
+        Ok(next_path) => Ok(CommandResult::ok(next_path.to_string_lossy().to_string())),
+        Err(e) => {
+            tracing::error!("Failed to move directory: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Deletes a directory and all indexed documents beneath it
+#[tauri::command]
+pub fn dir_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    tracing::debug!("Deleting directory: location={:?}, path={:?}", location_id, rel_path);
+
+    match state.store.dir_delete(location_id, &rel_path) {
+        Ok(deleted) => Ok(CommandResult::ok(deleted)),
+        Err(e) => {
+            tracing::error!("Failed to delete directory: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
 /// Enables filesystem watching for a location and reindexes changed files.
 #[tauri::command]
 pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
