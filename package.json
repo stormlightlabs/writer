@@ -14,7 +14,10 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "check": "tsc --noEmit",
-    "format": "dprint fmt ."
+    "format": "dprint fmt .",
+    "www:dev": "pnpm --filter @writer/www dev",
+    "www:build": "pnpm --filter @writer/www build",
+    "www:serve": "pnpm --filter @writer/www serve"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",

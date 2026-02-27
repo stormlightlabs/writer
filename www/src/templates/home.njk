@@ -1,0 +1,110 @@
+{% extends "base.njk" %}
+
+{% block title %}{{ page.title | default("Writer") }}{% endblock %}
+{% block description %}{{ page.description | default("A local-first markdown writing environment") }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1 class="hero-title">Write with Focus</h1>
+    <p class="hero-subtitle">A local-first markdown editor with intelligent writing assistance, instant capture, and PDF export. Your files, your workspace, your way.</p>
+    <div class="hero-cta">
+      <a href="/docs.html" class="btn btn-primary">Get Started</a>
+      <a href="/features.html" class="btn btn-secondary">Learn More</a>
+    </div>
+  </div>
+</section>
+
+<div class="screenshot">
+  <img src="https://placehold.co/900x562/161616/33b1ff?text=Main+Editor+Interface" alt="Main editor interface showing split-pane markdown editing" />
+</div>
+
+<section class="features">
+  <div class="container">
+    <h2 class="section-title">Features</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">✏️</div>
+        <h3 class="feature-title">CodeMirror 6 Editor</h3>
+        <p class="feature-desc">Modern, fast markdown editing with syntax highlighting, live preview, and synchronized scrolling between editor and preview panes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3 class="feature-title">Style Check</h3>
+        <p class="feature-desc">Intelligent writing assistance powered by Rust pattern matching. Detect filler words, redundancies, and clichés as you write.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📁</div>
+        <h3 class="feature-title">Folder Workspaces</h3>
+        <p class="feature-desc">Add any folder as a workspace location. Full filesystem operations with automatic watching and reindexing.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3 class="feature-title">Quick Capture</h3>
+        <p class="feature-desc">Global keyboard shortcut to capture thoughts instantly. Create timestamped notes or append to existing documents.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3 class="feature-title">Focus Mode</h3>
+        <p class="feature-desc">Typewriter scrolling keeps your cursor centered. Dim surrounding content for distraction-free writing sessions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3 class="feature-title">PDF Export</h3>
+        <p class="feature-desc">Export to PDF with configurable page size, margins, fonts, and custom headers/footers.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content-section">
+  <div class="container">
+    <div class="two-col">
+      <div class="content-text">
+        <h2>Local-First Philosophy</h2>
+        <p>Your documents stay on your machine. No cloud sync required, no vendor lock-in. Writer uses your existing folder structure as the source of truth.</p>
+        <p>Built with Tauri 2 for a lightweight, native experience. Rust backend handles file operations, indexing, and style checking with blazing speed.</p>
+      </div>
+      <div class="content-image">
+        <img src="https://placehold.co/500x375/262626/3ddbd9?text=Workspace+Browser" alt="Workspace browser showing folder structure" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content-section content-section--alt">
+  <div class="container">
+    <div class="two-col reverse">
+      <div class="content-text">
+        <h2>Intelligent Writing Assistance</h2>
+        <p>Style checking runs in real-time, highlighting potential improvements without being intrusive. Powered by aho-corasick pattern matching in Rust for instant feedback.</p>
+        <p>Parts-of-speech highlighting helps you analyze sentence structure. Customize patterns to match your writing style guide.</p>
+      </div>
+      <div class="content-image">
+        <img src="https://placehold.co/500x375/262626/ee5396?text=Style+Check" alt="Style check highlighting filler words" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content-section">
+  <div class="container">
+    <div class="two-col">
+      <div class="content-text">
+        <h2>Capture Ideas Instantly</h2>
+        <p>Set a global hotkey to open the quick capture window from anywhere. Three modes: quick note, append to document, or start a writing session.</p>
+        <p>Captured notes land in your designated inbox folder, ready to be processed later.</p>
+      </div>
+      <div class="content-image">
+        <img src="https://placehold.co/500x375/262626/42be65?text=Quick+Capture" alt="Quick capture window appearing" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container page-shell">
+  <article class="prose">
+    {{ content | safe }}
+  </article>
+</div>
+{% endblock %}

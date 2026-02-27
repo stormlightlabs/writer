@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Writer{% endblock %}</title>
+  <meta name="description" content="{% block description %}A local-first markdown writing environment{% endblock %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <a href="/index.html" class="logo">
+        <span class="logo-icon">W</span>
+        Writer
+      </a>
+      <nav class="nav">
+        <a href="/index.html" {% if currentPath == "index.html" %}class="active" aria-current="page"{% endif %}>Home</a>
+        <a href="/features.html" {% if currentPath == "features.html" %}class="active" aria-current="page"{% endif %}>Features</a>
+        <a href="/docs.html" {% if currentPath == "docs.html" %}class="active" aria-current="page"{% endif %}>Docs</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{{ content | safe }}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p class="footer-text">Built with Rust and React. Open source, local-first.</p>
+    </div>
+  </footer>
+</body>
+</html>
