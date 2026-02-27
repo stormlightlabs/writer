@@ -33,62 +33,6 @@ describe("appStore", () => {
     expect(useAppStore.getState().selectedLocationId).toBe(10);
   });
 
-  it("opens and reuses document tabs", () => {
-    const state = useAppStore.getState();
-    const firstOpen = state.openDocumentTab({ location_id: 1, rel_path: "notes/a.md" }, "A");
-    const secondOpen = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "notes/a.md" }, "A");
-
-    expect(firstOpen.didCreateTab).toBeTruthy();
-    expect(secondOpen.didCreateTab).toBeFalsy();
-    expect(useAppStore.getState().tabs).toHaveLength(1);
-    expect(useAppStore.getState().activeTabId).toBe(firstOpen.tabId);
-  });
-
-  it("closing the active tab activates an adjacent tab", () => {
-    const store = useAppStore.getState();
-    const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
-    const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
-
-    useAppStore.getState().selectTab(first.tabId);
-
-    const nextDocRef = useAppStore.getState().closeTab(first.tabId);
-    expect(nextDocRef).toStrictEqual({ location_id: 1, rel_path: "b.md" });
-    expect(useAppStore.getState().activeTabId).toBe(second.tabId);
-    expect(useAppStore.getState().tabs).toHaveLength(1);
-  });
-
-  it("removing a location clears selected and active state tied to that location", () => {
-    const store = useAppStore.getState();
-
-    store.setLocations([{ id: 1, name: "A", root_path: "/a", added_at: "2024-01-01" }, {
-      id: 2,
-      name: "B",
-      root_path: "/b",
-      added_at: "2024-01-01",
-    }]);
-
-    store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
-    useAppStore.getState().removeLocation(1);
-
-    expect(useAppStore.getState().locations.map((location) => location.id)).toStrictEqual([2]);
-    expect(useAppStore.getState().selectedLocationId).toBeUndefined();
-    expect(useAppStore.getState().activeTabId).toBeNull();
-    expect(useAppStore.getState().tabs).toStrictEqual([]);
-  });
-
-  it("marks only the active tab as modified", () => {
-    const store = useAppStore.getState();
-    const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
-    const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
-
-    useAppStore.getState().selectTab(first.tabId);
-    useAppStore.getState().markActiveTabModified(true);
-
-    const { tabs } = useAppStore.getState();
-    expect(tabs.find((tab) => tab.id === first.tabId)?.isModified).toBeTruthy();
-    expect(tabs.find((tab) => tab.id === second.tabId)?.isModified).toBeFalsy();
-  });
-
   it("keeps selected location when locations refresh and selected id still exists", () => {
     const store = useAppStore.getState();
 
@@ -119,34 +63,6 @@ describe("appStore", () => {
 
     store.setSelectedDocPath("notes/new.md");
     expect(useAppStore.getState().selectedDocPath).toBe("notes/new.md");
-  });
-
-  it("closing an inactive tab leaves the active tab unchanged", () => {
-    const store = useAppStore.getState();
-    const first = store.openDocumentTab({ location_id: 1, rel_path: "a.md" }, "A");
-    const second = useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "b.md" }, "B");
-    const closedResult = useAppStore.getState().closeTab(first.tabId);
-
-    expect(closedResult).toBeNull();
-    expect(useAppStore.getState().tabs.map((tab) => tab.id)).toStrictEqual([second.tabId]);
-    expect(useAppStore.getState().activeTabId).toBe(second.tabId);
-  });
-
-  it("closing the final active tab clears tab and selection state", () => {
-    const store = useAppStore.getState();
-    const only = store.openDocumentTab({ location_id: 1, rel_path: "only.md" }, "Only");
-
-    const nextRef = useAppStore.getState().closeTab(only.tabId);
-
-    expect(nextRef).toBeNull();
-    expect(useAppStore.getState().tabs).toStrictEqual([]);
-    expect(useAppStore.getState().activeTabId).toBeNull();
-    expect(useAppStore.getState().selectedDocPath).toBeUndefined();
-  });
-
-  it("markActiveTabModified is a no-op when no active tab exists", () => {
-    useAppStore.getState().markActiveTabModified(true);
-    expect(useAppStore.getState().tabs).toStrictEqual([]);
   });
 
   it("focused layout hooks expose and update layout state", () => {
@@ -259,28 +175,26 @@ describe("appStore", () => {
     expect(locationsState.current.locations).toStrictEqual([]);
   });
 
-  it("tabs selector hooks expose and update tab state", () => {
+  it("tabs selector hooks apply backend session state", () => {
     const { result: tabsState } = renderHook(() => useTabsState());
     const { result: tabsActions } = renderHook(() => useTabsActions());
 
-    let firstTabId = "";
-    let secondTabId = "";
-
     act(() => {
-      firstTabId = tabsActions.current.openDocumentTab({ location_id: 1, rel_path: "first.md" }, "First").tabId;
-      secondTabId = tabsActions.current.openDocumentTab({ location_id: 1, rel_path: "second.md" }, "Second").tabId;
-      tabsActions.current.selectTab(firstTabId);
-      const currentTabs = useAppStore.getState().tabs;
-      tabsActions.current.reorderTabs([{ ...currentTabs.find((tab) => tab.id === secondTabId)!, isModified: false }, {
-        ...currentTabs.find((tab) => tab.id === firstTabId)!,
-        isModified: false,
-      }]);
+      tabsActions.current.applySessionState({
+        activeTabId: "tab-2",
+        tabs: [{ id: "tab-1", docRef: { location_id: 1, rel_path: "first.md" }, title: "First", isModified: false }, {
+          id: "tab-2",
+          docRef: { location_id: 1, rel_path: "second.md" },
+          title: "Second",
+          isModified: true,
+        }],
+      });
     });
 
     expect(tabsState.current.tabs).toHaveLength(2);
-    expect(tabsState.current.activeTabId).toBe(firstTabId);
-    expect(tabsState.current.tabs[0].id).toBe(secondTabId);
-    expect(tabsState.current.tabs[1].id).toBe(firstTabId);
+    expect(tabsState.current.activeTabId).toBe("tab-2");
+    expect(tabsState.current.isSessionHydrated).toBe(true);
+    expect(useAppStore.getState().selectedDocPath).toBe("second.md");
   });
 
   it("should update typewriter scrolling setting", () => {

@@ -1,7 +1,7 @@
 use super::capture;
 use super::locations::*;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -197,6 +197,161 @@ pub fn session_last_doc_set(
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => {
             tracing::error!("Failed to persist last opened document session state: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_get(state: State<'_, AppState>) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!("Loading persisted session state");
+
+    match state.store.session_get() {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to load session state: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_open_tab(
+    state: State<'_, AppState>, doc_ref: writer_store::CaptureDocRef, title: String,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!(
+        "Opening session tab: location_id={}, rel_path={}",
+        doc_ref.location_id,
+        doc_ref.rel_path
+    );
+
+    match state.store.session_open_tab(doc_ref, title) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to open session tab: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_select_tab(
+    state: State<'_, AppState>, tab_id: String,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!("Selecting session tab: {}", tab_id);
+
+    match state.store.session_select_tab(&tab_id) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to select session tab: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_close_tab(
+    state: State<'_, AppState>, tab_id: String,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!("Closing session tab: {}", tab_id);
+
+    match state.store.session_close_tab(&tab_id) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to close session tab: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_reorder_tabs(
+    state: State<'_, AppState>, tab_ids: Vec<String>,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!("Reordering session tabs: count={}", tab_ids.len());
+
+    match state.store.session_reorder_tabs(&tab_ids) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to reorder session tabs: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_mark_tab_modified(
+    state: State<'_, AppState>, tab_id: String, is_modified: bool,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!(
+        "Marking session tab modified: tab_id={}, is_modified={}",
+        tab_id,
+        is_modified
+    );
+
+    match state.store.session_mark_tab_modified(&tab_id, is_modified) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to mark session tab modified: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_update_tab_doc(
+    state: State<'_, AppState>, location_id: i64, old_rel_path: String, new_doc_ref: writer_store::CaptureDocRef,
+    title: String,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!(
+        "Updating session tab document: location_id={}, old_rel_path={}, new_rel_path={}",
+        location_id,
+        old_rel_path,
+        new_doc_ref.rel_path
+    );
+
+    match state
+        .store
+        .session_update_tab_doc(location_id, &old_rel_path, new_doc_ref, title)
+    {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to update session tab document: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_drop_doc(
+    state: State<'_, AppState>, location_id: i64, rel_path: String,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!(
+        "Dropping document from session tabs: location_id={}, rel_path={}",
+        location_id,
+        rel_path
+    );
+
+    match state.store.session_drop_doc(location_id, &rel_path) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to drop document from session tabs: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn session_prune_locations(
+    state: State<'_, AppState>, valid_location_ids: Vec<i64>,
+) -> Result<CommandResult<writer_store::SessionState>> {
+    tracing::debug!("Pruning session tabs by locations: count={}", valid_location_ids.len());
+
+    let valid_ids: HashSet<i64> = valid_location_ids.into_iter().collect();
+    match state.store.session_prune_locations(&valid_ids) {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(e) => {
+            tracing::error!("Failed to prune session tabs by locations: {}", e);
             Ok(CommandResult::err(e))
         }
     }

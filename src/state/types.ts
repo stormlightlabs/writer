@@ -2,7 +2,6 @@ import type { MarginSide, Orientation, PageSize, PdfExportOptions } from "$pdf/t
 import type {
   AppTheme,
   DocMeta,
-  DocRef,
   EditorFontFamily,
   FocusDimmingMode,
   FocusModeSettings,
@@ -10,12 +9,12 @@ import type {
   LocationDescriptor,
   PatternCategory,
   SearchHit,
+  SessionState,
   StyleCheckPattern,
   StyleCheckSettings,
   Tab,
 } from "$types";
 
-export type OpenDocumentTabResult = { tabId: string; didCreateTab: boolean };
 export type SearchFilters = { locations?: number[]; fileTypes?: string[]; dateRange?: { from?: Date; to?: Date } };
 
 export type LayoutChromeState = {
@@ -138,15 +137,9 @@ export type WorkspaceState = WorkspaceLocationsState & WorkspaceDocumentsState;
 
 export type WorkspaceActions = WorkspaceLocationsActions & WorkspaceDocumentsActions;
 
-export type TabsState = { tabs: Tab[]; activeTabId: string | null };
+export type TabsState = { tabs: Tab[]; activeTabId: string | null; isSessionHydrated: boolean };
 
-export type TabsActions = {
-  openDocumentTab: (docRef: DocRef, title: string) => OpenDocumentTabResult;
-  selectTab: (tabId: string) => DocRef | null;
-  closeTab: (tabId: string) => DocRef | null;
-  reorderTabs: (tabs: Tab[]) => void;
-  markActiveTabModified: (isModified: boolean) => void;
-};
+export type TabsActions = { applySessionState: (session: SessionState) => void };
 
 export type PdfExportState = { isExportingPdf: boolean; pdfExportError: string | null };
 

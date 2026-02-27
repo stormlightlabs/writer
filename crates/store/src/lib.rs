@@ -18,12 +18,13 @@ mod text_utils;
 
 pub use settings::StyleCheckSettings;
 pub use settings::UiLayoutSettings;
-pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, GlobalCaptureSettings};
+pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, GlobalCaptureSettings, SessionState, SessionTab};
 
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
 const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
 const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
+const SESSION_STATE_SETTINGS_KEY: &str = "session_state";
 
 const README_TEMPLATE: &str = include_str!("../assets/README_TEMPLATE.md");
 
@@ -380,6 +381,275 @@ impl Store {
         .map_err(|e| AppError::io(format!("Failed to clear last open doc setting: {}", e)))?;
 
         Ok(())
+    }
+
+    fn normalize_session_state(session: &mut SessionState) {
+        session.tabs.retain(|tab| !tab.id.is_empty());
+
+        let mut seen_ids: HashSet<String> = HashSet::new();
+        session.tabs.retain(|tab| seen_ids.insert(tab.id.clone()));
+
+        if session.tabs.is_empty() {
+            session.active_tab_id = None;
+        } else if !session
+            .active_tab_id
+            .as_ref()
+            .is_some_and(|active_tab_id| session.tabs.iter().any(|tab| tab.id == *active_tab_id))
+        {
+            session.active_tab_id = Some(session.tabs[0].id.clone());
+        }
+
+        if session.next_tab_id == 0 {
+            session.next_tab_id = 1;
+        }
+    }
+
+    fn session_get_locked(conn: &Connection) -> Result<SessionState, AppError> {
+        let maybe_value = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?1",
+                params![SESSION_STATE_SETTINGS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| AppError::io(format!("Failed to query session state: {}", e)))?;
+
+        let mut state = match maybe_value {
+            Some(value) => serde_json::from_str::<SessionState>(&value)
+                .map_err(|e| AppError::new(ErrorCode::Parse, format!("Failed to parse session state: {}", e)))?,
+            None => SessionState::default(),
+        };
+
+        Self::normalize_session_state(&mut state);
+        Ok(state)
+    }
+
+    fn session_set_locked(conn: &Connection, session: &SessionState) -> Result<(), AppError> {
+        let session_json = serde_json::to_string(session)
+            .map_err(|e| AppError::new(ErrorCode::Parse, format!("Failed to serialize session state: {}", e)))?;
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET
+             value = excluded.value,
+             updated_at = excluded.updated_at",
+            params![SESSION_STATE_SETTINGS_KEY, session_json, updated_at],
+        )
+        .map_err(|e| AppError::io(format!("Failed to persist session state: {}", e)))?;
+
+        if let Some(active_tab_id) = session.active_tab_id.as_ref()
+            && let Some(active_tab) = session.tabs.iter().find(|tab| &tab.id == active_tab_id)
+        {
+            let doc_ref_json = serde_json::to_string(&active_tab.doc_ref).map_err(|e| {
+                AppError::new(
+                    ErrorCode::Parse,
+                    format!("Failed to serialize active document for session state: {}", e),
+                )
+            })?;
+
+            conn.execute(
+                "INSERT INTO app_settings (key, value, updated_at)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(key) DO UPDATE SET
+                 value = excluded.value,
+                 updated_at = excluded.updated_at",
+                params![LAST_OPEN_DOC_SETTINGS_KEY, doc_ref_json, updated_at],
+            )
+            .map_err(|e| AppError::io(format!("Failed to persist active document for session state: {}", e)))?;
+
+            return Ok(());
+        }
+
+        conn.execute(
+            "DELETE FROM app_settings WHERE key = ?1",
+            params![LAST_OPEN_DOC_SETTINGS_KEY],
+        )
+        .map_err(|e| AppError::io(format!("Failed to clear active document for session state: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub fn session_get(&self) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        Self::session_get_locked(&conn)
+    }
+
+    pub fn session_open_tab(&self, doc_ref: CaptureDocRef, title: String) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        if let Some(existing_tab) = state.tabs.iter().find(|tab| tab.doc_ref == doc_ref) {
+            state.active_tab_id = Some(existing_tab.id.clone());
+            Self::session_set_locked(&conn, &state)?;
+            return Ok(state);
+        }
+
+        let tab_id = format!("tab-{}", state.next_tab_id);
+        state.next_tab_id += 1;
+        state
+            .tabs
+            .push(SessionTab { id: tab_id.clone(), doc_ref, title, is_modified: false });
+        state.active_tab_id = Some(tab_id);
+
+        Self::session_set_locked(&conn, &state)?;
+        Ok(state)
+    }
+
+    pub fn session_select_tab(&self, tab_id: &str) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        if state.tabs.iter().any(|tab| tab.id == tab_id) {
+            state.active_tab_id = Some(tab_id.to_string());
+            Self::session_set_locked(&conn, &state)?;
+        }
+
+        Ok(state)
+    }
+
+    pub fn session_close_tab(&self, tab_id: &str) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        let closed_tab_index = state.tabs.iter().position(|tab| tab.id == tab_id);
+        if let Some(closed_tab_index) = closed_tab_index {
+            state.tabs.remove(closed_tab_index);
+
+            if state.tabs.is_empty() {
+                state.active_tab_id = None;
+            } else if state.active_tab_id.as_deref() == Some(tab_id) {
+                let next_index = closed_tab_index.min(state.tabs.len() - 1);
+                state.active_tab_id = Some(state.tabs[next_index].id.clone());
+            }
+
+            Self::session_set_locked(&conn, &state)?;
+        }
+
+        Ok(state)
+    }
+
+    pub fn session_reorder_tabs(&self, tab_ids: &[String]) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        if state.tabs.is_empty() {
+            return Ok(state);
+        }
+
+        let mut remaining = state.tabs.clone();
+        let mut reordered = Vec::with_capacity(remaining.len());
+
+        for tab_id in tab_ids {
+            if let Some(index) = remaining.iter().position(|tab| tab.id == *tab_id) {
+                reordered.push(remaining.remove(index));
+            }
+        }
+
+        reordered.extend(remaining);
+        state.tabs = reordered;
+
+        Self::normalize_session_state(&mut state);
+        Self::session_set_locked(&conn, &state)?;
+        Ok(state)
+    }
+
+    pub fn session_mark_tab_modified(&self, tab_id: &str, is_modified: bool) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        if let Some(tab) = state.tabs.iter_mut().find(|tab| tab.id == tab_id)
+            && tab.is_modified != is_modified
+        {
+            tab.is_modified = is_modified;
+            Self::session_set_locked(&conn, &state)?;
+        }
+
+        Ok(state)
+    }
+
+    pub fn session_update_tab_doc(
+        &self, location_id: i64, old_rel_path: &str, new_doc_ref: CaptureDocRef, title: String,
+    ) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        let mut changed = false;
+        for tab in &mut state.tabs {
+            if tab.doc_ref.location_id == location_id && tab.doc_ref.rel_path == old_rel_path {
+                tab.doc_ref = new_doc_ref.clone();
+                tab.title = title.clone();
+                changed = true;
+            }
+        }
+
+        if changed {
+            Self::session_set_locked(&conn, &state)?;
+        }
+
+        Ok(state)
+    }
+
+    pub fn session_drop_doc(&self, location_id: i64, rel_path: &str) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        let original_len = state.tabs.len();
+        state
+            .tabs
+            .retain(|tab| !(tab.doc_ref.location_id == location_id && tab.doc_ref.rel_path == rel_path));
+
+        if state.tabs.len() != original_len {
+            Self::normalize_session_state(&mut state);
+            Self::session_set_locked(&conn, &state)?;
+        }
+
+        Ok(state)
+    }
+
+    pub fn session_prune_locations(&self, valid_location_ids: &HashSet<i64>) -> Result<SessionState, AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+        let mut state = Self::session_get_locked(&conn)?;
+
+        let original_len = state.tabs.len();
+        state
+            .tabs
+            .retain(|tab| valid_location_ids.contains(&tab.doc_ref.location_id));
+
+        if state.tabs.len() != original_len {
+            Self::normalize_session_state(&mut state);
+            Self::session_set_locked(&conn, &state)?;
+        }
+
+        Ok(state)
     }
 
     /// Adds a new location
@@ -2164,6 +2434,101 @@ mod tests {
         let loaded = store.last_open_doc_get().unwrap();
 
         assert!(loaded.is_none());
+    }
+
+    #[test]
+    fn test_session_open_select_close_round_trip() {
+        let (store, _temp) = create_test_store();
+        let first_doc = CaptureDocRef { location_id: 1, rel_path: "notes/a.md".to_string() };
+        let second_doc = CaptureDocRef { location_id: 1, rel_path: "notes/b.md".to_string() };
+
+        let opened = store.session_open_tab(first_doc.clone(), "A".to_string()).unwrap();
+        assert_eq!(opened.tabs.len(), 1);
+        let first_tab_id = opened.tabs[0].id.clone();
+        assert_eq!(opened.active_tab_id, Some(first_tab_id.clone()));
+
+        let opened_again = store.session_open_tab(first_doc.clone(), "A".to_string()).unwrap();
+        assert_eq!(opened_again.tabs.len(), 1);
+        assert_eq!(opened_again.active_tab_id, Some(first_tab_id.clone()));
+
+        let with_second = store.session_open_tab(second_doc.clone(), "B".to_string()).unwrap();
+        assert_eq!(with_second.tabs.len(), 2);
+        let second_tab_id = with_second.tabs[1].id.clone();
+        assert_eq!(with_second.active_tab_id, Some(second_tab_id.clone()));
+
+        let selected = store.session_select_tab(&first_tab_id).unwrap();
+        assert_eq!(selected.active_tab_id, Some(first_tab_id.clone()));
+
+        let closed = store.session_close_tab(&first_tab_id).unwrap();
+        assert_eq!(closed.tabs.len(), 1);
+        assert_eq!(closed.tabs[0].doc_ref, second_doc);
+        assert_eq!(closed.active_tab_id, Some(second_tab_id));
+    }
+
+    #[test]
+    fn test_session_reorder_mark_and_update_doc() {
+        let (store, _temp) = create_test_store();
+        let first_doc = CaptureDocRef { location_id: 7, rel_path: "first.md".to_string() };
+        let second_doc = CaptureDocRef { location_id: 7, rel_path: "second.md".to_string() };
+
+        let first = store.session_open_tab(first_doc.clone(), "First".to_string()).unwrap();
+        let first_tab_id = first.tabs[0].id.clone();
+        let second = store
+            .session_open_tab(second_doc.clone(), "Second".to_string())
+            .unwrap();
+        let second_tab_id = second.tabs[1].id.clone();
+
+        let reordered = store
+            .session_reorder_tabs(&[second_tab_id.clone(), first_tab_id.clone()])
+            .unwrap();
+        assert_eq!(reordered.tabs[0].id, second_tab_id);
+        assert_eq!(reordered.tabs[1].id, first_tab_id.clone());
+
+        let modified = store.session_mark_tab_modified(&first_tab_id, true).unwrap();
+        let marked_tab = modified.tabs.iter().find(|tab| tab.id == first_tab_id).unwrap();
+        assert!(marked_tab.is_modified);
+
+        let updated = store
+            .session_update_tab_doc(
+                7,
+                "first.md",
+                CaptureDocRef { location_id: 7, rel_path: "renamed.md".to_string() },
+                "Renamed".to_string(),
+            )
+            .unwrap();
+        let renamed_tab = updated.tabs.iter().find(|tab| tab.id == first_tab_id).unwrap();
+        assert_eq!(renamed_tab.doc_ref.rel_path, "renamed.md");
+        assert_eq!(renamed_tab.title, "Renamed");
+    }
+
+    #[test]
+    fn test_session_prunes_locations_and_syncs_last_open_doc() {
+        let (store, _temp) = create_test_store();
+
+        store
+            .session_open_tab(
+                CaptureDocRef { location_id: 10, rel_path: "keep.md".to_string() },
+                "Keep".to_string(),
+            )
+            .unwrap();
+        store
+            .session_open_tab(
+                CaptureDocRef { location_id: 20, rel_path: "drop.md".to_string() },
+                "Drop".to_string(),
+            )
+            .unwrap();
+
+        let mut valid_locations = HashSet::new();
+        valid_locations.insert(10);
+        let pruned = store.session_prune_locations(&valid_locations).unwrap();
+
+        assert_eq!(pruned.tabs.len(), 1);
+        assert_eq!(pruned.tabs[0].doc_ref.location_id, 10);
+        assert_eq!(store.last_open_doc_get().unwrap(), Some(pruned.tabs[0].doc_ref.clone()));
+
+        let dropped = store.session_drop_doc(10, "keep.md").unwrap();
+        assert!(dropped.tabs.is_empty());
+        assert!(store.last_open_doc_get().unwrap().is_none());
     }
 
     #[test]

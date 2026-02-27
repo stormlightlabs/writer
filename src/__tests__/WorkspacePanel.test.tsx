@@ -139,6 +139,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
     locationDocuments: [],
     sidebarFilter: "",
     isSidebarLoading: false,
+    isSessionHydrated: true,
     refreshingLocationId: undefined,
     sidebarRefreshReason: null,
     tabs: [],

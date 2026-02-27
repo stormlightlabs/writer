@@ -1,23 +1,15 @@
 import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects";
-import { docExists, runCmd, sessionLastDocGet, sessionLastDocSet } from "$ports";
-import type { AppError, DocRef, LocationDescriptor } from "$types";
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock(
-  "$ports",
-  () => ({ runCmd: vi.fn(async () => {}), sessionLastDocGet: vi.fn(), docExists: vi.fn(), sessionLastDocSet: vi.fn() }),
-);
+import type { DocRef, LocationDescriptor } from "$types";
+import { renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 type UseDocumentSessionEffectsArgs = Parameters<typeof useDocumentSessionEffects>[0];
 
 const LOCATION: LocationDescriptor = { id: 1, name: "Workspace", root_path: "/workspace", added_at: "2024-01-01" };
 
-let sessionLastDocGetOnOk: ((docRef: DocRef | null) => void) | null = null;
-let docExistsOnOk: ((exists: boolean) => void) | null = null;
-
 const createArgs = (overrides: Partial<UseDocumentSessionEffectsArgs> = {}): UseDocumentSessionEffectsArgs => ({
   isSidebarLoading: false,
+  isSessionHydrated: true,
   locations: [LOCATION],
   selectedLocationId: LOCATION.id,
   tabs: [],
@@ -31,86 +23,34 @@ const createArgs = (overrides: Partial<UseDocumentSessionEffectsArgs> = {}): Use
 });
 
 describe("useDocumentSessionEffects", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    sessionLastDocGetOnOk = null;
-    docExistsOnOk = null;
-
-    vi.mocked(sessionLastDocGet).mockImplementation(
-      (onOk: (docRef: DocRef | null) => void, _onErr: (error: AppError) => void) => {
-        sessionLastDocGetOnOk = onOk;
-        return { type: "None" } as never;
-      },
-    );
-
-    vi.mocked(docExists).mockImplementation(
-      (_locationId: number, _relPath: string, onOk: (exists: boolean) => void, _onErr: (error: AppError) => void) => {
-        docExistsOnOk = onOk;
-        return { type: "None" } as never;
-      },
-    );
-
-    vi.mocked(sessionLastDocSet).mockImplementation((
-      _docRef: DocRef | null,
-      _onOk: (value: boolean) => void,
-      _onErr: (error: AppError) => void,
-    ) => ({ type: "None" } as never));
-
-    vi.mocked(runCmd).mockResolvedValue();
-  });
-
-  it("does not create a new document while restoring a previously opened one", () => {
-    const handleSelectDocument = vi.fn();
+  it("waits for session hydration before creating a startup draft", () => {
     const handleNewDocument = vi.fn();
-
-    renderHook(() => useDocumentSessionEffects(createArgs({ handleSelectDocument, handleNewDocument })));
-
-    expect(sessionLastDocGet).toHaveBeenCalledOnce();
-    expect(handleNewDocument).not.toHaveBeenCalled();
-
-    act(() => {
-      sessionLastDocGetOnOk?.({ location_id: LOCATION.id, rel_path: "notes/last.md" });
-    });
-
-    expect(docExists).toHaveBeenCalledWith(LOCATION.id, "notes/last.md", expect.any(Function), expect.any(Function));
-
-    act(() => {
-      docExistsOnOk?.(true);
-    });
-
-    expect(handleSelectDocument).toHaveBeenCalledWith(LOCATION.id, "notes/last.md");
+    renderHook(() => useDocumentSessionEffects(createArgs({ isSessionHydrated: false, handleNewDocument })));
     expect(handleNewDocument).not.toHaveBeenCalled();
   });
 
-  it("creates a new document when no previous document exists", () => {
+  it("creates a new draft on startup when no tabs are restored", () => {
     const handleNewDocument = vi.fn();
-
     renderHook(() => useDocumentSessionEffects(createArgs({ handleNewDocument })));
-
-    act(() => {
-      sessionLastDocGetOnOk?.(null);
-    });
-
-    expect(handleNewDocument).toHaveBeenCalledOnce();
+    expect(handleNewDocument).toHaveBeenCalled();
     expect(handleNewDocument).toHaveBeenCalledWith(LOCATION.id);
   });
 
-  it("creates a new document when the previous document is missing", () => {
-    const handleSelectDocument = vi.fn();
-    const handleNewDocument = vi.fn();
+  it("opens the active document when one is selected", () => {
+    const openDoc = vi.fn();
+    const activeDocRef: DocRef = { location_id: LOCATION.id, rel_path: "notes/today.md" };
 
-    renderHook(() => useDocumentSessionEffects(createArgs({ handleSelectDocument, handleNewDocument })));
+    renderHook(() =>
+      useDocumentSessionEffects(
+        createArgs({
+          tabs: [{ id: "tab-1", docRef: activeDocRef, title: "Today", isModified: false }],
+          activeTab: { id: "tab-1", docRef: activeDocRef, title: "Today", isModified: false },
+          activeDocRef,
+          openDoc,
+        }),
+      )
+    );
 
-    act(() => {
-      sessionLastDocGetOnOk?.({ location_id: LOCATION.id, rel_path: "notes/missing.md" });
-    });
-
-    act(() => {
-      docExistsOnOk?.(false);
-    });
-
-    expect(handleSelectDocument).not.toHaveBeenCalled();
-    expect(handleNewDocument).toHaveBeenCalledOnce();
-    expect(handleNewDocument).toHaveBeenCalledWith(LOCATION.id);
+    expect(openDoc).toHaveBeenCalledWith(activeDocRef);
   });
 });

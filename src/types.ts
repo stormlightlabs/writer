@@ -35,6 +35,8 @@ export type DocRef = { location_id: LocationId; rel_path: string };
 
 export type Tab = { id: string; docRef: DocRef; title: string; isModified: boolean; isPinned?: boolean };
 
+export type SessionState = { tabs: Tab[]; activeTabId: string | null };
+
 export type DocMeta = {
   location_id: LocationId;
   rel_path: string;

@@ -76,18 +76,15 @@ Migrate core application state and heavy computation to the Rust backend to redu
 
 ### Tasks
 
-1. **Session & Tab Management**
-   - Shift `TabsStore` logic to a persistent Rust-based session manager
-   - Support session persistence across application restarts and potential multi-window sync
-2. **Reactive File System**
+1. **Reactive File System**
    - Leverage `RecommendedWatcher` to eliminate the need for manual frontend file list updates
    - Implement event-driven UI updates based on backend file system events
-3. **High-Performance Analysis**
+2. **High-Performance Analysis**
    - Move `PatternMatcher` and `StyleCheck` logic to Rust using the `aho-corasick` crate
    - Offload heavy multi-pattern matching from the JS main thread
-4. **Unified Metadata Extraction**
+3. **Unified Metadata Extraction**
    - Calculate document metadata (word counts, outlines) during the `markdown_render` pass in Rust
-5. **Architectural Hardening**
+4. **Architectural Hardening**
    - Simplify and unify `CommandResult` and `AppError` patterns across all Tauri commands
 
 ## Hardening

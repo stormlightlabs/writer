@@ -33,6 +33,7 @@ const createWorkspaceControllerState = (
   locationDocuments: [],
   sidebarFilter: "",
   isSidebarLoading: false,
+  isSessionHydrated: true,
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
   tabs: [],

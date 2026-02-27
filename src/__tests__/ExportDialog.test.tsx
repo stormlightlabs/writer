@@ -207,7 +207,15 @@ describe("PdfExportDialog", () => {
         word_count: 100,
         updated_at: "2024-01-01",
       }]);
-      useAppStore.getState().openDocumentTab({ location_id: 1, rel_path: "test.md" }, "My Document");
+      useAppStore.getState().applySessionState({
+        activeTabId: "tab-1",
+        tabs: [{
+          id: "tab-1",
+          docRef: { location_id: 1, rel_path: "test.md" },
+          title: "My Document",
+          isModified: false,
+        }],
+      });
       renderExportDialog();
 
       expect(screen.getByText("My Document")).toBeInTheDocument();

@@ -56,6 +56,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     documents,
     selectedLocationId,
     isSidebarLoading,
+    isSessionHydrated,
     tabs,
     activeTab,
     markActiveTabModified,
@@ -142,6 +143,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
 
   useDocumentSessionEffects({
     isSidebarLoading,
+    isSessionHydrated,
     locations,
     selectedLocationId,
     tabs,

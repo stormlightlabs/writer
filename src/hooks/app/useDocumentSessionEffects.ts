@@ -1,9 +1,9 @@
-import { docExists, runCmd, sessionLastDocGet, sessionLastDocSet } from "$ports";
 import type { DocRef, LocationDescriptor, Tab } from "$types";
 import { useEffect, useRef } from "react";
 
 type UseDocumentSessionEffectsArgs = {
   isSidebarLoading: boolean;
+  isSessionHydrated: boolean;
   locations: LocationDescriptor[];
   selectedLocationId?: number;
   tabs: Tab[];
@@ -18,6 +18,7 @@ type UseDocumentSessionEffectsArgs = {
 export function useDocumentSessionEffects(
   {
     isSidebarLoading,
+    isSessionHydrated,
     locations,
     selectedLocationId,
     tabs,
@@ -37,48 +38,17 @@ export function useDocumentSessionEffects(
       return;
     }
 
-    if (isSidebarLoading || locations.length === 0 || tabs.length > 0) {
+    if (!isSessionHydrated || isSidebarLoading || locations.length === 0) {
       return;
     }
 
     startupDocumentReadyRef.current = true;
+    startupDocumentRestoredRef.current = true;
 
-    const completeStartupRestore = () => {
-      startupDocumentRestoredRef.current = true;
-    };
-
-    const fallbackToBlankDraft = () => {
-      completeStartupRestore();
+    if (tabs.length === 0) {
       handleNewDocument(selectedLocationId ?? locations[0]?.id);
-    };
-
-    void runCmd(sessionLastDocGet((docRef) => {
-      if (!docRef) {
-        fallbackToBlankDraft();
-        return;
-      }
-
-      const locationExists = locations.some((location) => location.id === docRef.location_id);
-      if (!locationExists) {
-        fallbackToBlankDraft();
-        return;
-      }
-
-      void runCmd(docExists(docRef.location_id, docRef.rel_path, (exists) => {
-        if (exists) {
-          completeStartupRestore();
-          handleSelectDocument(docRef.location_id, docRef.rel_path);
-          return;
-        }
-
-        fallbackToBlankDraft();
-      }, () => {
-        fallbackToBlankDraft();
-      }));
-    }, () => {
-      fallbackToBlankDraft();
-    }));
-  }, [isSidebarLoading, locations, selectedLocationId, tabs.length, handleSelectDocument, handleNewDocument]);
+    }
+  }, [isSessionHydrated, isSidebarLoading, locations, selectedLocationId, tabs.length, handleNewDocument]);
 
   useEffect(() => {
     if (!activeDocRef) {
@@ -105,12 +75,4 @@ export function useDocumentSessionEffects(
 
     handleNewDocument(selectedLocationId);
   }, [activeTab, documentsCount, handleNewDocument, handleSelectDocument, isSidebarLoading, selectedLocationId, tabs]);
-
-  useEffect(() => {
-    if (!startupDocumentRestoredRef.current) {
-      return;
-    }
-
-    void runCmd(sessionLastDocSet(activeDocRef, () => {}, () => {}));
-  }, [activeDocRef]);
 }

@@ -14,6 +14,7 @@ import type {
   RenderResult,
   SaveStatus,
   SearchHit,
+  SessionState,
   StyleCheckPattern,
   StyleMarkerStyle,
 } from "$types";
@@ -131,9 +132,40 @@ export type UiLayoutSetParams<T> = Parameters<
   (settings: UiLayoutSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
 
-export type SessionLastDocSetParams<T> = Parameters<
-  (docRef: DocRef | null, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+export type SessionOpenTabParams<T> = Parameters<
+  (docRef: DocRef, title: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
+
+export type SessionTabIdParams<T> = Parameters<(tabId: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void>;
+
+export type SessionReorderTabsParams<T> = Parameters<
+  (tabIds: string[], onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export type SessionMarkTabModifiedParams<T> = Parameters<
+  (tabId: string, isModified: boolean, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export type SessionUpdateTabDocParams<T> = Parameters<
+  (
+    locationId: number,
+    oldRelPath: string,
+    newDocRef: DocRef,
+    title: string,
+    onOk: SuccessCallback<T>,
+    onErr: ErrorCallback,
+  ) => void
+>;
+
+export type SessionDropDocParams<T> = Parameters<
+  (locationId: number, relPath: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export type SessionPruneLocationsParams<T> = Parameters<
+  (validLocationIds: number[], onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export type SessionParams = LocParams<SessionState>;
 
 export type StyleCheckSetParams<T> = Parameters<
   (settings: PersistedStyleCheckSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void

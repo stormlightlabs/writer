@@ -162,18 +162,16 @@ export const useWorkspaceDocumentsActions = () =>
   );
 
 export const useTabsState = () =>
-  useTabsStore(useShallow((state) => ({ tabs: state.tabs, activeTabId: state.activeTabId })));
-
-export const useTabsActions = () =>
   useTabsStore(
     useShallow((state) => ({
-      openDocumentTab: state.openDocumentTab,
-      selectTab: state.selectTab,
-      closeTab: state.closeTab,
-      reorderTabs: state.reorderTabs,
-      markActiveTabModified: state.markActiveTabModified,
+      tabs: state.tabs,
+      activeTabId: state.activeTabId,
+      isSessionHydrated: state.isSessionHydrated,
     })),
   );
+
+export const useTabsActions = () =>
+  useTabsStore(useShallow((state) => ({ applySessionState: state.applySessionState })));
 
 export const usePdfExportState = () =>
   usePdfExportStore(

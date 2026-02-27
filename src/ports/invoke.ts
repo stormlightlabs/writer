@@ -8,6 +8,7 @@ import type {
   ErrorCode,
   GlobalCaptureSettings,
   SearchHit,
+  SessionState,
 } from "$types";
 import { f } from "$utils/serialize";
 import type { InvokeArgs } from "@tauri-apps/api/core";
@@ -237,6 +238,36 @@ function normalizeCaptureSubmitResult(value: unknown): CaptureSubmitResult {
   };
 }
 
+function normalizeSessionState(value: unknown): SessionState {
+  if (!isRecord(value) || !Array.isArray(value.tabs)) {
+    return { tabs: [], activeTabId: null };
+  }
+
+  const tabs = value.tabs.map((tab) => {
+    if (!isRecord(tab)) {
+      return null;
+    }
+    if (typeof tab.id !== "string" || !tab.id.trim()) {
+      return null;
+    }
+
+    const docRef = normalizeDocRef(tab.doc_ref);
+    if (!docRef) {
+      return null;
+    }
+
+    return {
+      id: tab.id,
+      docRef,
+      title: typeof tab.title === "string" ? tab.title : docRef.rel_path.split("/").pop() || "Untitled",
+      isModified: typeof tab.is_modified === "boolean" ? tab.is_modified : false,
+    };
+  }).filter((tab): tab is SessionState["tabs"][number] => tab !== null);
+
+  const activeTabId = typeof value.active_tab_id === "string" ? value.active_tab_id : null;
+  return { tabs, activeTabId: tabs.some((tab) => tab.id === activeTabId) ? activeTabId : tabs[0]?.id ?? null };
+}
+
 function normalizeCommandValue(command: string, value: unknown): unknown {
   switch (command) {
     case "doc_list": {
@@ -269,8 +300,16 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     case "global_capture_submit": {
       return normalizeCaptureSubmitResult(value);
     }
-    case "session_last_doc_get": {
-      return normalizeDocRef(value);
+    case "session_get":
+    case "session_open_tab":
+    case "session_select_tab":
+    case "session_close_tab":
+    case "session_reorder_tabs":
+    case "session_mark_tab_modified":
+    case "session_update_tab_doc":
+    case "session_drop_doc":
+    case "session_prune_locations": {
+      return normalizeSessionState(value);
     }
     default: {
       return value;

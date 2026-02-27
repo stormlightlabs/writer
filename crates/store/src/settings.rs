@@ -149,6 +149,30 @@ pub struct CaptureDocRef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SessionTab {
+    pub id: String,
+    pub doc_ref: CaptureDocRef,
+    pub title: String,
+    pub is_modified: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SessionState {
+    #[serde(default)]
+    pub active_tab_id: Option<String>,
+    #[serde(default)]
+    pub tabs: Vec<SessionTab>,
+    #[serde(default)]
+    pub next_tab_id: u64,
+}
+
+impl Default for SessionState {
+    fn default() -> Self {
+        Self { active_tab_id: None, tabs: Vec::new(), next_tab_id: 1 }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GlobalCaptureSettings {
     #[serde(default = "default_true")]
     pub enabled: bool,

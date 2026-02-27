@@ -1,5 +1,5 @@
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
-import { docList, runCmd } from "$ports";
+import { docList, runCmd, sessionGet, sessionPruneLocations } from "$ports";
 import { resetAppStore, useAppStore } from "$state/stores/app";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,17 @@ vi.mock(
     docRename: vi.fn(() => ({ type: "None" })),
     locationAddViaDialog: vi.fn(() => ({ type: "None" })),
     locationRemove: vi.fn(() => ({ type: "None" })),
+    sessionGet: vi.fn((_onOk: (session: { tabs: unknown[]; activeTabId: string | null }) => void) => ({
+      type: "None",
+    })),
+    sessionPruneLocations: vi.fn(() => ({ type: "None" })),
+    sessionOpenTab: vi.fn(() => ({ type: "None" })),
+    sessionSelectTab: vi.fn(() => ({ type: "None" })),
+    sessionCloseTab: vi.fn(() => ({ type: "None" })),
+    sessionReorderTabs: vi.fn(() => ({ type: "None" })),
+    sessionMarkTabModified: vi.fn(() => ({ type: "None" })),
+    sessionUpdateTabDoc: vi.fn(() => ({ type: "None" })),
+    sessionDropDoc: vi.fn(() => ({ type: "None" })),
   }),
 );
 
@@ -40,6 +51,8 @@ describe("useWorkspaceController", () => {
     });
 
     expect(createdRef).toMatchObject({ location_id: 1 });
+    expect(sessionGet).toHaveBeenCalledOnce();
+    expect(sessionPruneLocations).not.toHaveBeenCalled();
   });
 
   it("ignores non-numeric locationId values in handleRefreshSidebar", () => {

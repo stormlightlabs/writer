@@ -5,13 +5,13 @@ import type {
   CaptureSubmitResult,
   DocContent,
   DocMeta,
-  DocRef,
   GlobalCaptureSettings,
   LocationDescriptor,
   LocationId,
   MarkdownProfile,
   RenderResult,
   SearchHit,
+  SessionState,
 } from "$types";
 import { info } from "@tauri-apps/plugin-log";
 import { invokeCmd } from "./invoke";
@@ -42,7 +42,14 @@ import type {
   SaveResult,
   SearchFiltersPayload,
   SearchParams,
-  SessionLastDocSetParams,
+  SessionDropDocParams,
+  SessionMarkTabModifiedParams,
+  SessionOpenTabParams,
+  SessionParams,
+  SessionPruneLocationsParams,
+  SessionReorderTabsParams,
+  SessionTabIdParams,
+  SessionUpdateTabDocParams,
   StyleCheckSetParams,
   UiLayoutSetParams,
   UiLayoutSettings,
@@ -234,12 +241,46 @@ export function uiLayoutSet(...[settings, onOk, onErr]: UiLayoutSetParams<boolea
   return invokeCmd<boolean>("ui_layout_set", { settings }, onOk, onErr);
 }
 
-export function sessionLastDocGet(...[onOk, onErr]: LocParams<DocRef | null>): Cmd {
-  return invokeCmd<DocRef | null>("session_last_doc_get", {}, onOk, onErr);
+export function sessionGet(...[onOk, onErr]: SessionParams): Cmd {
+  return invokeCmd<SessionState>("session_get", {}, onOk, onErr);
 }
 
-export function sessionLastDocSet(...[docRef, onOk, onErr]: SessionLastDocSetParams<boolean>): Cmd {
-  return invokeCmd<boolean>("session_last_doc_set", { docRef }, onOk, onErr);
+export function sessionOpenTab(...[docRef, title, onOk, onErr]: SessionOpenTabParams<SessionState>): Cmd {
+  return invokeCmd<SessionState>("session_open_tab", { docRef, title }, onOk, onErr);
+}
+
+export function sessionSelectTab(...[tabId, onOk, onErr]: SessionTabIdParams<SessionState>): Cmd {
+  return invokeCmd<SessionState>("session_select_tab", { tabId }, onOk, onErr);
+}
+
+export function sessionCloseTab(...[tabId, onOk, onErr]: SessionTabIdParams<SessionState>): Cmd {
+  return invokeCmd<SessionState>("session_close_tab", { tabId }, onOk, onErr);
+}
+
+export function sessionReorderTabs(...[tabIds, onOk, onErr]: SessionReorderTabsParams<SessionState>): Cmd {
+  return invokeCmd<SessionState>("session_reorder_tabs", { tabIds }, onOk, onErr);
+}
+
+export function sessionMarkTabModified(
+  ...[tabId, isModified, onOk, onErr]: SessionMarkTabModifiedParams<SessionState>
+): Cmd {
+  return invokeCmd<SessionState>("session_mark_tab_modified", { tabId, isModified }, onOk, onErr);
+}
+
+export function sessionUpdateTabDoc(
+  ...[locationId, oldRelPath, newDocRef, title, onOk, onErr]: SessionUpdateTabDocParams<SessionState>
+): Cmd {
+  return invokeCmd<SessionState>("session_update_tab_doc", { locationId, oldRelPath, newDocRef, title }, onOk, onErr);
+}
+
+export function sessionDropDoc(...[locationId, relPath, onOk, onErr]: SessionDropDocParams<SessionState>): Cmd {
+  return invokeCmd<SessionState>("session_drop_doc", { locationId, relPath }, onOk, onErr);
+}
+
+export function sessionPruneLocations(
+  ...[validLocationIds, onOk, onErr]: SessionPruneLocationsParams<SessionState>
+): Cmd {
+  return invokeCmd<SessionState>("session_prune_locations", { validLocationIds }, onOk, onErr);
 }
 
 export function styleCheckGet(...[onOk, onErr]: LocParams<PersistedStyleCheckSettings>): Cmd {

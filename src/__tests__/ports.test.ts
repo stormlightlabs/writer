@@ -26,8 +26,15 @@ import {
   renderMarkdownForPdf,
   runCmd,
   searchDocuments,
-  sessionLastDocGet,
-  sessionLastDocSet,
+  sessionCloseTab,
+  sessionDropDoc,
+  sessionGet,
+  sessionMarkTabModified,
+  sessionOpenTab,
+  sessionPruneLocations,
+  sessionReorderTabs,
+  sessionSelectTab,
+  sessionUpdateTabDoc,
   startWatch,
   stopWatch,
   SubscriptionManager,
@@ -840,37 +847,81 @@ describe("ui layout Commands", () => {
 });
 
 describe("session Commands", () => {
-  describe(sessionLastDocGet, () => {
+  describe(sessionGet, () => {
     it("should create command with empty payload", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
-      const cmd = sessionLastDocGet(onOk, onErr) as InvokeCmd;
+      const cmd = sessionGet(onOk, onErr) as InvokeCmd;
 
       expect(cmd.type).toBe("Invoke");
-      expect(cmd.command).toBe("session_last_doc_get");
+      expect(cmd.command).toBe("session_get");
       expect(cmd.payload).toStrictEqual({});
     });
   });
 
-  describe(sessionLastDocSet, () => {
-    it("should create command with docRef payload", () => {
+  describe(sessionOpenTab, () => {
+    it("should create command with open payload", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
-      const cmd = sessionLastDocSet({ location_id: 7, rel_path: "notes/start.md" }, onOk, onErr) as InvokeCmd;
+      const cmd = sessionOpenTab({ location_id: 7, rel_path: "notes/start.md" }, "Start", onOk, onErr) as InvokeCmd;
 
       expect(cmd.type).toBe("Invoke");
-      expect(cmd.command).toBe("session_last_doc_set");
-      expect(cmd.payload).toStrictEqual({ docRef: { location_id: 7, rel_path: "notes/start.md" } });
+      expect(cmd.command).toBe("session_open_tab");
+      expect(cmd.payload).toStrictEqual({ docRef: { location_id: 7, rel_path: "notes/start.md" }, title: "Start" });
+    });
+  });
+
+  it("should create tab-id session commands", () => {
+    const onOk = vi.fn();
+    const onErr = vi.fn();
+
+    expect(sessionSelectTab("tab-1", onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_select_tab",
+      payload: { tabId: "tab-1" },
+    });
+    expect(sessionCloseTab("tab-1", onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_close_tab",
+      payload: { tabId: "tab-1" },
+    });
+  });
+
+  it("should create reorder and modified commands", () => {
+    const onOk = vi.fn();
+    const onErr = vi.fn();
+
+    expect(sessionReorderTabs(["tab-2", "tab-1"], onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_reorder_tabs",
+      payload: { tabIds: ["tab-2", "tab-1"] },
+    });
+    expect(sessionMarkTabModified("tab-2", true, onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_mark_tab_modified",
+      payload: { tabId: "tab-2", isModified: true },
+    });
+  });
+
+  it("should create doc-linked session commands", () => {
+    const onOk = vi.fn();
+    const onErr = vi.fn();
+
+    expect(sessionUpdateTabDoc(1, "old.md", { location_id: 1, rel_path: "new.md" }, "New", onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_update_tab_doc",
+      payload: { locationId: 1, oldRelPath: "old.md", newDocRef: { location_id: 1, rel_path: "new.md" }, title: "New" },
     });
 
-    it("should support clearing the persisted docRef", () => {
-      const onOk = vi.fn();
-      const onErr = vi.fn();
-      const cmd = sessionLastDocSet(null, onOk, onErr) as InvokeCmd;
-
-      expect(cmd.type).toBe("Invoke");
-      expect(cmd.command).toBe("session_last_doc_set");
-      expect(cmd.payload).toStrictEqual({ docRef: null });
+    expect(sessionDropDoc(1, "new.md", onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_drop_doc",
+      payload: { locationId: 1, relPath: "new.md" },
+    });
+    expect(sessionPruneLocations([1, 2], onOk, onErr)).toMatchObject({
+      type: "Invoke",
+      command: "session_prune_locations",
+      payload: { validLocationIds: [1, 2] },
     });
   });
 });
