@@ -113,7 +113,7 @@ type SidebarLocationItemProps = {
   refreshReason: SidebarRefreshReason | null;
   filterText: string;
   isMenuOpen: boolean;
-  showFilenamesInsteadOfTitles: boolean;
+  filenameVisibility: boolean;
 };
 
 function SidebarLocationItemComponent(
@@ -136,7 +136,7 @@ function SidebarLocationItemComponent(
     refreshReason,
     filterText,
     isMenuOpen,
-    showFilenamesInsteadOfTitles,
+    filenameVisibility,
   }: SidebarLocationItemProps,
 ) {
   const handleRemoveClick = useCallback(() => {
@@ -194,7 +194,7 @@ function SidebarLocationItemComponent(
                 onRenameDocument={onRenameDocument}
                 onMoveDocument={onMoveDocument}
                 onDeleteDocument={onDeleteDocument}
-                showFilenamesInsteadOfTitles={showFilenamesInsteadOfTitles}
+                filenameVisibility={filenameVisibility}
                 id={location.id} />
             )))}
         </div>

@@ -39,11 +39,10 @@ export type UiLayoutSettings = {
   syntax_highlighting_enabled: boolean;
   editor_font_size: number;
   editor_font_family: EditorFontFamily;
-  calm_ui_enabled: boolean;
-  calm_ui_focus_mode: boolean;
   focus_typewriter_scrolling_enabled: boolean;
   focus_dimming_mode: FocusDimmingMode;
-  show_filenames_instead_of_titles: boolean;
+  focus_auto_enter_focus_mode: boolean;
+  filename_visibility: boolean;
 };
 
 export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };

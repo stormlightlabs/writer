@@ -15,9 +15,7 @@ const createMockDoc = (overrides: Partial<DocMeta> = {}): DocMeta => ({
   ...overrides,
 });
 
-const mockSidebarState = {
-  showFilenamesInsteadOfTitles: false,
-};
+const mockSidebarState = { filenameVisibility: false };
 
 const createProps = (overrides: Partial<Parameters<typeof DocumentItem>[0]> = {}) => ({
   doc: createMockDoc(),
@@ -27,7 +25,7 @@ const createProps = (overrides: Partial<Parameters<typeof DocumentItem>[0]> = {}
   onRenameDocument: vi.fn().mockResolvedValue(true),
   onMoveDocument: vi.fn().mockResolvedValue(true),
   onDeleteDocument: vi.fn().mockResolvedValue(true),
-  showFilenamesInsteadOfTitles: false,
+  filenameVisibility: false,
   id: 1,
   ...overrides,
 });
@@ -45,10 +43,10 @@ describe("DocumentItem", () => {
       expect(screen.getByText("My Document")).toBeInTheDocument();
     });
 
-    it("displays filename when showFilenamesInsteadOfTitles is true", () => {
+    it("displays filename when filenameVisibility is true", () => {
       const props = createProps({
         doc: createMockDoc({ title: "My Document", rel_path: "notes/my-file.md" }),
-        showFilenamesInsteadOfTitles: true,
+        filenameVisibility: true,
       });
       render(<DocumentItem {...props} />);
       expect(screen.getByText("my-file.md")).toBeInTheDocument();
@@ -57,7 +55,7 @@ describe("DocumentItem", () => {
     it("displays filename when title is empty", () => {
       const props = createProps({
         doc: createMockDoc({ title: "", rel_path: "notes/untitled.md" }),
-        showFilenamesInsteadOfTitles: false,
+        filenameVisibility: false,
       });
       render(<DocumentItem {...props} />);
       expect(screen.getByText("untitled.md")).toBeInTheDocument();

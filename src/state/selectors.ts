@@ -1,4 +1,4 @@
-import type { CalmUiSettings, StyleCheckSettings } from "$types";
+import type { StyleCheckSettings } from "$types";
 import { useShallow } from "zustand/react/shallow";
 import { useLayoutStore } from "./stores/layout";
 import { usePdfExportStore } from "./stores/pdf-export";
@@ -21,10 +21,8 @@ export const useLayoutChromeState = () =>
       topBarsCollapsed: state.topBarsCollapsed,
       statusBarCollapsed: state.statusBarCollapsed,
       showSearch: state.showSearch,
-      calmUiSettings: state.calmUiSettings,
-      chromeTemporarilyVisible: state.chromeTemporarilyVisible,
       reduceMotion: state.reduceMotion,
-      showFilenamesInsteadOfTitles: state.showFilenamesInsteadOfTitles,
+      showFilenames: state.showFilenames,
     })),
   );
 
@@ -39,13 +37,8 @@ export const useLayoutChromeActions = () =>
       toggleStatusBarCollapsed: state.toggleStatusBarCollapsed,
       setShowSearch: state.setShowSearch,
       toggleShowSearch: state.toggleShowSearch,
-      setCalmUiSettings: state.setCalmUiSettings,
-      toggleCalmUi: state.toggleCalmUi,
-      setCalmUiFocusMode: state.setCalmUiFocusMode,
-      setChromeTemporarilyVisible: state.setChromeTemporarilyVisible,
-      revealChromeTemporarily: state.revealChromeTemporarily,
-      setShowFilenamesInsteadOfTitles: state.setShowFilenamesInsteadOfTitles,
-      toggleShowFilenamesInsteadOfTitles: state.toggleShowFilenamesInsteadOfTitles,
+      setFilenameVisibility: state.setFilenameVisibility,
+      toggleFilenameVisibility: state.toggleFilenameVisibility,
     })),
   );
 
@@ -285,6 +278,7 @@ export const useLayoutSettingsFocusState = () =>
       focusModeSettings: state.focusModeSettings,
       setTypewriterScrollingEnabled: state.setTypewriterScrollingEnabled,
       setFocusDimmingMode: state.setFocusDimmingMode,
+      setAutoEnterFocusMode: state.setAutoEnterFocusMode,
     })),
   );
 
@@ -336,7 +330,7 @@ export const useSidebarState = () => {
   const layoutState = useLayoutStore(
     useShallow((state) => ({
       toggleSidebarCollapsed: state.toggleSidebarCollapsed,
-      showFilenamesInsteadOfTitles: state.showFilenamesInsteadOfTitles,
+      filenameVisibility: state.showFilenames,
     })),
   );
   const workspaceState = useWorkspaceStore(
@@ -367,7 +361,7 @@ export const useSidebarState = () => {
     setFilterText: workspaceState.setFilterText,
     selectLocation: workspaceState.selectLocation,
     toggleSidebarCollapsed: layoutState.toggleSidebarCollapsed,
-    showFilenamesInsteadOfTitles: layoutState.showFilenamesInsteadOfTitles,
+    filenameVisibility: layoutState.filenameVisibility,
   };
 };
 
@@ -400,34 +394,15 @@ export const useEditorPresentationState = () =>
     })),
   );
 
-export const useCalmUiSettings = () =>
-  useLayoutStore(
-    useShallow((state): CalmUiSettings & { chromeTemporarilyVisible: boolean } => ({
-      ...state.calmUiSettings,
-      chromeTemporarilyVisible: state.chromeTemporarilyVisible,
-    })),
-  );
-
-export const useCalmUiActions = () =>
-  useLayoutStore(
-    useShallow((state) => ({
-      setCalmUiSettings: state.setCalmUiSettings,
-      toggleCalmUi: state.toggleCalmUi,
-      setCalmUiFocusMode: state.setCalmUiFocusMode,
-      setChromeTemporarilyVisible: state.setChromeTemporarilyVisible,
-      revealChromeTemporarily: state.revealChromeTemporarily,
-    })),
-  );
-
 export const useReduceMotionState = () =>
   useLayoutStore(useShallow((state) => ({ reduceMotion: state.reduceMotion, setReduceMotion: state.setReduceMotion })));
 
 export const useShowFilenamesState = () =>
   useLayoutStore(
     useShallow((state) => ({
-      showFilenamesInsteadOfTitles: state.showFilenamesInsteadOfTitles,
-      setShowFilenamesInsteadOfTitles: state.setShowFilenamesInsteadOfTitles,
-      toggleShowFilenamesInsteadOfTitles: state.toggleShowFilenamesInsteadOfTitles,
+      filenameVisibility: state.showFilenames,
+      setFilenameVisibility: state.setFilenameVisibility,
+      toggleFilenameVisibility: state.toggleFilenameVisibility,
     })),
   );
 

@@ -313,112 +313,27 @@ describe("appStore", () => {
 
     expect(result.current.focusModeSettings.typewriterScrollingEnabled).toBe(!initialValue);
   });
-});
 
-describe("Calm UI state", () => {
-  beforeEach(() => {
-    resetAppStore();
-  });
-
-  it("should have default Calm UI settings", () => {
+  it("should have autoEnterFocusMode in default focus mode settings", () => {
     const { result } = renderHook(() => useAppStore());
 
-    expect(result.current.calmUiSettings).toEqual({ enabled: true, focusMode: true });
-    expect(result.current.chromeTemporarilyVisible).toBe(false);
+    expect(result.current.focusModeSettings.autoEnterFocusMode).toBe(true);
   });
 
-  it("should toggle Calm UI", () => {
+  it("should set autoEnterFocusMode", () => {
     const { result } = renderHook(() => useAppStore());
 
     act(() => {
-      result.current.toggleCalmUi();
+      result.current.setAutoEnterFocusMode(false);
     });
 
-    expect(result.current.calmUiSettings.enabled).toBe(false);
+    expect(result.current.focusModeSettings.autoEnterFocusMode).toBe(false);
 
     act(() => {
-      result.current.toggleCalmUi();
+      result.current.setAutoEnterFocusMode(true);
     });
 
-    expect(result.current.calmUiSettings.enabled).toBe(true);
-  });
-
-  it("should apply collapsed chrome preset when toggling Calm UI", () => {
-    const { result } = renderHook(() => useAppStore());
-
-    act(() => {
-      result.current.toggleCalmUi();
-    });
-
-    expect(result.current.calmUiSettings.enabled).toBe(false);
-    expect(result.current.sidebarCollapsed).toBe(false);
-    expect(result.current.topBarsCollapsed).toBe(false);
-    expect(result.current.statusBarCollapsed).toBe(false);
-
-    act(() => {
-      result.current.toggleCalmUi();
-    });
-
-    expect(result.current.calmUiSettings.enabled).toBe(true);
-    expect(result.current.sidebarCollapsed).toBe(true);
-    expect(result.current.topBarsCollapsed).toBe(true);
-    expect(result.current.statusBarCollapsed).toBe(true);
-
-    act(() => {
-      result.current.toggleCalmUi();
-    });
-
-    expect(result.current.calmUiSettings.enabled).toBe(false);
-    expect(result.current.sidebarCollapsed).toBe(false);
-    expect(result.current.topBarsCollapsed).toBe(false);
-    expect(result.current.statusBarCollapsed).toBe(false);
-  });
-
-  it("should set Calm UI focus mode", () => {
-    const { result } = renderHook(() => useAppStore());
-
-    act(() => {
-      result.current.setCalmUiFocusMode(false);
-    });
-
-    expect(result.current.calmUiSettings.focusMode).toBe(false);
-  });
-
-  it("should set all Calm UI settings at once", () => {
-    const { result } = renderHook(() => useAppStore());
-    const newSettings = { enabled: false, focusMode: false };
-
-    act(() => {
-      result.current.setCalmUiSettings(newSettings);
-    });
-
-    expect(result.current.calmUiSettings).toEqual(newSettings);
-  });
-
-  it("should set chrome temporarily visible", () => {
-    const { result } = renderHook(() => useAppStore());
-
-    act(() => {
-      result.current.setChromeTemporarilyVisible(true);
-    });
-
-    expect(result.current.chromeTemporarilyVisible).toBe(true);
-
-    act(() => {
-      result.current.setChromeTemporarilyVisible(false);
-    });
-
-    expect(result.current.chromeTemporarilyVisible).toBe(false);
-  });
-
-  it("should reveal chrome temporarily", () => {
-    const { result } = renderHook(() => useAppStore());
-
-    act(() => {
-      result.current.revealChromeTemporarily();
-    });
-
-    expect(result.current.chromeTemporarilyVisible).toBe(true);
+    expect(result.current.focusModeSettings.autoEnterFocusMode).toBe(true);
   });
 });
 

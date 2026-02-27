@@ -17,7 +17,7 @@ type DocumentItemProps = {
   onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
   onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
   onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
-  showFilenamesInsteadOfTitles: boolean;
+  filenameVisibility: boolean;
   id: number;
 };
 
@@ -32,20 +32,17 @@ function RenameDialog(
   const [name, setName] = useState(currentName);
   const [isRenaming, setIsRenaming] = useState(false);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!name.trim() || name === currentName) {
-        onClose();
-        return;
-      }
-      setIsRenaming(true);
-      await onRename(name.trim());
-      setIsRenaming(false);
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || name === currentName) {
       onClose();
-    },
-    [name, currentName, onRename, onClose],
-  );
+      return;
+    }
+    setIsRenaming(true);
+    await onRename(name.trim());
+    setIsRenaming(false);
+    onClose();
+  }, [name, currentName, onRename, onClose]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
@@ -69,10 +66,12 @@ function RenameDialog(
           autoFocus
           disabled={isRenaming} />
         <div className="flex justify-end gap-2 mt-4">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isRenaming}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" size="sm" disabled={isRenaming || !name.trim() || name === currentName}>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isRenaming}>Cancel</Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            disabled={isRenaming || !name.trim() || name === currentName}>
             Rename
           </Button>
         </div>
@@ -92,20 +91,17 @@ function MoveDialog(
   const [path, setPath] = useState(currentPath);
   const [isMoving, setIsMoving] = useState(false);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!path.trim() || path === currentPath) {
-        onClose();
-        return;
-      }
-      setIsMoving(true);
-      await onMove(path.trim());
-      setIsMoving(false);
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!path.trim() || path === currentPath) {
       onClose();
-    },
-    [path, currentPath, onMove, onClose],
-  );
+      return;
+    }
+    setIsMoving(true);
+    await onMove(path.trim());
+    setIsMoving(false);
+    onClose();
+  }, [path, currentPath, onMove, onClose]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setPath(e.target.value);
@@ -130,9 +126,7 @@ function MoveDialog(
           disabled={isMoving} />
         <p className="text-xs text-text-secondary mt-2">Enter the new relative path for the document.</p>
         <div className="flex justify-end gap-2 mt-4">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isMoving}>
-            Cancel
-          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isMoving}>Cancel</Button>
           <Button type="submit" variant="primary" size="sm" disabled={isMoving || !path.trim() || path === currentPath}>
             Move
           </Button>
@@ -164,13 +158,11 @@ function DeleteConfirmDialog(
       <div className="p-4 min-w-[300px]">
         <h3 className="text-sm font-medium text-text-primary mb-3">Delete Document</h3>
         <p className="text-sm text-text-secondary mb-4">
-          Are you sure you want to delete <span className="text-text-primary font-medium">{documentName}</span>?
-          This action cannot be undone.
+          Are you sure you want to delete{" "}
+          <span className="text-text-primary font-medium">{documentName}</span>? This action cannot be undone.
         </p>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isDeleting}>
-            Cancel
-          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isDeleting}>Cancel</Button>
           <Button type="button" variant="dangerGhost" size="sm" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? "Deleting..." : "Delete"}
           </Button>
@@ -181,8 +173,17 @@ function DeleteConfirmDialog(
 }
 
 export function DocumentItem(
-  { doc, isSelected, selectedDocPath, onSelectDocument, onRenameDocument, onMoveDocument, onDeleteDocument, showFilenamesInsteadOfTitles, id }:
-    DocumentItemProps,
+  {
+    doc,
+    isSelected,
+    selectedDocPath,
+    onSelectDocument,
+    onRenameDocument,
+    onMoveDocument,
+    onDeleteDocument,
+    filenameVisibility: filenameVisibility,
+    id,
+  }: DocumentItemProps,
 ) {
   const { isOpen, position, open, close } = useContextMenu();
   const [showRenameDialog, setShowRenameDialog] = useState(false);
@@ -190,11 +191,11 @@ export function DocumentItem(
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const displayLabel = useMemo(() => {
-    if (showFilenamesInsteadOfTitles) {
+    if (filenameVisibility) {
       return doc.rel_path.split("/").pop() || "Untitled";
     }
     return doc.title || doc.rel_path.split("/").pop() || "Untitled";
-  }, [doc.title, doc.rel_path, showFilenamesInsteadOfTitles]);
+  }, [doc.title, doc.rel_path, filenameVisibility]);
 
   const handleClick = useCallback(() => onSelectDocument(id, doc.rel_path), [id, onSelectDocument, doc.rel_path]);
 
@@ -231,19 +232,13 @@ export function DocumentItem(
     setShowDeleteDialog(true);
   }, [close]);
 
-  const performRename = useCallback(
-    async (newName: string) => {
-      await onRenameDocument(id, doc.rel_path, newName);
-    },
-    [id, doc.rel_path, onRenameDocument],
-  );
+  const performRename = useCallback(async (newName: string) => {
+    await onRenameDocument(id, doc.rel_path, newName);
+  }, [id, doc.rel_path, onRenameDocument]);
 
-  const performMove = useCallback(
-    async (newRelPath: string) => {
-      await onMoveDocument(id, doc.rel_path, newRelPath);
-    },
-    [id, doc.rel_path, onMoveDocument],
-  );
+  const performMove = useCallback(async (newRelPath: string) => {
+    await onMoveDocument(id, doc.rel_path, newRelPath);
+  }, [id, doc.rel_path, onMoveDocument]);
 
   const performDelete = useCallback(async () => {
     await onDeleteDocument(id, doc.rel_path);
@@ -284,11 +279,7 @@ export function DocumentItem(
         onClose={closeRenameDialog}
         currentName={currentFilename}
         onRename={performRename} />
-      <MoveDialog
-        isOpen={showMoveDialog}
-        onClose={closeMoveDialog}
-        currentPath={doc.rel_path}
-        onMove={performMove} />
+      <MoveDialog isOpen={showMoveDialog} onClose={closeMoveDialog} currentPath={doc.rel_path} onMove={performMove} />
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
         onClose={closeDeleteDialog}

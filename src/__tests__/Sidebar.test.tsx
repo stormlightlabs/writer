@@ -19,7 +19,7 @@ const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState
   setFilterText: vi.fn(),
   selectLocation: vi.fn(),
   toggleSidebarCollapsed: vi.fn(),
-  showFilenamesInsteadOfTitles: false,
+  filenameVisibility: false,
   ...overrides,
 });
 

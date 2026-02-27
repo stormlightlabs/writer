@@ -34,10 +34,8 @@ export const getInitialLayoutChromeState = (): LayoutChromeState => ({
   topBarsCollapsed: false,
   statusBarCollapsed: false,
   showSearch: false,
-  calmUiSettings: { enabled: true, focusMode: true },
-  chromeTemporarilyVisible: false,
   reduceMotion: false,
-  showFilenamesInsteadOfTitles: false,
+  showFilenames: false,
 });
 
 export const getInitialEditorPresentationState = (): EditorPresentationState => ({
@@ -53,7 +51,7 @@ export const getInitialViewModeState = (): ViewModeState => ({
   isSplitView: false,
   isFocusMode: false,
   isPreviewVisible: false,
-  focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence" },
+  focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence", autoEnterFocusMode: true },
 });
 
 export const getInitialWriterToolsState = (): WriterToolsState => ({
@@ -87,24 +85,9 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   setShowSearch: (value) => set({ showSearch: value }),
   toggleShowSearch: () => set((state) => ({ showSearch: !state.showSearch })),
 
-  setCalmUiSettings: (settings) => set({ calmUiSettings: settings }),
-  toggleCalmUi: () =>
-    set((state) => {
-      const nextEnabled = !state.calmUiSettings.enabled;
-      return {
-        calmUiSettings: { ...state.calmUiSettings, enabled: nextEnabled },
-        sidebarCollapsed: nextEnabled,
-        topBarsCollapsed: nextEnabled,
-        statusBarCollapsed: nextEnabled,
-        chromeTemporarilyVisible: false,
-      };
-    }),
-  setCalmUiFocusMode: (value) => set((state) => ({ calmUiSettings: { ...state.calmUiSettings, focusMode: value } })),
-  setChromeTemporarilyVisible: (value) => set({ chromeTemporarilyVisible: value }),
-  revealChromeTemporarily: () => set({ chromeTemporarilyVisible: true }),
   setReduceMotion: (value) => set({ reduceMotion: value }),
-  setShowFilenamesInsteadOfTitles: (value) => set({ showFilenamesInsteadOfTitles: value }),
-  toggleShowFilenamesInsteadOfTitles: () => set((state) => ({ showFilenamesInsteadOfTitles: !state.showFilenamesInsteadOfTitles })),
+  setFilenameVisibility: (value) => set({ showFilenames: value }),
+  toggleFilenameVisibility: () => set((state) => ({ showFilenames: !state.showFilenames })),
 
   setLineNumbersVisible: (value) => set({ lineNumbersVisible: value }),
   toggleLineNumbersVisible: () => set((state) => ({ lineNumbersVisible: !state.lineNumbersVisible })),
@@ -136,6 +119,8 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
     set((state) => ({ focusModeSettings: { ...state.focusModeSettings, typewriterScrollingEnabled: enabled } })),
   setFocusDimmingMode: (mode) =>
     set((state) => ({ focusModeSettings: { ...state.focusModeSettings, dimmingMode: mode } })),
+  setAutoEnterFocusMode: (enabled) =>
+    set((state) => ({ focusModeSettings: { ...state.focusModeSettings, autoEnterFocusMode: enabled } })),
   toggleTypewriterScrolling: () =>
     set((state) => ({
       focusModeSettings: {

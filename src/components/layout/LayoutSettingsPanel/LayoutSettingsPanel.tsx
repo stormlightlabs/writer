@@ -4,8 +4,6 @@ import { Dialog } from "$components/Dialog";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { XIcon } from "$icons";
 import {
-  useCalmUiActions,
-  useCalmUiSettings,
   useGlobalCaptureSettingsState,
   useLayoutSettingsChromeState,
   useLayoutSettingsEditorState,
@@ -107,7 +105,8 @@ function ChromeSettingsSection() {
     toggleTabBarCollapsed,
     toggleStatusBarCollapsed,
   } = useLayoutSettingsChromeState();
-  const { showFilenamesInsteadOfTitles, toggleShowFilenamesInsteadOfTitles } = useShowFilenamesState();
+  const { filenameVisibility: filenameVisibility, toggleFilenameVisibility: toggleFilenameVisibility } =
+    useShowFilenamesState();
 
   return (
     <>
@@ -129,35 +128,9 @@ function ChromeSettingsSection() {
       <ToggleRow
         label="Show Filenames"
         description="Display filenames instead of document titles in the sidebar."
-        isVisible={showFilenamesInsteadOfTitles}
-        onToggle={toggleShowFilenamesInsteadOfTitles} />
+        isVisible={filenameVisibility}
+        onToggle={toggleFilenameVisibility} />
     </>
-  );
-}
-
-function CalmUiSettingsSection() {
-  const { enabled, focusMode } = useCalmUiSettings();
-  const { toggleCalmUi, setCalmUiFocusMode } = useCalmUiActions();
-
-  return (
-    <div className="py-2.5">
-      <ToggleRow
-        label="Enable Calm UI"
-        description="Writing-first defaults with quieter chrome behavior."
-        isVisible={enabled}
-        onToggle={toggleCalmUi} />
-
-      {enabled && (
-        <div className="mt-2 pl-3 border-l-2 border-border-subtle">
-          <p className="m-0 text-xs text-text-secondary mb-2">Calm UI Options</p>
-          <ToggleRow
-            label="Auto-enter Focus Mode"
-            description="Enter Focus mode when opening a document."
-            isVisible={focusMode}
-            onToggle={setCalmUiFocusMode} />
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -207,10 +180,16 @@ function EditorSettingsSection() {
 }
 
 function FocusModeSection() {
-  const { focusModeSettings, setTypewriterScrollingEnabled, setFocusDimmingMode } = useLayoutSettingsFocusState();
+  const { focusModeSettings, setTypewriterScrollingEnabled, setFocusDimmingMode, setAutoEnterFocusMode } =
+    useLayoutSettingsFocusState();
 
   return (
     <>
+      <ToggleRow
+        label="Auto-enter Focus Mode"
+        description="Enter Focus mode when opening a document."
+        isVisible={focusModeSettings.autoEnterFocusMode}
+        onToggle={setAutoEnterFocusMode} />
       <ToggleRow
         label="Typewriter Scrolling"
         description="Keep the active line centered in the viewport."
@@ -271,9 +250,6 @@ const SettingsBody = () => (
   <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
     <CollapsibleSection title="Accessibility" description="Configure motion and display preferences.">
       <AccessibilitySection />
-    </CollapsibleSection>
-    <CollapsibleSection title="Calm UI" description="Reduce visual noise and automate focus-oriented behavior.">
-      <CalmUiSettingsSection />
     </CollapsibleSection>
     <CollapsibleSection title="Chrome" description="Control visibility of core app UI regions." defaultOpen>
       <ChromeSettingsSection />

@@ -79,7 +79,11 @@ export type AppError = { code: ErrorCode; message: string; context?: string };
 
 export type FocusDimmingMode = "off" | "sentence" | "paragraph";
 
-export type FocusModeSettings = { typewriterScrollingEnabled: boolean; dimmingMode: FocusDimmingMode };
+export type FocusModeSettings = {
+  typewriterScrollingEnabled: boolean;
+  dimmingMode: FocusDimmingMode;
+  autoEnterFocusMode: boolean;
+};
 
 export type PosHighlightingEnabled = boolean;
 
@@ -98,8 +102,6 @@ export type StyleCheckSettings = {
 export type CaptureMode = "QuickNote" | "WritingSession" | "Append";
 
 export type CaptureDocRef = { locationId: number; relPath: string };
-
-export type CalmUiSettings = { enabled: boolean; focusMode: boolean };
 
 export type GlobalCaptureSettings = {
   enabled: boolean;

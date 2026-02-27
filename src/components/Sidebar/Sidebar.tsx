@@ -72,7 +72,7 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     setFilterText,
     selectLocation,
     toggleSidebarCollapsed,
-    showFilenamesInsteadOfTitles,
+    filenameVisibility: filenameVisibility,
   } = useSidebarState();
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
   const [showLocationMenu, setShowLocationMenu] = useState<number | null>(null);
@@ -183,7 +183,7 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
               isRefreshing={isRefreshingLocation}
               refreshReason={sidebarRefreshReason}
               filterText={filterText}
-              showFilenamesInsteadOfTitles={showFilenamesInsteadOfTitles} />
+              filenameVisibility={filenameVisibility} />
           );
         })}
       </div>

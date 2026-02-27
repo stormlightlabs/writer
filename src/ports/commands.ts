@@ -109,15 +109,11 @@ export function docExists(...[locationId, relPath, onOk, onErr]: DocOpenParams<b
   return invokeCmd<boolean>("doc_exists", { locationId, relPath }, onOk, onErr);
 }
 
-export function docRename(
-  ...[locationId, relPath, newName, onOk, onErr]: DocRenameParams<DocMeta>
-): Cmd {
+export function docRename(...[locationId, relPath, newName, onOk, onErr]: DocRenameParams<DocMeta>): Cmd {
   return invokeCmd<DocMeta>("doc_rename", { locationId, relPath, newName }, onOk, onErr);
 }
 
-export function docMove(
-  ...[locationId, relPath, newRelPath, onOk, onErr]: DocMoveParams<DocMeta>
-): Cmd {
+export function docMove(...[locationId, relPath, newRelPath, onOk, onErr]: DocMoveParams<DocMeta>): Cmd {
   return invokeCmd<DocMeta>("doc_move", { locationId, relPath, newRelPath }, onOk, onErr);
 }
 

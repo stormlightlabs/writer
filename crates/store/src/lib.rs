@@ -1684,11 +1684,10 @@ mod tests {
             syntax_highlighting_enabled: false,
             editor_font_size: 18,
             editor_font_family: "Monaspace Neon".to_string(),
-            calm_ui_enabled: false,
-            calm_ui_focus_mode: false,
             focus_typewriter_scrolling_enabled: false,
             focus_dimming_mode: FocusDimmingMode::Paragraph,
-            show_filenames_instead_of_titles: false,
+            focus_auto_enter_focus_mode: false,
+            filename_visibility: false,
         };
 
         store.ui_layout_set(&settings).unwrap();
@@ -1723,8 +1722,7 @@ mod tests {
         assert!(loaded.syntax_highlighting_enabled);
         assert_eq!(loaded.editor_font_size, 16);
         assert_eq!(loaded.editor_font_family, "IBM Plex Mono");
-        assert!(loaded.calm_ui_enabled);
-        assert!(loaded.calm_ui_focus_mode);
+        assert!(loaded.focus_auto_enter_focus_mode);
         assert!(loaded.focus_typewriter_scrolling_enabled);
         assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);
     }

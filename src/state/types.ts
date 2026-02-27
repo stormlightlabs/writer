@@ -1,7 +1,6 @@
 import type { PdfExportOptions } from "$pdf/types";
 import type {
   AppTheme,
-  CalmUiSettings,
   DocMeta,
   DocRef,
   EditorFontFamily,
@@ -24,10 +23,8 @@ export type LayoutChromeState = {
   topBarsCollapsed: boolean;
   statusBarCollapsed: boolean;
   showSearch: boolean;
-  calmUiSettings: CalmUiSettings;
-  chromeTemporarilyVisible: boolean;
   reduceMotion: boolean;
-  showFilenamesInsteadOfTitles: boolean;
+  showFilenames: boolean;
 };
 
 export type EditorPresentationState = {
@@ -57,14 +54,9 @@ export type LayoutChromeActions = {
   toggleStatusBarCollapsed: () => void;
   setShowSearch: (value: boolean) => void;
   toggleShowSearch: () => void;
-  setCalmUiSettings: (settings: CalmUiSettings) => void;
-  toggleCalmUi: () => void;
-  setCalmUiFocusMode: (value: boolean) => void;
-  setChromeTemporarilyVisible: (value: boolean) => void;
-  revealChromeTemporarily: () => void;
   setReduceMotion: (value: boolean) => void;
-  setShowFilenamesInsteadOfTitles: (value: boolean) => void;
-  toggleShowFilenamesInsteadOfTitles: () => void;
+  setFilenameVisibility: (value: boolean) => void;
+  toggleFilenameVisibility: () => void;
 };
 
 export type EditorPresentationActions = {
@@ -87,6 +79,7 @@ export type ViewModeActions = {
   setFocusModeSettings: (settings: FocusModeSettings) => void;
   setTypewriterScrollingEnabled: (enabled: boolean) => void;
   setFocusDimmingMode: (mode: FocusDimmingMode) => void;
+  setAutoEnterFocusMode: (enabled: boolean) => void;
   toggleTypewriterScrolling: () => void;
   setPreviewVisible: (value: boolean) => void;
   togglePreviewVisible: () => void;

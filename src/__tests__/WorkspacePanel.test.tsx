@@ -1,7 +1,7 @@
 /* oxlint-disable eslint-plugin-react-perf/jsx-no-new-object-as-prop */
 import { EditorProps } from "$components/Editor";
 import { WorkspacePanel } from "$components/layout/WorkspacePanel";
-import type { CalmUiVisibility, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
+import type { WorkspacePanelProps } from "$components/layout/WorkspacePanel";
 import { PreviewProps } from "$components/Preview";
 import { StatusBarProps } from "$components/StatusBar";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
@@ -57,7 +57,6 @@ type WorkspacePanelPropOverrides = {
   editor?: Partial<EditorProps>;
   preview?: Partial<PreviewProps>;
   statusBar?: Partial<StatusBarProps>;
-  calmUiVisibility?: CalmUiVisibility;
 };
 
 const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => ({
@@ -72,7 +71,7 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   setFilterText: vi.fn(),
   selectLocation: vi.fn(),
   toggleSidebarCollapsed: vi.fn(),
-  showFilenamesInsteadOfTitles: false,
+  filenameVisibility: false,
   ...overrides,
 });
 
@@ -182,7 +181,6 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     ...overrides.preview,
   },
   statusBar: { stats: { cursorLine: 1, cursorColumn: 1, wordCount: 0, charCount: 0 }, ...overrides.statusBar },
-  calmUiVisibility: overrides.calmUiVisibility,
 });
 
 const renderWorkspacePanel = (

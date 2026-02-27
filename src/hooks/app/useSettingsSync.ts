@@ -1,6 +1,6 @@
 import { logger } from "$logger";
 import { globalCaptureGet, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
-import { stateToLayoutSettings, uiSettingsToCalmUI, uiSettingsToFocusMode } from "$state/helpers";
+import { stateToLayoutSettings, uiSettingsToFocusMode } from "$state/helpers";
 import {
   useEditorPresentationStateRaw,
   useLayoutChromeState,
@@ -36,9 +36,8 @@ export function useSettingsSync(): void {
       state.setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
       state.setEditorFontSize(settings.editor_font_size);
       state.setEditorFontFamily(settings.editor_font_family);
-      state.setCalmUiSettings(uiSettingsToCalmUI(settings));
       state.setFocusModeSettings(uiSettingsToFocusMode(settings));
-      state.setShowFilenamesInsteadOfTitles(settings.show_filenames_instead_of_titles);
+      state.setFilenameVisibility(settings.filename_visibility);
       setLayoutSettingsHydrated(true);
     }, () => {
       if (!isCancelled) {

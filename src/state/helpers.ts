@@ -1,5 +1,5 @@
 import { UiLayoutSettings } from "$ports";
-import type { CalmUiSettings, FocusModeSettings } from "$types";
+import type { FocusModeSettings } from "$types";
 import type { EditorPresentationState, LayoutChromeState } from "./types";
 
 export const stateToLayoutSettings = (
@@ -16,21 +16,16 @@ export const stateToLayoutSettings = (
   syntax_highlighting_enabled: presentation.syntaxHighlightingEnabled,
   editor_font_size: presentation.editorFontSize,
   editor_font_family: presentation.editorFontFamily,
-  calm_ui_enabled: layoutChrome.calmUiSettings.enabled,
-  calm_ui_focus_mode: layoutChrome.calmUiSettings.focusMode,
   focus_typewriter_scrolling_enabled: focusModeSettings.typewriterScrollingEnabled,
   focus_dimming_mode: focusModeSettings.dimmingMode,
-  show_filenames_instead_of_titles: layoutChrome.showFilenamesInsteadOfTitles,
-});
-
-export const uiSettingsToCalmUI: (uiSettings: UiLayoutSettings) => CalmUiSettings = (uiSettings) => ({
-  enabled: uiSettings.calm_ui_enabled,
-  focusMode: uiSettings.calm_ui_focus_mode,
+  focus_auto_enter_focus_mode: focusModeSettings.autoEnterFocusMode,
+  filename_visibility: layoutChrome.showFilenames,
 });
 
 export const uiSettingsToFocusMode: (uiSettings: UiLayoutSettings) => FocusModeSettings = (uiSettings) => ({
   typewriterScrollingEnabled: uiSettings.focus_typewriter_scrolling_enabled,
   dimmingMode: uiSettings.focus_dimming_mode,
+  autoEnterFocusMode: uiSettings.focus_auto_enter_focus_mode,
 });
 
 export function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {

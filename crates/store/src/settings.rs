@@ -21,20 +21,16 @@ fn default_inbox_dir() -> String {
     "inbox".to_string()
 }
 
-fn default_calm_ui_enabled() -> bool {
-    true
-}
-
-fn default_calm_ui_focus_mode() -> bool {
-    true
-}
-
 fn default_focus_typewriter_scrolling_enabled() -> bool {
     true
 }
 
 fn default_focus_dimming_mode() -> FocusDimmingMode {
     FocusDimmingMode::Sentence
+}
+
+fn default_focus_auto_enter_focus_mode() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -86,16 +82,14 @@ pub struct UiLayoutSettings {
     pub editor_font_size: u16,
     #[serde(default = "default_editor_font_family")]
     pub editor_font_family: String,
-    #[serde(default = "default_calm_ui_enabled")]
-    pub calm_ui_enabled: bool,
-    #[serde(default = "default_calm_ui_focus_mode")]
-    pub calm_ui_focus_mode: bool,
     #[serde(default = "default_focus_typewriter_scrolling_enabled")]
     pub focus_typewriter_scrolling_enabled: bool,
     #[serde(default = "default_focus_dimming_mode")]
     pub focus_dimming_mode: FocusDimmingMode,
+    #[serde(default = "default_focus_auto_enter_focus_mode")]
+    pub focus_auto_enter_focus_mode: bool,
     #[serde(default)]
-    pub show_filenames_instead_of_titles: bool,
+    pub filename_visibility: bool,
 }
 
 impl Default for UiLayoutSettings {
@@ -110,11 +104,10 @@ impl Default for UiLayoutSettings {
             syntax_highlighting_enabled: true,
             editor_font_size: default_editor_font_size(),
             editor_font_family: default_editor_font_family(),
-            calm_ui_enabled: default_calm_ui_enabled(),
-            calm_ui_focus_mode: default_calm_ui_focus_mode(),
             focus_typewriter_scrolling_enabled: default_focus_typewriter_scrolling_enabled(),
             focus_dimming_mode: default_focus_dimming_mode(),
-            show_filenames_instead_of_titles: false,
+            focus_auto_enter_focus_mode: default_focus_auto_enter_focus_mode(),
+            filename_visibility: false,
         }
     }
 }

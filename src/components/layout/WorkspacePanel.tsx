@@ -23,8 +23,6 @@ export type WorkspaceEditorProps = Pick<EditorProps, K>;
 type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
-export type CalmUiVisibility = { sidebar: boolean; statusBar: boolean; tabBar: boolean };
-
 export type WorkspacePanelProps = {
   toolbar: Pick<
     ToolbarProps,
@@ -41,7 +39,6 @@ export type WorkspacePanelProps = {
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
   statusBar: StatusBarProps;
-  calmUiVisibility?: CalmUiVisibility;
 };
 
 const SPLIT_PANEL_MIN_WIDTH = 280;
@@ -138,7 +135,7 @@ function Section({ children, initial, animate, exit, transition, className, styl
   );
 }
 
-export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisibility }: WorkspacePanelProps) {
+export function WorkspacePanel({ toolbar, editor, preview, statusBar }: WorkspacePanelProps) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
@@ -148,12 +145,9 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, calmUiVisi
   const panelMode = useMemo(() => getPanelMode(isSplitView, isPreviewVisible), [isSplitView, isPreviewVisible]);
   const sidebarMaxWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, viewportWidth - 280));
 
-  const effectiveSidebarVisible = calmUiVisibility ? calmUiVisibility.sidebar && !sidebarCollapsed : !sidebarCollapsed;
-  const effectiveTabBarVisible = calmUiVisibility ? calmUiVisibility.tabBar && !topBarsCollapsed : !topBarsCollapsed;
-
-  const effectiveStatusBarVisible = calmUiVisibility
-    ? calmUiVisibility.statusBar && !statusBarCollapsed
-    : !statusBarCollapsed;
+  const effectiveSidebarVisible = !sidebarCollapsed;
+  const effectiveTabBarVisible = !topBarsCollapsed;
+  const effectiveStatusBarVisible = !statusBarCollapsed;
 
   const { size: sidebarWidth, isResizing, startResizing, setSize: setSidebarWidth } = useResizable({
     initialSize: 280,
