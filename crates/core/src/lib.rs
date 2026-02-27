@@ -350,6 +350,30 @@ pub enum BackendEvent {
     DocModifiedExternally { doc_id: DocId, new_mtime: DateTime<Utc> },
     /// Emitted when save status changes (for UI feedback)
     SaveStatusChanged { doc_id: DocId, status: SaveStatus },
+    /// Emitted when the filesystem watcher detects file or directory changes.
+    FilesystemChanged {
+        location_id: LocationId,
+        entry_kind: FsEntryKind,
+        change_kind: FsChangeKind,
+        rel_path: PathBuf,
+        old_rel_path: Option<PathBuf>,
+    },
+}
+
+/// Filesystem entry kind for watcher events
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FsEntryKind {
+    File,
+    Directory,
+}
+
+/// Filesystem change kind for watcher events
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FsChangeKind {
+    Created,
+    Modified,
+    Deleted,
+    Renamed,
 }
 
 /// Save status for UI feedback loop

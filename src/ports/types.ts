@@ -63,6 +63,14 @@ export type BackendEvent =
   | { type: "ReconciliationComplete"; checked: number; missing: LocationId[] }
   | { type: "ConflictDetected"; location_id: LocationId; rel_path: string; conflict_filename: string }
   | { type: "DocModifiedExternally"; doc_id: DocRef; new_mtime: string }
+  | {
+    type: "FilesystemChanged";
+    location_id: LocationId;
+    entry_kind: "File" | "Directory";
+    change_kind: "Created" | "Modified" | "Deleted" | "Renamed";
+    rel_path: string;
+    old_rel_path?: string | null;
+  }
   | { type: "SaveStatusChanged"; doc_id: DocRef; status: SaveStatus };
 
 export type ErrorCallback = (error: AppError) => void;

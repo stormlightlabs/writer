@@ -1,5 +1,14 @@
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
-import { docList, runCmd, sessionGet, sessionPruneLocations } from "$ports";
+import {
+  docDelete,
+  docList,
+  docRename,
+  runCmd,
+  sessionDropDoc,
+  sessionGet,
+  sessionPruneLocations,
+  sessionUpdateTabDoc,
+} from "$ports";
 import { resetAppStore, useAppStore } from "$state/stores/app";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +24,7 @@ vi.mock(
     docMove: vi.fn(() => ({ type: "None" })),
     docRename: vi.fn(() => ({ type: "None" })),
     locationAddViaDialog: vi.fn(() => ({ type: "None" })),
+    locationList: vi.fn(() => ({ type: "None" })),
     locationRemove: vi.fn(() => ({ type: "None" })),
     sessionGet: vi.fn((_onOk: (session: { tabs: unknown[]; activeTabId: string | null }) => void) => ({
       type: "None",
@@ -64,5 +74,62 @@ describe("useWorkspaceController", () => {
 
     expect(docList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
     expect(runCmd).toHaveBeenCalled();
+  });
+
+  it("does not patch documents in JS after rename", async () => {
+    const originalDoc = {
+      location_id: 1,
+      rel_path: "draft.md",
+      title: "Draft",
+      updated_at: "2024-01-01T00:00:00Z",
+      word_count: 10,
+    };
+    useAppStore.getState().setDocuments([originalDoc]);
+    vi.mocked(docRename).mockImplementation((_locationId, _relPath, _newName, onOk) => {
+      onOk({ ...originalDoc, rel_path: "renamed.md", title: "Renamed" });
+      return { type: "None" };
+    });
+
+    const { result } = renderHook(() => useWorkspaceController());
+
+    const renamed = await act(async () => {
+      return await result.current.handleRenameDocument(1, "draft.md", "renamed.md");
+    });
+
+    expect(renamed).toBeTruthy();
+    expect(useAppStore.getState().documents).toStrictEqual([originalDoc]);
+    expect(sessionUpdateTabDoc).toHaveBeenCalledWith(
+      1,
+      "draft.md",
+      { location_id: 1, rel_path: "renamed.md" },
+      "Renamed",
+      expect.any(Function),
+      expect.any(Function),
+    );
+  });
+
+  it("does not patch documents in JS after delete", async () => {
+    const originalDoc = {
+      location_id: 1,
+      rel_path: "delete-me.md",
+      title: "Delete me",
+      updated_at: "2024-01-01T00:00:00Z",
+      word_count: 8,
+    };
+    useAppStore.getState().setDocuments([originalDoc]);
+    vi.mocked(docDelete).mockImplementation((_locationId, _relPath, onOk) => {
+      onOk(true);
+      return { type: "None" };
+    });
+
+    const { result } = renderHook(() => useWorkspaceController());
+
+    const deleted = await act(async () => {
+      return await result.current.handleDeleteDocument(1, "delete-me.md");
+    });
+
+    expect(deleted).toBeTruthy();
+    expect(useAppStore.getState().documents).toStrictEqual([originalDoc]);
+    expect(sessionDropDoc).toHaveBeenCalledWith(1, "delete-me.md", expect.any(Function), expect.any(Function));
   });
 });

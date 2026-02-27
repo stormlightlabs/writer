@@ -5,6 +5,7 @@ import {
   docMove,
   docRename,
   locationAddViaDialog,
+  locationList,
   locationRemove,
   runCmd,
   sessionCloseTab,
@@ -68,7 +69,7 @@ export function useWorkspaceController() {
   const { selectedDocPath, documents, isLoadingDocuments, refreshingLocationId, sidebarRefreshReason } =
     useWorkspaceDocumentsState();
   const { setSidebarRefreshState } = useWorkspaceDocumentsActions();
-  const { setSidebarFilter, setSelectedLocation, addLocation, removeLocation } = useWorkspaceLocationsActions();
+  const { setSidebarFilter, setSelectedLocation, setLocations } = useWorkspaceLocationsActions();
   const { tabs, activeTabId, isSessionHydrated } = useTabsState();
   const { applySessionState } = useTabsActions();
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [activeTabId, tabs]);
@@ -100,23 +101,34 @@ export function useWorkspaceController() {
     [documents, selectedLocationId],
   );
 
+  const refreshLocations = useCallback((nextSelectedLocationId?: number) => {
+    runCmd(locationList((nextLocations) => {
+      setLocations(nextLocations);
+      if (nextSelectedLocationId && nextLocations.some((location) => location.id === nextSelectedLocationId)) {
+        setSelectedLocation(nextSelectedLocationId);
+      }
+    }, (error) => {
+      logger.error(f("Failed to refresh locations", { error }));
+    }));
+  }, [setLocations, setSelectedLocation]);
+
   const handleAddLocation = useCallback(() => {
     runCmd(locationAddViaDialog((location) => {
-      addLocation(location);
+      refreshLocations(location.id);
     }, (error) => {
       logger.error(f("Failed to add location", { error }));
     }));
-  }, [addLocation]);
+  }, [refreshLocations]);
 
   const handleRemoveLocation = useCallback((locationId: number) => {
     runCmd(locationRemove(locationId, (removed) => {
       if (removed) {
-        removeLocation(locationId);
+        refreshLocations();
       }
     }, (error) => {
       logger.error(f("Failed to remove location", { locationId, error }));
     }));
-  }, [removeLocation]);
+  }, [refreshLocations]);
 
   const openTab = useCallback((docRef: DocRef, title: string) => {
     void runCmd(sessionOpenTab(docRef, title, applySession, (error) => {
@@ -240,12 +252,6 @@ export function useWorkspaceController() {
   const handleRenameDocument = useCallback((locationId: number, relPath: string, newName: string): Promise<boolean> => {
     return new Promise((resolve) => {
       runCmd(docRename(locationId, relPath, newName, (newMeta) => {
-        const workspaceState = useWorkspaceStore.getState();
-        const updatedDocuments = workspaceState.documents.map((doc) =>
-          doc.location_id === locationId && doc.rel_path === relPath ? newMeta : doc
-        );
-        workspaceState.setDocuments(updatedDocuments);
-
         void runCmd(
           sessionUpdateTabDoc(
             locationId,
@@ -270,12 +276,6 @@ export function useWorkspaceController() {
     (locationId: number, relPath: string, newRelPath: string): Promise<boolean> => {
       return new Promise((resolve) => {
         runCmd(docMove(locationId, relPath, newRelPath, (newMeta) => {
-          const workspaceState = useWorkspaceStore.getState();
-          const updatedDocuments = workspaceState.documents.map((doc) =>
-            doc.location_id === locationId && doc.rel_path === relPath ? newMeta : doc
-          );
-          workspaceState.setDocuments(updatedDocuments);
-
           void runCmd(
             sessionUpdateTabDoc(
               locationId,
@@ -305,12 +305,6 @@ export function useWorkspaceController() {
           resolve(false);
           return;
         }
-
-        const workspaceState = useWorkspaceStore.getState();
-        const updatedDocuments = workspaceState.documents.filter((doc) =>
-          !(doc.location_id === locationId && doc.rel_path === relPath)
-        );
-        workspaceState.setDocuments(updatedDocuments);
 
         void runCmd(sessionDropDoc(locationId, relPath, applySession, () => {}));
 

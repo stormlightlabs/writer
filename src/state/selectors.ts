@@ -135,8 +135,6 @@ export const useWorkspaceLocationsActions = () =>
       setLocations: state.setLocations,
       setLoadingLocations: state.setLoadingLocations,
       setSelectedLocation: state.setSelectedLocation,
-      addLocation: state.addLocation,
-      removeLocation: state.removeLocation,
     })),
   );
 

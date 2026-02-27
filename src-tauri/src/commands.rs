@@ -14,7 +14,7 @@ use writer_core::{
 use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult};
 use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
 
-type Result<T> = std::result::Result<T, ()>;
+type CommandResponse<T> = std::result::Result<CommandResult<T>, AppError>;
 
 /// Application state shared across commands
 pub struct AppState {
@@ -32,14 +32,16 @@ impl AppState {
 #[tauri::command]
 pub async fn location_add_via_dialog(
     app: AppHandle, state: State<'_, AppState>,
-) -> Result<CommandResult<LocationDescriptor>> {
+) -> CommandResponse<LocationDescriptor> {
     tracing::debug!("Opening folder picker dialog");
 
     let folder_path = app.dialog().file().blocking_pick_folder();
 
     match folder_path {
         Some(path) => {
-            let path_buf: PathBuf = path.into_path().map_err(|_| ())?;
+            let path_buf: PathBuf = path
+                .into_path()
+                .map_err(|_| AppError::invalid_path("Selected folder path is invalid"))?;
             tracing::info!("Folder selected: {:?}", path_buf);
 
             let name = path_buf
@@ -80,7 +82,7 @@ pub async fn location_add_via_dialog(
 
 /// Lists all registered locations
 #[tauri::command]
-pub fn location_list(state: State<'_, AppState>) -> Result<CommandResult<Vec<LocationDescriptor>>> {
+pub fn location_list(state: State<'_, AppState>) -> CommandResponse<Vec<LocationDescriptor>> {
     tracing::debug!("Listing all locations");
 
     match state.store.location_list() {
@@ -97,7 +99,7 @@ pub fn location_list(state: State<'_, AppState>) -> Result<CommandResult<Vec<Loc
 
 /// Removes a location by ID
 #[tauri::command]
-pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
+pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> CommandResponse<bool> {
     let id = LocationId(location_id);
     tracing::info!("Removing location: id={}", location_id);
 
@@ -123,7 +125,7 @@ pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> Result<C
 
 /// Validates all locations and returns those that no longer exist
 #[tauri::command]
-pub fn location_validate(state: State<'_, AppState>) -> Result<CommandResult<Vec<(i64, String)>>> {
+pub fn location_validate(state: State<'_, AppState>) -> CommandResponse<Vec<(i64, String)>> {
     tracing::debug!("Validating all locations");
 
     match state.store.validate_locations() {
@@ -149,7 +151,7 @@ pub fn location_validate(state: State<'_, AppState>) -> Result<CommandResult<Vec
 }
 
 #[tauri::command]
-pub fn ui_layout_get(state: State<'_, AppState>) -> Result<CommandResult<UiLayoutSettings>> {
+pub fn ui_layout_get(state: State<'_, AppState>) -> CommandResponse<UiLayoutSettings> {
     tracing::debug!("Loading persisted UI layout settings");
 
     match state.store.ui_layout_get() {
@@ -162,7 +164,7 @@ pub fn ui_layout_get(state: State<'_, AppState>) -> Result<CommandResult<UiLayou
 }
 
 #[tauri::command]
-pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> Result<CommandResult<bool>> {
+pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> CommandResponse<bool> {
     tracing::debug!("Persisting UI layout settings");
 
     match state.store.ui_layout_set(&settings) {
@@ -175,7 +177,7 @@ pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> 
 }
 
 #[tauri::command]
-pub fn session_last_doc_get(state: State<'_, AppState>) -> Result<CommandResult<Option<writer_store::CaptureDocRef>>> {
+pub fn session_last_doc_get(state: State<'_, AppState>) -> CommandResponse<Option<writer_store::CaptureDocRef>> {
     tracing::debug!("Loading last opened document session state");
 
     match state.store.last_open_doc_get() {
@@ -190,7 +192,7 @@ pub fn session_last_doc_get(state: State<'_, AppState>) -> Result<CommandResult<
 #[tauri::command]
 pub fn session_last_doc_set(
     state: State<'_, AppState>, doc_ref: Option<writer_store::CaptureDocRef>,
-) -> Result<CommandResult<bool>> {
+) -> CommandResponse<bool> {
     tracing::debug!("Persisting last opened document session state");
 
     match state.store.last_open_doc_set(doc_ref.as_ref()) {
@@ -203,7 +205,7 @@ pub fn session_last_doc_set(
 }
 
 #[tauri::command]
-pub fn session_get(state: State<'_, AppState>) -> Result<CommandResult<writer_store::SessionState>> {
+pub fn session_get(state: State<'_, AppState>) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!("Loading persisted session state");
 
     match state.store.session_get() {
@@ -218,7 +220,7 @@ pub fn session_get(state: State<'_, AppState>) -> Result<CommandResult<writer_st
 #[tauri::command]
 pub fn session_open_tab(
     state: State<'_, AppState>, doc_ref: writer_store::CaptureDocRef, title: String,
-) -> Result<CommandResult<writer_store::SessionState>> {
+) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!(
         "Opening session tab: location_id={}, rel_path={}",
         doc_ref.location_id,
@@ -235,9 +237,7 @@ pub fn session_open_tab(
 }
 
 #[tauri::command]
-pub fn session_select_tab(
-    state: State<'_, AppState>, tab_id: String,
-) -> Result<CommandResult<writer_store::SessionState>> {
+pub fn session_select_tab(state: State<'_, AppState>, tab_id: String) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!("Selecting session tab: {}", tab_id);
 
     match state.store.session_select_tab(&tab_id) {
@@ -250,9 +250,7 @@ pub fn session_select_tab(
 }
 
 #[tauri::command]
-pub fn session_close_tab(
-    state: State<'_, AppState>, tab_id: String,
-) -> Result<CommandResult<writer_store::SessionState>> {
+pub fn session_close_tab(state: State<'_, AppState>, tab_id: String) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!("Closing session tab: {}", tab_id);
 
     match state.store.session_close_tab(&tab_id) {
@@ -267,7 +265,7 @@ pub fn session_close_tab(
 #[tauri::command]
 pub fn session_reorder_tabs(
     state: State<'_, AppState>, tab_ids: Vec<String>,
-) -> Result<CommandResult<writer_store::SessionState>> {
+) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!("Reordering session tabs: count={}", tab_ids.len());
 
     match state.store.session_reorder_tabs(&tab_ids) {
@@ -282,7 +280,7 @@ pub fn session_reorder_tabs(
 #[tauri::command]
 pub fn session_mark_tab_modified(
     state: State<'_, AppState>, tab_id: String, is_modified: bool,
-) -> Result<CommandResult<writer_store::SessionState>> {
+) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!(
         "Marking session tab modified: tab_id={}, is_modified={}",
         tab_id,
@@ -302,7 +300,7 @@ pub fn session_mark_tab_modified(
 pub fn session_update_tab_doc(
     state: State<'_, AppState>, location_id: i64, old_rel_path: String, new_doc_ref: writer_store::CaptureDocRef,
     title: String,
-) -> Result<CommandResult<writer_store::SessionState>> {
+) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!(
         "Updating session tab document: location_id={}, old_rel_path={}, new_rel_path={}",
         location_id,
@@ -325,7 +323,7 @@ pub fn session_update_tab_doc(
 #[tauri::command]
 pub fn session_drop_doc(
     state: State<'_, AppState>, location_id: i64, rel_path: String,
-) -> Result<CommandResult<writer_store::SessionState>> {
+) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!(
         "Dropping document from session tabs: location_id={}, rel_path={}",
         location_id,
@@ -344,7 +342,7 @@ pub fn session_drop_doc(
 #[tauri::command]
 pub fn session_prune_locations(
     state: State<'_, AppState>, valid_location_ids: Vec<i64>,
-) -> Result<CommandResult<writer_store::SessionState>> {
+) -> CommandResponse<writer_store::SessionState> {
     tracing::debug!("Pruning session tabs by locations: count={}", valid_location_ids.len());
 
     let valid_ids: HashSet<i64> = valid_location_ids.into_iter().collect();
@@ -361,7 +359,7 @@ pub fn session_prune_locations(
 #[tauri::command]
 pub fn doc_list(
     state: State<'_, AppState>, location_id: i64, options: Option<DocListOptions>,
-) -> Result<CommandResult<Vec<DocMeta>>> {
+) -> CommandResponse<Vec<DocMeta>> {
     let id = LocationId(location_id);
     let list_options = Some(options.unwrap_or(DocListOptions { recursive: true, ..Default::default() }));
     tracing::debug!("Listing documents for location: id={}", location_id);
@@ -380,7 +378,7 @@ pub fn doc_list(
 
 /// Opens a document by location_id and relative path
 #[tauri::command]
-pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<DocContent>> {
+pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) -> CommandResponse<DocContent> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -415,7 +413,7 @@ pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) 
 #[tauri::command]
 pub fn doc_save(
     app: AppHandle, state: State<'_, AppState>, location_id: i64, rel_path: String, text: String,
-) -> Result<CommandResult<SaveResult>> {
+) -> CommandResponse<SaveResult> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -483,7 +481,7 @@ pub fn doc_save(
 
 /// Checks if a document exists in a location
 #[tauri::command]
-pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
+pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String) -> CommandResponse<bool> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -523,7 +521,7 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
 #[tauri::command]
 pub fn doc_rename(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_name: String,
-) -> Result<CommandResult<DocMeta>> {
+) -> CommandResponse<DocMeta> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -559,7 +557,7 @@ pub fn doc_rename(
 #[tauri::command]
 pub fn doc_move(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
-) -> Result<CommandResult<DocMeta>> {
+) -> CommandResponse<DocMeta> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
@@ -594,7 +592,7 @@ pub fn doc_move(
 
 /// Deletes a document from disk and removes it from the index
 #[tauri::command]
-pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
+pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> CommandResponse<bool> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -627,7 +625,7 @@ pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
 
 /// Creates a directory at a relative path within a location
 #[tauri::command]
-pub fn dir_create(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
+pub fn dir_create(state: State<'_, AppState>, location_id: i64, rel_path: String) -> CommandResponse<bool> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -646,7 +644,7 @@ pub fn dir_create(state: State<'_, AppState>, location_id: i64, rel_path: String
 #[tauri::command]
 pub fn dir_rename(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_name: String,
-) -> Result<CommandResult<String>> {
+) -> CommandResponse<String> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -670,7 +668,7 @@ pub fn dir_rename(
 #[tauri::command]
 pub fn dir_move(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
-) -> Result<CommandResult<String>> {
+) -> CommandResponse<String> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
@@ -693,7 +691,7 @@ pub fn dir_move(
 
 /// Deletes a directory and all indexed documents beneath it
 #[tauri::command]
-pub fn dir_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> Result<CommandResult<bool>> {
+pub fn dir_delete(state: State<'_, AppState>, location_id: i64, rel_path: String) -> CommandResponse<bool> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -710,7 +708,7 @@ pub fn dir_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
 
 /// Enables filesystem watching for a location and reindexes changed files.
 #[tauri::command]
-pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
+pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> CommandResponse<bool> {
     let location_id_wrapped = LocationId(location_id);
 
     let location = match state.store.location_get(location_id_wrapped) {
@@ -768,7 +766,7 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
 
 /// Disables filesystem watching for a location.
 #[tauri::command]
-pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> Result<CommandResult<bool>> {
+pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> CommandResponse<bool> {
     let mut watchers = match state.watchers.lock() {
         Ok(guard) => guard,
         Err(_) => return Ok(CommandResult::err(AppError::io("Failed to lock watchers map"))),
@@ -781,7 +779,7 @@ pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> Result<Com
 #[tauri::command]
 pub fn search(
     state: State<'_, AppState>, query: String, filters: Option<SearchFilters>, limit: Option<usize>,
-) -> Result<CommandResult<Vec<SearchHit>>> {
+) -> CommandResponse<Vec<SearchHit>> {
     let limit = limit.unwrap_or(50);
 
     match state.store.search(&query, filters, limit) {
@@ -797,7 +795,7 @@ pub fn search(
 #[tauri::command]
 pub fn markdown_render(
     _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> Result<CommandResult<RenderResult>> {
+) -> CommandResponse<RenderResult> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -838,7 +836,7 @@ pub fn markdown_render(
 #[tauri::command]
 pub fn markdown_render_for_pdf(
     _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> Result<CommandResult<PdfRenderResult>> {
+) -> CommandResponse<PdfRenderResult> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
@@ -873,7 +871,7 @@ pub fn markdown_render_for_pdf(
 }
 
 #[tauri::command]
-pub fn style_check_get(state: State<'_, AppState>) -> Result<CommandResult<StyleCheckSettings>> {
+pub fn style_check_get(state: State<'_, AppState>) -> CommandResponse<StyleCheckSettings> {
     tracing::debug!("Loading persisted style check settings");
 
     match state.store.style_check_get() {
@@ -886,7 +884,7 @@ pub fn style_check_get(state: State<'_, AppState>) -> Result<CommandResult<Style
 }
 
 #[tauri::command]
-pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings) -> Result<CommandResult<bool>> {
+pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings) -> CommandResponse<bool> {
     tracing::debug!("Persisting style check settings");
 
     match state.store.style_check_set(&settings) {
@@ -900,7 +898,7 @@ pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings)
 
 /// Gets global capture settings
 #[tauri::command]
-pub fn global_capture_get(state: State<'_, AppState>) -> Result<CommandResult<writer_store::GlobalCaptureSettings>> {
+pub fn global_capture_get(state: State<'_, AppState>) -> CommandResponse<writer_store::GlobalCaptureSettings> {
     tracing::debug!("Loading global capture settings");
 
     match state.store.global_capture_get() {
@@ -916,7 +914,7 @@ pub fn global_capture_get(state: State<'_, AppState>) -> Result<CommandResult<wr
 #[tauri::command]
 pub fn global_capture_set(
     app: AppHandle, state: State<'_, AppState>, settings: writer_store::GlobalCaptureSettings,
-) -> Result<CommandResult<bool>> {
+) -> CommandResponse<bool> {
     tracing::debug!("Persisting global capture settings");
 
     if let Err(e) = capture::validate_shortcut_format(&settings.shortcut) {
@@ -940,7 +938,7 @@ pub fn global_capture_set(
 
 /// Opens the quick capture window
 #[tauri::command]
-pub fn global_capture_open(app: AppHandle) -> Result<CommandResult<bool>> {
+pub fn global_capture_open(app: AppHandle) -> CommandResponse<bool> {
     tracing::debug!("Opening quick capture window");
 
     match capture::show_quick_capture_window(&app) {
@@ -957,7 +955,7 @@ pub fn global_capture_open(app: AppHandle) -> Result<CommandResult<bool>> {
 pub async fn global_capture_submit(
     app: AppHandle, state: State<'_, AppState>, mode: writer_store::CaptureMode, text: String,
     destination: Option<writer_store::CaptureDocRef>, open_main_after_save: Option<bool>,
-) -> Result<CommandResult<capture::CaptureSubmitResult>> {
+) -> CommandResponse<capture::CaptureSubmitResult> {
     tracing::debug!("Submitting capture: mode={:?}, text_len={}", mode, text.len());
 
     let settings = match state.store.global_capture_get() {
@@ -1006,7 +1004,7 @@ pub async fn global_capture_submit(
 
 /// Pauses or resumes the global shortcut
 #[tauri::command]
-pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: bool) -> Result<CommandResult<bool>> {
+pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: bool) -> CommandResponse<bool> {
     tracing::debug!("Setting global capture pause state: {}", paused);
 
     let mut settings = match state.store.global_capture_get() {
@@ -1033,7 +1031,7 @@ pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: 
 
 /// Validates a shortcut format
 #[tauri::command]
-pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResult<bool>> {
+pub fn global_capture_validate_shortcut(shortcut: String) -> CommandResponse<bool> {
     tracing::debug!("Validating shortcut: {}", shortcut);
 
     match capture::validate_shortcut_format(&shortcut) {
@@ -1044,7 +1042,7 @@ pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResul
 
 /// Returns the markdown help guide content
 #[tauri::command]
-pub fn markdown_help_get() -> Result<CommandResult<String>> {
+pub fn markdown_help_get() -> CommandResponse<String> {
     tracing::debug!("Fetching markdown help content");
     Ok(CommandResult::ok(writer_store::get_markdown_help().to_string()))
 }

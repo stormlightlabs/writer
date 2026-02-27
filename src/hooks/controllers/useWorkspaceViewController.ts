@@ -162,7 +162,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     markActiveTabModified,
     setPreviewDoc,
     renderPreview,
-    handleRefreshSidebar,
   });
 
   useSettingsSync();

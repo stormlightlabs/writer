@@ -103,12 +103,12 @@ describe("Sidebar", () => {
 
   it("shows refresh feedback for the selected location and disables refresh action", () => {
     vi.mocked(useSidebarState).mockReturnValue(
-      createSidebarState({ refreshingLocationId: 1, sidebarRefreshReason: "save" }),
+      createSidebarState({ refreshingLocationId: 1, sidebarRefreshReason: "external" }),
     );
 
     render(<Sidebar />);
 
-    expect(screen.getByText("Updating after save...")).toBeInTheDocument();
+    expect(screen.getByText("Applying external file changes...")).toBeInTheDocument();
     expect(screen.getByTitle("Refresh Sidebar")).toBeDisabled();
   });
 

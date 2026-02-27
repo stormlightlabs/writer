@@ -1,6 +1,5 @@
-import type { SidebarRefreshReason } from "$state/types";
 import type { DocRef, SaveStatus, Tab } from "$types";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 type UseEditorPreviewEffectsArgs = {
   activeTab: Tab | null;
@@ -9,27 +8,14 @@ type UseEditorPreviewEffectsArgs = {
   markActiveTabModified: (isModified: boolean) => void;
   setPreviewDoc: (docRef: DocRef | null) => void;
   renderPreview: (docRef: DocRef, text: string) => void;
-  handleRefreshSidebar: (locationId?: number, options?: { source?: SidebarRefreshReason }) => void;
 };
 
 export function useEditorPreviewEffects(
-  { activeTab, text, saveStatus, markActiveTabModified, setPreviewDoc, renderPreview, handleRefreshSidebar }:
-    UseEditorPreviewEffectsArgs,
+  { activeTab, text, saveStatus, markActiveTabModified, setPreviewDoc, renderPreview }: UseEditorPreviewEffectsArgs,
 ): void {
-  const previousSaveStatusRef = useRef(saveStatus);
-
   useEffect(() => {
     markActiveTabModified(saveStatus === "Dirty");
   }, [saveStatus, markActiveTabModified]);
-
-  useEffect(() => {
-    const previousSaveStatus = previousSaveStatusRef.current;
-    if (previousSaveStatus === "Saving" && saveStatus === "Saved") {
-      handleRefreshSidebar(activeTab?.docRef.location_id, { source: "save" });
-    }
-
-    previousSaveStatusRef.current = saveStatus;
-  }, [activeTab, saveStatus, handleRefreshSidebar]);
 
   useEffect(() => {
     if (activeTab) {

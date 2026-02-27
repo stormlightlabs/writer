@@ -150,6 +150,7 @@ describe("appStore", () => {
     act(() => {
       locationsActions.current.setLoadingLocations(false);
       locationsActions.current.setSidebarFilter("draft");
+      locationsActions.current.setLocations([{ id: 9, name: "N", root_path: "/n", added_at: "2024-01-01" }]);
       documentsActions.current.setDocuments([{
         location_id: 1,
         rel_path: "a.md",
@@ -158,8 +159,6 @@ describe("appStore", () => {
         word_count: 10,
       }]);
       documentsActions.current.setLoadingDocuments(true);
-      locationsActions.current.addLocation({ id: 9, name: "N", root_path: "/n", added_at: "2024-01-01" });
-      locationsActions.current.removeLocation(9);
     });
 
     expect(locationsState.current.isLoadingLocations).toBeFalsy();
@@ -172,7 +171,12 @@ describe("appStore", () => {
       word_count: 10,
     }]);
     expect(documentsState.current.isLoadingDocuments).toBeTruthy();
-    expect(locationsState.current.locations).toStrictEqual([]);
+    expect(locationsState.current.locations).toStrictEqual([{
+      id: 9,
+      name: "N",
+      root_path: "/n",
+      added_at: "2024-01-01",
+    }]);
   });
 
   it("tabs selector hooks apply backend session state", () => {

@@ -43,20 +43,6 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
   },
   setLoadingLocations: (value) => set({ isLoadingLocations: value }),
   setSelectedLocation: (locationId) => set({ selectedLocationId: locationId, selectedDocPath: undefined }),
-  addLocation: (location) => {
-    set((state) => ({
-      locations: [...state.locations, location],
-      selectedLocationId: location.id,
-      selectedDocPath: undefined,
-    }));
-  },
-  removeLocation: (locationId) => {
-    set((state) => ({
-      locations: state.locations.filter((location) => location.id !== locationId),
-      selectedLocationId: state.selectedLocationId === locationId ? undefined : state.selectedLocationId,
-      selectedDocPath: state.selectedLocationId === locationId ? undefined : state.selectedDocPath,
-    }));
-  },
 
   setSelectedDocPath: (path) => set({ selectedDocPath: path }),
   setDocuments: (documents) => set({ documents }),

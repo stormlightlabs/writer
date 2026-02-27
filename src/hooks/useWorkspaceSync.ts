@@ -10,9 +10,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { useBackendEvents } from "./useBackendEvents";
 
 export function useWorkspaceSync(): void {
-  const { selectedLocationId } = useWorkspaceLocationsState();
+  const { locations, selectedLocationId } = useWorkspaceLocationsState();
   const { setLocations, setLoadingLocations } = useWorkspaceLocationsActions();
-  const { setDocuments, setLoadingDocuments } = useWorkspaceDocumentsActions();
+  const { setDocuments, setLoadingDocuments, setSidebarRefreshState } = useWorkspaceDocumentsActions();
 
   const hasLoadedLocationsRef = useRef(false);
   const loadLocations = useCallback((showLoading = true) => {
@@ -49,26 +49,37 @@ export function useWorkspaceSync(): void {
     selectedLocationRef.current = selectedLocationId;
   }, [selectedLocationId]);
 
-  const loadDocuments = useCallback((locationId: number) => {
+  const loadDocuments = useCallback((locationId: number, source: "manual" | "external" = "manual") => {
     const requestId = ++documentRequestRef.current;
 
-    setLoadingDocuments(true);
+    if (source === "manual") {
+      setLoadingDocuments(true);
+    } else {
+      setSidebarRefreshState(locationId, source);
+    }
+
     runCmd(docList(locationId, (nextDocuments) => {
       if (documentRequestRef.current !== requestId) {
         return;
       }
 
       setDocuments(nextDocuments);
-      setLoadingDocuments(false);
+      if (source === "manual") {
+        setLoadingDocuments(false);
+      }
+      setSidebarRefreshState(undefined, null);
     }, (error) => {
       if (documentRequestRef.current !== requestId) {
         return;
       }
 
       logger.error(f("Failed to load documents", { locationId, error }));
-      setLoadingDocuments(false);
+      if (source === "manual") {
+        setLoadingDocuments(false);
+      }
+      setSidebarRefreshState(undefined, null);
     }));
-  }, [setDocuments, setLoadingDocuments]);
+  }, [setDocuments, setLoadingDocuments, setSidebarRefreshState]);
 
   useEffect(() => {
     if (!selectedLocationId) {
@@ -77,30 +88,59 @@ export function useWorkspaceSync(): void {
       return;
     }
 
-    loadDocuments(selectedLocationId);
+    loadDocuments(selectedLocationId, "manual");
   }, [selectedLocationId, loadDocuments, setDocuments, setLoadingDocuments]);
 
+  const watchedLocationIdsRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
-    if (!selectedLocationId) {
-      return;
+    const nextWatchedIds = new Set(locations.map((location) => location.id));
+    const currentWatchedIds = watchedLocationIdsRef.current;
+
+    for (const locationId of nextWatchedIds) {
+      if (!currentWatchedIds.has(locationId)) {
+        void runCmd(startWatch(locationId));
+      }
     }
 
-    void runCmd(startWatch(selectedLocationId));
+    for (const locationId of currentWatchedIds) {
+      if (!nextWatchedIds.has(locationId)) {
+        void runCmd(stopWatch(locationId));
+      }
+    }
 
+    watchedLocationIdsRef.current = nextWatchedIds;
+  }, [locations]);
+
+  useEffect(() => {
     return () => {
-      void runCmd(stopWatch(selectedLocationId));
+      for (const locationId of watchedLocationIdsRef.current) {
+        void runCmd(stopWatch(locationId));
+      }
+      watchedLocationIdsRef.current.clear();
     };
-  }, [selectedLocationId]);
+  }, []);
 
   useBackendEvents({
-    onDocModifiedExternally: (docRef) => {
+    onLocationMissing: () => {
+      loadLocations(false);
+    },
+    onLocationChanged: () => {
+      loadLocations(false);
+    },
+    onReconciliationComplete: () => {
+      loadLocations(false);
+    },
+    onFilesystemChanged: (event) => {
       const currentLocationId = selectedLocationRef.current;
-      if (currentLocationId && docRef.location_id === currentLocationId) {
-        loadDocuments(currentLocationId);
+      if (currentLocationId && event.location_id === currentLocationId) {
+        loadDocuments(currentLocationId, "external");
         return;
       }
 
-      loadLocations(false);
+      if (event.entry_kind === "Directory") {
+        loadLocations(false);
+      }
     },
   });
 }

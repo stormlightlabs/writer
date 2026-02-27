@@ -20,6 +20,32 @@ describe(useBackendEvents, () => {
     expect(onLocationMissing).toHaveBeenCalledWith(42, "/missing/path");
   });
 
+  it("invokes FilesystemChanged callback", () => {
+    const onFilesystemChanged = vi.fn();
+
+    renderHook(() => useBackendEvents({ onFilesystemChanged }));
+
+    act(() => {
+      emitBackendEvent({
+        type: "FilesystemChanged",
+        location_id: 42,
+        entry_kind: "File",
+        change_kind: "Renamed",
+        rel_path: "new.md",
+        old_rel_path: "old.md",
+      });
+    });
+
+    expect(onFilesystemChanged).toHaveBeenCalledWith({
+      type: "FilesystemChanged",
+      location_id: 42,
+      entry_kind: "File",
+      change_kind: "Renamed",
+      rel_path: "new.md",
+      old_rel_path: "old.md",
+    });
+  });
+
   it("invokes latest callback after rerender", () => {
     const onLocationMissing1 = vi.fn();
     const onLocationMissing2 = vi.fn();

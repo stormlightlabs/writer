@@ -16,6 +16,15 @@ export type UseBackendEventsOptions = {
   onLocationChanged?: (locationId: LocationId, oldPath: string, newPath: string) => void;
   onReconciliationComplete?: (checked: number, missing: LocationId[]) => void;
   onDocModifiedExternally?: (docRef: { location_id: LocationId; rel_path: string }) => void;
+  onFilesystemChanged?: (
+    event: {
+      location_id: LocationId;
+      entry_kind: "File" | "Directory";
+      change_kind: "Created" | "Modified" | "Deleted" | "Renamed";
+      rel_path: string;
+      old_rel_path?: string | null;
+    },
+  ) => void;
 };
 
 const MAX_ALERT_ITEMS = 100;
@@ -94,6 +103,18 @@ function handleBackendEvent(payload: BackendEvent): void {
     }
     case "SaveStatusChanged": {
       logger.info(f("Save status changed", { docId: payload.doc_id, status: payload.status }));
+      break;
+    }
+    case "FilesystemChanged": {
+      logger.info(
+        f("Filesystem changed", {
+          locationId: payload.location_id,
+          entryKind: payload.entry_kind,
+          changeKind: payload.change_kind,
+          relPath: payload.rel_path,
+          oldRelPath: payload.old_rel_path,
+        }),
+      );
       break;
     }
   }
@@ -182,6 +203,9 @@ export function useBackendEvents(options: UseBackendEventsOptions = {}): Backend
           break;
         case "DocModifiedExternally":
           optionsRef.current.onDocModifiedExternally?.(payload.doc_id);
+          break;
+        case "FilesystemChanged":
+          optionsRef.current.onFilesystemChanged?.(payload);
           break;
         default:
           break;

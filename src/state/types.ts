@@ -107,7 +107,7 @@ export type WorkspaceLocationsState = {
   sidebarFilter: string;
 };
 
-export type SidebarRefreshReason = "manual" | "save" | "external";
+export type SidebarRefreshReason = "manual" | "external";
 
 export type WorkspaceDocumentsState = {
   selectedDocPath?: string;
@@ -122,8 +122,6 @@ export type WorkspaceLocationsActions = {
   setLocations: (locations: LocationDescriptor[]) => void;
   setLoadingLocations: (value: boolean) => void;
   setSelectedLocation: (locationId?: number) => void;
-  addLocation: (location: LocationDescriptor) => void;
-  removeLocation: (locationId: number) => void;
 };
 
 export type WorkspaceDocumentsActions = {

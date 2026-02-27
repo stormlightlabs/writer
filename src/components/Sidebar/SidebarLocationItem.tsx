@@ -169,7 +169,7 @@ const LocationActions = ({ isMenuOpen, handleMenuClick, handleRemoveClick }: Loc
 const RefreshStatus = ({ reason }: { reason: SidebarRefreshReason | null }) => (
   <div className="px-6 py-2 text-text-placeholder text-[11px] flex items-center gap-1.5">
     <RefreshIcon size="xs" className="animate-spin" />
-    <span>{reason === "save" ? "Updating after save..." : "Refreshing files..."}</span>
+    <span>{reason === "external" ? "Applying external file changes..." : "Refreshing files..."}</span>
   </div>
 );
 

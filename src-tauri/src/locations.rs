@@ -1,11 +1,16 @@
 use super::AppState;
+use notify::event::{ModifyKind, RemoveKind};
 use notify::{Event, EventKind};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_fs::FsExt;
-use writer_core::{AppError, BackendEvent, DocId, LocationDescriptor, LocationId};
+use writer_core::{AppError, BackendEvent, DocId, FsChangeKind, FsEntryKind, LocationDescriptor, LocationId};
 use writer_store::Store;
+
+fn should_process_watcher_event(kind: &EventKind) -> bool {
+    matches!(kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_))
+}
 
 pub(super) fn emit_doc_modified_event(app: &AppHandle, doc_id: DocId, mtime: chrono::DateTime<chrono::Utc>) {
     let event = BackendEvent::DocModifiedExternally { doc_id, new_mtime: mtime };
@@ -14,25 +19,184 @@ pub(super) fn emit_doc_modified_event(app: &AppHandle, doc_id: DocId, mtime: chr
     }
 }
 
-pub(super) fn handle_watcher_event(
-    app: &AppHandle, store: &Arc<Store>, location_id: LocationId, root_path: &PathBuf, event: Event,
-) {
-    let should_process = matches!(
-        event.kind,
-        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-    );
+fn relative_path(root_path: &Path, path: &Path) -> Option<PathBuf> {
+    match path.strip_prefix(root_path) {
+        Ok(rel_path) if !rel_path.as_os_str().is_empty() => Some(rel_path.to_path_buf()),
+        _ => None,
+    }
+}
 
-    if !should_process {
+fn emit_filesystem_changed_event(
+    app: &AppHandle, location_id: LocationId, entry_kind: FsEntryKind, change_kind: FsChangeKind, rel_path: PathBuf,
+    old_rel_path: Option<PathBuf>,
+) {
+    let event = BackendEvent::FilesystemChanged { location_id, entry_kind, change_kind, rel_path, old_rel_path };
+    if let Err(error) = app.emit("backend-event", event) {
+        tracing::error!("Failed to emit FilesystemChanged event: {}", error);
+    }
+}
+
+fn change_kind_from_event_kind(kind: &EventKind) -> FsChangeKind {
+    match kind {
+        EventKind::Create(_) => FsChangeKind::Created,
+        EventKind::Remove(_) => FsChangeKind::Deleted,
+        EventKind::Modify(ModifyKind::Name(_)) => FsChangeKind::Renamed,
+        EventKind::Modify(_) => FsChangeKind::Modified,
+        _ => FsChangeKind::Modified,
+    }
+}
+
+fn remove_document_from_index_if_present(store: &Store, doc_id: &DocId, path: &Path) {
+    if let Err(error) = store.remove_document_from_index(doc_id) {
+        tracing::error!("Failed to remove deleted file {:?} from index: {}", path, error);
+    }
+}
+
+fn reindex_document_and_emit(
+    app: &AppHandle, store: &Store, location_id: LocationId, path: &Path, doc_id: DocId, change_kind: FsChangeKind,
+) {
+    match store.reindex_document(&doc_id) {
+        Ok(()) => {
+            let new_mtime = std::fs::metadata(path)
+                .and_then(|metadata| metadata.modified())
+                .map(chrono::DateTime::<chrono::Utc>::from)
+                .unwrap_or_else(|_| chrono::Utc::now());
+
+            emit_doc_modified_event(app, doc_id.clone(), new_mtime);
+            emit_filesystem_changed_event(
+                app,
+                location_id,
+                FsEntryKind::File,
+                change_kind,
+                doc_id.rel_path.clone(),
+                None,
+            );
+        }
+        Err(error) => {
+            tracing::error!("Failed to reindex changed file {:?}: {}", path, error);
+        }
+    }
+}
+
+fn reconcile_directory_index_and_emit(
+    app: &AppHandle, store: &Store, location_id: LocationId, rel_path: PathBuf, change_kind: FsChangeKind,
+    old_rel_path: Option<PathBuf>,
+) {
+    if let Err(error) = store.reconcile_location_index(location_id) {
+        tracing::error!(
+            "Failed to reconcile index after directory change {:?} in location {:?}: {}",
+            rel_path,
+            location_id,
+            error
+        );
         return;
     }
 
+    emit_filesystem_changed_event(
+        app,
+        location_id,
+        FsEntryKind::Directory,
+        change_kind,
+        rel_path,
+        old_rel_path,
+    );
+}
+
+fn handle_rename_event(app: &AppHandle, store: &Store, location_id: LocationId, root_path: &Path, paths: &[PathBuf]) {
+    if paths.len() < 2 {
+        return;
+    }
+
+    let from_path = &paths[0];
+    let to_path = &paths[1];
+
+    let Some(old_rel_path) = relative_path(root_path, from_path) else {
+        return;
+    };
+    let Some(new_rel_path) = relative_path(root_path, to_path) else {
+        return;
+    };
+
+    let is_directory_rename = to_path.is_dir() || from_path.is_dir();
+    if is_directory_rename {
+        reconcile_directory_index_and_emit(
+            app,
+            store,
+            location_id,
+            new_rel_path,
+            FsChangeKind::Renamed,
+            Some(old_rel_path),
+        );
+        return;
+    }
+
+    let old_doc_id = match DocId::new(location_id, old_rel_path.clone()) {
+        Ok(doc_id) => doc_id,
+        Err(error) => {
+            tracing::warn!("Ignoring watcher rename source path that failed validation: {}", error);
+            return;
+        }
+    };
+    let new_doc_id = match DocId::new(location_id, new_rel_path.clone()) {
+        Ok(doc_id) => doc_id,
+        Err(error) => {
+            tracing::warn!(
+                "Ignoring watcher rename destination path that failed validation: {}",
+                error
+            );
+            return;
+        }
+    };
+
+    remove_document_from_index_if_present(store, &old_doc_id, from_path);
+    match store.reindex_document(&new_doc_id) {
+        Ok(()) => {
+            let new_mtime = std::fs::metadata(to_path)
+                .and_then(|metadata| metadata.modified())
+                .map(chrono::DateTime::<chrono::Utc>::from)
+                .unwrap_or_else(|_| chrono::Utc::now());
+            emit_doc_modified_event(app, new_doc_id.clone(), new_mtime);
+            emit_filesystem_changed_event(
+                app,
+                location_id,
+                FsEntryKind::File,
+                FsChangeKind::Renamed,
+                new_doc_id.rel_path.clone(),
+                Some(old_doc_id.rel_path.clone()),
+            );
+        }
+        Err(error) => {
+            tracing::error!("Failed to reindex renamed file {:?}: {}", to_path, error);
+        }
+    }
+}
+
+pub(super) fn handle_watcher_event(
+    app: &AppHandle, store: &Arc<Store>, location_id: LocationId, root_path: &Path, event: Event,
+) {
+    if !should_process_watcher_event(&event.kind) {
+        return;
+    }
+
+    if matches!(event.kind, EventKind::Modify(ModifyKind::Name(_))) {
+        handle_rename_event(app, store, location_id, root_path, &event.paths);
+        return;
+    }
+
+    let change_kind = change_kind_from_event_kind(&event.kind);
+
     for path in event.paths {
-        let rel_path = match path.strip_prefix(root_path) {
-            Ok(rel_path) if !rel_path.as_os_str().is_empty() => rel_path.to_path_buf(),
-            _ => continue,
+        let rel_path = match relative_path(root_path, &path) {
+            Some(rel_path) => rel_path,
+            None => continue,
         };
 
-        let doc_id = match DocId::new(location_id, rel_path) {
+        if path.exists() && path.is_dir() {
+            reconcile_directory_index_and_emit(app, store, location_id, rel_path, change_kind, None);
+            continue;
+        }
+
+        let doc_id = match DocId::new(location_id, rel_path.clone()) {
             Ok(doc_id) => doc_id,
             Err(error) => {
                 tracing::warn!("Ignoring watcher path that failed validation: {}", error);
@@ -41,27 +205,27 @@ pub(super) fn handle_watcher_event(
         };
 
         if path.exists() && path.is_file() {
-            match store.reindex_document(&doc_id) {
-                Ok(()) => {
-                    let new_mtime = std::fs::metadata(&path)
-                        .and_then(|metadata| metadata.modified())
-                        .map(chrono::DateTime::<chrono::Utc>::from)
-                        .unwrap_or_else(|_| chrono::Utc::now());
-                    emit_doc_modified_event(app, doc_id, new_mtime);
-                }
-                Err(error) => {
-                    tracing::error!("Failed to reindex changed file {:?}: {}", path, error);
-                }
+            reindex_document_and_emit(app, store, location_id, &path, doc_id, change_kind);
+            continue;
+        }
+
+        if !path.exists() {
+            let is_directory_delete = matches!(event.kind, EventKind::Remove(RemoveKind::Folder));
+            if is_directory_delete {
+                reconcile_directory_index_and_emit(app, store, location_id, rel_path, FsChangeKind::Deleted, None);
+                continue;
             }
-        } else if !path.exists() {
-            match store.remove_document_from_index(&doc_id) {
-                Ok(()) => {
-                    emit_doc_modified_event(app, doc_id, chrono::Utc::now());
-                }
-                Err(error) => {
-                    tracing::error!("Failed to remove deleted file {:?} from index: {}", path, error);
-                }
-            }
+
+            remove_document_from_index_if_present(store, &doc_id, &path);
+            emit_doc_modified_event(app, doc_id.clone(), chrono::Utc::now());
+            emit_filesystem_changed_event(
+                app,
+                location_id,
+                FsEntryKind::File,
+                FsChangeKind::Deleted,
+                doc_id.rel_path.clone(),
+                None,
+            );
         }
     }
 }
@@ -225,4 +389,43 @@ pub fn reconcile(app: &AppHandle) -> Result<(), AppError> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
+
+    #[test]
+    fn watcher_filter_allows_create_modify_remove() {
+        assert!(should_process_watcher_event(&EventKind::Create(CreateKind::Any)));
+        assert!(should_process_watcher_event(&EventKind::Modify(ModifyKind::Any)));
+        assert!(should_process_watcher_event(&EventKind::Remove(RemoveKind::Any)));
+    }
+
+    #[test]
+    fn watcher_filter_ignores_non_mutating_events() {
+        assert!(!should_process_watcher_event(&EventKind::Any));
+        assert!(!should_process_watcher_event(&EventKind::Other));
+    }
+
+    #[test]
+    fn maps_event_kinds_to_fs_change_kind() {
+        assert_eq!(
+            change_kind_from_event_kind(&EventKind::Create(CreateKind::Any)),
+            FsChangeKind::Created
+        );
+        assert_eq!(
+            change_kind_from_event_kind(&EventKind::Modify(ModifyKind::Any)),
+            FsChangeKind::Modified
+        );
+        assert_eq!(
+            change_kind_from_event_kind(&EventKind::Modify(ModifyKind::Name(RenameMode::Any))),
+            FsChangeKind::Renamed
+        );
+        assert_eq!(
+            change_kind_from_event_kind(&EventKind::Remove(RemoveKind::Any)),
+            FsChangeKind::Deleted
+        );
+    }
 }

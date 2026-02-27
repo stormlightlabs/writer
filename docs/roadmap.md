@@ -76,16 +76,11 @@ Migrate core application state and heavy computation to the Rust backend to redu
 
 ### Tasks
 
-1. **Reactive File System**
-   - Leverage `RecommendedWatcher` to eliminate the need for manual frontend file list updates
-   - Implement event-driven UI updates based on backend file system events
-2. **High-Performance Analysis**
+1. **High-Performance Analysis**
    - Move `PatternMatcher` and `StyleCheck` logic to Rust using the `aho-corasick` crate
    - Offload heavy multi-pattern matching from the JS main thread
-3. **Unified Metadata Extraction**
+2. **Unified Metadata Extraction**
    - Calculate document metadata (word counts, outlines) during the `markdown_render` pass in Rust
-4. **Architectural Hardening**
-   - Simplify and unify `CommandResult` and `AppError` patterns across all Tauri commands
 
 ## Hardening
 
