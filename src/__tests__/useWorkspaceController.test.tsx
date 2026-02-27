@@ -10,6 +10,8 @@ import {
   sessionUpdateTabDoc,
 } from "$ports";
 import { resetAppStore, useAppStore } from "$state/stores/app";
+import { useTabsStore } from "$state/stores/tabs";
+import { useWorkspaceStore } from "$state/stores/workspace";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,6 +76,50 @@ describe("useWorkspaceController", () => {
 
     expect(docList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
     expect(runCmd).toHaveBeenCalled();
+  });
+
+  it("does not prune hydrated session tabs until locations finish loading", () => {
+    useTabsStore.setState({
+      tabs: [{
+        id: "tab-1",
+        docRef: { location_id: 1, rel_path: "notes/today.md" },
+        title: "Today",
+        isModified: false,
+      }],
+      activeTabId: "tab-1",
+      isSessionHydrated: true,
+    });
+    useWorkspaceStore.setState({
+      locations: [useAppStore.getState().locations[0]],
+      selectedLocationId: 1,
+      isLoadingLocations: true,
+    });
+
+    renderHook(() => useWorkspaceController());
+
+    expect(sessionPruneLocations).not.toHaveBeenCalled();
+  });
+
+  it("prunes hydrated session tabs after locations finish loading", () => {
+    useTabsStore.setState({
+      tabs: [{
+        id: "tab-1",
+        docRef: { location_id: 1, rel_path: "notes/today.md" },
+        title: "Today",
+        isModified: false,
+      }],
+      activeTabId: "tab-1",
+      isSessionHydrated: true,
+    });
+    useWorkspaceStore.setState({
+      locations: [useAppStore.getState().locations[0]],
+      selectedLocationId: 1,
+      isLoadingLocations: false,
+    });
+
+    renderHook(() => useWorkspaceController());
+
+    expect(sessionPruneLocations).toHaveBeenCalledWith([1], expect.any(Function), expect.any(Function));
   });
 
   it("does not patch documents in JS after rename", async () => {

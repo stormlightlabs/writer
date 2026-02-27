@@ -86,7 +86,7 @@ export function useWorkspaceController() {
   }, [applySession]);
 
   useEffect(() => {
-    if (!isSessionHydrated) {
+    if (!isSessionHydrated || isLoadingLocations) {
       return;
     }
 
@@ -94,7 +94,7 @@ export function useWorkspaceController() {
     void runCmd(sessionPruneLocations(validLocationIds, applySession, (error) => {
       logger.error(f("Failed to prune session tabs by location", { error, validLocationIds }));
     }));
-  }, [locations, isSessionHydrated, applySession]);
+  }, [locations, isSessionHydrated, isLoadingLocations, applySession]);
 
   const locationDocuments = useMemo(
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),

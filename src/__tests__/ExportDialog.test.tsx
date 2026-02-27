@@ -56,7 +56,7 @@ describe("PdfExportDialog", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Export to PDF")).toBeInTheDocument();
+      expect(screen.getByText("Export")).toBeInTheDocument();
     });
   });
 
@@ -64,13 +64,16 @@ describe("PdfExportDialog", () => {
     it("renders header with close button", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
-      expect(screen.getByText("Export to PDF")).toBeInTheDocument();
+      expect(screen.getByText("Export")).toBeInTheDocument();
       expect(screen.getByLabelText("Close export dialog")).toBeInTheDocument();
     });
 
     it("renders options panel", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
+      expect(screen.getByText("PDF")).toBeInTheDocument();
+      expect(screen.getByText("DOC/DOCX")).toBeInTheDocument();
+      expect(screen.getByText("Plaintext")).toBeInTheDocument();
       expect(screen.getByText("Page Size")).toBeInTheDocument();
       expect(screen.getByText("Orientation")).toBeInTheDocument();
     });
@@ -128,6 +131,18 @@ describe("PdfExportDialog", () => {
       expect(screen.getByText("Exporting...")).toBeInTheDocument();
       const exportingButton = screen.getByText("Exporting...").closest("button");
       expect(exportingButton).toBeDisabled();
+    });
+
+    it("disables future export format tabs and disables export button for them", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      renderExportDialog();
+
+      const docxTab = screen.getByRole("button", { name: "DOC/DOCX export tab" });
+      const txtTab = screen.getByRole("button", { name: "Plaintext export tab" });
+
+      expect(docxTab).toBeDisabled();
+      expect(txtTab).toBeDisabled();
+      expect(screen.getByText("Export PDF")).toBeEnabled();
     });
   });
 

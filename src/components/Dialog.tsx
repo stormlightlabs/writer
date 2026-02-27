@@ -144,7 +144,10 @@ export function Dialog(
             <motion.button
               type="button"
               aria-label="Close dialog"
-              className={cn("absolute inset-0 border-none bg-black/45 p-0 m-0 pointer-events-auto", backdropClassName)}
+              className={cn(
+                "absolute inset-0 z-0 border-none bg-black/45 p-0 m-0 pointer-events-auto",
+                backdropClassName,
+              )}
               onClick={handleBackdropClick}
               initial={BACKDROP_FADE_MOTION.initial}
               animate={BACKDROP_FADE_MOTION.animate}
@@ -158,7 +161,7 @@ export function Dialog(
             aria-modal={showBackdrop}
             tabIndex={-1}
             ref={panelRef}
-            className={cn("pointer-events-auto", panelClassName)}
+            className={cn("relative z-10 pointer-events-auto", panelClassName)}
             style={panelStyle}
             initial={motionConfig.initial}
             animate={motionConfig.animate}

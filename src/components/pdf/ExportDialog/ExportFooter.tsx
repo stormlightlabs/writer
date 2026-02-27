@@ -2,7 +2,15 @@ import { Button } from "$components/Button";
 import { usePdfDialogUiState, usePdfExportActions, usePdfExportState } from "$state/selectors";
 import { useCallback } from "react";
 
-export const PdfExportDialogFooter = ({ handleExportClick }: { handleExportClick: () => void | Promise<void> }) => {
+type PdfExportDialogFooterProps = {
+  handleExportClick: () => void | Promise<void>;
+  exportLabel?: string;
+  disableExportButton?: boolean;
+};
+
+export const PdfExportDialogFooter = (
+  { handleExportClick, exportLabel = "Export PDF", disableExportButton = false }: PdfExportDialogFooterProps,
+) => {
   const { setOpen: setIsOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
   const { isExportingPdf } = usePdfExportState();
@@ -28,9 +36,9 @@ export const PdfExportDialogFooter = ({ handleExportClick }: { handleExportClick
         variant="primary"
         size="lg"
         onClick={handleExportClick}
-        disabled={isExportingPdf}
+        disabled={isExportingPdf || disableExportButton}
         className="sm:flex-1">
-        {isExportingPdf ? "Exporting..." : "Export PDF"}
+        {isExportingPdf ? "Exporting..." : exportLabel}
       </Button>
     </div>
   );

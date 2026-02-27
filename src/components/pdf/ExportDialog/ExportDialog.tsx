@@ -10,7 +10,7 @@ import {
   useWorkspaceDocumentsState,
 } from "$state/selectors";
 import type { EditorFontFamily } from "$types";
-import { useCallback, useMemo } from "react";
+import { type MouseEvent, useCallback, useMemo, useState } from "react";
 import { PdfExportDialogFooter } from "./ExportFooter";
 import { PdfExportDialogHeader } from "./ExportHeader";
 import { PdfExportDialogOptions } from "./ExportOptions";
@@ -20,6 +20,84 @@ export type PdfExportDialogProps = {
   previewResult?: PdfRenderResult | null;
   editorFontFamily: EditorFontFamily;
 };
+
+type ExportFormatTab = { id: "pdf" | "docx" | "txt"; label: string; disabled: boolean };
+
+const EXPORT_FORMAT_TABS: ExportFormatTab[] = [{ id: "pdf", label: "PDF", disabled: false }, {
+  id: "docx",
+  label: "DOC/DOCX",
+  disabled: true,
+}, { id: "txt", label: "Plaintext", disabled: true }];
+
+type ExportFormatTabsProps = {
+  activeTabId: ExportFormatTab["id"];
+  onTabClick: (event: MouseEvent<HTMLButtonElement>) => void;
+};
+
+const ExportFormatTabs = ({ activeTabId, onTabClick }: ExportFormatTabsProps) => (
+  <div className="mb-4 border-b border-border-subtle">
+    <div className="flex items-center gap-2">
+      {EXPORT_FORMAT_TABS.map((tab) => (
+        <ExportFormatTabButton key={tab.id} tab={tab} isActive={tab.id === activeTabId} onTabClick={onTabClick} />
+      ))}
+    </div>
+  </div>
+);
+
+type ExportFormatTabButtonProps = {
+  tab: ExportFormatTab;
+  isActive: boolean;
+  onTabClick: (event: MouseEvent<HTMLButtonElement>) => void;
+};
+
+const ExportFormatTabButton = ({ tab, isActive, onTabClick }: ExportFormatTabButtonProps) => (
+  <button
+    type="button"
+    disabled={tab.disabled}
+    data-tab-id={tab.id}
+    onClick={onTabClick}
+    className={`px-3 py-2 text-sm rounded-t border border-b-0 transition-colors ${
+      isActive
+        ? "bg-layer-02 text-text-primary border-border-subtle"
+        : "bg-transparent text-text-secondary border-transparent hover:text-text-primary hover:bg-layer-02/60"
+    } disabled:opacity-40 disabled:cursor-not-allowed`}
+    aria-label={`${tab.label} export tab`}>
+    {tab.label}
+  </button>
+);
+
+type PdfExportContentProps = {
+  showPreview: boolean;
+  previewResult: PdfRenderResult | null;
+  options: PdfExportOptions;
+  editorFontFamily: EditorFontFamily;
+  handleExportClick: () => Promise<void>;
+};
+
+const PdfExportContent = (
+  { showPreview, previewResult, options, editorFontFamily, handleExportClick }: PdfExportContentProps,
+) => (
+  <>
+    <div className={`flex-1 min-h-0 ${showPreview ? "grid grid-cols-[1fr,320px] gap-6" : ""}`}>
+      {showPreview
+        ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
+        : null}
+      <OptionsPane isFullWidth={!showPreview} />
+    </div>
+    <PdfExportDialogFooter handleExportClick={handleExportClick} exportLabel="Export PDF" />
+  </>
+);
+
+const PlannedFormatContent = ({ handleExportClick }: { handleExportClick: () => Promise<void> }) => (
+  <>
+    <div className="flex-1 min-h-0 flex items-center justify-center rounded-lg border border-dashed border-border-subtle bg-layer-02/40 p-6">
+      <p className="text-sm text-text-secondary text-center">
+        This export format is planned in the roadmap and is not available yet.
+      </p>
+    </div>
+    <PdfExportDialogFooter handleExportClick={handleExportClick} exportLabel="Coming soon" disableExportButton />
+  </>
+);
 
 const PdfTitle = ({ title }: { title?: string }) => (title
   ? (
@@ -55,6 +133,7 @@ export function PdfExportDialog({ onExport, previewResult, editorFontFamily }: P
   const { documents } = useWorkspaceDocumentsState();
 
   const { isCompact, viewportWidth } = useViewportTier();
+  const [activeExportTabId, setActiveExportTabId] = useState<ExportFormatTab["id"]>("pdf");
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
   const title = activeTab
     ? documents.find((doc) =>
@@ -73,6 +152,14 @@ export function PdfExportDialog({ onExport, previewResult, editorFontFamily }: P
 
   const compactPanel = useMemo(() => isCompact || viewportWidth < 1024, [isCompact, viewportWidth]);
   const showPreview = useMemo(() => !compactPanel && viewportWidth >= 1200, [compactPanel, viewportWidth]);
+  const isPdfTabActive = activeExportTabId === "pdf";
+  const handleExportFormatTabClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    const nextTabId = event.currentTarget.dataset.tabId as ExportFormatTab["id"] | undefined;
+    if (!nextTabId) {
+      return;
+    }
+    setActiveExportTabId(nextTabId);
+  }, []);
 
   const containerClasses = useMemo(() => {
     if (compactPanel) {
@@ -95,25 +182,27 @@ export function PdfExportDialog({ onExport, previewResult, editorFontFamily }: P
     <Dialog
       isOpen={isOpen}
       onClose={handleCancel}
-      ariaLabel="Export to PDF"
+      ariaLabel="Export"
       motionPreset={compactPanel ? "slideUp" : "scale"}
       backdropClassName={compactPanel ? "bg-black/40" : "bg-black/40"}
       containerClassName={containerClasses}
       panelClassName={panelClasses}>
       <div className={`flex flex-col min-h-0 ${compactPanel ? "p-4" : "p-6"}`}>
         <PdfExportDialogHeader />
+        <ExportFormatTabs activeTabId={activeExportTabId} onTabClick={handleExportFormatTabClick} />
         <PdfTitle title={title} />
         {pdfExportError ? <p className="text-sm text-support-error mb-4">{pdfExportError}</p> : null}
 
-        <div className={`flex-1 min-h-0 ${showPreview ? "grid grid-cols-[1fr,320px] gap-6" : ""}`}>
-          {showPreview && (
-            <PreviewPane previewResult={previewResult ?? null} options={options} editorFontFamily={editorFontFamily} />
-          )}
-
-          <OptionsPane isFullWidth={!showPreview} />
-        </div>
-
-        <PdfExportDialogFooter handleExportClick={handleExportClick} />
+        {isPdfTabActive
+          ? (
+            <PdfExportContent
+              showPreview={showPreview}
+              previewResult={previewResult ?? null}
+              options={options}
+              editorFontFamily={editorFontFamily}
+              handleExportClick={handleExportClick} />
+          )
+          : <PlannedFormatContent handleExportClick={handleExportClick} />}
       </div>
     </Dialog>
   );
