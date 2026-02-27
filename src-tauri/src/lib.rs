@@ -94,6 +94,7 @@ pub fn run() {
             cmd::session_last_doc_set,
             cmd::style_check_get,
             cmd::style_check_set,
+            cmd::style_check_scan,
             cmd::global_capture_get,
             cmd::global_capture_set,
             cmd::global_capture_open,

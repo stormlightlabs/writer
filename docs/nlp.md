@@ -14,8 +14,9 @@ Both are editor decorations; neither mutates the underlying document text.
 
 ## Style Check
 
-- Implemented in `src/editor/style-check.ts`.
-- Uses dictionary/pattern matching (`src/editor/pattern-matcher.ts`) against:
+- Dictionary/pattern matching is implemented in Rust (`crates/core/src/nlp.rs`) using `aho-corasick`.
+- Frontend decorations remain in `src/editor/style-check.ts` and call the backend `style_check_scan` command.
+- Matches are classified against:
   - filler
   - redundancy
   - cliche

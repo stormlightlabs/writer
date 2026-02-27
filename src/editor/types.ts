@@ -1,5 +1,4 @@
-import { PatternCategory, StyleMarkerStyle } from "$types";
-import { Pattern } from "./pattern-matcher";
+import { PatternCategory, StyleCheckPattern, StyleMarkerStyle } from "$types";
 
 export type PosLegendItem = {
   label: string;
@@ -33,13 +32,7 @@ export type StyleMatch = {
 export type StyleCheckConfig = {
   enabled: boolean;
   categories: { filler: boolean; redundancy: boolean; cliche: boolean };
-  customPatterns: Pattern[];
+  customPatterns: StyleCheckPattern[];
   markerStyle: StyleMarkerStyle;
   onMatchesChange?: (matches: StyleMatch[]) => void;
-};
-
-export type DictionaryEntry = {
-  label: string;
-  enabled: boolean;
-  patterns: Array<{ text: string; replacement: string | null; source?: string }>;
 };

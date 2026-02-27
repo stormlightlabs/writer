@@ -1,4 +1,3 @@
-import { PatternCategory } from "$types";
 import { PosLegendItem, StyleCheckConfig } from "./types";
 
 export const CATEGORY_LABELS = { filler: "Fillers & Weak Language", redundancy: "Redundancies", cliche: "Clichés" };
@@ -55,10 +54,4 @@ export const DEFAULT_CONFIG: StyleCheckConfig = {
   categories: { filler: true, redundancy: true, cliche: true },
   customPatterns: [],
   markerStyle: "highlight",
-};
-
-export const DICTIONARY_CATEGORY_MAP: Record<string, PatternCategory> = {
-  fillers: "filler",
-  redundancies: "redundancy",
-  cliches: "cliche",
 };

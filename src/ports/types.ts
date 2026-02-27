@@ -1,3 +1,4 @@
+import { StyleCategory } from "$editor/types";
 import type { PdfRenderResult } from "$pdf/types";
 import type {
   AppError,
@@ -177,6 +178,12 @@ export type SessionParams = LocParams<SessionState>;
 
 export type StyleCheckSetParams<T> = Parameters<
   (settings: PersistedStyleCheckSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export type BackendStyleCheckScanMatch = { from: number; to: number; category: StyleCategory; replacement?: string };
+
+export type StyleCheckScanParams<T> = Parameters<
+  (text: string, settings: PersistedStyleCheckSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
 
 export type SearchResult = SearchHit[];

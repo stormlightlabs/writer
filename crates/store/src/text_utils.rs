@@ -1,31 +1,11 @@
-use std::{
-    hash::{Hash, Hasher},
-    path::Path,
-};
+use std::hash::{Hash, Hasher};
 
 use writer_core::{AppError, Encoding, SearchMatch};
-
-/// Counts words in text (simple whitespace-based)
-pub fn count_words(text: &str) -> usize {
-    text.split_whitespace().count()
-}
 
 pub fn hash_text(text: &str) -> String {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
     format!("{:016x}", hasher.finish())
-}
-
-/// Extracts title from markdown (first H1) or filename
-pub fn extract_title(text: &str, rel_path: &Path) -> Option<String> {
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if let Some(title) = trimmed.strip_prefix("# ") {
-            return Some(title.trim().to_string());
-        }
-    }
-
-    rel_path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string())
 }
 
 pub fn extract_highlight_matches(snippet: &str) -> (String, Vec<SearchMatch>) {
@@ -116,26 +96,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_count_words() {
-        assert_eq!(count_words("Hello world"), 2);
-        assert_eq!(count_words("One two three four"), 4);
-        assert_eq!(count_words(""), 0);
-        assert_eq!(count_words("  multiple   spaces  "), 2);
-    }
-
-    #[test]
-    fn test_extract_title_from_heading() {
-        let text = "# My Title\n\nSome content";
-        let path = Path::new("file.md");
-        let title = extract_title(text, path);
-        assert_eq!(title, Some("My Title".to_string()));
-    }
-
-    #[test]
-    fn test_extract_title_from_filename() {
-        let text = "No heading here";
-        let path = Path::new("my_document.md");
-        let title = extract_title(text, path);
-        assert_eq!(title, Some("my_document".to_string()));
+    fn hash_text_is_stable() {
+        assert_eq!(hash_text("hello"), hash_text("hello"));
+        assert_ne!(hash_text("hello"), hash_text("goodbye"));
     }
 }

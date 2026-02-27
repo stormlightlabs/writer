@@ -11,6 +11,7 @@ use writer_core::{
     LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
     is_conflicted_filename, normalize_relative_path,
 };
+use writer_md::{MarkdownEngine, MarkdownProfile};
 
 mod file_utils;
 mod settings;
@@ -45,6 +46,30 @@ pub struct Store {
 }
 
 impl Store {
+    fn fallback_title_from_path(rel_path: &Path) -> Option<String> {
+        rel_path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .map(|value| value.to_string())
+    }
+
+    fn derive_text_metadata(text: &str, rel_path: &Path) -> (Option<String>, usize) {
+        let engine = MarkdownEngine::new();
+        match engine.metadata(text, MarkdownProfile::Extended) {
+            Ok(metadata) => (
+                metadata.title.or_else(|| Self::fallback_title_from_path(rel_path)),
+                metadata.word_count,
+            ),
+            Err(error) => {
+                tracing::warn!("Failed to derive markdown metadata for {:?}: {}", rel_path, error);
+                (
+                    Self::fallback_title_from_path(rel_path),
+                    text.split_whitespace().filter(|segment| !segment.is_empty()).count(),
+                )
+            }
+        }
+    }
+
     /// Opens or creates the store at the given path
     pub fn open(path: &PathBuf) -> Result<Self, AppError> {
         tracing::debug!("Opening store at {:?}", path);
@@ -961,11 +986,13 @@ impl Store {
         let text_content =
             if file_utils::is_indexable_text_path(path) { std::fs::read_to_string(path).ok() } else { None };
 
-        let word_count = text_content.as_ref().map(|content| text_utils::count_words(content));
-        let title = text_content
-            .as_ref()
-            .and_then(|content| text_utils::extract_title(content, &rel_path))
-            .or_else(|| text_utils::extract_title("", &rel_path));
+        let (title, word_count) = match text_content.as_ref() {
+            Some(content) => {
+                let (derived_title, derived_word_count) = Self::derive_text_metadata(content, &rel_path);
+                (derived_title, Some(derived_word_count))
+            }
+            None => (Self::fallback_title_from_path(&rel_path), None),
+        };
         let content_hash = text_content.as_ref().map(|content| text_utils::hash_text(content));
 
         Ok(DocMeta {
@@ -1003,8 +1030,7 @@ impl Store {
         let (text, encoding) = text_utils::detect_and_decode(&bytes)?;
 
         let line_ending = LineEnding::detect(&text);
-        let word_count = text_utils::count_words(&text);
-        let title = text_utils::extract_title(&text, &doc_id.rel_path);
+        let (title, word_count) = Self::derive_text_metadata(&text, &doc_id.rel_path);
 
         let metadata =
             std::fs::metadata(&full_path).map_err(|e| AppError::io(format!("Failed to read metadata: {}", e)))?;
@@ -1077,8 +1103,7 @@ impl Store {
         let created_at = metadata.created().ok().map(DateTime::<Utc>::from);
 
         let line_ending = LineEnding::detect(text);
-        let word_count = text_utils::count_words(text);
-        let title = text_utils::extract_title(text, &doc_id.rel_path);
+        let (title, word_count) = Self::derive_text_metadata(text, &doc_id.rel_path);
 
         let new_meta = DocMeta {
             id: doc_id.clone(),
@@ -1542,9 +1567,11 @@ impl Store {
             return Ok(());
         }
 
-        let title = meta.title.clone().unwrap_or_else(|| {
-            text_utils::extract_title(text, &doc_id.rel_path).unwrap_or_else(|| "Untitled".to_string())
-        });
+        let title = meta
+            .title
+            .clone()
+            .or_else(|| Self::fallback_title_from_path(&doc_id.rel_path))
+            .unwrap_or_else(|| "Untitled".to_string());
         self.upsert_fts_entry(doc_id, &title, text)
     }
 
@@ -2027,6 +2054,26 @@ mod tests {
         assert_eq!(doc_content.meta.filename, "test.md");
         assert_eq!(doc_content.meta.word_count, Some(7));
         assert_eq!(doc_content.meta.title, Some("Test Document".to_string()));
+    }
+
+    #[test]
+    fn test_doc_open_uses_markdown_front_matter_title_and_excludes_fm_from_word_count() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location_path = location_dir.path().to_path_buf();
+
+        let location = store
+            .location_add("Test Location".to_string(), location_path.clone())
+            .unwrap();
+
+        let content = "---\ntitle: Front Matter Title\n---\n\nBody words only";
+        std::fs::write(location_path.join("frontmatter.md"), content).unwrap();
+
+        let doc_id = DocId::new(location.id, PathBuf::from("frontmatter.md")).unwrap();
+        let doc_content = store.doc_open(&doc_id).unwrap();
+
+        assert_eq!(doc_content.meta.title, Some("Front Matter Title".to_string()));
+        assert_eq!(doc_content.meta.word_count, Some(3));
     }
 
     #[test]

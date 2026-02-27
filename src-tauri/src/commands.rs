@@ -8,8 +8,9 @@ use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
 use writer_core::{
-    AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
-    SaveResult, SearchFilters, SearchHit,
+    scan_style_matches, AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta,
+    LocationDescriptor, LocationId, SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch,
+    StylePatternInput, StyleScanInput,
 };
 use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult};
 use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
@@ -894,6 +895,33 @@ pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings)
             Ok(CommandResult::err(e))
         }
     }
+}
+
+#[tauri::command]
+pub fn style_check_scan(
+    _: State<'_, AppState>, text: String, settings: StyleCheckSettings,
+) -> CommandResponse<Vec<StyleMatch>> {
+    tracing::debug!("Scanning style matches: text_len={}", text.len());
+
+    let input = StyleScanInput {
+        text,
+        categories: StyleCategorySettings {
+            filler: settings.categories.filler,
+            redundancy: settings.categories.redundancy,
+            cliche: settings.categories.cliche,
+        },
+        custom_patterns: settings
+            .custom_patterns
+            .into_iter()
+            .map(|pattern| StylePatternInput {
+                text: pattern.text,
+                category: pattern.category,
+                replacement: pattern.replacement,
+            })
+            .collect(),
+    };
+
+    Ok(CommandResult::ok(scan_style_matches(&input)))
 }
 
 /// Gets global capture settings

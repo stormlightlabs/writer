@@ -1,9 +1,16 @@
-import { PatternMatcher } from "$editor/pattern-matcher";
 import { collectStyleMatches, resolveStyleMatchAtPosition, styleCheck } from "$editor/style-check";
 import type { StyleMatch } from "$editor/types";
+import { runStyleCheckScan } from "$ports";
 import { EditorState, Text } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("$ports", async () => {
+  const actual = await vi.importActual<typeof import("$ports")>("$ports");
+  return { ...actual, runStyleCheckScan: vi.fn() };
+});
+
+const runStyleCheckScanMock = vi.mocked(runStyleCheckScan);
 
 function lineAndColumn(text: string, position: number): { line: number; column: number } {
   const lines = text.slice(0, position).split("\n");
@@ -11,31 +18,37 @@ function lineAndColumn(text: string, position: number): { line: number; column: 
 }
 
 describe("styleCheck", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("collects exact absolute ranges with document-cased text", () => {
     const doc = "Start BASICALLY now.\nAnd at this point in time we decide.";
-    const matcher = new PatternMatcher([{ text: "basically", category: "filler" }, {
-      text: "at this point in time",
+
+    const matches = collectStyleMatches(Text.of(doc.split("\n")), [{
+      from: doc.indexOf("BASICALLY"),
+      to: doc.indexOf("BASICALLY") + "BASICALLY".length,
+      category: "filler",
+    }, {
+      from: doc.indexOf("at this point in time"),
+      to: doc.indexOf("at this point in time") + "at this point in time".length,
       category: "redundancy",
       replacement: "now",
     }]);
-
-    const matches = collectStyleMatches(Text.of(doc.split("\n")), matcher);
-    const firstFrom = doc.indexOf("BASICALLY");
-    const secondFrom = doc.indexOf("at this point in time");
-    const first = lineAndColumn(doc, firstFrom);
-    const second = lineAndColumn(doc, secondFrom);
+    const first = lineAndColumn(doc, doc.indexOf("BASICALLY"));
+    const second = lineAndColumn(doc, doc.indexOf("at this point in time"));
 
     expect(matches).toStrictEqual([{
-      from: firstFrom,
-      to: firstFrom + "BASICALLY".length,
+      from: doc.indexOf("BASICALLY"),
+      to: doc.indexOf("BASICALLY") + "BASICALLY".length,
       text: "BASICALLY",
       category: "filler",
       replacement: undefined,
       line: first.line,
       column: first.column,
     }, {
-      from: secondFrom,
-      to: secondFrom + "at this point in time".length,
+      from: doc.indexOf("at this point in time"),
+      to: doc.indexOf("at this point in time") + "at this point in time".length,
       text: "at this point in time",
       category: "redundancy",
       replacement: "now",
@@ -45,12 +58,12 @@ describe("styleCheck", () => {
   });
 
   it("deduplicates identical overlapping dictionary/custom results", () => {
-    const matcher = new PatternMatcher([{ text: "actually", category: "filler" }, {
-      text: "actually",
+    const matches = collectStyleMatches(Text.of(["actually"]), [{ from: 0, to: 8, category: "filler" }, {
+      from: 0,
+      to: 8,
       category: "filler",
     }]);
 
-    const matches = collectStyleMatches(Text.of(["actually"]), matcher);
     expect(matches).toHaveLength(1);
     expect(matches[0]).toMatchObject({ from: 0, to: 8, text: "actually", category: "filler" });
   });
@@ -63,7 +76,19 @@ describe("styleCheck", () => {
     expect(resolveStyleMatchAtPosition(matches, 10, 1)).toBeNull();
   });
 
-  it("emits style matches through the editor extension for full-document ranges", () => {
+  it("emits style matches through the editor extension for full-document ranges", async () => {
+    runStyleCheckScanMock.mockResolvedValueOnce([{ from: 16, to: 25, category: "filler" }, {
+      from: 39,
+      to: 60,
+      category: "redundancy",
+      replacement: "now",
+    }]).mockResolvedValueOnce([{ from: 25, to: 34, category: "filler" }, {
+      from: 48,
+      to: 69,
+      category: "redundancy",
+      replacement: "now",
+    }]);
+
     const onMatchesChange = vi.fn();
     const state = EditorState.create({
       doc: "Prefix.\nThis is BASICALLY fine.\nLater, at this point in time we ship.",
@@ -82,7 +107,10 @@ describe("styleCheck", () => {
     });
     const view = new EditorView({ state });
 
-    expect(onMatchesChange).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(onMatchesChange).toHaveBeenCalled();
+    });
+
     const initialMatches = onMatchesChange.mock.lastCall?.[0] as StyleMatch[];
     expect(initialMatches).toHaveLength(2);
     expect(initialMatches[0]).toMatchObject({ text: "BASICALLY", category: "filler" });
@@ -93,13 +121,24 @@ describe("styleCheck", () => {
     });
 
     view.dispatch({ changes: { from: 0, to: 0, insert: "Actually. " } });
+
+    await vi.waitFor(() => {
+      expect(runStyleCheckScanMock).toHaveBeenCalledTimes(2);
+    });
+
     const updatedMatches = onMatchesChange.mock.lastCall?.[0] as StyleMatch[];
     expect(updatedMatches).toHaveLength(2);
 
     view.destroy();
   });
 
-  it("loads built-in dictionaries and reports filler, redundancy, and cliche matches", () => {
+  it("scans built-ins from backend and reports mixed categories", async () => {
+    runStyleCheckScanMock.mockResolvedValueOnce([{ from: 0, to: 9, category: "filler" }, {
+      from: 17,
+      to: 28,
+      category: "redundancy",
+    }, { from: 46, to: 66, category: "cliche" }]);
+
     const onMatchesChange = vi.fn();
     const state = EditorState.create({
       doc: "Basically we act in order to ship, and we may beat around the bush.",
@@ -113,6 +152,10 @@ describe("styleCheck", () => {
       ],
     });
     const view = new EditorView({ state });
+
+    await vi.waitFor(() => {
+      expect(onMatchesChange).toHaveBeenCalled();
+    });
 
     const matches = onMatchesChange.mock.lastCall?.[0] as StyleMatch[];
     const categories = new Set(matches.map((match) => match.category));
@@ -128,7 +171,9 @@ describe("styleCheck", () => {
     view.destroy();
   });
 
-  it("applies configured marker style to style decorations", () => {
+  it("applies configured marker style to style decorations", async () => {
+    runStyleCheckScanMock.mockResolvedValueOnce([{ from: 8, to: 17, category: "filler" }]);
+
     const state = EditorState.create({
       doc: "This is basically a test.",
       extensions: [
@@ -144,10 +189,12 @@ describe("styleCheck", () => {
     document.body.append(parent);
     const view = new EditorView({ state, parent });
 
-    const flagged = parent.querySelector(".style-flag");
-    expect(flagged).toBeInTheDocument();
-    expect(flagged).toHaveClass("style-marker-underline");
-    expect(flagged).toHaveAttribute("data-marker-style", "underline");
+    await vi.waitFor(() => {
+      const flagged = parent.querySelector(".style-flag");
+      expect(flagged).toBeInTheDocument();
+      expect(flagged).toHaveClass("style-marker-underline");
+      expect(flagged).toHaveAttribute("data-marker-style", "underline");
+    });
 
     view.destroy();
     parent.remove();

@@ -495,6 +495,21 @@ impl MarkdownEngine {
         Self
     }
 
+    /// Extracts document metadata from Markdown without rendering HTML.
+    pub fn metadata(&self, text: &str, profile: MarkdownProfile) -> Result<DocumentMetadata, MarkdownError> {
+        let arena = Arena::new();
+        let options = profile.to_options();
+
+        let (body_text, front_matter) = if profile.supports_front_matter() {
+            Self::extract_front_matter(text)
+        } else {
+            (text, FrontMatter::default())
+        };
+
+        let root = parse_document(&arena, body_text, &options);
+        Ok(Self::build_metadata(root, body_text, front_matter))
+    }
+
     /// Renders Markdown text to HTML using the specified profile
     pub fn render(&self, text: &str, profile: MarkdownProfile) -> Result<RenderResult, MarkdownError> {
         let arena = Arena::new();
@@ -508,6 +523,18 @@ impl MarkdownEngine {
 
         let root = parse_document(&arena, body_text, &options);
 
+        let metadata = Self::build_metadata(root, body_text, front_matter);
+
+        let mut html_output = String::new();
+        comrak::format_html(root, &options, &mut html_output).map_err(|e| MarkdownError::ParseError(e.to_string()))?;
+
+        let diagnostics = Self::run_diagnostics(text, &metadata);
+        Ok(RenderResult { html: html_output, metadata, diagnostics })
+    }
+
+    fn build_metadata<'a>(
+        root: &'a comrak::nodes::AstNode<'a>, body_text: &str, front_matter: FrontMatter,
+    ) -> DocumentMetadata {
         let mut metadata = DocumentMetadata {
             title: None,
             outline: Vec::new(),
@@ -517,19 +544,14 @@ impl MarkdownEngine {
             front_matter,
         };
 
-        Self::extract_metadata_from_node(&root, &mut metadata, &mut true);
+        Self::extract_metadata_from_node(root, &mut metadata, &mut true);
 
         if let Some(title) = metadata.front_matter.fields.get("title") {
             metadata.title = Some(title.clone());
         }
 
         metadata.word_count = Self::estimate_word_count(body_text);
-
-        let mut html_output = String::new();
-        comrak::format_html(root, &options, &mut html_output).map_err(|e| MarkdownError::ParseError(e.to_string()))?;
-
-        let diagnostics = Self::run_diagnostics(text, &metadata);
-        Ok(RenderResult { html: html_output, metadata, diagnostics })
+        metadata
     }
 
     /// Extracts front matter from the beginning of the document
@@ -542,8 +564,10 @@ impl MarkdownEngine {
             && let Some(end_pos) = rest.find("\n---")
         {
             let fm_content = &rest[..end_pos];
-            let body_start = rest[end_pos..].find('\n').map(|p| p + 1).unwrap_or(end_pos + 4);
-            let body = &rest[body_start..];
+            let delimiter_end = end_pos + "\n---".len();
+            let body = rest[delimiter_end..]
+                .strip_prefix('\n')
+                .map_or(&rest[delimiter_end..], |value| value);
 
             let fields = Self::parse_yaml_like_front_matter(fm_content);
 
@@ -557,8 +581,10 @@ impl MarkdownEngine {
             && let Some(end_pos) = rest.find("\n+++")
         {
             let fm_content = &rest[..end_pos];
-            let body_start = rest[end_pos..].find('\n').map(|p| p + 1).unwrap_or(end_pos + 4);
-            let body = &rest[body_start..];
+            let delimiter_end = end_pos + "\n+++".len();
+            let body = rest[delimiter_end..]
+                .strip_prefix('\n')
+                .map_or(&rest[delimiter_end..], |value| value);
 
             let fields = Self::parse_toml_like_front_matter(fm_content);
 
@@ -701,7 +727,9 @@ impl MarkdownEngine {
     }
 
     /// Extracts metadata by traversing the AST
-    fn extract_metadata_from_node(node: &comrak::nodes::Node, metadata: &mut DocumentMetadata, first_h1: &mut bool) {
+    fn extract_metadata_from_node<'a>(
+        node: &'a comrak::nodes::AstNode<'a>, metadata: &mut DocumentMetadata, first_h1: &mut bool,
+    ) {
         match &node.data.borrow().value {
             NodeValue::Heading(heading) => {
                 let level = heading.level;
@@ -732,12 +760,12 @@ impl MarkdownEngine {
         }
 
         for child in node.children() {
-            Self::extract_metadata_from_node(&child, metadata, first_h1);
+            Self::extract_metadata_from_node(child, metadata, first_h1);
         }
     }
 
     /// Extracts plain text from a node and its children
-    fn extract_text_from_node(node: &comrak::nodes::Node) -> String {
+    fn extract_text_from_node<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
         let mut text = String::new();
 
         match &node.data.borrow().value {
@@ -749,7 +777,7 @@ impl MarkdownEngine {
             }
             _ => {
                 for child in node.children() {
-                    text.push_str(&Self::extract_text_from_node(&child));
+                    text.push_str(&Self::extract_text_from_node(child));
                 }
             }
         }
@@ -932,23 +960,7 @@ impl MarkdownEngine {
         };
 
         let root = parse_document(&arena, body_text, &options);
-
-        let mut metadata = DocumentMetadata {
-            title: None,
-            outline: Vec::new(),
-            links: Vec::new(),
-            task_items: TaskStats::default(),
-            word_count: 0,
-            front_matter,
-        };
-
-        Self::extract_metadata_from_node(&root, &mut metadata, &mut true);
-
-        if let Some(title) = metadata.front_matter.fields.get("title") {
-            metadata.title = Some(title.clone());
-        }
-
-        metadata.word_count = Self::estimate_word_count(body_text);
+        let metadata = Self::build_metadata(root, body_text, front_matter);
 
         let nodes = Self::transform_to_pdf_nodes(root);
 
@@ -1125,6 +1137,16 @@ mod tests {
         let result = engine.render(markdown, MarkdownProfile::GfmSafe).unwrap();
 
         assert_eq!(result.metadata.word_count, 5);
+    }
+
+    #[test]
+    fn test_metadata_extracts_front_matter_title_without_rendering_html() {
+        let engine = MarkdownEngine::new();
+        let markdown = "---\ntitle: Metadata Title\n---\n\nBody text only";
+        let metadata = engine.metadata(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert_eq!(metadata.title, Some("Metadata Title".to_string()));
+        assert_eq!(metadata.word_count, 3);
     }
 
     #[test]

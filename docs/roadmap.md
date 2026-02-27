@@ -70,25 +70,15 @@ Improve file organization
    - Badge counts on each smart folder / favorites section
    - Drag-and-drop reorder for smart folders
 
-## Source of Truth (Rust-Side State)
-
-Migrate core application state and heavy computation to the Rust backend to reduce frontend complexity and improve performance.
-
-### Tasks
-
-1. **High-Performance Analysis**
-   - Move `PatternMatcher` and `StyleCheck` logic to Rust using the `aho-corasick` crate
-   - Offload heavy multi-pattern matching from the JS main thread
-2. **Unified Metadata Extraction**
-   - Calculate document metadata (word counts, outlines) during the `markdown_render` pass in Rust
-
 ## Hardening
 
 ### Tasks
 
-1. **Perf**
+1. **Outline utilization**
+   - Use Rust-generated `metadata.outline` from `markdown_render` in the UI for document structure navigation/jump-to-heading behavior
+2. **Perf**
    - Incremental render scheduling (debounce, worker thread)
    - Indexing in background with progress events with UI feedback
-2. **Recovery**
+3. **Recovery**
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove

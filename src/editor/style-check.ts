@@ -1,64 +1,48 @@
 /**
  * Style check CodeMirror extension.
  *
- * Real-time prose polish that flags weak patterns (fillers, redundancies, clichés)
+ * Real-time prose polish that flags weak patterns (fillers, redundancies, cliches)
  * with virtual strikethrough decorations.
  *
  * Non-destructive - decorations are editor-only and not part of the document.
- *
- * Dictionary sources:
- * - Fillers: https://github.com/wooorm/fillers (MIT)
- * - Hedges: https://github.com/wooorm/hedges (MIT)
- * - Weasels: https://github.com/wooorm/weasels (MIT)
- * - Redundancies: https://github.com/retextjs/retext-simplify (MIT)
- * - Clichés: https://github.com/dundalek/no-cliches (MIT)
  */
 
+import { runStyleCheckScan } from "$ports";
+import type { BackendStyleCheckScanMatch, PersistedStyleCheckSettings } from "$ports";
 import { StyleMarkerStyle } from "$types";
 import { RangeSetBuilder, Text } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, hoverTooltip, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import { CATEGORY_LABELS, DEFAULT_CONFIG, DICTIONARY_CATEGORY_MAP } from "./constants";
-import styleDictionaries from "./data/style-dictionaries.json";
-import type { Pattern } from "./pattern-matcher";
-import { PatternMatcher } from "./pattern-matcher";
-import type { DictionaryEntry, StyleCheckConfig, StyleMatch } from "./types";
+import { CATEGORY_LABELS, DEFAULT_CONFIG } from "./constants";
+import type { StyleCheckConfig, StyleMatch } from "./types";
 
-function loadBuiltinPatterns(): Pattern[] {
-  const patterns: Pattern[] = [];
-
-  for (const [dictionaryCategory, dict] of Object.entries(styleDictionaries)) {
-    if (dictionaryCategory.startsWith("_")) continue;
-    const cat = DICTIONARY_CATEGORY_MAP[dictionaryCategory];
-    if (!cat) {
-      continue;
-    }
-    const entry = dict as DictionaryEntry;
-    for (const pattern of entry.patterns) {
-      patterns.push({ text: pattern.text, category: cat, replacement: pattern.replacement ?? undefined });
-    }
-  }
-
-  return patterns;
+function toPersistedStyleCheckSettings(config: StyleCheckConfig): PersistedStyleCheckSettings {
+  return {
+    enabled: config.enabled,
+    categories: config.categories,
+    custom_patterns: config.customPatterns,
+    marker_style: config.markerStyle,
+  };
 }
 
-function createMatcher(config: StyleCheckConfig): PatternMatcher {
-  const patterns = loadBuiltinPatterns().filter((p) => config.categories[p.category]);
-  patterns.push(...config.customPatterns);
-
-  return new PatternMatcher(patterns);
+function hasAnyPatternsEnabled(config: StyleCheckConfig): boolean {
+  return config.customPatterns.length > 0 || config.categories.filler || config.categories.redundancy
+    || config.categories.cliche;
 }
 
-export function collectStyleMatches(doc: Text, matcher: PatternMatcher): StyleMatch[] {
+export function collectStyleMatches(doc: Text, scannedMatches: BackendStyleCheckScanMatch[]): StyleMatch[] {
   const text = doc.toString();
-  const scannedMatches = matcher.scan(text);
   const matches: StyleMatch[] = [];
   const seenMatches = new Set<string>();
 
   for (const match of scannedMatches) {
-    const matchFrom = match.start;
-    const matchTo = match.end;
-    const dedupeKey = `${matchFrom}:${matchTo}:${match.pattern.category}:${match.pattern.replacement ?? ""}`;
+    const matchFrom = match.from;
+    const matchTo = match.to;
+    if (matchFrom < 0 || matchTo <= matchFrom || matchTo > doc.length) {
+      continue;
+    }
+
+    const dedupeKey = `${matchFrom}:${matchTo}:${match.category}:${match.replacement ?? ""}`;
     if (seenMatches.has(dedupeKey)) {
       continue;
     }
@@ -71,8 +55,8 @@ export function collectStyleMatches(doc: Text, matcher: PatternMatcher): StyleMa
       from: matchFrom,
       to: matchTo,
       text: text.slice(matchFrom, matchTo),
-      category: match.pattern.category,
-      replacement: match.pattern.replacement,
+      category: match.category,
+      replacement: match.replacement,
       line: line.number,
       column,
     });
@@ -104,16 +88,6 @@ function buildDecorations(matches: StyleMatch[], markerStyle: StyleMarkerStyle):
   }
 
   return builder.finish();
-}
-
-function runStyleScan(
-  view: EditorView,
-  matcher: PatternMatcher,
-  markerStyle: StyleMarkerStyle,
-): { matches: StyleMatch[]; decorations: DecorationSet } {
-  const matches = collectStyleMatches(view.state.doc, matcher);
-  const decorations = buildDecorations(matches, markerStyle);
-  return { matches, decorations };
 }
 
 export function resolveStyleMatchAtPosition(matches: StyleMatch[], position: number, side: number): StyleMatch | null {
@@ -179,40 +153,65 @@ function createStyleCheckPlugin(config: StyleCheckConfig) {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet = Decoration.none;
-      matcher: PatternMatcher;
       matches: StyleMatch[] = [];
+      pendingScanId = 0;
+      isDestroyed = false;
 
       constructor(private view: EditorView) {
-        this.matcher = createMatcher(config);
-
-        if (config.enabled) {
-          const result = runStyleScan(view, this.matcher, config.markerStyle);
-          this.decorations = result.decorations;
-          this.matches = result.matches;
-          config.onMatchesChange?.(this.matches);
+        if (config.enabled && hasAnyPatternsEnabled(config)) {
+          this.requestScan();
+          return;
         }
+
+        config.onMatchesChange?.([]);
       }
 
       update(update: ViewUpdate) {
-        if (!config.enabled) {
-          this.decorations = Decoration.none;
-          if (this.matches.length > 0) {
-            this.matches = [];
-            config.onMatchesChange?.(this.matches);
-          }
+        if (!config.enabled || !hasAnyPatternsEnabled(config)) {
+          this.clear();
           return;
         }
 
         if (update.docChanged) {
-          const result = runStyleScan(this.view, this.matcher, config.markerStyle);
-          this.decorations = result.decorations;
-          this.matches = result.matches;
-          config.onMatchesChange?.(this.matches);
+          this.requestScan();
         }
       }
 
-      getMatches(): StyleMatch[] {
-        return this.matches;
+      destroy() {
+        this.isDestroyed = true;
+      }
+
+      private clear() {
+        this.pendingScanId += 1;
+        this.decorations = Decoration.none;
+        if (this.matches.length > 0) {
+          this.matches = [];
+          config.onMatchesChange?.(this.matches);
+          this.view.dispatch({ effects: [] });
+        }
+      }
+
+      private requestScan() {
+        const currentScanId = this.pendingScanId + 1;
+        this.pendingScanId = currentScanId;
+        const text = this.view.state.doc.toString();
+
+        void runStyleCheckScan(text, toPersistedStyleCheckSettings(config)).then((scannedMatches) => {
+          if (this.isDestroyed || this.pendingScanId !== currentScanId) {
+            return;
+          }
+
+          this.matches = collectStyleMatches(this.view.state.doc, scannedMatches);
+          this.decorations = buildDecorations(this.matches, config.markerStyle);
+          config.onMatchesChange?.(this.matches);
+          this.view.dispatch({ effects: [] });
+        }).catch(() => {
+          if (this.isDestroyed || this.pendingScanId !== currentScanId) {
+            return;
+          }
+
+          this.clear();
+        });
       }
     },
     { decorations: (v) => v.decorations },
@@ -246,8 +245,3 @@ export const styleCheckTheme = EditorView.theme({
   ".cm-style-check-tooltip-flagged": { fontSize: "12px", opacity: "0.9" },
   ".cm-style-check-tooltip-suggestion": { fontSize: "12px", opacity: "0.9" },
 });
-
-export function getStyleMatches(view: EditorView): StyleMatch[] {
-  const matcher = createMatcher(DEFAULT_CONFIG);
-  return collectStyleMatches(view.state.doc, matcher);
-}

@@ -2,6 +2,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+mod nlp;
+pub use nlp::{
+    PatternCategory, PatternMatcher, StyleCategorySettings, StyleMatch, StylePattern, StylePatternInput,
+    StyleScanInput, scan_style_matches,
+};
+
 /// Unique identifier for a document within a location
 /// Combines location_id + rel_path for stable identity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -244,6 +250,7 @@ impl std::fmt::Display for ErrorCode {
 }
 
 /// Standard error response for all commands
+/// TODO: use thiserror
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppError {
     pub code: ErrorCode,

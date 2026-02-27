@@ -300,6 +300,23 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     case "global_capture_submit": {
       return normalizeCaptureSubmitResult(value);
     }
+    case "style_check_scan": {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+
+      return value.filter((match): match is { from: number; to: number; category: string; replacement?: string } =>
+        isRecord(match)
+        && typeof match.from === "number"
+        && typeof match.to === "number"
+        && typeof match.category === "string"
+      ).map((match) => ({
+        from: match.from,
+        to: match.to,
+        category: match.category,
+        replacement: typeof match.replacement === "string" ? match.replacement : undefined,
+      }));
+    }
     case "session_get":
     case "session_open_tab":
     case "session_select_tab":

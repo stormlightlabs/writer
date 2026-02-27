@@ -14,11 +14,12 @@ import type {
   SessionState,
 } from "$types";
 import { info } from "@tauri-apps/plugin-log";
-import { invokeCmd } from "./invoke";
+import { invokeCmd, runCmd } from "./invoke";
 import type {
   BackendCaptureDocRef,
   BackendCaptureSubmitInput,
   BackendGlobalCaptureSettings,
+  BackendStyleCheckScanMatch,
   Cmd,
   DirCreateParams,
   DirDeleteParams,
@@ -50,6 +51,7 @@ import type {
   SessionReorderTabsParams,
   SessionTabIdParams,
   SessionUpdateTabDocParams,
+  StyleCheckScanParams,
   StyleCheckSetParams,
   UiLayoutSetParams,
   UiLayoutSettings,
@@ -289,6 +291,21 @@ export function styleCheckGet(...[onOk, onErr]: LocParams<PersistedStyleCheckSet
 
 export function styleCheckSet(...[settings, onOk, onErr]: StyleCheckSetParams<boolean>): Cmd {
   return invokeCmd<boolean>("style_check_set", { settings }, onOk, onErr);
+}
+
+export function styleCheckScan(
+  ...[text, settings, onOk, onErr]: StyleCheckScanParams<BackendStyleCheckScanMatch[]>
+): Cmd {
+  return invokeCmd<BackendStyleCheckScanMatch[]>("style_check_scan", { text, settings }, onOk, onErr);
+}
+
+export function runStyleCheckScan(
+  text: string,
+  settings: PersistedStyleCheckSettings,
+): Promise<BackendStyleCheckScanMatch[]> {
+  return new Promise((resolve, reject) => {
+    void runCmd(styleCheckScan(text, settings, resolve, reject)).catch(reject);
+  });
 }
 
 export function globalCaptureGet(...[onOk, onErr]: GlobalCaptureGetParams): Cmd {

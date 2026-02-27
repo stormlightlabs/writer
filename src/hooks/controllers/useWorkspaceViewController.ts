@@ -29,6 +29,15 @@ export type WorkspaceViewController = {
   editorFontFamily: EditorFontFamily;
 };
 
+export function deriveWordCount(text: string, renderWordCount: number | undefined): number {
+  if (typeof renderWordCount === "number") {
+    return renderWordCount;
+  }
+
+  const trimmedText = text.trim();
+  return trimmedText ? trimmedText.split(/\s+/).length : 0;
+}
+
 function isSameDocRef(left: Maybe<DocRef>, right: Maybe<DocRef>): boolean {
   if (!left || !right) {
     return false;
@@ -97,18 +106,18 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     [editorModel.cursorLine, editorModel.cursorColumn],
   );
 
+  const renderWordCount = previewModel.renderResult?.metadata.word_count;
   const { wordCount, charCount, selectionCount } = useMemo(() => {
     const { text } = editorModel;
-    const trimmedText = text.trim();
 
     return {
-      wordCount: trimmedText ? trimmedText.split(/\s+/).length : 0,
+      wordCount: deriveWordCount(text, renderWordCount),
       charCount: text.length,
       selectionCount: editorModel.selectionFrom !== null && editorModel.selectionTo !== null
         ? editorModel.selectionTo - editorModel.selectionFrom
         : undefined,
     };
-  }, [editorModel.selectionFrom, editorModel.selectionTo, editorModel.text]);
+  }, [editorModel.selectionFrom, editorModel.selectionTo, editorModel.text, renderWordCount]);
 
   const editorStats = useMemo(() => ({ ...cursorPosition, wordCount, charCount, selectionCount }), [
     cursorPosition,
