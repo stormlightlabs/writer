@@ -1,4 +1,5 @@
 use tauri::Manager;
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 mod capture;
 mod commands;
@@ -8,14 +9,37 @@ use commands as cmd;
 
 pub use commands::AppState;
 
+const LOG_FILE_MAX_BYTES: u128 = 1_000_000;
+const LOG_FILE_RETENTION_COUNT: usize = 10;
+
+fn build_log_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    let mut log_builder = tauri_plugin_log::Builder::default()
+        .level(log::LevelFilter::Debug)
+        .rotation_strategy(RotationStrategy::KeepSome(LOG_FILE_RETENTION_COUNT))
+        .max_file_size(LOG_FILE_MAX_BYTES)
+        .timezone_strategy(TimezoneStrategy::UseLocal)
+        .clear_targets()
+        .target(Target::new(TargetKind::Stdout));
+
+    if let Ok(store_dir) = writer_store::Store::default_app_dir() {
+        log_builder = log_builder.target(Target::new(TargetKind::Folder {
+            path: store_dir.join("logs"),
+            file_name: Some("writer".to_string()),
+        }));
+    } else {
+        eprintln!("Falling back to OS log directory because store directory could not be resolved.");
+        log_builder = log_builder.target(Target::new(TargetKind::LogDir {
+            file_name: Some("writer".to_string()),
+        }));
+    }
+
+    log_builder.build()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(
-            tauri_plugin_log::Builder::default()
-                .level(log::LevelFilter::Debug)
-                .build(),
-        )
+        .plugin(build_log_plugin())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -23,15 +47,15 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
-            tracing::info!("Initializing application");
+            log::info!("Initializing application");
 
             let store = match writer_store::Store::open_default() {
                 Ok(store) => {
-                    tracing::info!("Store initialized successfully");
+                    log::info!("Store initialized successfully");
                     store
                 }
                 Err(e) => {
-                    tracing::error!("Failed to initialize store: {}", e);
+                    log::error!("Failed to initialize store: {}", e);
                     return Err(Box::new(e));
                 }
             };
@@ -40,22 +64,22 @@ pub fn run() {
             app.manage(app_state);
 
             if let Err(e) = locations::reconcile(app.handle()) {
-                tracing::error!("Location reconciliation failed: {}", e);
+                log::error!("Location reconciliation failed: {}", e);
             }
 
             let state = app.state::<AppState>();
             match state.store.global_capture_get() {
                 Ok(settings) => {
                     if let Err(e) = capture::reconcile_capture_runtime(app.handle(), &settings) {
-                        tracing::warn!("Failed to initialize global capture runtime: {}", e);
+                        log::warn!("Failed to initialize global capture runtime: {}", e);
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to load global capture settings: {}", e);
+                    log::warn!("Failed to load global capture settings: {}", e);
                 }
             }
 
-            tracing::info!("Application setup complete");
+            log::info!("Application setup complete");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

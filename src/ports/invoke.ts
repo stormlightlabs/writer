@@ -403,8 +403,22 @@ export async function runCmd(cmd: Cmd): Promise<void> {
 
     case "StartWatch": {
       try {
-        await invoke<unknown>("watch_enable", { locationId: cmd.locationId });
-        logger.info(f("Started location watcher", { locationId: cmd.locationId }));
+        const result = await invoke<unknown>("watch_enable", { locationId: cmd.locationId });
+        const commandResult = unwrapCmdResult<boolean>(result, "watch_enable");
+        if (commandResult.ok) {
+          if (commandResult.value) {
+            logger.info(f("Started location watcher", { locationId: cmd.locationId }));
+          } else {
+            logger.debug(f("Location watcher already running", { locationId: cmd.locationId }));
+          }
+        } else {
+          logger.error(
+            f("Failed to start location watcher", {
+              locationId: cmd.locationId,
+              error: JSON.stringify(commandResult.error),
+            }),
+          );
+        }
       } catch (error) {
         logger.error(
           f("Failed to start location watcher", {
@@ -418,8 +432,22 @@ export async function runCmd(cmd: Cmd): Promise<void> {
 
     case "StopWatch": {
       try {
-        await invoke<unknown>("watch_disable", { locationId: cmd.locationId });
-        logger.info(f("Stopped location watcher", { locationId: cmd.locationId }));
+        const result = await invoke<unknown>("watch_disable", { locationId: cmd.locationId });
+        const commandResult = unwrapCmdResult<boolean>(result, "watch_disable");
+        if (commandResult.ok) {
+          if (commandResult.value) {
+            logger.info(f("Stopped location watcher", { locationId: cmd.locationId }));
+          } else {
+            logger.debug(f("Location watcher was not active", { locationId: cmd.locationId }));
+          }
+        } else {
+          logger.error(
+            f("Failed to stop location watcher", {
+              locationId: cmd.locationId,
+              error: JSON.stringify(commandResult.error),
+            }),
+          );
+        }
       } catch (error) {
         logger.error(
           f("Failed to stop location watcher", {

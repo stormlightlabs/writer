@@ -46,6 +46,16 @@ pub struct Store {
 }
 
 impl Store {
+    pub fn default_app_dir() -> Result<PathBuf, AppError> {
+        dirs::data_dir()
+            .ok_or_else(|| AppError::io("Could not determine data directory"))
+            .map(|data_dir| data_dir.join("org.stormlightlabs.writer"))
+    }
+
+    pub fn default_db_path() -> Result<PathBuf, AppError> {
+        Self::default_app_dir().map(|app_dir| app_dir.join("app.db"))
+    }
+
     fn fallback_title_from_path(rel_path: &Path) -> Option<String> {
         rel_path
             .file_stem()
@@ -61,7 +71,7 @@ impl Store {
                 metadata.word_count,
             ),
             Err(error) => {
-                tracing::warn!("Failed to derive markdown metadata for {:?}: {}", rel_path, error);
+                log::warn!("Failed to derive markdown metadata for {:?}: {}", rel_path, error);
                 (
                     Self::fallback_title_from_path(rel_path),
                     text.split_whitespace().filter(|segment| !segment.is_empty()).count(),
@@ -72,28 +82,27 @@ impl Store {
 
     /// Opens or creates the store at the given path
     pub fn open(path: &PathBuf) -> Result<Self, AppError> {
-        tracing::debug!("Opening store at {:?}", path);
+        log::debug!("Opening store at {:?}", path);
 
         let conn = Connection::open(path).map_err(|e| AppError::io(format!("Failed to open database: {}", e)))?;
 
         let store = Self { conn: Arc::new(Mutex::new(conn)) };
 
         store.init_schema()?;
-        tracing::info!("Store initialized successfully");
+        log::info!("Store initialized successfully");
 
         Ok(store)
     }
 
     /// Opens the store in the default application data directory
     pub fn open_default() -> Result<Self, AppError> {
-        let app_dir = dirs::data_dir()
-            .ok_or_else(|| AppError::io("Could not determine data directory"))?
-            .join("org.stormlightlabs.writer");
+        let app_dir = Self::default_app_dir()?;
 
         std::fs::create_dir_all(&app_dir)
             .map_err(|e| AppError::io(format!("Failed to create app directory: {}", e)))?;
 
-        Self::open(&app_dir.join("app.db"))
+        let db_path = Self::default_db_path()?;
+        Self::open(&db_path)
     }
 
     /// Initializes the database schema
@@ -182,7 +191,7 @@ impl Store {
         )
         .map_err(|e| AppError::io(format!("Failed to create app_settings table: {}", e)))?;
 
-        tracing::debug!("Database schema initialized");
+        log::debug!("Database schema initialized");
         Ok(())
     }
 
@@ -683,7 +692,7 @@ impl Store {
         let added_at = Utc::now();
         let added_at_str = added_at.to_rfc3339();
 
-        tracing::debug!("Adding location: name={}, path={}", name, path_str);
+        log::debug!("Adding location: name={}, path={}", name, path_str);
 
         let conn = self
             .conn
@@ -712,11 +721,11 @@ impl Store {
             if !readme_path.exists()
                 && let Err(e) = std::fs::write(&readme_path, README_TEMPLATE)
             {
-                tracing::warn!("Failed to create README.md in new location: {}", e);
+                log::warn!("Failed to create README.md in new location: {}", e);
             }
         }
 
-        tracing::info!("Location added successfully: id={}, name={}", id, name);
+        log::info!("Location added successfully: id={}, name={}", id, name);
 
         Ok(LocationDescriptor { id: LocationId(id), name, root_path, added_at })
     }
@@ -754,11 +763,11 @@ impl Store {
         for location in locations {
             match location {
                 Ok(loc) => result.push(loc),
-                Err(e) => tracing::warn!("Failed to parse location row: {}", e),
+                Err(e) => log::warn!("Failed to parse location row: {}", e),
             }
         }
 
-        tracing::debug!("Listed {} locations", result.len());
+        log::debug!("Listed {} locations", result.len());
         Ok(result)
     }
 
@@ -810,10 +819,10 @@ impl Store {
             .map_err(|e| AppError::io(format!("Failed to remove location: {}", e)))?;
 
         if rows_affected > 0 {
-            tracing::info!("Location removed: id={}", location_id.0);
+            log::info!("Location removed: id={}", location_id.0);
             Ok(true)
         } else {
-            tracing::warn!("Attempted to remove non-existent location: id={}", location_id.0);
+            log::warn!("Attempted to remove non-existent location: id={}", location_id.0);
             Ok(false)
         }
     }
@@ -826,7 +835,7 @@ impl Store {
 
         for location in locations {
             if !location.root_path.exists() {
-                tracing::warn!(
+                log::warn!(
                     "Location root no longer exists: id={}, path={:?}",
                     location.id.0,
                     location.root_path
@@ -879,7 +888,7 @@ impl Store {
             docs.reverse();
         }
 
-        tracing::debug!("Listed {} documents in location {:?}", docs.len(), location_id);
+        log::debug!("Listed {} documents in location {:?}", docs.len(), location_id);
         Ok(docs)
     }
 
@@ -1061,7 +1070,7 @@ impl Store {
             word_count: Some(word_count),
         };
 
-        tracing::info!("Opened document: {:?}", doc_id.rel_path);
+        log::info!("Opened document: {:?}", doc_id.rel_path);
 
         Ok(DocContent { text, meta: doc_meta })
     }
@@ -1127,7 +1136,7 @@ impl Store {
         self.update_doc_in_catalog(doc_id, &new_meta)?;
         self.index_document_text(doc_id, &new_meta, text)?;
 
-        tracing::info!("Saved document: {:?}", doc_id.rel_path);
+        log::info!("Saved document: {:?}", doc_id.rel_path);
 
         Ok(SaveResult { success: true, new_meta: Some(new_meta), conflict_detected: is_conflict })
     }
@@ -1161,7 +1170,7 @@ impl Store {
             .persist(target_path)
             .map_err(|e| AppError::io(format!("Failed to persist file: {}", e)))?;
 
-        tracing::debug!("Atomic save completed: {:?}", target_path);
+        log::debug!("Atomic save completed: {:?}", target_path);
         Ok(())
     }
 
@@ -1213,7 +1222,7 @@ impl Store {
             self.index_document_text(&new_doc_id, &new_meta, &text)?;
         }
 
-        tracing::info!("Renamed document: {:?} -> {:?}", doc_id.rel_path, new_doc_id.rel_path);
+        log::info!("Renamed document: {:?} -> {:?}", doc_id.rel_path, new_doc_id.rel_path);
 
         Ok(new_meta)
     }
@@ -1263,7 +1272,7 @@ impl Store {
             self.index_document_text(&new_doc_id, &new_meta, &text)?;
         }
 
-        tracing::info!("Moved document: {:?} -> {:?}", doc_id.rel_path, new_doc_id.rel_path);
+        log::info!("Moved document: {:?} -> {:?}", doc_id.rel_path, new_doc_id.rel_path);
 
         Ok(new_meta)
     }
@@ -1284,7 +1293,7 @@ impl Store {
 
         self.remove_document_from_index(doc_id)?;
 
-        tracing::info!("Deleted document: {:?}", doc_id.rel_path);
+        log::info!("Deleted document: {:?}", doc_id.rel_path);
 
         Ok(true)
     }
@@ -1309,7 +1318,7 @@ impl Store {
 
         std::fs::create_dir_all(&full_path).map_err(|e| AppError::io(format!("Failed to create directory: {}", e)))?;
 
-        tracing::info!("Created directory: {:?}", normalized_rel_path);
+        log::info!("Created directory: {:?}", normalized_rel_path);
         Ok(true)
     }
 
@@ -1351,7 +1360,7 @@ impl Store {
 
         self.update_directory_paths_in_index(location_id, &normalized_rel_path, &next_rel_path)?;
 
-        tracing::info!("Renamed directory: {:?} -> {:?}", normalized_rel_path, next_rel_path);
+        log::info!("Renamed directory: {:?} -> {:?}", normalized_rel_path, next_rel_path);
         Ok(next_rel_path)
     }
 
@@ -1396,7 +1405,7 @@ impl Store {
 
         self.update_directory_paths_in_index(location_id, &normalized_rel_path, &normalized_new_rel_path)?;
 
-        tracing::info!(
+        log::info!(
             "Moved directory: {:?} -> {:?}",
             normalized_rel_path,
             normalized_new_rel_path
@@ -1422,7 +1431,7 @@ impl Store {
 
         self.remove_directory_from_index(location_id, &normalized_rel_path)?;
 
-        tracing::info!("Deleted directory: {:?}", normalized_rel_path);
+        log::info!("Deleted directory: {:?}", normalized_rel_path);
         Ok(true)
     }
 
@@ -1713,7 +1722,7 @@ impl Store {
                         indexed += 1;
                     }
                     Err(error) => {
-                        tracing::warn!("Skipping FTS index for {:?} after decode failure: {}", full_path, error);
+                        log::warn!("Skipping FTS index for {:?} after decode failure: {}", full_path, error);
                         self.remove_fts_entry(&doc_id)?;
                     }
                 }

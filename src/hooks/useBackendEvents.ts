@@ -36,6 +36,32 @@ let isStartingListener = false;
 const stateSubscribers = new Set<() => void>();
 const eventSubscribers = new Set<(event: BackendEvent) => void>();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toInternalBackendEvent(payload: unknown): BackendEvent | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  if (typeof payload.type === "string") {
+    return payload as BackendEvent;
+  }
+
+  const taggedEntries = Object.entries(payload);
+  if (taggedEntries.length !== 1) {
+    return null;
+  }
+
+  const [variant, body] = taggedEntries[0];
+  if (!isRecord(body)) {
+    return null;
+  }
+
+  return { type: variant, ...body } as BackendEvent;
+}
+
 function limitItems<T>(items: T[]): T[] {
   if (items.length <= MAX_ALERT_ITEMS) {
     return items;
@@ -50,77 +76,89 @@ function notifyStateSubscribers(): void {
   }
 }
 
-function handleBackendEvent(payload: BackendEvent): void {
-  switch (payload.type) {
+function handleBackendEvent(payload: unknown): void {
+  const normalized = toInternalBackendEvent(payload);
+  if (!normalized) {
+    logger.warn(f("Ignoring malformed backend event payload", { payload: JSON.stringify(payload) }));
+    return;
+  }
+
+  switch (normalized.type) {
     case "LocationMissing": {
       state = {
         ...state,
         missingLocations: limitItems([...state.missingLocations, {
-          location_id: payload.location_id,
-          path: payload.path,
+          location_id: normalized.location_id,
+          path: normalized.path,
         }]),
       };
       notifyStateSubscribers();
-      logger.warn(f("Location missing", { locationId: payload.location_id, path: payload.path }));
+      logger.warn(f("Location missing", { locationId: normalized.location_id, path: normalized.path }));
       break;
     }
     case "ConflictDetected": {
       state = {
         ...state,
         conflicts: limitItems([...state.conflicts, {
-          location_id: payload.location_id,
-          rel_path: payload.rel_path,
-          conflict_filename: payload.conflict_filename,
+          location_id: normalized.location_id,
+          rel_path: normalized.rel_path,
+          conflict_filename: normalized.conflict_filename,
         }]),
       };
       notifyStateSubscribers();
       logger.warn(
         f("Conflict detected", {
-          locationId: payload.location_id,
-          relPath: payload.rel_path,
-          conflictFileName: payload.conflict_filename,
+          locationId: normalized.location_id,
+          relPath: normalized.rel_path,
+          conflictFileName: normalized.conflict_filename,
         }),
       );
       break;
     }
     case "ReconciliationComplete": {
-      logger.info(f("Reconciliation complete", { checked: payload.checked, missingCount: payload.missing.length }));
+      logger.info(
+        f("Reconciliation complete", { checked: normalized.checked, missingCount: normalized.missing.length }),
+      );
       break;
     }
     case "LocationChanged": {
       logger.info(
         f("Location changed", {
-          locationId: payload.location_id,
-          oldPath: payload.old_path,
-          newPath: payload.new_path,
+          locationId: normalized.location_id,
+          oldPath: normalized.old_path,
+          newPath: normalized.new_path,
         }),
       );
       break;
     }
     case "DocModifiedExternally": {
-      logger.info(f("Document modified externally", { docId: payload.doc_id }));
+      logger.info(f("Document modified externally", { docId: normalized.doc_id }));
       break;
     }
     case "SaveStatusChanged": {
-      logger.info(f("Save status changed", { docId: payload.doc_id, status: payload.status }));
+      logger.info(f("Save status changed", { docId: normalized.doc_id, status: normalized.status }));
       break;
     }
     case "FilesystemChanged": {
       logger.info(
         f("Filesystem changed", {
-          locationId: payload.location_id,
-          entryKind: payload.entry_kind,
-          changeKind: payload.change_kind,
-          relPath: payload.rel_path,
-          oldRelPath: payload.old_rel_path,
+          locationId: normalized.location_id,
+          entryKind: normalized.entry_kind,
+          changeKind: normalized.change_kind,
+          relPath: normalized.rel_path,
+          oldRelPath: normalized.old_rel_path,
         }),
       );
       break;
     }
+    default: {
+      logger.warn(f("Ignoring unknown backend event type", { payload: JSON.stringify(payload) }));
+      return;
+    }
   }
 
   for (const subscriber of eventSubscribers) {
-    subscriber(payload);
+    subscriber(normalized);
   }
 }
 
@@ -130,7 +168,7 @@ function startSharedListener(): void {
   }
 
   isStartingListener = true;
-  void listen<BackendEvent>("backend-event", (event: TauriEvent<BackendEvent>) => {
+  void listen<unknown>("backend-event", (event: TauriEvent<unknown>) => {
     handleBackendEvent(event.payload);
   }).then((unlisten) => {
     sharedUnlisten = unlisten;

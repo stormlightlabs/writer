@@ -1,6 +1,7 @@
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import { docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
 import { resetAppStore, useAppStore } from "$state/stores/app";
+import type { DocMeta } from "$types";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearMockListeners, emitBackendEvent } from "./setup";
@@ -90,6 +91,64 @@ describe("useWorkspaceSync", () => {
 
     await waitFor(() => {
       expect(stopWatch).toHaveBeenCalledWith(2);
+    });
+  });
+
+  it("retries external refresh once for created files that are not yet listed", async () => {
+    let listCallsForLocation1 = 0;
+    vi.mocked(docList).mockImplementation((locationId: number, onOk: (docs: DocMeta[]) => void) => {
+      if (locationId === 1) {
+        listCallsForLocation1 += 1;
+        if (listCallsForLocation1 <= 2) {
+          onOk([{ location_id: 1, rel_path: "1.md", title: "1", updated_at: "2024-01-01T00:00:00Z", word_count: 1 }]);
+          return { type: "None" };
+        }
+
+        onOk([{ location_id: 1, rel_path: "1.md", title: "1", updated_at: "2024-01-01T00:00:00Z", word_count: 1 }, {
+          location_id: 1,
+          rel_path: "TEST.md",
+          title: "TEST",
+          updated_at: "2024-01-01T00:00:00Z",
+          word_count: 0,
+        }]);
+        return { type: "None" };
+      }
+
+      onOk([{
+        location_id: locationId,
+        rel_path: `${locationId}.md`,
+        title: `${locationId}`,
+        updated_at: "2024-01-01T00:00:00Z",
+        word_count: 1,
+      }]);
+      return { type: "None" };
+    });
+
+    renderHook(() => useWorkspaceSync());
+
+    await waitFor(() => {
+      expect(docList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
+    });
+
+    act(() => {
+      emitBackendEvent({
+        type: "FilesystemChanged",
+        location_id: 1,
+        entry_kind: "File",
+        change_kind: "Created",
+        rel_path: "TEST.md",
+      });
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 150);
+      });
+    });
+
+    await waitFor(() => {
+      const documents = useAppStore.getState().documents;
+      expect(documents.some((doc) => doc.rel_path === "TEST.md")).toBeTruthy();
     });
   });
 });

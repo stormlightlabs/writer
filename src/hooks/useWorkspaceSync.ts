@@ -43,43 +43,75 @@ export function useWorkspaceSync(): void {
   }, [loadLocations]);
 
   const documentRequestRef = useRef(0);
+  const EXTERNAL_REFRESH_RETRY_DELAY_MS = 120;
+  const EXTERNAL_REFRESH_MAX_ATTEMPTS = 3;
   const selectedLocationRef = useRef<number | null>(selectedLocationId);
 
   useEffect(() => {
     selectedLocationRef.current = selectedLocationId;
   }, [selectedLocationId]);
 
-  const loadDocuments = useCallback((locationId: number, source: "manual" | "external" = "manual") => {
-    const requestId = ++documentRequestRef.current;
+  type ExternalRefreshHint = {
+    changedRelPath?: string;
+    changeKind?: "Created" | "Modified" | "Deleted" | "Renamed";
+    attempt?: number;
+  };
 
-    if (source === "manual") {
-      setLoadingDocuments(true);
-    } else {
-      setSidebarRefreshState(locationId, source);
-    }
+  const loadDocuments = useCallback(
+    (locationId: number, source: "manual" | "external" = "manual", hint?: ExternalRefreshHint) => {
+      const requestId = ++documentRequestRef.current;
 
-    runCmd(docList(locationId, (nextDocuments) => {
-      if (documentRequestRef.current !== requestId) {
-        return;
-      }
-
-      setDocuments(nextDocuments);
       if (source === "manual") {
-        setLoadingDocuments(false);
-      }
-      setSidebarRefreshState(undefined, null);
-    }, (error) => {
-      if (documentRequestRef.current !== requestId) {
-        return;
+        setLoadingDocuments(true);
+      } else {
+        setSidebarRefreshState(locationId, source);
       }
 
-      logger.error(f("Failed to load documents", { locationId, error }));
-      if (source === "manual") {
-        setLoadingDocuments(false);
-      }
-      setSidebarRefreshState(undefined, null);
-    }));
-  }, [setDocuments, setLoadingDocuments, setSidebarRefreshState]);
+      runCmd(docList(locationId, (nextDocuments) => {
+        if (documentRequestRef.current !== requestId) {
+          return;
+        }
+
+        const externalAttempt = hint?.attempt ?? 0;
+        const changedRelPath = hint?.changedRelPath;
+        const includesChangedPath = Boolean(
+          changedRelPath && nextDocuments.some((doc) => doc.rel_path === changedRelPath),
+        );
+        const shouldRetryExternalRefresh = source === "external"
+          && Boolean(changedRelPath)
+          && externalAttempt < EXTERNAL_REFRESH_MAX_ATTEMPTS
+          && ((hint?.changeKind !== "Deleted" && !includesChangedPath)
+            || (hint?.changeKind === "Deleted" && includesChangedPath));
+
+        if (shouldRetryExternalRefresh) {
+          setTimeout(() => {
+            loadDocuments(locationId, "external", {
+              changedRelPath,
+              changeKind: hint?.changeKind,
+              attempt: externalAttempt + 1,
+            });
+          }, EXTERNAL_REFRESH_RETRY_DELAY_MS);
+        }
+
+        setDocuments(nextDocuments);
+        if (source === "manual") {
+          setLoadingDocuments(false);
+        }
+        setSidebarRefreshState(undefined, null);
+      }, (error) => {
+        if (documentRequestRef.current !== requestId) {
+          return;
+        }
+
+        logger.error(f("Failed to load documents", { locationId, error }));
+        if (source === "manual") {
+          setLoadingDocuments(false);
+        }
+        setSidebarRefreshState(undefined, null);
+      }));
+    },
+    [setDocuments, setLoadingDocuments, setSidebarRefreshState],
+  );
 
   useEffect(() => {
     if (!selectedLocationId) {
@@ -134,7 +166,11 @@ export function useWorkspaceSync(): void {
     onFilesystemChanged: (event) => {
       const currentLocationId = selectedLocationRef.current;
       if (currentLocationId && event.location_id === currentLocationId) {
-        loadDocuments(currentLocationId, "external");
+        loadDocuments(currentLocationId, "external", {
+          changedRelPath: event.rel_path,
+          changeKind: event.change_kind,
+          attempt: 0,
+        });
         return;
       }
 

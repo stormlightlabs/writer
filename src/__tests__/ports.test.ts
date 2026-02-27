@@ -532,6 +532,22 @@ describe(runCmd, () => {
       await expect(runCmd(cmd)).resolves.toBeUndefined();
       expect(invoke).toHaveBeenCalledWith("watch_disable", { locationId: 123 });
     });
+
+    it("logs a watcher start error when backend returns an app error", async () => {
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation((_: string) => Promise.resolve());
+      vi.mocked(invoke).mockResolvedValueOnce({ type: "err", error: { code: "IO_ERROR", message: "watch failed" } });
+      const cmd = startWatch(123);
+      await expect(runCmd(cmd)).resolves.toBeUndefined();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to start location watcher"));
+    });
+
+    it("logs a watcher stop error when backend returns an app error", async () => {
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation((_: string) => Promise.resolve());
+      vi.mocked(invoke).mockResolvedValueOnce({ type: "err", error: { code: "IO_ERROR", message: "stop failed" } });
+      const cmd = stopWatch(123);
+      await expect(runCmd(cmd)).resolves.toBeUndefined();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to stop location watcher"));
+    });
   });
 
   describe("none command", () => {

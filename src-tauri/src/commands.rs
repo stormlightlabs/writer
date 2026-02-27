@@ -34,7 +34,7 @@ impl AppState {
 pub async fn location_add_via_dialog(
     app: AppHandle, state: State<'_, AppState>,
 ) -> CommandResponse<LocationDescriptor> {
-    tracing::debug!("Opening folder picker dialog");
+    log::debug!("Opening folder picker dialog");
 
     let folder_path = app.dialog().file().blocking_pick_folder();
 
@@ -43,7 +43,7 @@ pub async fn location_add_via_dialog(
             let path_buf: PathBuf = path
                 .into_path()
                 .map_err(|_| AppError::invalid_path("Selected folder path is invalid"))?;
-            tracing::info!("Folder selected: {:?}", path_buf);
+            log::info!("Folder selected: {:?}", path_buf);
 
             let name = path_buf
                 .file_name()
@@ -53,26 +53,26 @@ pub async fn location_add_via_dialog(
 
             match state.store.location_add(name.clone(), path_buf.clone()) {
                 Ok(descriptor) => {
-                    tracing::info!("Location added successfully: id={:?}", descriptor.id);
+                    log::info!("Location added successfully: id={:?}", descriptor.id);
 
                     if let Err(e) = app.fs_scope().allow_directory(&path_buf, true) {
-                        tracing::warn!("Failed to add directory to fs scope: {}", e);
+                        log::warn!("Failed to add directory to fs scope: {}", e);
                     }
 
                     if let Err(error) = state.store.reconcile_location_index(descriptor.id) {
-                        tracing::warn!("Initial index build failed for location {:?}: {}", descriptor.id, error);
+                        log::warn!("Initial index build failed for location {:?}: {}", descriptor.id, error);
                     }
 
                     Ok(CommandResult::ok(descriptor))
                 }
                 Err(e) => {
-                    tracing::error!("Failed to add location: {}", e);
+                    log::error!("Failed to add location: {}", e);
                     Ok(CommandResult::err(e))
                 }
             }
         }
         None => {
-            tracing::debug!("Folder picker cancelled by user");
+            log::debug!("Folder picker cancelled by user");
             Ok(CommandResult::err(AppError::new(
                 writer_core::ErrorCode::PermissionDenied,
                 "No folder selected",
@@ -84,15 +84,15 @@ pub async fn location_add_via_dialog(
 /// Lists all registered locations
 #[tauri::command]
 pub fn location_list(state: State<'_, AppState>) -> CommandResponse<Vec<LocationDescriptor>> {
-    tracing::debug!("Listing all locations");
+    log::debug!("Listing all locations");
 
     match state.store.location_list() {
         Ok(locations) => {
-            tracing::debug!("Found {} locations", locations.len());
+            log::debug!("Found {} locations", locations.len());
             Ok(CommandResult::ok(locations))
         }
         Err(e) => {
-            tracing::error!("Failed to list locations: {}", e);
+            log::error!("Failed to list locations: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -102,7 +102,7 @@ pub fn location_list(state: State<'_, AppState>) -> CommandResponse<Vec<Location
 #[tauri::command]
 pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> CommandResponse<bool> {
     let id = LocationId(location_id);
-    tracing::info!("Removing location: id={}", location_id);
+    log::info!("Removing location: id={}", location_id);
 
     if let Ok(mut watchers) = state.watchers.lock() {
         watchers.remove(&location_id);
@@ -111,14 +111,14 @@ pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> CommandR
     match state.store.location_remove(id) {
         Ok(removed) => {
             if removed {
-                tracing::info!("Location removed successfully: id={}", location_id);
+                log::info!("Location removed successfully: id={}", location_id);
             } else {
-                tracing::warn!("Location not found for removal: id={}", location_id);
+                log::warn!("Location not found for removal: id={}", location_id);
             }
             Ok(CommandResult::ok(removed))
         }
         Err(e) => {
-            tracing::error!("Failed to remove location: {}", e);
+            log::error!("Failed to remove location: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -127,7 +127,7 @@ pub fn location_remove(state: State<'_, AppState>, location_id: i64) -> CommandR
 /// Validates all locations and returns those that no longer exist
 #[tauri::command]
 pub fn location_validate(state: State<'_, AppState>) -> CommandResponse<Vec<(i64, String)>> {
-    tracing::debug!("Validating all locations");
+    log::debug!("Validating all locations");
 
     match state.store.validate_locations() {
         Ok(missing) => {
@@ -137,15 +137,15 @@ pub fn location_validate(state: State<'_, AppState>) -> CommandResponse<Vec<(i64
                 .collect();
 
             if !result.is_empty() {
-                tracing::warn!("Found {} missing locations", result.len());
+                log::warn!("Found {} missing locations", result.len());
             } else {
-                tracing::debug!("All locations are valid");
+                log::debug!("All locations are valid");
             }
 
             Ok(CommandResult::ok(result))
         }
         Err(e) => {
-            tracing::error!("Failed to validate locations: {}", e);
+            log::error!("Failed to validate locations: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -153,12 +153,12 @@ pub fn location_validate(state: State<'_, AppState>) -> CommandResponse<Vec<(i64
 
 #[tauri::command]
 pub fn ui_layout_get(state: State<'_, AppState>) -> CommandResponse<UiLayoutSettings> {
-    tracing::debug!("Loading persisted UI layout settings");
+    log::debug!("Loading persisted UI layout settings");
 
     match state.store.ui_layout_get() {
         Ok(settings) => Ok(CommandResult::ok(settings)),
         Err(e) => {
-            tracing::error!("Failed to load UI layout settings: {}", e);
+            log::error!("Failed to load UI layout settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -166,12 +166,12 @@ pub fn ui_layout_get(state: State<'_, AppState>) -> CommandResponse<UiLayoutSett
 
 #[tauri::command]
 pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> CommandResponse<bool> {
-    tracing::debug!("Persisting UI layout settings");
+    log::debug!("Persisting UI layout settings");
 
     match state.store.ui_layout_set(&settings) {
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => {
-            tracing::error!("Failed to persist UI layout settings: {}", e);
+            log::error!("Failed to persist UI layout settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -179,12 +179,12 @@ pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> 
 
 #[tauri::command]
 pub fn session_last_doc_get(state: State<'_, AppState>) -> CommandResponse<Option<writer_store::CaptureDocRef>> {
-    tracing::debug!("Loading last opened document session state");
+    log::debug!("Loading last opened document session state");
 
     match state.store.last_open_doc_get() {
         Ok(doc_ref) => Ok(CommandResult::ok(doc_ref)),
         Err(e) => {
-            tracing::error!("Failed to load last opened document session state: {}", e);
+            log::error!("Failed to load last opened document session state: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -194,12 +194,12 @@ pub fn session_last_doc_get(state: State<'_, AppState>) -> CommandResponse<Optio
 pub fn session_last_doc_set(
     state: State<'_, AppState>, doc_ref: Option<writer_store::CaptureDocRef>,
 ) -> CommandResponse<bool> {
-    tracing::debug!("Persisting last opened document session state");
+    log::debug!("Persisting last opened document session state");
 
     match state.store.last_open_doc_set(doc_ref.as_ref()) {
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => {
-            tracing::error!("Failed to persist last opened document session state: {}", e);
+            log::error!("Failed to persist last opened document session state: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -207,12 +207,12 @@ pub fn session_last_doc_set(
 
 #[tauri::command]
 pub fn session_get(state: State<'_, AppState>) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!("Loading persisted session state");
+    log::debug!("Loading persisted session state");
 
     match state.store.session_get() {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to load session state: {}", e);
+            log::error!("Failed to load session state: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -222,7 +222,7 @@ pub fn session_get(state: State<'_, AppState>) -> CommandResponse<writer_store::
 pub fn session_open_tab(
     state: State<'_, AppState>, doc_ref: writer_store::CaptureDocRef, title: String,
 ) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!(
+    log::debug!(
         "Opening session tab: location_id={}, rel_path={}",
         doc_ref.location_id,
         doc_ref.rel_path
@@ -231,7 +231,7 @@ pub fn session_open_tab(
     match state.store.session_open_tab(doc_ref, title) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to open session tab: {}", e);
+            log::error!("Failed to open session tab: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -239,12 +239,12 @@ pub fn session_open_tab(
 
 #[tauri::command]
 pub fn session_select_tab(state: State<'_, AppState>, tab_id: String) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!("Selecting session tab: {}", tab_id);
+    log::debug!("Selecting session tab: {}", tab_id);
 
     match state.store.session_select_tab(&tab_id) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to select session tab: {}", e);
+            log::error!("Failed to select session tab: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -252,12 +252,12 @@ pub fn session_select_tab(state: State<'_, AppState>, tab_id: String) -> Command
 
 #[tauri::command]
 pub fn session_close_tab(state: State<'_, AppState>, tab_id: String) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!("Closing session tab: {}", tab_id);
+    log::debug!("Closing session tab: {}", tab_id);
 
     match state.store.session_close_tab(&tab_id) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to close session tab: {}", e);
+            log::error!("Failed to close session tab: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -267,12 +267,12 @@ pub fn session_close_tab(state: State<'_, AppState>, tab_id: String) -> CommandR
 pub fn session_reorder_tabs(
     state: State<'_, AppState>, tab_ids: Vec<String>,
 ) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!("Reordering session tabs: count={}", tab_ids.len());
+    log::debug!("Reordering session tabs: count={}", tab_ids.len());
 
     match state.store.session_reorder_tabs(&tab_ids) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to reorder session tabs: {}", e);
+            log::error!("Failed to reorder session tabs: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -282,7 +282,7 @@ pub fn session_reorder_tabs(
 pub fn session_mark_tab_modified(
     state: State<'_, AppState>, tab_id: String, is_modified: bool,
 ) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!(
+    log::debug!(
         "Marking session tab modified: tab_id={}, is_modified={}",
         tab_id,
         is_modified
@@ -291,7 +291,7 @@ pub fn session_mark_tab_modified(
     match state.store.session_mark_tab_modified(&tab_id, is_modified) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to mark session tab modified: {}", e);
+            log::error!("Failed to mark session tab modified: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -302,7 +302,7 @@ pub fn session_update_tab_doc(
     state: State<'_, AppState>, location_id: i64, old_rel_path: String, new_doc_ref: writer_store::CaptureDocRef,
     title: String,
 ) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!(
+    log::debug!(
         "Updating session tab document: location_id={}, old_rel_path={}, new_rel_path={}",
         location_id,
         old_rel_path,
@@ -315,7 +315,7 @@ pub fn session_update_tab_doc(
     {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to update session tab document: {}", e);
+            log::error!("Failed to update session tab document: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -325,7 +325,7 @@ pub fn session_update_tab_doc(
 pub fn session_drop_doc(
     state: State<'_, AppState>, location_id: i64, rel_path: String,
 ) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!(
+    log::debug!(
         "Dropping document from session tabs: location_id={}, rel_path={}",
         location_id,
         rel_path
@@ -334,7 +334,7 @@ pub fn session_drop_doc(
     match state.store.session_drop_doc(location_id, &rel_path) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to drop document from session tabs: {}", e);
+            log::error!("Failed to drop document from session tabs: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -344,13 +344,13 @@ pub fn session_drop_doc(
 pub fn session_prune_locations(
     state: State<'_, AppState>, valid_location_ids: Vec<i64>,
 ) -> CommandResponse<writer_store::SessionState> {
-    tracing::debug!("Pruning session tabs by locations: count={}", valid_location_ids.len());
+    log::debug!("Pruning session tabs by locations: count={}", valid_location_ids.len());
 
     let valid_ids: HashSet<i64> = valid_location_ids.into_iter().collect();
     match state.store.session_prune_locations(&valid_ids) {
         Ok(session) => Ok(CommandResult::ok(session)),
         Err(e) => {
-            tracing::error!("Failed to prune session tabs by locations: {}", e);
+            log::error!("Failed to prune session tabs by locations: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -363,15 +363,15 @@ pub fn doc_list(
 ) -> CommandResponse<Vec<DocMeta>> {
     let id = LocationId(location_id);
     let list_options = Some(options.unwrap_or(DocListOptions { recursive: true, ..Default::default() }));
-    tracing::debug!("Listing documents for location: id={}", location_id);
+    log::debug!("Listing documents for location: id={}", location_id);
 
     match state.store.doc_list(id, list_options) {
         Ok(docs) => {
-            tracing::debug!("Found {} documents in location {}", docs.len(), location_id);
+            log::debug!("Found {} documents in location {}", docs.len(), location_id);
             Ok(CommandResult::ok(docs))
         }
         Err(e) => {
-            tracing::error!("Failed to list documents: {}", e);
+            log::error!("Failed to list documents: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -383,12 +383,12 @@ pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) 
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!("Opening document: location={:?}, path={:?}", location_id, rel_path);
+    log::debug!("Opening document: location={:?}, path={:?}", location_id, rel_path);
 
     match DocId::new(location_id, rel_path) {
         Ok(doc_id) => match state.store.doc_open(&doc_id) {
             Ok(content) => {
-                tracing::info!(
+                log::info!(
                     "Document opened successfully: location={:?}, size={} bytes",
                     doc_id.location_id,
                     content.meta.size_bytes
@@ -396,12 +396,12 @@ pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) 
                 Ok(CommandResult::ok(content))
             }
             Err(e) => {
-                tracing::error!("Failed to open document: {}", e);
+                log::error!("Failed to open document: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Invalid document reference: {}", e);
+            log::error!("Invalid document reference: {}", e);
             Ok(CommandResult::err(AppError::invalid_path(format!(
                 "Invalid path: {}",
                 e
@@ -418,7 +418,7 @@ pub fn doc_save(
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Saving document: location={:?}, path={:?}, size={} bytes",
         location_id,
         rel_path,
@@ -429,7 +429,7 @@ pub fn doc_save(
         Ok(doc_id) => match state.store.doc_save(&doc_id, &text, None) {
             Ok(result) => {
                 if result.conflict_detected {
-                    tracing::warn!(
+                    log::warn!(
                         "Conflicted copy detected: location={:?}, path={:?}",
                         doc_id.location_id,
                         doc_id.rel_path
@@ -446,11 +446,11 @@ pub fn doc_save(
                     };
 
                     if let Err(e) = app.emit("backend-event", event) {
-                        tracing::error!("Failed to emit conflict event: {}", e);
+                        log::error!("Failed to emit conflict event: {}", e);
                     }
                 }
 
-                tracing::info!(
+                log::info!(
                     "Document saved successfully: location={:?}, size={} bytes",
                     doc_id.location_id,
                     text.len()
@@ -466,12 +466,12 @@ pub fn doc_save(
                 Ok(CommandResult::ok(result))
             }
             Err(e) => {
-                tracing::error!("Failed to save document: {}", e);
+                log::error!("Failed to save document: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Invalid document reference: {}", e);
+            log::error!("Invalid document reference: {}", e);
             Ok(CommandResult::err(AppError::invalid_path(format!(
                 "Invalid path: {}",
                 e
@@ -486,7 +486,7 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Checking document existence: location={:?}, path={:?}",
         location_id,
         rel_path
@@ -500,16 +500,16 @@ pub fn doc_exists(state: State<'_, AppState>, location_id: i64, rel_path: String
                 Ok(CommandResult::ok(exists))
             }
             Ok(None) => {
-                tracing::warn!("Location not found: {:?}", doc_id.location_id);
+                log::warn!("Location not found: {:?}", doc_id.location_id);
                 Ok(CommandResult::err(AppError::not_found("Location not found")))
             }
             Err(e) => {
-                tracing::error!("Failed to check location: {}", e);
+                log::error!("Failed to check location: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Invalid document reference: {}", e);
+            log::error!("Invalid document reference: {}", e);
             Ok(CommandResult::err(AppError::invalid_path(format!(
                 "Invalid path: {}",
                 e
@@ -526,7 +526,7 @@ pub fn doc_rename(
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Renaming document: location={:?}, path={:?}, new_name={}",
         location_id,
         rel_path,
@@ -536,16 +536,16 @@ pub fn doc_rename(
     match DocId::new(location_id, rel_path) {
         Ok(doc_id) => match state.store.doc_rename(&doc_id, &new_name) {
             Ok(new_meta) => {
-                tracing::info!("Document renamed successfully: {:?}", doc_id.rel_path);
+                log::info!("Document renamed successfully: {:?}", doc_id.rel_path);
                 Ok(CommandResult::ok(new_meta))
             }
             Err(e) => {
-                tracing::error!("Failed to rename document: {}", e);
+                log::error!("Failed to rename document: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Invalid document reference: {}", e);
+            log::error!("Invalid document reference: {}", e);
             Ok(CommandResult::err(AppError::invalid_path(format!(
                 "Invalid path: {}",
                 e
@@ -563,7 +563,7 @@ pub fn doc_move(
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Moving document: location={:?}, path={:?}, new_path={:?}",
         location_id,
         rel_path,
@@ -573,16 +573,16 @@ pub fn doc_move(
     match DocId::new(location_id, rel_path) {
         Ok(doc_id) => match state.store.doc_move(&doc_id, &new_rel_path) {
             Ok(new_meta) => {
-                tracing::info!("Document moved successfully: {:?}", doc_id.rel_path);
+                log::info!("Document moved successfully: {:?}", doc_id.rel_path);
                 Ok(CommandResult::ok(new_meta))
             }
             Err(e) => {
-                tracing::error!("Failed to move document: {}", e);
+                log::error!("Failed to move document: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Invalid document reference: {}", e);
+            log::error!("Invalid document reference: {}", e);
             Ok(CommandResult::err(AppError::invalid_path(format!(
                 "Invalid path: {}",
                 e
@@ -597,25 +597,25 @@ pub fn doc_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!("Deleting document: location={:?}, path={:?}", location_id, rel_path);
+    log::debug!("Deleting document: location={:?}, path={:?}", location_id, rel_path);
 
     match DocId::new(location_id, rel_path) {
         Ok(doc_id) => match state.store.doc_delete(&doc_id) {
             Ok(deleted) => {
                 if deleted {
-                    tracing::info!("Document deleted successfully: {:?}", doc_id.rel_path);
+                    log::info!("Document deleted successfully: {:?}", doc_id.rel_path);
                 } else {
-                    tracing::warn!("Document not found for deletion: {:?}", doc_id.rel_path);
+                    log::warn!("Document not found for deletion: {:?}", doc_id.rel_path);
                 }
                 Ok(CommandResult::ok(deleted))
             }
             Err(e) => {
-                tracing::error!("Failed to delete document: {}", e);
+                log::error!("Failed to delete document: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Invalid document reference: {}", e);
+            log::error!("Invalid document reference: {}", e);
             Ok(CommandResult::err(AppError::invalid_path(format!(
                 "Invalid path: {}",
                 e
@@ -630,12 +630,12 @@ pub fn dir_create(state: State<'_, AppState>, location_id: i64, rel_path: String
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!("Creating directory: location={:?}, path={:?}", location_id, rel_path);
+    log::debug!("Creating directory: location={:?}, path={:?}", location_id, rel_path);
 
     match state.store.dir_create(location_id, &rel_path) {
         Ok(created) => Ok(CommandResult::ok(created)),
         Err(e) => {
-            tracing::error!("Failed to create directory: {}", e);
+            log::error!("Failed to create directory: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -649,7 +649,7 @@ pub fn dir_rename(
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Renaming directory: location={:?}, path={:?}, new_name={}",
         location_id,
         rel_path,
@@ -659,7 +659,7 @@ pub fn dir_rename(
     match state.store.dir_rename(location_id, &rel_path, &new_name) {
         Ok(next_path) => Ok(CommandResult::ok(next_path.to_string_lossy().to_string())),
         Err(e) => {
-            tracing::error!("Failed to rename directory: {}", e);
+            log::error!("Failed to rename directory: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -674,7 +674,7 @@ pub fn dir_move(
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Moving directory: location={:?}, path={:?}, new_path={:?}",
         location_id,
         rel_path,
@@ -684,7 +684,7 @@ pub fn dir_move(
     match state.store.dir_move(location_id, &rel_path, &new_rel_path) {
         Ok(next_path) => Ok(CommandResult::ok(next_path.to_string_lossy().to_string())),
         Err(e) => {
-            tracing::error!("Failed to move directory: {}", e);
+            log::error!("Failed to move directory: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -696,12 +696,12 @@ pub fn dir_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!("Deleting directory: location={:?}, path={:?}", location_id, rel_path);
+    log::debug!("Deleting directory: location={:?}, path={:?}", location_id, rel_path);
 
     match state.store.dir_delete(location_id, &rel_path) {
         Ok(deleted) => Ok(CommandResult::ok(deleted)),
         Err(e) => {
-            tracing::error!("Failed to delete directory: {}", e);
+            log::error!("Failed to delete directory: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -711,6 +711,7 @@ pub fn dir_delete(state: State<'_, AppState>, location_id: i64, rel_path: String
 #[tauri::command]
 pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64) -> CommandResponse<bool> {
     let location_id_wrapped = LocationId(location_id);
+    log::debug!("Enabling watcher for location_id={}", location_id);
 
     let location = match state.store.location_get(location_id_wrapped) {
         Ok(Some(location)) => location,
@@ -724,13 +725,19 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
     };
 
     if watchers.contains_key(&location_id) {
+        log::debug!("Watcher already active for location_id={}", location_id);
         return Ok(CommandResult::ok(false));
     }
 
     let root_path = location.root_path.clone();
+    log::debug!(
+        "Creating watcher for location_id={}, root_path={:?}",
+        location_id,
+        root_path
+    );
     let store = Arc::clone(&state.store);
     let app_handle = app.clone();
-    let root_for_callback = root_path.clone();
+    let root_for_callback = root_path.canonicalize().unwrap_or_else(|_| root_path.clone());
 
     let watcher_result = RecommendedWatcher::new(
         move |result| match result {
@@ -738,7 +745,7 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
                 handle_watcher_event(&app_handle, &store, location_id_wrapped, &root_for_callback, event);
             }
             Err(error) => {
-                tracing::error!("Watcher error for location {}: {}", location_id, error);
+                log::error!("Watcher error for location {}: {}", location_id, error);
             }
         },
         Config::default(),
@@ -755,6 +762,12 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
     };
 
     if let Err(error) = watcher.watch(&root_path, RecursiveMode::Recursive) {
+        log::error!(
+            "Failed to watch location_id={} path {:?}: {}",
+            location_id,
+            root_path,
+            error
+        );
         return Ok(CommandResult::err(AppError::new(
             writer_core::ErrorCode::Io,
             format!("Failed to watch path: {}", error),
@@ -762,18 +775,29 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
     }
 
     watchers.insert(location_id, watcher);
+    log::info!(
+        "Watcher enabled for location_id={}, root_path={:?}",
+        location_id,
+        root_path
+    );
     Ok(CommandResult::ok(true))
 }
 
 /// Disables filesystem watching for a location.
 #[tauri::command]
 pub fn watch_disable(state: State<'_, AppState>, location_id: i64) -> CommandResponse<bool> {
+    log::debug!("Disabling watcher for location_id={}", location_id);
     let mut watchers = match state.watchers.lock() {
         Ok(guard) => guard,
         Err(_) => return Ok(CommandResult::err(AppError::io("Failed to lock watchers map"))),
     };
-
-    Ok(CommandResult::ok(watchers.remove(&location_id).is_some()))
+    let removed = watchers.remove(&location_id).is_some();
+    log::info!(
+        "Watcher disable result for location_id={}: removed={}",
+        location_id,
+        removed
+    );
+    Ok(CommandResult::ok(removed))
 }
 
 /// Full-text search across indexed documents.
@@ -800,7 +824,7 @@ pub fn markdown_render(
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Rendering markdown: location={:?}, path={:?}, profile={:?}, text_len={}",
         location_id,
         rel_path,
@@ -813,7 +837,7 @@ pub fn markdown_render(
 
     match engine.render(&text, profile) {
         Ok(result) => {
-            tracing::debug!(
+            log::debug!(
                 "Markdown rendered successfully: html_len={}, outline_items={}",
                 result.html.len(),
                 result.metadata.outline.len()
@@ -821,7 +845,7 @@ pub fn markdown_render(
             Ok(CommandResult::ok(result))
         }
         Err(e) => {
-            tracing::error!("Failed to render markdown: {}", e);
+            log::error!("Failed to render markdown: {}", e);
             Ok(CommandResult::err(AppError::new(
                 writer_core::ErrorCode::Parse,
                 format!("Failed to render markdown: {}", e),
@@ -841,7 +865,7 @@ pub fn markdown_render_for_pdf(
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
 
-    tracing::debug!(
+    log::debug!(
         "Rendering markdown for PDF: location={:?}, path={:?}, profile={:?}, text_len={}",
         location_id,
         rel_path,
@@ -854,7 +878,7 @@ pub fn markdown_render_for_pdf(
 
     match engine.render_for_pdf(&text, profile) {
         Ok(result) => {
-            tracing::debug!(
+            log::debug!(
                 "Markdown rendered for PDF successfully: nodes={}, word_count={}",
                 result.nodes.len(),
                 result.word_count
@@ -862,7 +886,7 @@ pub fn markdown_render_for_pdf(
             Ok(CommandResult::ok(result))
         }
         Err(e) => {
-            tracing::error!("Failed to render markdown for PDF: {}", e);
+            log::error!("Failed to render markdown for PDF: {}", e);
             Ok(CommandResult::err(AppError::new(
                 writer_core::ErrorCode::Parse,
                 format!("Failed to render markdown for PDF: {}", e),
@@ -873,12 +897,12 @@ pub fn markdown_render_for_pdf(
 
 #[tauri::command]
 pub fn style_check_get(state: State<'_, AppState>) -> CommandResponse<StyleCheckSettings> {
-    tracing::debug!("Loading persisted style check settings");
+    log::debug!("Loading persisted style check settings");
 
     match state.store.style_check_get() {
         Ok(settings) => Ok(CommandResult::ok(settings)),
         Err(e) => {
-            tracing::error!("Failed to load style check settings: {}", e);
+            log::error!("Failed to load style check settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -886,12 +910,12 @@ pub fn style_check_get(state: State<'_, AppState>) -> CommandResponse<StyleCheck
 
 #[tauri::command]
 pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings) -> CommandResponse<bool> {
-    tracing::debug!("Persisting style check settings");
+    log::debug!("Persisting style check settings");
 
     match state.store.style_check_set(&settings) {
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => {
-            tracing::error!("Failed to persist style check settings: {}", e);
+            log::error!("Failed to persist style check settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -901,7 +925,7 @@ pub fn style_check_set(state: State<'_, AppState>, settings: StyleCheckSettings)
 pub fn style_check_scan(
     _: State<'_, AppState>, text: String, settings: StyleCheckSettings,
 ) -> CommandResponse<Vec<StyleMatch>> {
-    tracing::debug!("Scanning style matches: text_len={}", text.len());
+    log::debug!("Scanning style matches: text_len={}", text.len());
 
     let input = StyleScanInput {
         text,
@@ -927,12 +951,12 @@ pub fn style_check_scan(
 /// Gets global capture settings
 #[tauri::command]
 pub fn global_capture_get(state: State<'_, AppState>) -> CommandResponse<writer_store::GlobalCaptureSettings> {
-    tracing::debug!("Loading global capture settings");
+    log::debug!("Loading global capture settings");
 
     match state.store.global_capture_get() {
         Ok(settings) => Ok(CommandResult::ok(settings)),
         Err(e) => {
-            tracing::error!("Failed to load global capture settings: {}", e);
+            log::error!("Failed to load global capture settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -943,7 +967,7 @@ pub fn global_capture_get(state: State<'_, AppState>) -> CommandResponse<writer_
 pub fn global_capture_set(
     app: AppHandle, state: State<'_, AppState>, settings: writer_store::GlobalCaptureSettings,
 ) -> CommandResponse<bool> {
-    tracing::debug!("Persisting global capture settings");
+    log::debug!("Persisting global capture settings");
 
     if let Err(e) = capture::validate_shortcut_format(&settings.shortcut) {
         return Ok(CommandResult::err(e));
@@ -953,12 +977,12 @@ pub fn global_capture_set(
         Ok(()) => match capture::reconcile_capture_runtime(&app, &settings) {
             Ok(_) => Ok(CommandResult::ok(true)),
             Err(e) => {
-                tracing::error!("Failed to reconcile capture runtime: {}", e);
+                log::error!("Failed to reconcile capture runtime: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Failed to persist global capture settings: {}", e);
+            log::error!("Failed to persist global capture settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -967,12 +991,12 @@ pub fn global_capture_set(
 /// Opens the quick capture window
 #[tauri::command]
 pub fn global_capture_open(app: AppHandle) -> CommandResponse<bool> {
-    tracing::debug!("Opening quick capture window");
+    log::debug!("Opening quick capture window");
 
     match capture::show_quick_capture_window(&app) {
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => {
-            tracing::error!("Failed to open quick capture window: {}", e);
+            log::error!("Failed to open quick capture window: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -984,7 +1008,7 @@ pub async fn global_capture_submit(
     app: AppHandle, state: State<'_, AppState>, mode: writer_store::CaptureMode, text: String,
     destination: Option<writer_store::CaptureDocRef>, open_main_after_save: Option<bool>,
 ) -> CommandResponse<capture::CaptureSubmitResult> {
-    tracing::debug!("Submitting capture: mode={:?}, text_len={}", mode, text.len());
+    log::debug!("Submitting capture: mode={:?}, text_len={}", mode, text.len());
 
     let settings = match state.store.global_capture_get() {
         Ok(s) => s,
@@ -1015,12 +1039,12 @@ pub async fn global_capture_submit(
     {
         Ok(result) => {
             if let Err(e) = capture::update_last_capture_target(&app, result.last_capture_target.clone()) {
-                tracing::warn!("Failed to update last capture target: {}", e);
+                log::warn!("Failed to update last capture target: {}", e);
             }
 
             if open_main_after_save.unwrap_or(false) && result.success {
                 if let Err(e) = capture::show_main_window(&app) {
-                    tracing::warn!("Failed to show main window: {}", e);
+                    log::warn!("Failed to show main window: {}", e);
                 }
             }
 
@@ -1033,7 +1057,7 @@ pub async fn global_capture_submit(
 /// Pauses or resumes the global shortcut
 #[tauri::command]
 pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: bool) -> CommandResponse<bool> {
-    tracing::debug!("Setting global capture pause state: {}", paused);
+    log::debug!("Setting global capture pause state: {}", paused);
 
     let mut settings = match state.store.global_capture_get() {
         Ok(s) => s,
@@ -1046,12 +1070,12 @@ pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: 
         Ok(()) => match capture::reconcile_capture_runtime(&app, &settings) {
             Ok(_) => Ok(CommandResult::ok(true)),
             Err(e) => {
-                tracing::error!("Failed to reconcile capture runtime: {}", e);
+                log::error!("Failed to reconcile capture runtime: {}", e);
                 Ok(CommandResult::err(e))
             }
         },
         Err(e) => {
-            tracing::error!("Failed to persist global capture settings: {}", e);
+            log::error!("Failed to persist global capture settings: {}", e);
             Ok(CommandResult::err(e))
         }
     }
@@ -1060,7 +1084,7 @@ pub fn global_capture_pause(app: AppHandle, state: State<'_, AppState>, paused: 
 /// Validates a shortcut format
 #[tauri::command]
 pub fn global_capture_validate_shortcut(shortcut: String) -> CommandResponse<bool> {
-    tracing::debug!("Validating shortcut: {}", shortcut);
+    log::debug!("Validating shortcut: {}", shortcut);
 
     match capture::validate_shortcut_format(&shortcut) {
         Ok(()) => Ok(CommandResult::ok(true)),
@@ -1071,6 +1095,6 @@ pub fn global_capture_validate_shortcut(shortcut: String) -> CommandResponse<boo
 /// Returns the markdown help guide content
 #[tauri::command]
 pub fn markdown_help_get() -> CommandResponse<String> {
-    tracing::debug!("Fetching markdown help content");
+    log::debug!("Fetching markdown help content");
     Ok(CommandResult::ok(writer_store::get_markdown_help().to_string()))
 }

@@ -74,9 +74,9 @@ pub fn register_global_shortcut(app: &AppHandle, shortcut_str: &str) -> Result<(
     app.global_shortcut()
         .on_shortcut(shortcut, move |app, shortcut, event| {
             if event.state == ShortcutState::Pressed {
-                tracing::info!("Global shortcut triggered: {:?}", shortcut);
+                log::info!("Global shortcut triggered: {:?}", shortcut);
                 if let Err(e) = show_quick_capture_window(app) {
-                    tracing::error!("Failed to show quick capture window: {}", e);
+                    log::error!("Failed to show quick capture window: {}", e);
                 }
             }
         })
@@ -90,7 +90,7 @@ pub fn register_global_shortcut(app: &AppHandle, shortcut_str: &str) -> Result<(
             )
         })?;
 
-    tracing::info!("Global shortcut registered: {}", shortcut_str);
+    log::info!("Global shortcut registered: {}", shortcut_str);
     Ok(())
 }
 
@@ -98,7 +98,7 @@ pub fn register_global_shortcut(app: &AppHandle, shortcut_str: &str) -> Result<(
 pub fn reconcile_shortcut_registration(app: &AppHandle, settings: &GlobalCaptureSettings) -> Result<(), AppError> {
     let gs = app.global_shortcut();
     if let Err(e) = gs.unregister_all() {
-        tracing::warn!("Failed to unregister existing shortcuts: {}", e);
+        log::warn!("Failed to unregister existing shortcuts: {}", e);
     }
 
     if settings.enabled && !settings.paused {
@@ -231,7 +231,7 @@ pub fn build_or_update_tray_menu(app: &AppHandle, settings: &GlobalCaptureSettin
         .on_menu_event(|app, event| {
             let menu_id = event.id().as_ref();
             if let Err(e) = handle_tray_menu_action(app, menu_id) {
-                tracing::error!("Tray menu action failed ({}): {}", menu_id, e);
+                log::error!("Tray menu action failed ({}): {}", menu_id, e);
             }
         });
 
@@ -256,7 +256,7 @@ pub fn reconcile_capture_runtime(app: &AppHandle, settings: &GlobalCaptureSettin
 fn emit_capture_saved_event(app: &AppHandle, doc_id: &DocId, mtime: chrono::DateTime<chrono::Utc>) {
     let event = BackendEvent::DocModifiedExternally { doc_id: doc_id.clone(), new_mtime: mtime };
     if let Err(error) = app.emit("backend-event", event) {
-        tracing::warn!("Failed to emit DocModifiedExternally event for capture save: {}", error);
+        log::warn!("Failed to emit DocModifiedExternally event for capture save: {}", error);
     }
 }
 

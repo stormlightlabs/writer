@@ -46,6 +46,33 @@ describe(useBackendEvents, () => {
     });
   });
 
+  it("invokes FilesystemChanged callback for externally tagged Rust payload", () => {
+    const onFilesystemChanged = vi.fn();
+
+    renderHook(() => useBackendEvents({ onFilesystemChanged }));
+
+    act(() => {
+      emitBackendEvent({
+        FilesystemChanged: {
+          location_id: 42,
+          entry_kind: "File",
+          change_kind: "Created",
+          rel_path: "TEST.md",
+          old_rel_path: null,
+        },
+      });
+    });
+
+    expect(onFilesystemChanged).toHaveBeenCalledWith({
+      type: "FilesystemChanged",
+      location_id: 42,
+      entry_kind: "File",
+      change_kind: "Created",
+      rel_path: "TEST.md",
+      old_rel_path: null,
+    });
+  });
+
   it("invokes latest callback after rerender", () => {
     const onLocationMissing1 = vi.fn();
     const onLocationMissing2 = vi.fn();

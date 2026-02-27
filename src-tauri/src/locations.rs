@@ -15,14 +15,27 @@ fn should_process_watcher_event(kind: &EventKind) -> bool {
 pub(super) fn emit_doc_modified_event(app: &AppHandle, doc_id: DocId, mtime: chrono::DateTime<chrono::Utc>) {
     let event = BackendEvent::DocModifiedExternally { doc_id, new_mtime: mtime };
     if let Err(error) = app.emit("backend-event", event) {
-        tracing::error!("Failed to emit DocModifiedExternally event: {}", error);
+        log::error!("Failed to emit DocModifiedExternally event: {}", error);
     }
 }
 
 fn relative_path(root_path: &Path, path: &Path) -> Option<PathBuf> {
     match path.strip_prefix(root_path) {
         Ok(rel_path) if !rel_path.as_os_str().is_empty() => Some(rel_path.to_path_buf()),
-        _ => None,
+        _ => {
+            let canonical_root = root_path.canonicalize().ok()?;
+            match path.strip_prefix(&canonical_root) {
+                Ok(rel_path) if !rel_path.as_os_str().is_empty() => Some(rel_path.to_path_buf()),
+                _ => {
+                    let canonical_path = path.canonicalize().ok()?;
+                    canonical_path
+                        .strip_prefix(&canonical_root)
+                        .ok()
+                        .filter(|rel_path| !rel_path.as_os_str().is_empty())
+                        .map(Path::to_path_buf)
+                }
+            }
+        }
     }
 }
 
@@ -30,9 +43,17 @@ fn emit_filesystem_changed_event(
     app: &AppHandle, location_id: LocationId, entry_kind: FsEntryKind, change_kind: FsChangeKind, rel_path: PathBuf,
     old_rel_path: Option<PathBuf>,
 ) {
+    log::debug!(
+        "Emitting FilesystemChanged: location_id={:?}, entry_kind={:?}, change_kind={:?}, rel_path={:?}, old_rel_path={:?}",
+        location_id,
+        entry_kind,
+        change_kind,
+        rel_path,
+        old_rel_path
+    );
     let event = BackendEvent::FilesystemChanged { location_id, entry_kind, change_kind, rel_path, old_rel_path };
     if let Err(error) = app.emit("backend-event", event) {
-        tracing::error!("Failed to emit FilesystemChanged event: {}", error);
+        log::error!("Failed to emit FilesystemChanged event: {}", error);
     }
 }
 
@@ -48,7 +69,7 @@ fn change_kind_from_event_kind(kind: &EventKind) -> FsChangeKind {
 
 fn remove_document_from_index_if_present(store: &Store, doc_id: &DocId, path: &Path) {
     if let Err(error) = store.remove_document_from_index(doc_id) {
-        tracing::error!("Failed to remove deleted file {:?} from index: {}", path, error);
+        log::error!("Failed to remove deleted file {:?} from index: {}", path, error);
     }
 }
 
@@ -73,7 +94,23 @@ fn reindex_document_and_emit(
             );
         }
         Err(error) => {
-            tracing::error!("Failed to reindex changed file {:?}: {}", path, error);
+            log::error!("Failed to reindex changed file {:?}: {}", path, error);
+            if let Err(reconcile_error) = store.reconcile_location_index(location_id) {
+                log::error!(
+                    "Failed to reconcile index after file change {:?} in location {:?}: {}",
+                    path,
+                    location_id,
+                    reconcile_error
+                );
+            }
+            emit_filesystem_changed_event(
+                app,
+                location_id,
+                FsEntryKind::File,
+                change_kind,
+                doc_id.rel_path.clone(),
+                None,
+            );
         }
     }
 }
@@ -83,7 +120,7 @@ fn reconcile_directory_index_and_emit(
     old_rel_path: Option<PathBuf>,
 ) {
     if let Err(error) = store.reconcile_location_index(location_id) {
-        tracing::error!(
+        log::error!(
             "Failed to reconcile index after directory change {:?} in location {:?}: {}",
             rel_path,
             location_id,
@@ -133,14 +170,14 @@ fn handle_rename_event(app: &AppHandle, store: &Store, location_id: LocationId, 
     let old_doc_id = match DocId::new(location_id, old_rel_path.clone()) {
         Ok(doc_id) => doc_id,
         Err(error) => {
-            tracing::warn!("Ignoring watcher rename source path that failed validation: {}", error);
+            log::warn!("Ignoring watcher rename source path that failed validation: {}", error);
             return;
         }
     };
     let new_doc_id = match DocId::new(location_id, new_rel_path.clone()) {
         Ok(doc_id) => doc_id,
         Err(error) => {
-            tracing::warn!(
+            log::warn!(
                 "Ignoring watcher rename destination path that failed validation: {}",
                 error
             );
@@ -166,7 +203,23 @@ fn handle_rename_event(app: &AppHandle, store: &Store, location_id: LocationId, 
             );
         }
         Err(error) => {
-            tracing::error!("Failed to reindex renamed file {:?}: {}", to_path, error);
+            log::error!("Failed to reindex renamed file {:?}: {}", to_path, error);
+            if let Err(reconcile_error) = store.reconcile_location_index(location_id) {
+                log::error!(
+                    "Failed to reconcile index after file rename {:?} in location {:?}: {}",
+                    to_path,
+                    location_id,
+                    reconcile_error
+                );
+            }
+            emit_filesystem_changed_event(
+                app,
+                location_id,
+                FsEntryKind::File,
+                FsChangeKind::Renamed,
+                new_doc_id.rel_path.clone(),
+                Some(old_doc_id.rel_path.clone()),
+            );
         }
     }
 }
@@ -174,7 +227,19 @@ fn handle_rename_event(app: &AppHandle, store: &Store, location_id: LocationId, 
 pub(super) fn handle_watcher_event(
     app: &AppHandle, store: &Arc<Store>, location_id: LocationId, root_path: &Path, event: Event,
 ) {
+    log::debug!(
+        "Watcher event received: location_id={:?}, kind={:?}, paths={:?}",
+        location_id,
+        event.kind,
+        event.paths
+    );
+
     if !should_process_watcher_event(&event.kind) {
+        log::debug!(
+            "Ignoring watcher event for location_id={:?}: unsupported kind={:?}",
+            location_id,
+            event.kind
+        );
         return;
     }
 
@@ -199,7 +264,7 @@ pub(super) fn handle_watcher_event(
         let doc_id = match DocId::new(location_id, rel_path.clone()) {
             Ok(doc_id) => doc_id,
             Err(error) => {
-                tracing::warn!("Ignoring watcher path that failed validation: {}", error);
+                log::warn!("Ignoring watcher path that failed validation: {}", error);
                 continue;
             }
         };
@@ -252,7 +317,7 @@ pub(super) fn resolve_default_capture_root(app: &AppHandle) -> Result<PathBuf, A
     let path = match app.path().document_dir() {
         Ok(documents_dir) => documents_dir.join("inbox"),
         Err(documents_error) => {
-            tracing::warn!(
+            log::warn!(
                 "Failed to resolve documents directory: {}. Falling back to $HOME/Documents.",
                 documents_error
             );
@@ -291,11 +356,11 @@ pub(super) fn ensure_default_capture_location(app: &AppHandle, state: &AppState)
     match state.store.location_add(location_name, capture_root.clone()) {
         Ok(descriptor) => {
             if let Err(error) = app.fs_scope().allow_directory(&capture_root, true) {
-                tracing::warn!("Failed to add auto-created capture location to fs scope: {}", error);
+                log::warn!("Failed to add auto-created capture location to fs scope: {}", error);
             }
 
             if let Err(error) = state.store.reconcile_location_index(descriptor.id) {
-                tracing::warn!(
+                log::warn!(
                     "Initial index build failed for auto-created capture location {:?}: {}",
                     descriptor.id,
                     error
@@ -321,7 +386,7 @@ pub(super) fn resolve_capture_target_location(
         if state.store.location_get(destination_id)?.is_some() {
             return Ok(destination_id);
         }
-        tracing::warn!(
+        log::warn!(
             "Capture destination location no longer exists: {}. Falling back to current/open location resolution.",
             destination_ref.location_id
         );
@@ -332,7 +397,7 @@ pub(super) fn resolve_capture_target_location(
         if state.store.location_get(last_open_location)?.is_some() {
             return Ok(last_open_location);
         }
-        tracing::warn!(
+        log::warn!(
             "Last open location no longer exists: {}. Falling back to default capture inbox location.",
             last_open_doc.location_id
         );
@@ -343,7 +408,7 @@ pub(super) fn resolve_capture_target_location(
 
 /// Reconciles locations on startup and emits events for any issues
 pub fn reconcile(app: &AppHandle) -> Result<(), AppError> {
-    tracing::info!("Starting location reconciliation");
+    log::info!("Starting location reconciliation");
 
     let state = app.state::<AppState>();
     let locations = state.store.location_list()?;
@@ -355,7 +420,7 @@ pub fn reconcile(app: &AppHandle) -> Result<(), AppError> {
         checked += 1;
 
         if !location.root_path.exists() {
-            tracing::warn!(
+            log::warn!(
                 "Location root missing: id={}, path={:?}",
                 location.id.0,
                 location.root_path
@@ -366,23 +431,23 @@ pub fn reconcile(app: &AppHandle) -> Result<(), AppError> {
             let event = BackendEvent::LocationMissing { location_id: location.id, path: location.root_path.clone() };
 
             if let Err(e) = app.emit("backend-event", event) {
-                tracing::error!("Failed to emit location missing event: {}", e);
+                log::error!("Failed to emit location missing event: {}", e);
             }
         }
     }
 
     match state.store.reconcile_indexes() {
-        Ok(indexed) => tracing::info!("Startup index reconciliation complete: indexed_files={}", indexed),
-        Err(error) => tracing::error!("Startup index reconciliation failed: {}", error),
+        Ok(indexed) => log::info!("Startup index reconciliation complete: indexed_files={}", indexed),
+        Err(error) => log::error!("Startup index reconciliation failed: {}", error),
     }
 
     let completion_event = BackendEvent::ReconciliationComplete { checked, missing: missing.clone() };
 
     if let Err(e) = app.emit("backend-event", completion_event) {
-        tracing::error!("Failed to emit reconciliation complete event: {}", e);
+        log::error!("Failed to emit reconciliation complete event: {}", e);
     }
 
-    tracing::info!(
+    log::info!(
         "Location reconciliation complete: checked={}, missing={}",
         checked,
         missing.len()
