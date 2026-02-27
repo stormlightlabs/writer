@@ -1,4 +1,3 @@
-import { logger } from "$logger";
 import {
   backendEvents,
   batch,
@@ -38,6 +37,7 @@ import {
 import type { BatchCmd, Cmd, InvokeCmd, StartWatchCmd, StopWatchCmd } from "$ports";
 import type { AppError, LocationDescriptor } from "$types";
 import { invoke } from "@tauri-apps/api/core";
+import * as logger from "@tauri-apps/plugin-log";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("commandResult", () => {
@@ -541,7 +541,8 @@ describe(runCmd, () => {
 
       await runCmd(unknownCmd);
 
-      expect(warnSpy).toHaveBeenCalledWith("Unknown command type", { cmd: unknownCmd });
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown command type"));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"cmd":{"type":"Unknown"}'));
     });
   });
 });
@@ -573,7 +574,8 @@ describe(SubscriptionManager, () => {
 
       await manager.subscribe(unknownSub);
 
-      expect(warnSpy).toHaveBeenCalledWith("Unknown subscription type", { sub: unknownSub });
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown subscription type"));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"sub":{"type":"Unknown"}'));
     });
   });
 
@@ -697,6 +699,24 @@ describe("document Commands", () => {
         profile: "GfmSafe",
       });
     });
+
+    it("should sanitize non-primitive markdown payload fields", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cyclic: Record<string, unknown> = {};
+      cyclic.self = cyclic;
+
+      const cmd = renderMarkdown(
+        "11" as unknown as number,
+        null as unknown as string,
+        cyclic as unknown as string,
+        "UnknownProfile" as unknown as "GfmSafe",
+        onOk,
+        onErr,
+      ) as InvokeCmd;
+
+      expect(cmd.payload).toStrictEqual({ locationId: 0, relPath: "", text: "" });
+    });
   });
 
   describe(renderMarkdownForPdf, () => {
@@ -713,6 +733,24 @@ describe("document Commands", () => {
         text: "# Draft",
         profile: "GfmSafe",
       });
+    });
+
+    it("should sanitize non-primitive markdown-for-pdf payload fields", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cyclic: Record<string, unknown> = {};
+      cyclic.self = cyclic;
+
+      const cmd = renderMarkdownForPdf(
+        "11" as unknown as number,
+        null as unknown as string,
+        cyclic as unknown as string,
+        "UnknownProfile" as unknown as "GfmSafe",
+        onOk,
+        onErr,
+      ) as InvokeCmd;
+
+      expect(cmd.payload).toStrictEqual({ locationId: 0, relPath: "", text: "" });
     });
   });
 
@@ -822,9 +860,7 @@ describe("session Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("session_last_doc_set");
-      expect(cmd.payload).toStrictEqual({
-        docRef: { location_id: 7, rel_path: "notes/start.md" },
-      });
+      expect(cmd.payload).toStrictEqual({ docRef: { location_id: 7, rel_path: "notes/start.md" } });
     });
 
     it("should support clearing the persisted docRef", () => {

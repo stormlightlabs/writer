@@ -1,4 +1,3 @@
-import { logger } from "$logger";
 import { docDelete, docList, docMove, docRename, locationAddViaDialog, locationRemove, runCmd } from "$ports";
 import {
   useTabsActions,
@@ -13,11 +12,17 @@ import { useWorkspaceStore } from "$state/stores/workspace";
 import type { SidebarRefreshReason } from "$state/types";
 import type { AppError, DocMeta, DocRef } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useMemo } from "react";
 
 const TRANSIENT_EMPTY_REFRESH_RETRY_DELAY_MS = 120;
 
 type RefreshSidebarOptions = { source?: SidebarRefreshReason; attempt?: number };
+
+function toLocationId(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
 
 function areDocumentsEqual(left: DocMeta[], right: DocMeta[]): boolean {
   if (left.length !== right.length) {
@@ -60,7 +65,7 @@ export function useWorkspaceController() {
     runCmd(locationAddViaDialog((location) => {
       addLocation(location);
     }, (error) => {
-      logger.error("Failed to add location", { error });
+      logger.error(f("Failed to add location", { error }));
     }));
   }, [addLocation]);
 
@@ -70,7 +75,7 @@ export function useWorkspaceController() {
         removeLocation(locationId);
       }
     }, (error) => {
-      logger.error("Failed to remove location", { locationId, error });
+      logger.error(f("Failed to remove location", { locationId, error }));
     }));
   }, [removeLocation]);
 
@@ -96,7 +101,9 @@ export function useWorkspaceController() {
   const handleCreateNewDocument = useCallback((locationId?: number) => {
     const workspaceState = useWorkspaceStore.getState();
     const tabsState = useTabsStore.getState();
-    const targetLocationId = locationId ?? workspaceState.selectedLocationId ?? workspaceState.locations[0]?.id;
+    const requestedLocationId = toLocationId(locationId);
+    const targetLocationId = requestedLocationId ?? workspaceState.selectedLocationId
+      ?? workspaceState.locations[0]?.id;
 
     if (!targetLocationId) {
       logger.warn("Cannot create draft without a selected location.");
@@ -113,7 +120,9 @@ export function useWorkspaceController() {
     const source = options.source ?? "manual";
     const attempt = options.attempt ?? 0;
     const workspaceState = useWorkspaceStore.getState();
-    const targetLocationId = locationId ?? workspaceState.selectedLocationId ?? workspaceState.locations[0]?.id;
+    const requestedLocationId = toLocationId(locationId);
+    const targetLocationId = requestedLocationId ?? workspaceState.selectedLocationId
+      ?? workspaceState.locations[0]?.id;
 
     if (!targetLocationId || workspaceState.selectedLocationId !== targetLocationId) {
       return;
@@ -152,7 +161,7 @@ export function useWorkspaceController() {
         return;
       }
 
-      logger.error("Failed to refresh sidebar documents", { locationId: targetLocationId, error });
+      logger.error(f("Failed to refresh sidebar documents", { locationId: targetLocationId, error }));
       const latestState = useWorkspaceStore.getState();
       if (latestState.refreshingLocationId === targetLocationId) {
         latestState.setSidebarRefreshState(undefined, null);
@@ -183,10 +192,10 @@ export function useWorkspaceController() {
         );
         workspaceState.setDocuments(updatedDocuments);
 
-        logger.info("Document renamed", { locationId, oldPath: relPath, newPath: newMeta.rel_path });
+        logger.info(f("Document renamed", { locationId, oldPath: relPath, newPath: newMeta.rel_path }));
         resolve(true);
       }, (error: AppError) => {
-        logger.error("Failed to rename document", { locationId, relPath, newName, error });
+        logger.error(f("Failed to rename document", { locationId, relPath, newName, error }));
         resolve(false);
       }));
     });
@@ -216,10 +225,10 @@ export function useWorkspaceController() {
           );
           workspaceState.setDocuments(updatedDocuments);
 
-          logger.info("Document moved", { locationId, oldPath: relPath, newPath: newMeta.rel_path });
+          logger.info(f("Document moved", { locationId, oldPath: relPath, newPath: newMeta.rel_path }));
           resolve(true);
         }, (error: AppError) => {
-          logger.error("Failed to move document", { locationId, relPath, newRelPath, error });
+          logger.error(f("Failed to move document", { locationId, relPath, newRelPath, error }));
           resolve(false);
         }));
       });
@@ -251,10 +260,10 @@ export function useWorkspaceController() {
         );
         workspaceState.setDocuments(updatedDocuments);
 
-        logger.info("Document deleted", { locationId, relPath });
+        logger.info(f("Document deleted", { locationId, relPath }));
         resolve(true);
       }, (error: AppError) => {
-        logger.error("Failed to delete document", { locationId, relPath, error });
+        logger.error(f("Failed to delete document", { locationId, relPath, error }));
         resolve(false);
       }));
     });

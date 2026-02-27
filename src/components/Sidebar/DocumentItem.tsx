@@ -2,8 +2,9 @@ import { Button } from "$components/Button";
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
 import { Dialog } from "$components/Dialog";
 import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, TrashIcon } from "$icons";
-import { logger } from "$logger";
 import type { DocMeta } from "$types";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useMemo, useState } from "react";
 import { TreeItem } from "./TreeItem";
 
@@ -213,7 +214,7 @@ export function DocumentItem(
     try {
       await navigator.clipboard.writeText(doc.rel_path);
     } catch (error) {
-      logger.error("Failed to copy path to clipboard", { error });
+      logger.error(f("Failed to copy path to clipboard", { error }));
     }
   }, [doc.rel_path]);
 

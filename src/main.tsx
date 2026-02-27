@@ -1,13 +1,14 @@
-import { logger } from "$logger";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import * as logger from "@tauri-apps/plugin-log";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { applyInitialRoute, AppRouter } from "./Router";
 import "@fontsource-variable/ibm-plex-sans";
 import "./App.css";
+import { f } from "$utils/serialize";
 
 try {
-  await logger.init();
+  await logger.attachConsole();
 } catch (error) {
   console.error("Failed to initialize frontend logging:", error);
 }
@@ -15,16 +16,18 @@ try {
 logger.info("Frontend bootstrap started");
 
 globalThis.addEventListener("error", (event) => {
-  logger.error("Unhandled window error", {
-    message: event.message,
-    filename: event.filename,
-    lineno: event.lineno,
-    colno: event.colno,
-  });
+  logger.error(
+    f("Unhandled window error", {
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    }),
+  );
 });
 
 globalThis.addEventListener("unhandledrejection", (event) => {
-  logger.error("Unhandled promise rejection", { reason: String(event.reason) });
+  logger.error(f("Unhandled promise rejection", { reason: String(event.reason) }));
 });
 
 /**

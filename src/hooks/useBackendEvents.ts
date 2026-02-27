@@ -1,8 +1,9 @@
-import { logger } from "$logger";
 import type { BackendEvent } from "$ports";
 import type { LocationId } from "$types";
+import { f } from "$utils/serialize";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
+import * as logger from "@tauri-apps/plugin-log";
 import { useEffect, useRef, useState } from "react";
 
 export type BackendEventState = {
@@ -51,7 +52,7 @@ function handleBackendEvent(payload: BackendEvent): void {
         }]),
       };
       notifyStateSubscribers();
-      logger.warn("Location missing", { locationId: payload.location_id, path: payload.path });
+      logger.warn(f("Location missing", { locationId: payload.location_id, path: payload.path }));
       break;
     }
     case "ConflictDetected": {
@@ -64,31 +65,35 @@ function handleBackendEvent(payload: BackendEvent): void {
         }]),
       };
       notifyStateSubscribers();
-      logger.warn("Conflict detected", {
-        locationId: payload.location_id,
-        relPath: payload.rel_path,
-        conflictFileName: payload.conflict_filename,
-      });
+      logger.warn(
+        f("Conflict detected", {
+          locationId: payload.location_id,
+          relPath: payload.rel_path,
+          conflictFileName: payload.conflict_filename,
+        }),
+      );
       break;
     }
     case "ReconciliationComplete": {
-      logger.info("Reconciliation complete", { checked: payload.checked, missingCount: payload.missing.length });
+      logger.info(f("Reconciliation complete", { checked: payload.checked, missingCount: payload.missing.length }));
       break;
     }
     case "LocationChanged": {
-      logger.info("Location changed", {
-        locationId: payload.location_id,
-        oldPath: payload.old_path,
-        newPath: payload.new_path,
-      });
+      logger.info(
+        f("Location changed", {
+          locationId: payload.location_id,
+          oldPath: payload.old_path,
+          newPath: payload.new_path,
+        }),
+      );
       break;
     }
     case "DocModifiedExternally": {
-      logger.info("Document modified externally", { docId: payload.doc_id });
+      logger.info(f("Document modified externally", { docId: payload.doc_id }));
       break;
     }
     case "SaveStatusChanged": {
-      logger.info("Save status changed", { docId: payload.doc_id, status: payload.status });
+      logger.info(f("Save status changed", { docId: payload.doc_id, status: payload.status }));
       break;
     }
   }
@@ -109,9 +114,9 @@ function startSharedListener(): void {
   }).then((unlisten) => {
     sharedUnlisten = unlisten;
   }).catch((error) => {
-    logger.error("Failed to subscribe to backend events", {
-      message: error instanceof Error ? error.message : String(error),
-    });
+    logger.error(
+      f("Failed to subscribe to backend events", { message: error instanceof Error ? error.message : String(error) }),
+    );
   }).finally(() => {
     isStartingListener = false;
     if (stateSubscribers.size === 0 && eventSubscribers.size === 0 && sharedUnlisten) {

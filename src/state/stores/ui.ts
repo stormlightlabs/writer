@@ -1,8 +1,9 @@
-import { logger } from "$logger";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import { globalCaptureSet, runCmd } from "$ports";
 import type { UiActions, UiState } from "$state/types";
 import type { GlobalCaptureSettings } from "$types";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
 import { create } from "zustand";
 
 export type UiStore = UiState & UiActions;
@@ -62,7 +63,7 @@ export const useUiStore = create<UiStore>()((set, get) => ({
     set({ globalCaptureSettings: next });
 
     await runCmd(globalCaptureSet(next, () => {}, (error) => {
-      logger.error("Failed to persist quick capture enabled state", error);
+      logger.error(f("Failed to persist quick capture enabled state", { error }));
       set({ globalCaptureSettings: previous });
     }));
   },

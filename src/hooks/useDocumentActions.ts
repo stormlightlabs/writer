@@ -1,7 +1,7 @@
 import type { EditorMsg } from "$hooks/useEditor";
-import { logger } from "$logger";
 import type { DocMeta, DocRef, Tab } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
 
 type UseDocumentActionsArgs = {
@@ -13,6 +13,10 @@ type UseDocumentActionsArgs = {
   createDraftTab: (docRef: DocRef, title: string) => void;
   createNewDocument: (locationId?: number) => DocRef | null;
 };
+
+function toLocationId(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
 
 export function useDocumentActions(
   { editorDocRef, selectedLocationId, documents, tabs, dispatchEditor, createDraftTab, createNewDocument }:
@@ -36,7 +40,7 @@ export function useDocumentActions(
   }, [createDraftTab, dispatchEditor, documents, editorDocRef, selectedLocationId, tabs]);
 
   const handleNewDocument = useCallback((locationId?: number) => {
-    const draftRef = createNewDocument(locationId);
+    const draftRef = createNewDocument(toLocationId(locationId));
     if (!draftRef) {
       logger.warn("Cannot create a new document without a selected location.");
       return;

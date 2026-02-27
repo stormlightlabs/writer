@@ -1,14 +1,15 @@
 import { MarkdownPdfDocument } from "$components/pdf/MarkdownPdfDocument";
-import { logger } from "$logger";
-import { serializeError } from "$pdf/errors";
+import { PDFError } from "$pdf/errors";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { renderMarkdownForPdf, runCmd } from "$ports";
 import { usePdfDialogUiState, usePdfExportActions } from "$state/selectors";
 import type { EditorFontFamily, Tab } from "$types";
+import { f } from "$utils/serialize";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
 
 export type ExportPdfFn = (
@@ -35,7 +36,7 @@ export function usePdfExport(): ExportPdfFn {
     ) => {
       const bodyFont = describePdfFont(editorFontFamily, strategy);
       const codeFont = describePdfFont("IBM Plex Mono", strategy);
-      logger.debug("PDF export render attempt started", { strategy, bodyFont, codeFont, runtime: runtimeContext() });
+      logger.debug(f("PDF export render attempt started", { strategy, bodyFont, codeFont, runtime: runtimeContext() }));
 
       await ensurePdfFontRegistered(editorFontFamily, strategy);
       await ensurePdfFontRegistered("IBM Plex Mono", strategy);
@@ -49,7 +50,7 @@ export function usePdfExport(): ExportPdfFn {
           useBuiltinFonts={strategy === "builtin"} />,
       ).toBlob();
 
-      logger.debug("PDF export render attempt completed", { strategy, outputSizeBytes: blob.size });
+      logger.debug(f("PDF export render attempt completed", { strategy, outputSizeBytes: blob.size }));
 
       return blob;
     },
@@ -67,23 +68,29 @@ export function usePdfExport(): ExportPdfFn {
           blob = await renderPdfBlob(result, options, editorFontFamily, "custom");
         } catch (initialError) {
           customRenderError = initialError;
-          logger.warn("PDF export custom font render failed; retrying with built-in fonts", {
-            editorFontFamily,
-            error: serializeError(initialError),
-          });
+          logger.warn(
+            f("PDF export custom font render failed; retrying with built-in fonts", {
+              editorFontFamily,
+              error: PDFError.serialize(initialError),
+            }),
+          );
 
           try {
             blob = await renderPdfBlob(result, options, editorFontFamily, "builtin");
-            logger.warn("PDF export completed with built-in fonts after custom font failure", {
-              editorFontFamily,
-              customError: serializeError(customRenderError),
-            });
+            logger.warn(
+              f("PDF export completed with built-in fonts after custom font failure", {
+                editorFontFamily,
+                customError: PDFError.serialize(customRenderError),
+              }),
+            );
           } catch (builtinError) {
-            logger.error("PDF export failed with both custom and built-in fonts", {
-              editorFontFamily,
-              customError: serializeError(customRenderError),
-              builtinError: serializeError(builtinError),
-            });
+            logger.error(
+              f("PDF export failed with both custom and built-in fonts", {
+                editorFontFamily,
+                customError: PDFError.serialize(customRenderError),
+                builtinError: PDFError.serialize(builtinError),
+              }),
+            );
             throw new Error("Failed to render PDF using both custom and built-in fonts. Check logs for details.", {
               cause: builtinError,
             });
@@ -96,22 +103,26 @@ export function usePdfExport(): ExportPdfFn {
         const filePath = await save({ filters: [{ name: "PDF", extensions: ["pdf"] }], defaultPath: defaultFileName });
 
         if (!filePath) {
-          logger.info("PDF export canceled before writing file", {
-            editorFontFamily,
-            fallbackUsed: customRenderError !== null,
-          });
+          logger.info(
+            f("PDF export canceled before writing file", {
+              editorFontFamily,
+              fallbackUsed: customRenderError !== null,
+            }),
+          );
           finishPdfExport();
           return false;
         }
 
         await writeFile(filePath, uint8Array);
-        logger.info("PDF export completed", { filePath, editorFontFamily, fallbackUsed: customRenderError !== null });
+        logger.info(
+          f("PDF export completed", { filePath, editorFontFamily, fallbackUsed: customRenderError !== null }),
+        );
 
         finishPdfExport();
         return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to export PDF";
-        logger.error("PDF export failed", { editorFontFamily, error: serializeError(err) });
+        logger.error(f("PDF export failed", { editorFontFamily, error: PDFError.serialize(err) }));
         failPdfExport(errorMessage);
         throw err;
       }
@@ -162,7 +173,7 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }:
         resetPdfExport();
       }
     } catch (error) {
-      logger.error("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) });
+      logger.error(f("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) }));
     }
   }, [activeTab, editorFontFamily, exportPdf, resetPdfExport, setPdfExportDialogOpen, text]);
 

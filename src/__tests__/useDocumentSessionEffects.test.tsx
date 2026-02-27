@@ -4,12 +4,10 @@ import type { AppError, DocRef, LocationDescriptor } from "$types";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$ports", () => ({
-  runCmd: vi.fn(async () => {}),
-  sessionLastDocGet: vi.fn(),
-  docExists: vi.fn(),
-  sessionLastDocSet: vi.fn(),
-}));
+vi.mock(
+  "$ports",
+  () => ({ runCmd: vi.fn(async () => {}), sessionLastDocGet: vi.fn(), docExists: vi.fn(), sessionLastDocSet: vi.fn() }),
+);
 
 type UseDocumentSessionEffectsArgs = Parameters<typeof useDocumentSessionEffects>[0];
 
@@ -38,23 +36,19 @@ describe("useDocumentSessionEffects", () => {
     sessionLastDocGetOnOk = null;
     docExistsOnOk = null;
 
-    vi.mocked(sessionLastDocGet).mockImplementation((
-      onOk: (docRef: DocRef | null) => void,
-      _onErr: (error: AppError) => void,
-    ) => {
-      sessionLastDocGetOnOk = onOk;
-      return { type: "None" } as never;
-    });
+    vi.mocked(sessionLastDocGet).mockImplementation(
+      (onOk: (docRef: DocRef | null) => void, _onErr: (error: AppError) => void) => {
+        sessionLastDocGetOnOk = onOk;
+        return { type: "None" } as never;
+      },
+    );
 
-    vi.mocked(docExists).mockImplementation((
-      _locationId: number,
-      _relPath: string,
-      onOk: (exists: boolean) => void,
-      _onErr: (error: AppError) => void,
-    ) => {
-      docExistsOnOk = onOk;
-      return { type: "None" } as never;
-    });
+    vi.mocked(docExists).mockImplementation(
+      (_locationId: number, _relPath: string, onOk: (exists: boolean) => void, _onErr: (error: AppError) => void) => {
+        docExistsOnOk = onOk;
+        return { type: "None" } as never;
+      },
+    );
 
     vi.mocked(sessionLastDocSet).mockImplementation((
       _docRef: DocRef | null,

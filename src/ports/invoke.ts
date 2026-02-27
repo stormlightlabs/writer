@@ -1,4 +1,3 @@
-import { logger } from "$logger";
 import type {
   AppError,
   CaptureDocRef,
@@ -10,10 +9,12 @@ import type {
   GlobalCaptureSettings,
   SearchHit,
 } from "$types";
+import { f } from "$utils/serialize";
 import type { InvokeArgs } from "@tauri-apps/api/core";
 import { invoke } from "@tauri-apps/api/core";
 import type { Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
+import * as logger from "@tauri-apps/plugin-log";
 import type { BackendEvent, Cmd, CmdResult, Sub } from "./types";
 
 type RustCommandResult<T> = { Ok: T } | { Err: unknown };
@@ -304,25 +305,29 @@ export async function runCmd(cmd: Cmd): Promise<void> {
   switch (cmd.type) {
     case "Invoke": {
       try {
-        logger.debug("Invoking backend command", { command: cmd.command, payload: summarizePayload(cmd.payload) });
+        logger.debug(f("Invoking backend command", { command: cmd.command, payload: summarizePayload(cmd.payload) }));
         const result = await invoke<unknown>(cmd.command, cmd.payload as InvokeArgs);
         const commandResult = unwrapCmdResult<unknown>(result, cmd.command);
 
         if (commandResult.ok) {
-          logger.debug("Backend command succeeded", { command: cmd.command });
+          logger.debug(f("Backend command succeeded", { command: cmd.command }));
           cmd.onOk(normalizeCommandValue(cmd.command, commandResult.value));
         } else {
-          logger.warn("Backend command returned application error", {
-            command: cmd.command,
-            error: commandResult.error,
-          });
+          logger.warn(
+            f("Backend command returned application error", {
+              command: cmd.command,
+              error: JSON.stringify(commandResult.error),
+            }),
+          );
           cmd.onErr(commandResult.error);
         }
       } catch (error) {
-        logger.error("Backend command failed at transport layer", {
-          command: cmd.command,
-          message: error instanceof Error ? error.message : String(error),
-        });
+        logger.error(
+          f("Backend command failed at transport layer", {
+            command: cmd.command,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
         cmd.onErr({
           code: "IO_ERROR",
           message: error instanceof Error ? error.message : String(error),
@@ -333,7 +338,7 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     }
 
     case "Batch": {
-      logger.debug("Running command batch", { count: cmd.commands.length });
+      logger.debug(`Running command batch, count: ${cmd.commands.length}`);
       for await (const subCmd of cmd.commands) {
         await runCmd(subCmd);
       }
@@ -343,12 +348,14 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     case "StartWatch": {
       try {
         await invoke<unknown>("watch_enable", { locationId: cmd.locationId });
-        logger.info("Started location watcher", { locationId: cmd.locationId });
+        logger.info(f("Started location watcher", { locationId: cmd.locationId }));
       } catch (error) {
-        logger.error("Failed to start location watcher", {
-          locationId: cmd.locationId,
-          message: error instanceof Error ? error.message : String(error),
-        });
+        logger.error(
+          f("Failed to start location watcher", {
+            locationId: cmd.locationId,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        );
       }
       break;
     }
@@ -356,12 +363,14 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     case "StopWatch": {
       try {
         await invoke<unknown>("watch_disable", { locationId: cmd.locationId });
-        logger.info("Stopped location watcher", { locationId: cmd.locationId });
+        logger.info(f("Stopped location watcher", { locationId: cmd.locationId }));
       } catch (error) {
-        logger.error("Failed to stop location watcher", {
-          locationId: cmd.locationId,
-          message: error instanceof Error ? error.message : String(error),
-        });
+        logger.error(
+          f("Failed to stop location watcher", {
+            locationId: cmd.locationId,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        );
       }
       break;
     }
@@ -371,7 +380,7 @@ export async function runCmd(cmd: Cmd): Promise<void> {
     }
 
     default: {
-      logger.warn("Unknown command type", { cmd });
+      logger.warn(f("Unknown command type", { cmd }));
     }
   }
 }
@@ -384,7 +393,7 @@ export class SubscriptionManager {
       case "BackendEvents": {
         logger.info("Subscribing to backend events");
         const unlisten = await listen<BackendEvent>("backend-event", (event: TauriEvent<BackendEvent>) => {
-          logger.debug("Received backend event", { type: event.payload.type });
+          logger.debug(f("Received backend event", { type: event.payload.type }));
           sub.onEvent(event.payload);
         });
         this.unlistenFns.set("backend-events", unlisten);
@@ -400,7 +409,7 @@ export class SubscriptionManager {
       }
 
       default: {
-        logger.warn("Unknown subscription type", { sub });
+        logger.warn(f("Unknown subscription type", { sub }));
         return () => {};
       }
     }
@@ -410,7 +419,7 @@ export class SubscriptionManager {
     for (const [, unlisten] of this.unlistenFns) {
       unlisten();
     }
-    logger.info("Cleaned up subscriptions", { count: this.unlistenFns.size });
+    logger.info(f("Cleaned up subscriptions", { count: this.unlistenFns.size }));
     this.unlistenFns.clear();
   }
 }

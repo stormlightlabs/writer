@@ -4,7 +4,7 @@ import { Preview, type PreviewProps } from "$components/Preview";
 import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
 import { Toolbar, type ToolbarProps } from "$components/Toolbar";
-import type { StyleMatch } from "$editor/style-check";
+import type { StyleMatch } from "$editor/types";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useResizable } from "$hooks/useResizable";
 import { useViewportTier } from "$hooks/useViewportTier";

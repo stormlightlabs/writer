@@ -1,4 +1,3 @@
-import { logger } from "$logger";
 import { globalCaptureGet, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
 import { stateToLayoutSettings, uiSettingsToFocusMode } from "$state/helpers";
 import {
@@ -9,6 +8,8 @@ import {
 } from "$state/selectors";
 import { useLayoutStore } from "$state/stores/layout";
 import { useUiStore } from "$state/stores/ui";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
 import { useEffect, useState } from "react";
 
 export function useSettingsSync(): void {
@@ -66,7 +67,7 @@ export function useSettingsSync(): void {
 
       useUiStore.getState().setGlobalCaptureSettings(settings);
     }, (error) => {
-      logger.error("Failed to load global capture settings", error);
+      logger.error(f("Failed to load global capture settings", { error }));
     }));
 
     return () => {

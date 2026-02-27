@@ -19,7 +19,6 @@
     "paths": {
       "$ports": ["./ports/index.ts"],
       "$types": ["./types.ts"],
-      "$logger": ["./logger.ts"],
       "$icons": ["./components/icons.tsx"],
       "$editor/*": ["./editor/*"],
       "$pdf/*": ["./pdf/*"],

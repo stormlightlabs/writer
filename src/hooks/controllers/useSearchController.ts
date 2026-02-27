@@ -1,7 +1,8 @@
-import { logger } from "$logger";
 import { runCmd, searchDocuments, type SearchFiltersPayload } from "$ports";
 import { useLayoutChromeActions, useSearchActions, useSearchState } from "$state/selectors";
 import type { SearchHit } from "$types";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export function useSearchController(onSelectDocument: (locationId: number, path: string) => void) {
@@ -43,7 +44,7 @@ export function useSearchController(onSelectDocument: (locationId: number, path:
         if (requestIdRef.current !== requestId) {
           return;
         }
-        logger.error("Search failed", { query: normalizedQuery, error });
+        logger.error(f("Search failed", { query: normalizedQuery, error }));
         setSearchResults([]);
         setIsSearching(false);
       }));

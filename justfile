@@ -21,3 +21,6 @@ alias cmt := find-comments
 
 test:
     cargo test --quiet
+
+dev:
+    pnpm tauri dev

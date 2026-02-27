@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### 2026-02-27
+
+- Implemented file operations (move, rename, delete) with sidebar context menu support.
+- Added a draggable "Help" sheet and integrated diagnostics/style checking into routed sheets.
+- Added automatic "Markdown Tutorial" file added for new locations.
+
+## v0.1.0 - 2026-02-26
+
+- Initial stable release of Writer
+
 ### 2026-02-25
 
 - New document creation from the sidebar and toolbar with draft path generation and recovery.

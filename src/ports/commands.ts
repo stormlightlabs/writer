@@ -13,6 +13,7 @@ import type {
   RenderResult,
   SearchHit,
 } from "$types";
+import { info } from "@tauri-apps/plugin-log";
 import { invokeCmd } from "./invoke";
 import type {
   BackendCaptureDocRef,
@@ -77,6 +78,46 @@ function toBackendCaptureSubmitInput(input: CaptureSubmitInput): BackendCaptureS
   };
 }
 
+function normalizeMarkdownProfile(profile: unknown): MarkdownProfile | undefined {
+  if (profile === "StrictCommonMark" || profile === "GfmSafe") {
+    return profile;
+  }
+  return undefined;
+}
+
+function toSafeMarkdownPayload(
+  locationId: unknown,
+  relPath: unknown,
+  text: unknown,
+  profile: unknown,
+): { locationId: number; relPath: string; text: string; profile?: MarkdownProfile } {
+  const normalizedProfile = normalizeMarkdownProfile(profile);
+  return {
+    locationId: typeof locationId === "number" ? locationId : 0,
+    relPath: typeof relPath === "string" ? relPath : "",
+    text: typeof text === "string" ? text : "",
+    ...(normalizedProfile ? { profile: normalizedProfile } : {}),
+  };
+}
+
+function describeValueShape(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+
+  const valueType = typeof value;
+  if (valueType !== "object") {
+    return valueType;
+  }
+
+  if (Array.isArray(value)) {
+    return `array(len=${value.length})`;
+  }
+
+  const constructorName = value?.constructor?.name;
+  return constructorName ? `object(${constructorName})` : "object";
+}
+
 export function locationAddViaDialog(...[onOk, onErr]: LocParams<LocationDescriptor>): Cmd {
   return invokeCmd<LocationDescriptor>("location_add_via_dialog", {}, onOk, onErr);
 }
@@ -128,13 +169,41 @@ export function searchDocuments(...[query, filters, limit, onOk, onErr]: SearchP
 export function renderMarkdown(
   ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownParams<RenderResult>
 ): Cmd {
-  return invokeCmd<RenderResult>("markdown_render", { locationId, relPath, text, profile }, onOk, onErr);
+  const payload = toSafeMarkdownPayload(locationId, relPath, text, profile);
+  void info(
+    JSON.stringify({
+      event: "renderMarkdown_payload",
+      raw: {
+        locationId: describeValueShape(locationId),
+        relPath: describeValueShape(relPath),
+        text: describeValueShape(text),
+        profile: describeValueShape(profile),
+      },
+      normalized: { ...payload, text: `<${payload.text.length} chars>` },
+    }),
+  ).catch(() => {});
+
+  return invokeCmd<RenderResult>("markdown_render", payload, onOk, onErr);
 }
 
 export function renderMarkdownForPdf(
   ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownForPdfParams<PdfRenderResult>
 ): Cmd {
-  return invokeCmd<PdfRenderResult>("markdown_render_for_pdf", { locationId, relPath, text, profile }, onOk, onErr);
+  const payload = toSafeMarkdownPayload(locationId, relPath, text, profile);
+  void info(
+    JSON.stringify({
+      event: "renderMarkdownForPdf_payload",
+      raw: {
+        locationId: describeValueShape(locationId),
+        relPath: describeValueShape(relPath),
+        text: describeValueShape(text),
+        profile: describeValueShape(profile),
+      },
+      normalized: { ...payload, text: `<${payload.text.length} chars>` },
+    }),
+  ).catch(() => {});
+
+  return invokeCmd<PdfRenderResult>("markdown_render_for_pdf", payload, onOk, onErr);
 }
 
 export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd {

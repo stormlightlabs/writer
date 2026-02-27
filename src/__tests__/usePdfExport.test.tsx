@@ -1,5 +1,4 @@
 import { usePdfExport } from "$hooks/usePdfExport";
-import { logger } from "$logger";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { PdfRenderResult } from "$pdf/types";
@@ -7,15 +6,11 @@ import { useAppStore } from "$state/stores/app";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
+import * as logger from "@tauri-apps/plugin-log";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$components/pdf/MarkdownPdfDocument", () => ({ MarkdownPdfDocument: () => null }));
-
-vi.mock(
-  "$logger",
-  () => ({ logger: { init: vi.fn(), trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }),
-);
 
 vi.mock(
   "$pdf/fonts",
@@ -83,17 +78,14 @@ describe(usePdfExport, () => {
     expect(vi.mocked(ensurePdfFontRegistered)).toHaveBeenNthCalledWith(4, "IBM Plex Mono", "builtin");
     expect(vi.mocked(writeFile)).toHaveBeenCalledOnce();
     expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
-      "PDF export custom font render failed; retrying with built-in fonts",
-      expect.objectContaining({
-        editorFontFamily: "IBM Plex Sans Variable",
-        error: expect.objectContaining({ message: "Custom font failure without known substrings" }),
-      }),
+      expect.stringContaining("PDF export custom font render failed; retrying with built-in fonts"),
+    );
+    expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(expect.stringContaining('"editorFontFamily":"IBM Plex Sans Variable"'));
+    expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
+      expect.stringContaining('"message":"Custom font failure without known substrings"'),
     );
     expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
-      "PDF export completed with built-in fonts after custom font failure",
-      expect.objectContaining({
-        customError: expect.objectContaining({ message: "Custom font failure without known substrings" }),
-      }),
+      expect.stringContaining("PDF export completed with built-in fonts after custom font failure"),
     );
     expect(vi.mocked(describePdfFont)).toHaveBeenCalled();
   });
@@ -115,11 +107,9 @@ describe(usePdfExport, () => {
       "Failed to render PDF using both custom and built-in fonts. Check logs for details.",
     );
     expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
-      "PDF export failed with both custom and built-in fonts",
-      expect.objectContaining({
-        customError: expect.objectContaining({ message: "custom failed" }),
-        builtinError: expect.objectContaining({ message: "builtin failed" }),
-      }),
+      expect.stringContaining("PDF export failed with both custom and built-in fonts"),
     );
+    expect(vi.mocked(logger.error)).toHaveBeenCalledWith(expect.stringContaining('"message":"custom failed"'));
+    expect(vi.mocked(logger.error)).toHaveBeenCalledWith(expect.stringContaining('"message":"builtin failed"'));
   });
 });

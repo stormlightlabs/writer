@@ -1,8 +1,9 @@
-import { logger } from "$logger";
 import { globalCaptureGet, globalCaptureSubmit, runCmd } from "$ports";
 import type { CaptureMode, CaptureSubmitResult, GlobalCaptureSettings } from "$types";
 import type { AppError } from "$types";
+import { f } from "$utils/serialize";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QuickCaptureForm } from "./QuickCaptureForm";
 
@@ -19,7 +20,7 @@ export function QuickCaptureApp() {
         setSettings(loadedSettings);
         setIsLoading(false);
       }, (err) => {
-        logger.error("Failed to load global capture settings", err);
+        logger.error(f("Failed to load global capture settings", { err }));
         setError("Failed to load settings");
         setIsLoading(false);
       }));
@@ -40,7 +41,9 @@ export function QuickCaptureApp() {
           setIsSubmitting(false);
 
           if (result.success) {
-            logger.info("Capture submitted successfully", { savedTo: result.savedTo, locationId: result.locationId });
+            logger.info(
+              f("Capture submitted successfully", { savedTo: result.savedTo, locationId: result.locationId }),
+            );
 
             if (result.shouldClose) {
               windowRef.current.close().catch((err) => {
@@ -52,7 +55,7 @@ export function QuickCaptureApp() {
           }
         }, (err: AppError) => {
           setIsSubmitting(false);
-          logger.error("Capture submission failed", err);
+          logger.error(f("Capture submission failed", { err }));
           setError(err.message || "Failed to save capture");
         }),
       );
@@ -62,7 +65,7 @@ export function QuickCaptureApp() {
 
   const handleClose = useCallback(() => {
     windowRef.current.close().catch((err) => {
-      logger.error("Failed to close window", err);
+      logger.error(f("Failed to close window", { err }));
     });
   }, []);
 

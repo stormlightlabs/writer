@@ -1,10 +1,11 @@
-import { logger } from "$logger";
 import { docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
 import {
   useWorkspaceDocumentsActions,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
 } from "$state/selectors";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useRef } from "react";
 import { useBackendEvents } from "./useBackendEvents";
 
@@ -27,7 +28,7 @@ export function useWorkspaceSync(): void {
       setLocations(nextLocations);
       setLoadingLocations(false);
     }, (error) => {
-      logger.error("Failed to load locations", { error });
+      logger.error(f("Failed to load locations", { error }));
       setLoadingLocations(false);
     }));
   }, [setLoadingLocations, setLocations]);
@@ -55,7 +56,7 @@ export function useWorkspaceSync(): void {
         return;
       }
 
-      logger.error("Failed to load documents", { locationId, error });
+      logger.error(f("Failed to load documents", { locationId, error }));
       setLoadingDocuments(false);
     }));
   }, [setDocuments, setLoadingDocuments]);
