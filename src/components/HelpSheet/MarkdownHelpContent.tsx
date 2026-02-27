@@ -85,7 +85,7 @@ export function MarkdownHelpContent({ className }: MarkdownHelpContentProps) {
   }
 
   return (
-    <div className={cn("p-4 overflow-auto", className)}>
+    <div className={cn("p-4", className)}>
       <div
         className="preview-content prose prose-sm dark:prose-invert max-w-none"
         dangerouslySetInnerHTML={innerHtml} />

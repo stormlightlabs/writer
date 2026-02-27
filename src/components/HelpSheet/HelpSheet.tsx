@@ -103,7 +103,7 @@ export function HelpSheet({ isOpen, onClose }: HelpSheetProps) {
       ariaLabel="Help Sheet"
       ariaLabelledBy={titleId}
       className="min-h-[50vh]">
-      <div className="flex flex-col h-full">
+      <div className="flex h-full min-h-0 flex-col">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle">
           <h2 id={titleId} className="text-lg font-semibold text-text-primary">Help</h2>
           <CloseButton onClose={onClose} />
@@ -121,7 +121,7 @@ export function HelpSheet({ isOpen, onClose }: HelpSheetProps) {
           role="tabpanel"
           id={getTabPanelDomId(activeTab)}
           aria-labelledby={getTabDomId(activeTab)}
-          className="flex-1 overflow-auto">
+          className="flex-1 min-h-0 overflow-y-auto">
           {activeTab === "shortcuts" && <ShortcutsTabContent />}
           {activeTab === "markdown" && <MarkdownHelpContent />}
         </div>

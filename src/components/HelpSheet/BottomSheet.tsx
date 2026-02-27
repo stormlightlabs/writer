@@ -1,9 +1,10 @@
 import { useSkipAnimation } from "$hooks/useMotion";
 import { DragIcon } from "$icons";
 import { cn } from "$utils/tw";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useMotionValue } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 type BottomSheetProps = {
   isOpen: boolean;
@@ -27,53 +28,77 @@ function getFocusableElements(root: HTMLElement): HTMLElement[] {
   );
 }
 
-type DragToDismissHandleProps = {
-  dragProps?: {
-    drag: "y";
-    dragConstraints: { top: 0 };
-    dragElastic: number;
-    onDragEnd: (
-      event: MouseEvent | TouchEvent | PointerEvent,
-      info: { offset: { y: number }; velocity: { y: number } },
-    ) => void;
-    dragSnapToOrigin?: boolean;
-  };
-};
+type DragToDismissHandleProps = { onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void };
 
-const DragToDismissHandle = ({ dragProps }: DragToDismissHandleProps) => (
-  <motion.div {...dragProps} className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none">
+const DragToDismissHandle = ({ onPointerDown }: DragToDismissHandleProps) => (
+  <div
+    role="presentation"
+    onPointerDown={onPointerDown}
+    className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none">
     <DragIcon size="lg" className="text-border-subtle" />
-  </motion.div>
+  </div>
 );
 
 export function BottomSheet({ isOpen, onClose, children, ariaLabel, ariaLabelledBy, className }: BottomSheetProps) {
   const skipAnimation = useSkipAnimation();
   const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartYRef = useRef(0);
+  const lastClientYRef = useRef(0);
+  const lastMoveTsRef = useRef(0);
+  const dragOffsetRef = useRef(0);
+  const y = useMotionValue(0);
+  const sheetStyle = useMemo(() => ({ y }), [y]);
   const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : TRANSITION, [skipAnimation]);
   const backdropTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : { duration: 0.15 }, [skipAnimation]);
 
-  const handleDragEnd = useCallback(
-    (_e: MouseEvent | TouchEvent | PointerEvent, info: { offset: { y: number }; velocity: { y: number } }) => {
-      if (info.offset.y > 100 || info.velocity.y > 500) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
+  const clearDragState = useCallback(() => {
+    dragOffsetRef.current = 0;
+    dragStartYRef.current = 0;
+    lastClientYRef.current = 0;
+    lastMoveTsRef.current = 0;
+  }, []);
 
-  const dragProps = useMemo(
-    () =>
-      skipAnimation
-        ? {
-          drag: "y" as const,
-          dragConstraints: { top: 0 } as const,
-          dragElastic: 0.05,
-          onDragEnd: handleDragEnd,
-          dragSnapToOrigin: true,
-        }
-        : { drag: "y" as const, dragConstraints: { top: 0 } as const, dragElastic: 0.05, onDragEnd: handleDragEnd },
-    [skipAnimation, handleDragEnd],
-  );
+  const handleDragMove = useCallback((event: PointerEvent) => {
+    const offset = Math.max(0, event.clientY - dragStartYRef.current);
+    dragOffsetRef.current = offset;
+    lastClientYRef.current = event.clientY;
+    lastMoveTsRef.current = event.timeStamp;
+    y.set(offset);
+  }, [y]);
+
+  const handleDragEnd = useCallback((event: PointerEvent) => {
+    const deltaY = Math.max(0, event.clientY - lastClientYRef.current);
+    const deltaT = Math.max(1, event.timeStamp - lastMoveTsRef.current);
+    const velocityY = (deltaY / deltaT) * 1000;
+    const shouldClose = dragOffsetRef.current > 100 || velocityY > 500;
+
+    globalThis.removeEventListener("pointermove", handleDragMove);
+    globalThis.removeEventListener("pointerup", handleDragEnd);
+    globalThis.removeEventListener("pointercancel", handleDragEnd);
+    clearDragState();
+
+    if (shouldClose) {
+      onClose();
+      return;
+    }
+
+    y.set(0);
+  }, [clearDragState, handleDragMove, onClose, y]);
+
+  const handleDragStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    dragStartYRef.current = event.clientY;
+    lastClientYRef.current = event.clientY;
+    lastMoveTsRef.current = event.timeStamp;
+    dragOffsetRef.current = 0;
+
+    globalThis.addEventListener("pointermove", handleDragMove);
+    globalThis.addEventListener("pointerup", handleDragEnd);
+    globalThis.addEventListener("pointercancel", handleDragEnd);
+  }, [handleDragEnd, handleDragMove]);
 
   useEffect(() => {
     if (!isOpen || typeof globalThis.addEventListener !== "function") {
@@ -136,6 +161,21 @@ export function BottomSheet({ isOpen, onClose, children, ariaLabel, ariaLabelled
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      y.set(0);
+      clearDragState();
+    }
+  }, [clearDragState, isOpen, y]);
+
+  useEffect(() => {
+    return () => {
+      globalThis.removeEventListener("pointermove", handleDragMove);
+      globalThis.removeEventListener("pointerup", handleDragEnd);
+      globalThis.removeEventListener("pointercancel", handleDragEnd);
+    };
+  }, [handleDragEnd, handleDragMove]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -160,15 +200,15 @@ export function BottomSheet({ isOpen, onClose, children, ariaLabel, ariaLabelled
               "absolute bottom-0 left-0 right-0 pointer-events-auto",
               "bg-layer-01 border-t border-border-subtle",
               "rounded-t-xl shadow-2xl",
-              "max-h-[80vh] overflow-hidden flex flex-col",
+              "max-h-[80vh] min-h-0 overflow-hidden flex flex-col",
               className,
             )}
             initial={SHEET_MOTION.initial}
             animate={SHEET_MOTION.animate}
             exit={SHEET_MOTION.exit}
             transition={transition}
-            {...dragProps}>
-            <DragToDismissHandle dragProps={dragProps} />
+            style={sheetStyle}>
+            <DragToDismissHandle onPointerDown={handleDragStart} />
             {children}
           </motion.div>
         </div>

@@ -177,7 +177,13 @@ export const ExternalLinkIcon = ({ size = "md", className = "", style }: IconPro
 
 export const PenIcon = ({ size = "md", className = "", style }: IconProps) => (
   <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
-    <i className="i-ri-pen-nib-line" />
+    <i className="i-ri-ball-pen-line" />
+  </span>
+);
+
+export const QuestionIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-question-line" />
   </span>
 );
 

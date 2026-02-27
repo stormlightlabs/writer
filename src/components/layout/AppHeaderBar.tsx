@@ -1,7 +1,7 @@
 import { Button } from "$components/Button";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { ChevronDownIcon, PenIcon, SearchIcon } from "$icons";
-import { useAppHeaderBarState } from "$state/selectors";
+import { ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
+import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
 import { useCallback, useMemo } from "react";
 
 const AppTitle = ({ hideTitle }: { hideTitle: boolean }) => (
@@ -16,6 +16,7 @@ const AppTitle = ({ hideTitle }: { hideTitle: boolean }) => (
 const SearchRow = (
   {
     onOpenSearch,
+    onOpenHelp,
     onToggleSidebar,
     onToggleTabBar,
     onToggleStatusBar,
@@ -24,9 +25,11 @@ const SearchRow = (
     statusBarCollapsed,
     iconOnly,
     showSearchShortcut,
+    showHelpShortcut,
     compactTabLabel,
   }: {
     onOpenSearch: () => void;
+    onOpenHelp: () => void;
     onToggleSidebar: () => void;
     onToggleTabBar: () => void;
     onToggleStatusBar: () => void;
@@ -35,6 +38,7 @@ const SearchRow = (
     statusBarCollapsed: boolean;
     iconOnly: boolean;
     showSearchShortcut: boolean;
+    showHelpShortcut: boolean;
     compactTabLabel: boolean;
   },
 ) => {
@@ -79,6 +83,19 @@ const SearchRow = (
           <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Ctrl+Shift+F</kbd>
         )}
       </Button>
+      <Button
+        onClick={onOpenHelp}
+        variant="outline"
+        size="sm"
+        className={`flex items-center gap-1.5 ${iconOnly ? "w-8 h-8 p-0 justify-center" : ""}`}
+        title="Open help sheet (Cmd+/)"
+        aria-label={iconOnly ? "Open help sheet" : undefined}>
+        <QuestionIcon size="sm" />
+        {iconOnly ? null : <span>Help</span>}
+        {!iconOnly && showHelpShortcut && (
+          <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Cmd+/</kbd>
+        )}
+      </Button>
 
       <Button
         onClick={onToggleSidebar}
@@ -114,6 +131,7 @@ const SearchRow = (
 };
 
 export const AppHeaderBar = () => {
+  const { setOpen: setHelpSheetOpen } = useHelpSheetState();
   const {
     sidebarCollapsed,
     tabBarCollapsed,
@@ -125,17 +143,22 @@ export const AppHeaderBar = () => {
   } = useAppHeaderBarState();
   const { viewportWidth, isCompact, isNarrow } = useViewportTier();
   const showSearchShortcut = useMemo(() => viewportWidth >= 1240, [viewportWidth]);
+  const showHelpShortcut = useMemo(() => viewportWidth >= 1240, [viewportWidth]);
   const iconOnly = useMemo(() => viewportWidth < 760, [viewportWidth]);
 
   const handleOpenSearch = useCallback(() => {
     setShowSearch(true);
   }, [setShowSearch]);
+  const handleOpenHelp = useCallback(() => {
+    setHelpSheetOpen(true);
+  }, [setHelpSheetOpen]);
 
   return (
     <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
       <AppTitle hideTitle={isCompact} />
       <SearchRow
         onOpenSearch={handleOpenSearch}
+        onOpenHelp={handleOpenHelp}
         onToggleSidebar={toggleSidebarCollapsed}
         onToggleTabBar={toggleTabBarCollapsed}
         onToggleStatusBar={toggleStatusBarCollapsed}
@@ -144,6 +167,7 @@ export const AppHeaderBar = () => {
         statusBarCollapsed={statusBarCollapsed}
         iconOnly={iconOnly}
         showSearchShortcut={showSearchShortcut}
+        showHelpShortcut={showHelpShortcut}
         compactTabLabel={isNarrow} />
     </header>
   );

@@ -19,7 +19,7 @@ describe("useHelpSheetHotkey", () => {
     expect(helpShortcut).toBeDefined();
     expect(helpShortcut?.label).toBe("Toggle Help Sheet");
     expect(helpShortcut?.category).toBe("Help");
-    expect(helpShortcut?.keys).toStrictEqual(["Cmd", "Shift", "/"]);
+    expect(helpShortcut?.keys).toStrictEqual(["Cmd", "/"]);
   });
 
   it("toggles help sheet on Cmd+?", () => {
@@ -55,6 +55,19 @@ describe("useHelpSheetHotkey", () => {
     expect(useUiStore.getState().helpSheetOpen).toBe(true);
   });
 
+  it("toggles help sheet on Cmd+/", () => {
+    renderHook(() => useHelpSheetHotkey());
+
+    expect(useUiStore.getState().helpSheetOpen).toBe(false);
+
+    act(() => {
+      const event = new KeyboardEvent("keydown", { key: "/", metaKey: true, bubbles: true });
+      document.dispatchEvent(event);
+    });
+
+    expect(useUiStore.getState().helpSheetOpen).toBe(true);
+  });
+
   it("cleans up event listener on unmount", () => {
     const { unmount } = renderHook(() => useHelpSheetHotkey());
 
@@ -68,7 +81,7 @@ describe("useHelpSheetHotkey", () => {
     expect(useUiStore.getState().helpSheetOpen).toBe(false);
   });
 
-  it("does not toggle while typing in an input", () => {
+  it("toggles while an input is focused when command modifiers are used", () => {
     renderHook(() => useHelpSheetHotkey());
     const input = document.createElement("input");
     document.body.append(input);
@@ -79,7 +92,7 @@ describe("useHelpSheetHotkey", () => {
       input.dispatchEvent(event);
     });
 
-    expect(useUiStore.getState().helpSheetOpen).toBe(false);
+    expect(useUiStore.getState().helpSheetOpen).toBe(true);
     input.remove();
   });
 

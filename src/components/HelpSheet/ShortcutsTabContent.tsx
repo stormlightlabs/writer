@@ -46,7 +46,7 @@ export function ShortcutsTabContent({ className }: ShortcutsTabContentProps) {
   }
 
   return (
-    <div className={cn("p-4 overflow-auto", className)}>
+    <div className={cn("p-4", className)}>
       {sortedCategories.map((category) => (
         <section key={category} className="mb-6 last:mb-0">
           <h3 className="text-sm font-semibold text-text-primary mb-3 uppercase tracking-wide">{category}</h3>

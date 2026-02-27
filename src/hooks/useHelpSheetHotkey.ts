@@ -6,22 +6,9 @@ const HELP_SHORTCUT = {
   id: "toggle-help-sheet",
   category: "Help",
   label: "Toggle Help Sheet",
-  keys: ["Cmd", "Shift", "/"],
+  keys: ["Cmd", "/"],
   description: "Show or hide the help sheet with keyboard shortcuts and markdown reference",
 };
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  if (target.isContentEditable || target.closest("[contenteditable='true']")) {
-    return true;
-  }
-
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-}
 
 export function useHelpSheetHotkey(): void {
   const { toggle } = useHelpSheetState();
@@ -42,9 +29,11 @@ export function useHelpSheetHotkey(): void {
       }
 
       const hasMod = event.ctrlKey || event.metaKey;
-      const isQuestionMark = event.key === "?" || (event.shiftKey && event.key.toLowerCase() === "/");
+      const key = event.key.toLowerCase();
+      const slashKeyPressed = key === "/" || event.code === "Slash";
+      const isQuestionMark = key === "?" || (event.shiftKey && slashKeyPressed);
 
-      if (hasMod && isQuestionMark && !isEditableTarget(event.target)) {
+      if (hasMod && (slashKeyPressed || isQuestionMark)) {
         event.preventDefault();
         toggle();
       }
