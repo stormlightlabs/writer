@@ -177,6 +177,7 @@ export type UiState = {
   pdfExportDialogOpen: boolean;
   pdfExportOptions: PdfExportOptions;
   globalCaptureSettings: GlobalCaptureSettings;
+  helpSheetOpen: boolean;
 };
 
 export type UiActions = {
@@ -192,6 +193,8 @@ export type UiActions = {
   setPdfIncludeFooter: (value: boolean) => void;
   setGlobalCaptureSettings: (value: GlobalCaptureSettings) => void;
   setQuickCaptureEnabled: (enabled: boolean) => Promise<void>;
+  setHelpSheetOpen: (value: boolean) => void;
+  toggleHelpSheet: () => void;
 };
 
 export type AppStore =

@@ -7,6 +7,7 @@ import { useWorkspaceController } from "$hooks/controllers/useWorkspaceControlle
 import { useDocumentActions } from "$hooks/useDocumentActions";
 import { useEditor } from "$hooks/useEditor";
 import { useEditorBridge } from "$hooks/useEditorBridge";
+import { useHelpSheetHotkey } from "$hooks/useHelpSheetHotkey";
 import { useLayoutHotkeys } from "$hooks/useLayoutHotkeys";
 import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
 import { usePreview } from "$hooks/usePreview";
@@ -39,6 +40,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
 
   useWorkspaceSync();
   useLayoutHotkeys();
+  useHelpSheetHotkey();
 
   const editorPresentation = useEditorPresentationStateRaw();
   const {

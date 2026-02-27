@@ -25,6 +25,7 @@ export const getInitialUiState = (): UiState => ({
   pdfExportDialogOpen: false,
   pdfExportOptions: DEFAULT_OPTIONS,
   globalCaptureSettings: DEFAULT_GLOBAL_CAPTURE_SETTINGS,
+  helpSheetOpen: false,
 });
 
 export const useUiStore = create<UiStore>()((set, get) => ({
@@ -64,6 +65,8 @@ export const useUiStore = create<UiStore>()((set, get) => ({
       set({ globalCaptureSettings: previous });
     }));
   },
+  setHelpSheetOpen: (value) => set({ helpSheetOpen: value }),
+  toggleHelpSheet: () => set((state) => ({ helpSheetOpen: !state.helpSheetOpen })),
 }));
 
 export function resetUiStore(): void {

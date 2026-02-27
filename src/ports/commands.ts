@@ -185,4 +185,8 @@ export function globalCaptureValidateShortcut(...[shortcut, onOk, onErr]: Global
   return invokeCmd<boolean>("global_capture_validate_shortcut", { shortcut }, onOk, onErr);
 }
 
+export function markdownHelpGet(...[onOk, onErr]: LocParams<string>): Cmd {
+  return invokeCmd<string>("markdown_help_get", {}, onOk, onErr);
+}
+
 export type { MarkdownProfile, SearchFiltersPayload };

@@ -180,3 +180,9 @@ export const PenIcon = ({ size = "md", className = "", style }: IconProps) => (
     <i className="i-ri-pen-nib-line" />
   </span>
 );
+
+export const DragIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-drag-move-line" />
+  </span>
+);

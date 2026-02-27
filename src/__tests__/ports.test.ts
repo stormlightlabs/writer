@@ -19,6 +19,7 @@ import {
   locationList,
   locationRemove,
   locationValidate,
+  markdownHelpGet,
   none,
   noSub,
   ok,
@@ -904,6 +905,18 @@ describe("global capture Commands", () => {
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("global_capture_validate_shortcut");
       expect(cmd.payload).toStrictEqual({ shortcut: "CommandOrControl+Shift+N" });
+    });
+  });
+
+  describe(markdownHelpGet, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = markdownHelpGet(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("markdown_help_get");
+      expect(cmd.payload).toStrictEqual({});
     });
   });
 });

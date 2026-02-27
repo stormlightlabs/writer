@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+import { HelpSheet } from "./components/HelpSheet";
 import { AppHeaderBar } from "./components/layout/AppHeaderBar";
 import { BackendAlerts } from "./components/layout/BackendAlerts";
 import { FocusModePanel } from "./components/layout/FocusModePanel";
@@ -7,12 +9,20 @@ import { WorkspacePanel } from "./components/layout/WorkspacePanel";
 import { PdfExportDialog } from "./components/pdf/ExportDialog/ExportDialog";
 import { useAppChromeController } from "./hooks/controllers/useAppChromeController";
 import { useWorkspaceViewController } from "./hooks/controllers/useWorkspaceViewController";
+import { useHelpSheetState } from "./state/selectors";
 
 const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
   const { workspacePanelProps, focusModePanelProps, handleExportPdf } = useWorkspaceViewController();
+  const { isOpen: isHelpSheetOpen, setOpen: setHelpSheetOpen } = useHelpSheetState();
+  const closeHelpSheet = useCallback(() => setHelpSheetOpen(false), [setHelpSheetOpen]);
 
   if (isFocusMode) {
-    return <FocusModePanel {...focusModePanelProps} />;
+    return (
+      <>
+        <FocusModePanel {...focusModePanelProps} />
+        <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
+      </>
+    );
   }
 
   return (
@@ -22,6 +32,7 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
       <PdfExportDialog onExport={handleExportPdf} />
       <SearchOverlay />
       <BackendAlerts />
+      <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
     </>
   );
 };

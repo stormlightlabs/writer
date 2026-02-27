@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { resetLayoutStore, useLayoutStore } from "./layout";
 import { resetPdfExportStore, usePdfExportStore } from "./pdf-export";
 import { resetSearchStore, useSearchStore } from "./search";
+import { resetShortcutsStore } from "./shortcuts";
 import { resetTabsStore, useTabsStore } from "./tabs";
 import { resetUiStore, useUiStore } from "./ui";
 import { resetWorkspaceStore, useWorkspaceStore } from "./workspace";
@@ -53,4 +54,5 @@ export function resetAppStore(): void {
   resetPdfExportStore();
   resetSearchStore();
   resetUiStore();
+  resetShortcutsStore();
 }

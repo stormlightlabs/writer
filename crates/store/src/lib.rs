@@ -27,6 +27,10 @@ const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
 
 const README_TEMPLATE: &str = include_str!("../assets/README_TEMPLATE.md");
 
+pub fn get_markdown_help() -> &'static str {
+    README_TEMPLATE
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StyleCheckPattern {
     pub text: String,

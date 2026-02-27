@@ -916,3 +916,10 @@ pub fn global_capture_validate_shortcut(shortcut: String) -> Result<CommandResul
         Err(e) => Ok(CommandResult::err(e)),
     }
 }
+
+/// Returns the markdown help guide content
+#[tauri::command]
+pub fn markdown_help_get() -> Result<CommandResult<String>, ()> {
+    tracing::debug!("Fetching markdown help content");
+    Ok(CommandResult::ok(writer_store::get_markdown_help().to_string()))
+}

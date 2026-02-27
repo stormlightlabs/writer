@@ -415,6 +415,15 @@ export const useCreateReadmeState = () =>
     })),
   );
 
+export const useHelpSheetState = () =>
+  useUiStore(
+    useShallow((state) => ({
+      isOpen: state.helpSheetOpen,
+      setOpen: state.setHelpSheetOpen,
+      toggle: state.toggleHelpSheet,
+    })),
+  );
+
 export type SidebarStateReturn = ReturnType<typeof useSidebarState>;
 export type ToolbarStateReturn = ReturnType<typeof useToolbarState>;
 export type EditorPresentationStateReturn = ReturnType<typeof useEditorPresentationState>;
