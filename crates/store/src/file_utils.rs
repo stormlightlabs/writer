@@ -41,3 +41,10 @@ pub fn collect_file_paths_recursive(dir: &Path, files: &mut Vec<PathBuf>) -> Res
 
     Ok(())
 }
+
+pub fn fallback_title_from_path(rel_path: &Path) -> Option<String> {
+    rel_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_string())
+}

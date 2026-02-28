@@ -1,6 +1,6 @@
 ---
 title: "Writing and NLP"
-last_updated: 2026-02-26
+last_updated: 2026-02-28
 ---
 
 ## Current Features

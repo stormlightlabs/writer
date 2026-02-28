@@ -17,9 +17,8 @@ mod file_utils;
 mod settings;
 mod text_utils;
 
-pub use settings::StyleCheckSettings;
-pub use settings::UiLayoutSettings;
-pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, GlobalCaptureSettings, SessionState, SessionTab};
+pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, SessionState, SessionTab};
+pub use settings::{GlobalCaptureSettings, StyleCheckSettings, UiLayoutSettings};
 
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
 const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
@@ -40,6 +39,15 @@ pub struct StyleCheckPattern {
 }
 
 /// Manages the SQLite database for the application
+///
+/// TODO: Break this impl up into smaller "Repositories"
+///     1. Location
+///     2. Document
+///     3. Directory
+///     4. File Operations
+///     5. Settings
+///     6. Search/FTS
+///     7. Session
 pub struct Store {
     conn: Arc<Mutex<Connection>>,
 }
@@ -55,24 +63,19 @@ impl Store {
         Self::default_app_dir().map(|app_dir| app_dir.join("app.db"))
     }
 
-    fn fallback_title_from_path(rel_path: &Path) -> Option<String> {
-        rel_path
-            .file_stem()
-            .and_then(|value| value.to_str())
-            .map(|value| value.to_string())
-    }
-
     fn derive_text_metadata(text: &str, rel_path: &Path) -> (Option<String>, usize) {
         let engine = MarkdownEngine::new();
         match engine.metadata(text, MarkdownProfile::Extended) {
             Ok(metadata) => (
-                metadata.title.or_else(|| Self::fallback_title_from_path(rel_path)),
+                metadata
+                    .title
+                    .or_else(|| file_utils::fallback_title_from_path(rel_path)),
                 metadata.word_count,
             ),
             Err(error) => {
                 log::warn!("Failed to derive markdown metadata for {:?}: {}", rel_path, error);
                 (
-                    Self::fallback_title_from_path(rel_path),
+                    file_utils::fallback_title_from_path(rel_path),
                     text.split_whitespace().filter(|segment| !segment.is_empty()).count(),
                 )
             }
@@ -999,7 +1002,7 @@ impl Store {
                 let (derived_title, derived_word_count) = Self::derive_text_metadata(content, &rel_path);
                 (derived_title, Some(derived_word_count))
             }
-            None => (Self::fallback_title_from_path(&rel_path), None),
+            None => (file_utils::fallback_title_from_path(&rel_path), None),
         };
         let content_hash = text_content.as_ref().map(|content| text_utils::hash_text(content));
 
@@ -1656,7 +1659,7 @@ impl Store {
         let title = meta
             .title
             .clone()
-            .or_else(|| Self::fallback_title_from_path(&doc_id.rel_path))
+            .or_else(|| file_utils::fallback_title_from_path(&doc_id.rel_path))
             .unwrap_or_else(|| "Untitled".to_string());
         self.upsert_fts_entry(doc_id, &title, text)
     }
