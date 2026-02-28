@@ -293,6 +293,20 @@ export function Editor(
     }, debounceMsRef.current);
   }, []);
 
+  const flushPendingChange = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    if (onChangeTimeoutRef.current) {
+      clearTimeout(onChangeTimeoutRef.current);
+      onChangeTimeoutRef.current = null;
+    }
+
+    callbacksRef.current.onChange?.(view.state.doc.toString());
+  }, []);
+
   const createUpdateListener = useCallback(() =>
     EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.docChanged) {
@@ -325,7 +339,10 @@ export function Editor(
       presentation: currentPresentation,
       placeholder: currentPresentation.placeholder,
       updateListener: createUpdateListener(),
-      onSave: () => callbacksRef.current.onSave?.(),
+      onSave: () => {
+        flushPendingChange();
+        callbacksRef.current.onSave?.();
+      },
       onStyleMatchesChange: (matches) => callbacksRef.current.onStyleMatchesChange?.(matches),
       compartments: compartmentsRef.current,
     });
@@ -337,7 +354,7 @@ export function Editor(
     }
 
     return view;
-  }, [createUpdateListener]);
+  }, [createUpdateListener, flushPendingChange]);
 
   useEffect(() => {
     if (viewRef.current || !containerRef.current) {

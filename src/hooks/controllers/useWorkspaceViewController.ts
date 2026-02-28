@@ -16,10 +16,16 @@ import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useEditorPresentationState } from "$state/selectors";
-import type { DocRef, EditorFontFamily, Maybe } from "$types";
+import type { DocRef, EditorFontFamily, Maybe, SaveStatus } from "$types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export type FocusModePanelProps = { editor: WorkspaceEditorProps; statusBar: StatusBarProps };
+export type FocusModePanelProps = {
+  editor: WorkspaceEditorProps;
+  statusBar: StatusBarProps;
+  saveStatus: SaveStatus;
+  hasActiveDocument: boolean;
+  onSave: () => void;
+};
 
 export type WorkspaceViewController = {
   workspacePanelProps: WorkspacePanelProps;
@@ -249,11 +255,16 @@ export function useWorkspaceViewController(): WorkspaceViewController {
         onSelectionChange: handleSelectionChange,
       },
       statusBar: { docMeta: activeDocMeta, stats: editorStats },
+      saveStatus: editorModel.saveStatus,
+      hasActiveDocument: hasOpenDocument,
+      onSave: handleSave,
     }),
     [
       activeDocMeta,
       editorStats,
       editorModel.text,
+      editorModel.saveStatus,
+      hasOpenDocument,
       handleEditorChange,
       handleSave,
       handleCursorMove,
