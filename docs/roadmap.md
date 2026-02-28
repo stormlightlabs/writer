@@ -1,24 +1,25 @@
 ---
 title: "Roadmap"
-last_updated: 2026-02-27
+last_updated: 2026-02-28
 ---
 
-## Export
+## Drag-and-drop
 
-Multi-format document export with live preview, building on the existing `@react-pdf/renderer` pipeline and adding DOCX and plaintext output.
+Sidebar reorder, cross-location move, external file import, and nested folder creation using `@atlaskit/pragmatic-drag-and-drop`. Full design in [spec](../.sandbox/drag-and-drop.md).
 
 ### Tasks
 
-1. **DOCX export**
-   - Add [`docx-rs`](https://github.com/bokuweb/docx-rs) as a Cargo dependency in `src-tauri/Cargo.toml`
-   - Implement a `markdown_ast_to_docx` Tauri command that accepts the Markdown AST (or raw text via `markdown_to_docx`), converts it to a `.docx` byte buffer using `docx-rs` (`Docx`, `Paragraph`, `Run`, heading levels, code blocks, lists, blockquotes), and returns `Vec<u8>` to the frontend
-   - Support basic formatting: bold, italic, code font, ordered/unordered lists, blockquotes, headings 1-3
-   - Frontend receives the blob, prompts the Tauri `save` dialog with `.docx` filter, and writes with `writeFile`
-   - Add "DOCX" option to the export dialog alongside "PDF"
+1. **Sidebar draggable items** - register `DocumentItem` as `draggable()` + `dropTargetForElements()` with hitbox edge detection
+2. **Cross-location drops** - register `SidebarLocationItem` as drop target; move doc via `docMove`
+3. **Monitor & dispatch** - `monitorForElements` in `Sidebar.tsx` to orchestrate reorder vs. move on drop
+4. **Drop indicators & feedback** - insertion line, ghost opacity, drop-target highlight ring
+5. **External file drops** - Tauri `onDragDropEvent` listener; resolve target from pointer position; import `.md` files via `docSave`
+6. **Accessibility** - screen-reader announcements via `live-region`; reduced-motion support via `useSkipAnimation()`
+7. **Nested folder creation** - modifier-key drop opens `MoveDialog` pre-filled; backend `create_dir_all` handles new dirs
 
 ## Content blocks (transclusion)
 
-Allow embedding external Markdown files, images, and CSV data into a master document using `/filename` syntax.
+Allow embedding external Markdown files, images, and CSV data into a master document using `/filename` syntax, as well as drag-and-drop of files into the editor.
 
 ### Tasks
 

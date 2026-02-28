@@ -1,3 +1,4 @@
+// TODO: address getContext() warning (install canvas npm package)
 import { PdfPreviewPanel, usePdfPreview } from "$components/export/preview/PdfPreview";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import { ensurePdfFontRegistered } from "$pdf/fonts";

@@ -844,6 +844,44 @@ mod tests {
     }
 
     #[test]
+    fn test_yaml_front_matter_parses_scalar_fields_only() {
+        let engine = MarkdownEngine::new();
+        let markdown =
+            "---\ntitle: \"YAML Post: 2026\"\ndraft: false\nrevision: 3\ntags:\n  - writing\n---\n\n# Content";
+        let result = engine.render(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert_eq!(result.metadata.title, Some("YAML Post: 2026".to_string()));
+        assert_eq!(
+            result.metadata.front_matter.fields.get("draft"),
+            Some(&"false".to_string())
+        );
+        assert_eq!(
+            result.metadata.front_matter.fields.get("revision"),
+            Some(&"3".to_string())
+        );
+        assert!(!result.metadata.front_matter.fields.contains_key("tags"));
+    }
+
+    #[test]
+    fn test_toml_front_matter_parses_scalar_fields_only() {
+        let engine = MarkdownEngine::new();
+        let markdown =
+            "+++\ntitle = \"TOML Post\"\ndraft = true\nrevision = 2\n[nested]\nkey = \"ignored\"\n+++\n\n# Content";
+        let result = engine.render(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert_eq!(result.metadata.title, Some("TOML Post".to_string()));
+        assert_eq!(
+            result.metadata.front_matter.fields.get("draft"),
+            Some(&"true".to_string())
+        );
+        assert_eq!(
+            result.metadata.front_matter.fields.get("revision"),
+            Some(&"2".to_string())
+        );
+        assert!(!result.metadata.front_matter.fields.contains_key("nested"));
+    }
+
+    #[test]
     fn test_diagnostics_empty_link_url() {
         let engine = MarkdownEngine::new();
         let markdown = "[Empty link]()";

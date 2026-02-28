@@ -1,4 +1,5 @@
-import { useMarkdownExport, useTextExport } from "$hooks/useTextExport";
+import { useMarkdownExport, useTextExport, useTextExportUI } from "$hooks/useTextExport";
+import type { TextExportResult } from "$ports";
 import { useAppStore } from "$state/stores/app";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
@@ -11,6 +12,16 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
 vi.mock("@tauri-apps/plugin-fs", () => ({ writeFile: vi.fn() }));
 
 vi.mock("$state/stores/toasts", () => ({ showSuccessToast: vi.fn(), showErrorToast: vi.fn() }));
+
+const { mockRenderMarkdownForText, mockRunCmd } = vi.hoisted(() => ({
+  mockRenderMarkdownForText: vi.fn(),
+  mockRunCmd: vi.fn(async () => {}),
+}));
+
+vi.mock(
+  "$ports",
+  () => ({ renderMarkdownForText: (...args: unknown[]) => mockRenderMarkdownForText(...args), runCmd: mockRunCmd }),
+);
 
 const textRenderResult = { text: "Exported text content", title: "Test Document", word_count: 10 };
 
@@ -254,5 +265,60 @@ describe(useMarkdownExport, () => {
 
     expect(useAppStore.getState().isExportingText).toBeFalsy();
     expect(useAppStore.getState().textExportError).toBe("Permission denied");
+  });
+});
+
+describe(useTextExportUI, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAppStore.getState().resetTextExport();
+    mockRenderMarkdownForText.mockImplementation(
+      (
+        _locationId: number,
+        _relPath: string,
+        _text: string,
+        _profile: unknown,
+        onOk: (value: TextExportResult) => void,
+      ) => {
+        onOk(textRenderResult);
+        return { type: "None" };
+      },
+    );
+  });
+
+  it("returns false when no active tab exists", async () => {
+    const { result } = renderHook(() => useTextExportUI({ activeTab: null, text: "Hello" }));
+
+    let didExport = true;
+    await act(async () => {
+      didExport = await result.current.handleExportText();
+    });
+
+    expect(didExport).toBeFalsy();
+  });
+
+  it("returns false when render fails", async () => {
+    mockRenderMarkdownForText.mockImplementationOnce(
+      (
+        _locationId: number,
+        _relPath: string,
+        _text: string,
+        _profile: unknown,
+        _onOk: (value: TextExportResult) => void,
+        onErr: (error: Error) => void,
+      ) => {
+        onErr(new Error("Render failed"));
+        return { type: "None" };
+      },
+    );
+    const activeTab = { id: "tab-1", title: "Doc", docRef: { location_id: 1, rel_path: "doc.md" }, isModified: false };
+    const { result } = renderHook(() => useTextExportUI({ activeTab, text: "Hello" }));
+
+    let didExport = true;
+    await act(async () => {
+      didExport = await result.current.handleExportText();
+    });
+
+    expect(didExport).toBeFalsy();
   });
 });

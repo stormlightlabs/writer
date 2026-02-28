@@ -29,3 +29,11 @@ export function buildDraftRelPath(locationId: number, documents: DocMeta[], tabs
 }
 
 export const getDraftTitle = (relPath: string): string => relPath.split("/").pop() || "Untitled";
+
+export function sanitizeExportFilename(title: string, extension: string): string {
+  const sanitized = title.replaceAll(/[^\w\s.-]/g, "").replaceAll(/\s+/g, "_").replaceAll(/_+/g, "_").replaceAll(
+    /^_|_$/g,
+    "",
+  );
+  return sanitized ? `${sanitized}.${extension}` : `document.${extension}`;
+}

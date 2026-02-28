@@ -3,19 +3,12 @@ import { renderMarkdownForText, runCmd, type TextExportResult as TextExportResul
 import { useTextExportActions } from "$state/selectors";
 import { showErrorToast, showSuccessToast } from "$state/stores/toasts";
 import type { Tab } from "$types";
+import { sanitizeExportFilename } from "$utils/paths";
 import { f } from "$utils/serialize";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import * as logger from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
-
-function sanitizeExportFilename(title: string, extension: string): string {
-  const sanitized = title.replaceAll(/[^\w\s.-]/g, "").replaceAll(/\s+/g, "_").replaceAll(/_+/g, "_").replaceAll(
-    /^_|_$/g,
-    "",
-  );
-  return sanitized ? `${sanitized}.${extension}` : `document.${extension}`;
-}
 
 export type ExportTextFn = (result: TextExportResultType) => Promise<boolean>;
 
@@ -28,7 +21,8 @@ export function useTextExport(): ExportTextFn {
     try {
       const textBytes = new TextEncoder().encode(result.text);
       const uint8Array = new Uint8Array(textBytes);
-      const defaultFileName = result.title ? sanitizeExportFilename(result.title, "txt") : "document.txt";
+      const epoch = Date.now();
+      const defaultFileName = result.title ? sanitizeExportFilename(result.title, "txt") : `document_${epoch}.txt`;
       const filePath = await save({ filters: [{ name: "Text", extensions: ["txt"] }], defaultPath: defaultFileName });
 
       if (!filePath) {
@@ -101,7 +95,7 @@ export function useTextExportUI({ activeTab, text }: UseTextExportUIArgs) {
   const handleExportText = useCallback(async () => {
     if (!activeTab) {
       logger.warn("Cannot export text without an active document.");
-      return;
+      return false;
     }
 
     const docRef = activeTab.docRef;
@@ -111,22 +105,24 @@ export function useTextExportUI({ activeTab, text }: UseTextExportUIArgs) {
         void runCmd(renderMarkdownForText(docRef.location_id, docRef.rel_path, text, void 0, resolve, reject));
       });
 
-      await exportText(renderResult);
+      return await exportText(renderResult);
     } catch (error) {
       logger.error(f("Failed to export text", { error: error instanceof Error ? error.message : String(error) }));
+      return false;
     }
   }, [activeTab, exportText, text]);
 
   const handleExportMarkdown = useCallback(async () => {
     if (!activeTab) {
       logger.warn("Cannot export markdown without an active document.");
-      return;
+      return false;
     }
 
     try {
-      await exportMarkdown(text, activeTab.title);
+      return await exportMarkdown(text, activeTab.title);
     } catch (error) {
       logger.error(f("Failed to export markdown", { error: error instanceof Error ? error.message : String(error) }));
+      return false;
     }
   }, [activeTab, exportMarkdown, text]);
 

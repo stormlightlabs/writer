@@ -1,32 +1,49 @@
 use super::{DocumentMetadata, FrontMatter, FrontMatterFormat, Heading, LinkRef, TaskStats, utils};
 use comrak::nodes::NodeValue;
+use serde_yaml::Value as YamlValue;
 use std::collections::HashMap;
+use toml::Value as TomlValue;
 
 pub struct MarkdownParser;
 
 impl MarkdownParser {
+    fn yaml_scalar_to_string(value: &YamlValue) -> Option<String> {
+        match value {
+            YamlValue::String(text) => Some(text.clone()),
+            YamlValue::Bool(boolean) => Some(boolean.to_string()),
+            YamlValue::Number(number) => Some(number.to_string()),
+            YamlValue::Null => Some("null".to_string()),
+            _ => None,
+        }
+    }
+
+    fn toml_scalar_to_string(value: &TomlValue) -> Option<String> {
+        match value {
+            TomlValue::String(text) => Some(text.clone()),
+            TomlValue::Integer(number) => Some(number.to_string()),
+            TomlValue::Float(number) => Some(number.to_string()),
+            TomlValue::Boolean(boolean) => Some(boolean.to_string()),
+            TomlValue::Datetime(datetime) => Some(datetime.to_string()),
+            _ => None,
+        }
+    }
+
     /// Parses YAML-like front matter into key-value pairs
-    ///
-    /// This is a simple parser that handles basic "key: value" pairs.
-    /// TODO: use a YAML parser (serde_yml crate)
     pub fn parse_yaml_like_front_matter(content: &str) -> HashMap<String, String> {
         let mut fields = HashMap::new();
 
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                continue;
-            }
-
-            if let Some(pos) = trimmed.find(':') {
-                let key = trimmed[..pos].trim().to_string();
-                let value = trimmed[pos + 1..]
-                    .trim()
-                    .trim_matches('"')
-                    .trim_matches('\'')
-                    .to_string();
-                if !key.is_empty() {
-                    fields.insert(key, value);
+        if let Ok(parsed) = serde_yaml::from_str::<YamlValue>(content)
+            && let YamlValue::Mapping(mapping) = parsed
+        {
+            for (key, value) in mapping {
+                let Some(key_text) = key.as_str() else {
+                    continue;
+                };
+                let Some(value_text) = Self::yaml_scalar_to_string(&value) else {
+                    continue;
+                };
+                if !key_text.is_empty() {
+                    fields.insert(key_text.to_string(), value_text);
                 }
             }
         }
@@ -35,27 +52,16 @@ impl MarkdownParser {
     }
 
     /// Parses TOML-like front matter into key-value pairs
-    ///
-    /// This is a simple parser that handles basic "key = value" pairs.
-    /// TODO: use a TOML parser (toml crate)
     pub fn parse_toml_like_front_matter(content: &str) -> HashMap<String, String> {
         let mut fields = HashMap::new();
 
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                continue;
-            }
-
-            if let Some(pos) = trimmed.find('=') {
-                let key = trimmed[..pos].trim().to_string();
-                let value = trimmed[pos + 1..]
-                    .trim()
-                    .trim_matches('"')
-                    .trim_matches('\'')
-                    .to_string();
+        if let Ok(table) = toml::from_str::<toml::Table>(content) {
+            for (key, value) in table {
+                let Some(value_text) = Self::toml_scalar_to_string(&value) else {
+                    continue;
+                };
                 if !key.is_empty() {
-                    fields.insert(key, value);
+                    fields.insert(key.to_string(), value_text);
                 }
             }
         }

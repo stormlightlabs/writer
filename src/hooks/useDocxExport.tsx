@@ -2,19 +2,12 @@ import { type DocxExportResult, renderMarkdownForDocx, runCmd } from "$ports";
 import { useDocxExportActions } from "$state/selectors";
 import { showErrorToast, showSuccessToast } from "$state/stores/toasts";
 import type { Tab } from "$types";
+import { sanitizeExportFilename } from "$utils/paths";
 import { f } from "$utils/serialize";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import * as logger from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
-
-function sanitizeExportFilename(title: string): string {
-  const sanitized = title.replaceAll(/[^\w\s.-]/g, "").replaceAll(/\s+/g, "_").replaceAll(/_+/g, "_").replaceAll(
-    /^_|_$/g,
-    "",
-  );
-  return sanitized ? `${sanitized}.docx` : "document.docx";
-}
 
 export type ExportDocxFn = (result: DocxExportResult) => Promise<boolean>;
 
@@ -26,7 +19,8 @@ export function useDocxExport(): ExportDocxFn {
 
     try {
       const uint8Array = new Uint8Array(result.data);
-      const defaultFileName = result.title ? sanitizeExportFilename(result.title) : "document.docx";
+      const epoch = Date.now();
+      const defaultFileName = result.title ? sanitizeExportFilename(result.title, "docx") : `document_${epoch}.docx`;
       const filePath = await save({
         filters: [{ name: "Word Document", extensions: ["docx"] }],
         defaultPath: defaultFileName,
@@ -62,7 +56,7 @@ export function useDocxExportUI({ activeTab, text }: UseDocxExportUIArgs) {
   const handleExportDocx = useCallback(async () => {
     if (!activeTab) {
       logger.warn("Cannot export DOCX without an active document.");
-      return;
+      return false;
     }
 
     const docRef = activeTab.docRef;
@@ -72,9 +66,10 @@ export function useDocxExportUI({ activeTab, text }: UseDocxExportUIArgs) {
         void runCmd(renderMarkdownForDocx(docRef.location_id, docRef.rel_path, text, void 0, resolve, reject));
       });
 
-      await exportDocx(renderResult);
+      return await exportDocx(renderResult);
     } catch (error) {
       logger.error(f("Failed to export DOCX", { error: error instanceof Error ? error.message : String(error) }));
+      return false;
     }
   }, [activeTab, exportDocx, text]);
 

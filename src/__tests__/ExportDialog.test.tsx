@@ -2,11 +2,17 @@ import { ExportDialog } from "$components/export/ExportDialog/ExportDialog";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useAppStore } from "$state/stores/app";
+import { resetDocxExportStore, useDocxExportStore } from "$state/stores/docx-export";
 import { resetPdfExportStore, usePdfExportStore } from "$state/stores/pdf-export";
+import { resetTextExportStore, useTextExportStore } from "$state/stores/text-export";
 import { resetUiStore, useUiStore } from "$state/stores/ui";
 import type { EditorFontFamily } from "$types";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockHandleExportText = vi.fn();
+const mockHandleExportMarkdown = vi.fn();
+const mockHandleExportDocx = vi.fn();
 
 const mockRenderResult: PdfRenderResult = {
   title: "Test Document",
@@ -20,6 +26,15 @@ vi.mock(
   "$components/export/preview/PdfPreview",
   () => ({ PdfPreviewPanel: () => <div data-testid="pdf-preview">Preview Content</div> }),
 );
+
+vi.mock(
+  "$hooks/useTextExport",
+  () => ({
+    useTextExportUI: () => ({ handleExportText: mockHandleExportText, handleExportMarkdown: mockHandleExportMarkdown }),
+  }),
+);
+
+vi.mock("$hooks/useDocxExport", () => ({ useDocxExportUI: () => ({ handleExportDocx: mockHandleExportDocx }) }));
 
 vi.mock("$hooks/useViewportTier", () => ({ useViewportTier: () => ({ isCompact: false, viewportWidth: 1400 }) }));
 
@@ -36,11 +51,30 @@ function renderExportDialog(
   return render(<ExportDialog onExport={onExport} previewResult={previewResult} editorFontFamily={editorFontFamily} />);
 }
 
+function seedActiveDocument() {
+  useAppStore.getState().setDocuments([{
+    location_id: 1,
+    rel_path: "test.md",
+    title: "My Document",
+    word_count: 100,
+    updated_at: "2024-01-01",
+  }]);
+  useAppStore.getState().applySessionState({
+    activeTabId: "tab-1",
+    tabs: [{ id: "tab-1", docRef: { location_id: 1, rel_path: "test.md" }, title: "My Document", isModified: false }],
+  });
+}
+
 describe("PdfExportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetUiStore();
     resetPdfExportStore();
+    resetTextExportStore();
+    resetDocxExportStore();
+    mockHandleExportText.mockResolvedValue(true);
+    mockHandleExportMarkdown.mockResolvedValue(true);
+    mockHandleExportDocx.mockResolvedValue(true);
   });
 
   describe("visibility", () => {
@@ -54,7 +88,7 @@ describe("PdfExportDialog", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Export")).toBeInTheDocument();
+      expect(screen.getByText("Export Document")).toBeInTheDocument();
     });
   });
 
@@ -62,7 +96,7 @@ describe("PdfExportDialog", () => {
     it("renders header with close button", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
-      expect(screen.getByText("Export")).toBeInTheDocument();
+      expect(screen.getByText("Export Document")).toBeInTheDocument();
       expect(screen.getByLabelText("Close export dialog")).toBeInTheDocument();
     });
 
@@ -72,8 +106,8 @@ describe("PdfExportDialog", () => {
       expect(screen.getByText("PDF")).toBeInTheDocument();
       expect(screen.getByText("DOCX")).toBeInTheDocument();
       expect(screen.getByText("Plaintext")).toBeInTheDocument();
-      expect(screen.getByText("Page Size")).toBeInTheDocument();
-      expect(screen.getByText("Orientation")).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Page Size" })).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Orientation" })).toBeInTheDocument();
     });
 
     it("renders footer with cancel and export buttons", () => {
@@ -93,20 +127,30 @@ describe("PdfExportDialog", () => {
   describe("interactions", () => {
     it("closes dialog when cancel button is clicked", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
+      useTextExportStore.getState().failTextExport("text failed");
+      useDocxExportStore.getState().failDocxExport("docx failed");
       renderExportDialog();
 
       fireEvent.click(screen.getByText("Cancel"));
 
       expect(useUiStore.getState().pdfExportDialogOpen).toBe(false);
+      expect(usePdfExportStore.getState().pdfExportError).toBeNull();
+      expect(useTextExportStore.getState().textExportError).toBeNull();
+      expect(useDocxExportStore.getState().docxExportError).toBeNull();
     });
 
     it("closes dialog when close button is clicked", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
+      useTextExportStore.getState().failTextExport("text failed");
+      useDocxExportStore.getState().failDocxExport("docx failed");
       renderExportDialog();
 
       fireEvent.click(screen.getByLabelText("Close export dialog"));
 
       expect(useUiStore.getState().pdfExportDialogOpen).toBe(false);
+      expect(usePdfExportStore.getState().pdfExportError).toBeNull();
+      expect(useTextExportStore.getState().textExportError).toBeNull();
+      expect(useDocxExportStore.getState().docxExportError).toBeNull();
     });
 
     it("calls onExport with current options when export is clicked", async () => {
@@ -142,6 +186,50 @@ describe("PdfExportDialog", () => {
       expect(txtTab).toBeEnabled();
       expect(screen.getByText("Export PDF")).toBeEnabled();
     });
+
+    it("keeps dialog open when text export does not succeed", async () => {
+      seedActiveDocument();
+      mockHandleExportText.mockResolvedValueOnce(false);
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      renderExportDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "Plaintext export tab" }));
+      fireEvent.click(screen.getByText("Export Text"));
+
+      await waitFor(() => {
+        expect(mockHandleExportText).toHaveBeenCalledOnce();
+      });
+      expect(useUiStore.getState().pdfExportDialogOpen).toBe(true);
+    });
+
+    it("closes dialog when text export succeeds", async () => {
+      seedActiveDocument();
+      mockHandleExportText.mockResolvedValueOnce(true);
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      renderExportDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "Plaintext export tab" }));
+      fireEvent.click(screen.getByText("Export Text"));
+
+      await waitFor(() => {
+        expect(mockHandleExportText).toHaveBeenCalledOnce();
+      });
+      expect(useUiStore.getState().pdfExportDialogOpen).toBe(false);
+    });
+
+    it("keeps dialog open when DOCX export does not succeed", async () => {
+      mockHandleExportDocx.mockResolvedValueOnce(false);
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      renderExportDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "DOCX export tab" }));
+      fireEvent.click(screen.getByText("Export DOCX"));
+
+      await waitFor(() => {
+        expect(mockHandleExportDocx).toHaveBeenCalledOnce();
+      });
+      expect(useUiStore.getState().pdfExportDialogOpen).toBe(true);
+    });
   });
 
   describe("error handling", () => {
@@ -159,9 +247,7 @@ describe("PdfExportDialog", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
 
-      const container = screen.getByText("Page Size").parentElement;
-      const pageSizeSelect = container?.querySelector("select");
-      if (!pageSizeSelect) throw new Error("Page size select not found");
+      const pageSizeSelect = screen.getByRole("combobox", { name: "Page Size" });
       fireEvent.change(pageSizeSelect, { target: { value: "LETTER" } });
 
       expect(useUiStore.getState().pdfExportOptions.pageSize).toBe("LETTER");
@@ -171,9 +257,7 @@ describe("PdfExportDialog", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
 
-      const container = screen.getByText("Orientation").parentElement;
-      const orientationSelect = container?.querySelector("select");
-      if (!orientationSelect) throw new Error("Orientation select not found");
+      const orientationSelect = screen.getByRole("combobox", { name: "Orientation" });
       fireEvent.change(orientationSelect, { target: { value: "landscape" } });
 
       expect(useUiStore.getState().pdfExportOptions.orientation).toBe("landscape");
@@ -213,22 +297,7 @@ describe("PdfExportDialog", () => {
   describe("document title display", () => {
     it("shows document title when available", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
-      useAppStore.getState().setDocuments([{
-        location_id: 1,
-        rel_path: "test.md",
-        title: "My Document",
-        word_count: 100,
-        updated_at: "2024-01-01",
-      }]);
-      useAppStore.getState().applySessionState({
-        activeTabId: "tab-1",
-        tabs: [{
-          id: "tab-1",
-          docRef: { location_id: 1, rel_path: "test.md" },
-          title: "My Document",
-          isModified: false,
-        }],
-      });
+      seedActiveDocument();
       renderExportDialog();
 
       expect(screen.getByText("My Document")).toBeInTheDocument();
