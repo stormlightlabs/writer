@@ -73,12 +73,12 @@ describe(useTextExport, () => {
     });
   });
 
-  it("sanitizes filename by replacing special characters", async () => {
+  it("sanitizes filename allowing spaces, dashes, and dots", async () => {
     vi.mocked(save).mockResolvedValue("/tmp/output.txt");
 
     const { result } = renderHook(() => useTextExport());
 
-    const resultWithSpecialChars = { ...textRenderResult, title: "My Document: Version 1.0!" };
+    const resultWithSpecialChars = { ...textRenderResult, title: "Version 1.1 - Final Draft" };
 
     await act(async () => {
       await result.current(resultWithSpecialChars);
@@ -86,7 +86,58 @@ describe(useTextExport, () => {
 
     expect(save).toHaveBeenCalledWith({
       filters: [{ name: "Text", extensions: ["txt"] }],
-      defaultPath: "My_Document__Version_1_0_.txt",
+      defaultPath: "Version_1.1_-_Final_Draft.txt",
+    });
+  });
+
+  it("condenses multiple spaces into single underscore", async () => {
+    vi.mocked(save).mockResolvedValue("/tmp/output.txt");
+
+    const { result } = renderHook(() => useTextExport());
+
+    const resultWithMultipleSpaces = { ...textRenderResult, title: "My   Document  Title" };
+
+    await act(async () => {
+      await result.current(resultWithMultipleSpaces);
+    });
+
+    expect(save).toHaveBeenCalledWith({
+      filters: [{ name: "Text", extensions: ["txt"] }],
+      defaultPath: "My_Document_Title.txt",
+    });
+  });
+
+  it("removes leading and trailing underscores", async () => {
+    vi.mocked(save).mockResolvedValue("/tmp/output.txt");
+
+    const { result } = renderHook(() => useTextExport());
+
+    const resultWithUnderscores = { ...textRenderResult, title: "  My Document  " };
+
+    await act(async () => {
+      await result.current(resultWithUnderscores);
+    });
+
+    expect(save).toHaveBeenCalledWith({
+      filters: [{ name: "Text", extensions: ["txt"] }],
+      defaultPath: "My_Document.txt",
+    });
+  });
+
+  it("uses default filename when title only contains special characters", async () => {
+    vi.mocked(save).mockResolvedValue("/tmp/output.txt");
+
+    const { result } = renderHook(() => useTextExport());
+
+    const resultWithOnlySpecialChars = { ...textRenderResult, title: "@#$%^&*()!" };
+
+    await act(async () => {
+      await result.current(resultWithOnlySpecialChars);
+    });
+
+    expect(save).toHaveBeenCalledWith({
+      filters: [{ name: "Text", extensions: ["txt"] }],
+      defaultPath: "document.txt",
     });
   });
 
@@ -124,6 +175,7 @@ describe(useTextExport, () => {
 describe(useMarkdownExport, () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAppStore.getState().resetTextExport();
   });
 
   it("exports markdown successfully", async () => {
@@ -142,6 +194,8 @@ describe(useMarkdownExport, () => {
       defaultPath: "Test_Document.md",
     });
     expect(writeFile).toHaveBeenCalledOnce();
+    expect(useAppStore.getState().isExportingText).toBeFalsy();
+    expect(useAppStore.getState().textExportError).toBeNull();
   });
 
   it("returns false when user cancels save dialog", async () => {
@@ -156,6 +210,7 @@ describe(useMarkdownExport, () => {
 
     expect(didExport).toBeFalsy();
     expect(writeFile).not.toHaveBeenCalled();
+    expect(useAppStore.getState().isExportingText).toBeFalsy();
   });
 
   it("uses default filename when title is null", async () => {
@@ -173,7 +228,22 @@ describe(useMarkdownExport, () => {
     });
   });
 
-  it("handles export errors", async () => {
+  it("sanitizes filename allowing spaces, dashes, and dots", async () => {
+    vi.mocked(save).mockResolvedValue("/tmp/output.md");
+
+    const { result } = renderHook(() => useMarkdownExport());
+
+    await act(async () => {
+      await result.current("# Markdown", "Version 1.1 - Final Draft");
+    });
+
+    expect(save).toHaveBeenCalledWith({
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+      defaultPath: "Version_1.1_-_Final_Draft.md",
+    });
+  });
+
+  it("handles export errors and sets error state", async () => {
     vi.mocked(save).mockRejectedValue(new Error("Permission denied"));
 
     const { result } = renderHook(() => useMarkdownExport());
@@ -181,5 +251,8 @@ describe(useMarkdownExport, () => {
     await act(async () => {
       await expect(result.current("# Markdown", "Test")).rejects.toThrow("Permission denied");
     });
+
+    expect(useAppStore.getState().isExportingText).toBeFalsy();
+    expect(useAppStore.getState().textExportError).toBe("Permission denied");
   });
 });

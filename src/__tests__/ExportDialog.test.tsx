@@ -17,7 +17,7 @@ const mockRenderResult: PdfRenderResult = {
 const mockOnExport = vi.fn();
 
 vi.mock(
-  "$components/pdf/PdfPreview",
+  "$components/export/preview/PdfPreview",
   () => ({ PdfPreviewPanel: () => <div data-testid="pdf-preview">Preview Content</div> }),
 );
 

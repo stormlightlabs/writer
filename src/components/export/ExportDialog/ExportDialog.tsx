@@ -1,6 +1,3 @@
-// TODO: make the options section collapsible
-// TODO: pin the toolbar/make sticky or render above the scrollable portion of the preview
-// FIXME: Fit Page and Fit Width do the same thing
 import { Button } from "$components/Button";
 import { Dialog } from "$components/Dialog";
 import { PdfPreviewPanel } from "$components/export/preview/PdfPreview";

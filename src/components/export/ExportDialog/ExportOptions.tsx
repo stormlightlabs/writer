@@ -1,10 +1,10 @@
 import { ORIENTATIONS, PAGE_SIZES } from "$pdf/constants";
-import { MarginSide, Orientation, PageSize, type PdfExportOptions } from "$pdf/types";
+import { MarginSide, Orientation, PageSize } from "$pdf/types";
 import { usePdfDialogUiState } from "$state/selectors";
 import { useCallback } from "react";
 
-const PdfExportDialogPageSize = ({ options }: { options: PdfExportOptions }) => {
-  const { setPageSize } = usePdfDialogUiState();
+function PdfExportDialogPageSize() {
+  const { setPageSize, options } = usePdfDialogUiState();
 
   const handlePageSizeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     setPageSize(event.target.value as PageSize);
@@ -21,10 +21,10 @@ const PdfExportDialogPageSize = ({ options }: { options: PdfExportOptions }) => 
       </select>
     </div>
   );
-};
+}
 
-const PdfExportDialogOrientation = ({ options }: { options: PdfExportOptions }) => {
-  const { setOrientation } = usePdfDialogUiState();
+function PdfExportDialogOrientation() {
+  const { setOrientation, options } = usePdfDialogUiState();
 
   const handleOrientationChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     setOrientation(event.target.value as Orientation);
@@ -43,10 +43,10 @@ const PdfExportDialogOrientation = ({ options }: { options: PdfExportOptions }) 
       </select>
     </div>
   );
-};
+}
 
-const PdfExportDialogFontSize = ({ options }: { options: PdfExportOptions }) => {
-  const { setFontSize } = usePdfDialogUiState();
+function PdfExportDialogFontSize() {
+  const { setFontSize, options } = usePdfDialogUiState();
 
   const handleFontSizeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setFontSize(parseInt(event.target.value, 10));
@@ -65,9 +65,9 @@ const PdfExportDialogFontSize = ({ options }: { options: PdfExportOptions }) => 
         className="w-full" />
     </div>
   );
-};
+}
 
-const PdfMarginField = ({ side, value }: { side: MarginSide; value: number }) => {
+function PdfMarginField({ side, value }: { side: MarginSide; value: number }) {
   const { setMargin } = usePdfDialogUiState();
 
   const onChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,22 +86,26 @@ const PdfMarginField = ({ side, value }: { side: MarginSide; value: number }) =>
         className="w-full px-2 py-1 bg-layer-02 border border-border-subtle rounded text-text-primary text-sm" />
     </label>
   );
-};
+}
 
-const PdfExportDialogMargins = ({ options }: { options: PdfExportOptions }) => (
-  <div>
-    <p className="block text-sm font-medium text-text-primary mb-2">Margins (px)</p>
-    <div className="grid grid-cols-2 gap-2">
-      <PdfMarginField side="top" value={options.margins.top} />
-      <PdfMarginField side="right" value={options.margins.right} />
-      <PdfMarginField side="bottom" value={options.margins.bottom} />
-      <PdfMarginField side="left" value={options.margins.left} />
+function PdfExportDialogMargins() {
+  const { options } = usePdfDialogUiState();
+
+  return (
+    <div>
+      <p className="block text-sm font-medium text-text-primary mb-2">Margins (px)</p>
+      <div className="grid grid-cols-2 gap-2">
+        <PdfMarginField side="top" value={options.margins.top} />
+        <PdfMarginField side="right" value={options.margins.right} />
+        <PdfMarginField side="bottom" value={options.margins.bottom} />
+        <PdfMarginField side="left" value={options.margins.left} />
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
-const PdfExportDialogHeaderFooter = ({ options }: { options: PdfExportOptions }) => {
-  const { setIncludeHeader, setIncludeFooter } = usePdfDialogUiState();
+function PdfExportDialogHeaderFooter() {
+  const { setIncludeHeader, setIncludeFooter, options } = usePdfDialogUiState();
 
   const onHeaderChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setIncludeHeader(event.target.checked);
@@ -123,20 +127,16 @@ const PdfExportDialogHeaderFooter = ({ options }: { options: PdfExportOptions })
       </label>
     </div>
   );
-};
+}
 
-export const PdfExportDialogOptions = () => {
-  const { options } = usePdfDialogUiState();
-
-  return (
-    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-      <div className="space-y-4">
-        <PdfExportDialogPageSize options={options} />
-        <PdfExportDialogOrientation options={options} />
-        <PdfExportDialogFontSize options={options} />
-        <PdfExportDialogMargins options={options} />
-        <PdfExportDialogHeaderFooter options={options} />
-      </div>
+export const PdfExportDialogOptions = () => (
+  <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+    <div className="space-y-4">
+      <PdfExportDialogPageSize />
+      <PdfExportDialogOrientation />
+      <PdfExportDialogFontSize />
+      <PdfExportDialogMargins />
+      <PdfExportDialogHeaderFooter />
     </div>
-  );
-};
+  </div>
+);

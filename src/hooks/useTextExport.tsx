@@ -9,6 +9,14 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import * as logger from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
 
+function sanitizeExportFilename(title: string, extension: string): string {
+  const sanitized = title.replaceAll(/[^\w\s.-]/g, "").replaceAll(/\s+/g, "_").replaceAll(/_+/g, "_").replaceAll(
+    /^_|_$/g,
+    "",
+  );
+  return sanitized ? `${sanitized}.${extension}` : `document.${extension}`;
+}
+
 export type ExportTextFn = (result: TextExportResultType) => Promise<boolean>;
 
 export function useTextExport(): ExportTextFn {
@@ -20,7 +28,7 @@ export function useTextExport(): ExportTextFn {
     try {
       const textBytes = new TextEncoder().encode(result.text);
       const uint8Array = new Uint8Array(textBytes);
-      const defaultFileName = result.title ? `${result.title.replaceAll(/[^a-zA-Z0-9]/g, "_")}.txt` : "document.txt";
+      const defaultFileName = result.title ? sanitizeExportFilename(result.title, "txt") : "document.txt";
       const filePath = await save({ filters: [{ name: "Text", extensions: ["txt"] }], defaultPath: defaultFileName });
 
       if (!filePath) {
@@ -48,11 +56,15 @@ export function useTextExport(): ExportTextFn {
 export type ExportMarkdownFn = (text: string, title: string | null) => Promise<boolean>;
 
 export function useMarkdownExport(): ExportMarkdownFn {
+  const { startTextExport, finishTextExport, failTextExport } = useTextExportActions();
+
   const exportMarkdown = useCallback(async (text: string, title: string | null) => {
+    startTextExport();
+
     try {
       const textBytes = new TextEncoder().encode(text);
       const uint8Array = new Uint8Array(textBytes);
-      const defaultFileName = title ? `${title.replaceAll(/[^a-zA-Z0-9]/g, "_")}.md` : "document.md";
+      const defaultFileName = title ? sanitizeExportFilename(title, "md") : "document.md";
       const filePath = await save({
         filters: [{ name: "Markdown", extensions: ["md"] }],
         defaultPath: defaultFileName,
@@ -60,19 +72,22 @@ export function useMarkdownExport(): ExportMarkdownFn {
 
       if (!filePath) {
         logger.info("Markdown export canceled before writing file");
+        finishTextExport();
         return false;
       }
 
       await writeFile(filePath, uint8Array);
 
       showSuccessToast("Markdown saved successfully");
+      finishTextExport();
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to export markdown";
+      failTextExport(errorMessage);
       showErrorToast(`Export failed: ${errorMessage}`);
       throw err;
     }
-  }, []);
+  }, [failTextExport, finishTextExport, startTextExport]);
 
   return exportMarkdown;
 }

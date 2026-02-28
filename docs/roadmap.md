@@ -9,13 +9,7 @@ Multi-format document export with live preview, building on the existing `@react
 
 ### Tasks
 
-1. **Plaintext export**
-   - Strip all Markdown formatting from the raw document text (headings → plain text, remove `**`, `_`, `` ` ``, link syntax, etc.)
-   - Preserve logical structure: blank lines between paragraphs, indentation for list items, `---` for horizontal rules
-   - Save via Tauri `save` dialog with `.txt` filter
-   - Add "Plain Text" option to the export dialog
-   - Add option to save the markdown file anywhere.
-2. **DOCX export**
+1. **DOCX export**
    - Add [`docx-rs`](https://github.com/bokuweb/docx-rs) as a Cargo dependency in `src-tauri/Cargo.toml`
    - Implement a `markdown_ast_to_docx` Tauri command that accepts the Markdown AST (or raw text via `markdown_to_docx`), converts it to a `.docx` byte buffer using `docx-rs` (`Docx`, `Paragraph`, `Run`, heading levels, code blocks, lists, blockquotes), and returns `Vec<u8>` to the frontend
    - Support basic formatting: bold, italic, code font, ordered/unordered lists, blockquotes, headings 1-3
