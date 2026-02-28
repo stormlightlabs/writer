@@ -7,15 +7,21 @@ last_updated: 2026-02-28
 
 Sidebar reorder, cross-location move, external file import, and nested folder creation using `@atlaskit/pragmatic-drag-and-drop`. Full design in [spec](../.sandbox/drag-and-drop.md).
 
-### Tasks
+### Part 1
 
 1. **Sidebar draggable items** - register `DocumentItem` as `draggable()` + `dropTargetForElements()` with hitbox edge detection
-2. **Cross-location drops** - register `SidebarLocationItem` as drop target; move doc via `docMove`
+2. **Drop indicators & feedback** - insertion line, ghost opacity, drop-target highlight ring
 3. **Monitor & dispatch** - `monitorForElements` in `Sidebar.tsx` to orchestrate reorder vs. move on drop
-4. **Drop indicators & feedback** - insertion line, ghost opacity, drop-target highlight ring
-5. **External file drops** - Tauri `onDragDropEvent` listener; resolve target from pointer position; import `.md` files via `docSave`
-6. **Accessibility** - screen-reader announcements via `live-region`; reduced-motion support via `useSkipAnimation()`
-7. **Nested folder creation** - modifier-key drop opens `MoveDialog` pre-filled; backend `create_dir_all` handles new dirs
+
+### Part 2
+
+1. **Cross-location drops** - register `SidebarLocationItem` as drop target; move doc via `docMove`
+2. **External file drops** - Tauri `onDragDropEvent` listener; resolve target from pointer position; import `.md` files via `docSave`
+3. **Nested folder creation** - modifier-key drop opens `MoveDialog` pre-filled; backend `create_dir_all` handles new dirs
+
+### Part 3
+
+1. **Accessibility** - screen-reader announcements via `live-region`; reduced-motion support via `useSkipAnimation()`
 
 ## Content blocks (transclusion)
 

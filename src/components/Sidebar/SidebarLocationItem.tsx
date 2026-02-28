@@ -1,11 +1,14 @@
 import { Button } from "$components/Button";
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { FolderIcon, MoreVerticalIcon, RefreshIcon, TrashIcon } from "$icons";
 import type { SidebarRefreshReason } from "$state/types";
 import { DocMeta, LocationDescriptor } from "$types";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { DocumentItem } from "./DocumentItem";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type DocumentDragData, DocumentItem } from "./DocumentItem";
 import { EmptyDocuments } from "./EmptyDocuments";
 import { RemoveButton } from "./RemoveButton";
 import { TreeItem } from "./TreeItem";
@@ -306,6 +309,28 @@ function SidebarLocationItemComponent(
   }: SidebarLocationItemProps,
 ) {
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
+  const locationRef = useRef<HTMLDivElement>(null);
+  const [isDropTarget, setIsDropTarget] = useState(false);
+  const skipAnimation = useSkipAnimation();
+
+  useEffect(() => {
+    const element = locationRef.current;
+    if (!element) return;
+
+    return combine(
+      dropTargetForElements({
+        element,
+        getData: () => ({ locationId: location.id }),
+        canDrop: ({ source }) => {
+          const data = source.data as DocumentDragData;
+          return data.type === "document" && data.locationId !== location.id;
+        },
+        onDragEnter: () => setIsDropTarget(true),
+        onDragLeave: () => setIsDropTarget(false),
+        onDrop: () => setIsDropTarget(false),
+      }),
+    );
+  }, [location.id]);
 
   const handleRemoveClick = useCallback(() => {
     onRemove(location.id);
@@ -372,7 +397,12 @@ function SidebarLocationItemComponent(
   }, []);
 
   return (
-    <div>
+    <div
+      ref={locationRef}
+      data-location-id={location.id}
+      className={`${isDropTarget ? "ring-2 ring-border-interactive rounded" : ""} ${
+        skipAnimation ? "" : "transition-all duration-150"
+      }`}>
       <FolderItem
         name={location.name}
         isSelected={isSelected && !selectedDocPath}

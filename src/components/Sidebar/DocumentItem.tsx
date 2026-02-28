@@ -1,14 +1,22 @@
-// TODO: context menu for nested directories
-// TODO: nested directory creation
-// TODO: drag + drop to move
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
+import { useSkipAnimation } from "$hooks/useMotion";
 import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, TrashIcon } from "$icons";
 import type { DocMeta } from "$types";
 import { f } from "$utils/serialize";
+import { cn } from "$utils/tw";
+import {
+  attachClosestEdge,
+  type Edge,
+  extractClosestEdge,
+} from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import * as logger from "@tauri-apps/plugin-log";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type DialogAnchor, OperationDialog } from "./OperationDialog";
 import { TreeItem } from "./TreeItem";
+
+export type DocumentDragData = { type: "document"; locationId: number; relPath: string; title: string };
 
 const FILE_TEXT_ICON = { Component: FileTextIcon, size: "sm" as const };
 
@@ -234,6 +242,58 @@ export function DocumentItem(
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [operationAnchor, setOperationAnchor] = useState<DialogAnchor | undefined>();
+  const treeItemRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<"idle" | "dragging">("idle");
+  const [dropState, setDropState] = useState<"idle" | "over">("idle");
+  const [closestEdge, setClosestEdge] = useState<Edge | null>(null);
+  const skipAnimation = useSkipAnimation();
+
+  useEffect(() => {
+    const element = treeItemRef.current;
+    if (!element) return;
+
+    return combine(
+      draggable({
+        element,
+        getInitialData: (): DocumentDragData => ({
+          type: "document",
+          locationId: id,
+          relPath: doc.rel_path,
+          title: doc.title || doc.rel_path.split("/").pop() || "Untitled",
+        }),
+        onDragStart: () => setDragState("dragging"),
+        onDrop: () => setDragState("idle"),
+      }),
+      dropTargetForElements({
+        element,
+        canDrop: ({ source }) => {
+          const data = source.data as DocumentDragData;
+          return data.type === "document" && data.locationId === id && data.relPath !== doc.rel_path;
+        },
+        getData: ({ input }) =>
+          attachClosestEdge({ locationId: id, relPath: doc.rel_path }, {
+            input,
+            element,
+            allowedEdges: ["top", "bottom"],
+          }),
+        onDragEnter: (args) => {
+          setDropState("over");
+          setClosestEdge(extractClosestEdge(args.self.data));
+        },
+        onDrag: (args) => {
+          setClosestEdge(extractClosestEdge(args.self.data));
+        },
+        onDragLeave: () => {
+          setDropState("idle");
+          setClosestEdge(null);
+        },
+        onDrop: () => {
+          setDropState("idle");
+          setClosestEdge(null);
+        },
+      }),
+    );
+  }, [id, doc.rel_path, doc.title]);
 
   const displayLabel = useMemo(() => {
     if (filenameVisibility) {
@@ -320,18 +380,33 @@ export function DocumentItem(
     [handleOpen, handleCopyPath, handleRename, handleMove, handleDeleteClick],
   );
 
-  const currentFilename = doc.rel_path.split("/").pop() || "";
+  const currentFilename = useMemo(() => doc.rel_path.split("/").pop() || "", [doc.rel_path]);
+  const edgeStyle = useMemo(() => {
+    if (!closestEdge) return {};
+    return { [closestEdge === "top" ? "top" : "bottom"]: "-1px" };
+  }, [closestEdge]);
 
   return (
     <>
-      <TreeItem
-        key={doc.rel_path}
-        icon={FILE_TEXT_ICON}
-        label={displayLabel}
-        isSelected={isSelected && selectedDocPath === doc.rel_path}
-        level={level}
-        onClick={handleClick}
-        onContextMenu={handleContextMenu} />
+      <div ref={treeItemRef} className="relative">
+        <TreeItem
+          key={doc.rel_path}
+          icon={FILE_TEXT_ICON}
+          label={displayLabel}
+          isSelected={isSelected && selectedDocPath === doc.rel_path}
+          level={level}
+          onClick={handleClick}
+          onContextMenu={handleContextMenu}
+          isDragging={dragState === "dragging"}
+          isDropTarget={dropState === "over"} />
+        {closestEdge && (
+          <div
+            className={cn("absolute left-0 right-0 h-0.5 bg-accent-cyan z-10 pointer-events-none", {
+              "transition-all duration-150": !skipAnimation,
+            })}
+            style={edgeStyle} />
+        )}
+      </div>
       <ContextMenu isOpen={isOpen} position={position} onClose={close} items={contextMenuItems} />
       <RenameDialog
         isOpen={showRenameDialog}

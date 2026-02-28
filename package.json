@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest --reporter=dot",
-    "test:run": "vitest run",
+    "test:run": "vitest run --reporter=dot",
     "test:coverage": "vitest run --coverage",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

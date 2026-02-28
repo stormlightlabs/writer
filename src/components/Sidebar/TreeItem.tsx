@@ -1,7 +1,7 @@
 import { Button } from "$components/Button";
 import { ChevronRightIcon, IconProps, type IconSize } from "$icons";
-import type { CSSProperties, MouseEventHandler } from "react";
-import { useCallback, useMemo } from "react";
+import type { CSSProperties, MouseEventHandler, Ref } from "react";
+import { forwardRef, useCallback, useMemo } from "react";
 
 type IconMemo = { Component: React.ComponentType<IconProps>; size: IconSize };
 
@@ -16,9 +16,11 @@ type TreeItemProps = {
   onToggle?: () => void;
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
   children?: React.ReactNode;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
 };
 
-export function TreeItem(
+function TreeItemComponent(
   {
     icon,
     label,
@@ -30,7 +32,10 @@ export function TreeItem(
     onToggle,
     onContextMenu,
     children,
+    isDragging = false,
+    isDropTarget = false,
   }: TreeItemProps,
+  ref: Ref<HTMLDivElement>,
 ) {
   const paddingLeft = level * 16 + 12;
 
@@ -60,8 +65,16 @@ export function TreeItem(
     const base = [
       "sidebar-item group flex items-center gap-2",
       "cursor-pointer rounded mx-2 mb-0.5 text-[0.8125rem]",
-      "transition-colors duration-150",
+      isDragging || isDropTarget ? "" : "transition-colors duration-150",
     ];
+
+    if (isDragging) {
+      base.push("opacity-30");
+    }
+
+    if (isDropTarget) {
+      base.push("ring-2 ring-border-interactive");
+    }
 
     if (isSelected) {
       base.push("bg-layer-accent-01 text-text-primary");
@@ -70,7 +83,7 @@ export function TreeItem(
     }
 
     return base.join(" ");
-  }, [isSelected]);
+  }, [isSelected, isDragging, isDropTarget]);
 
   const buttonStyle: CSSProperties = useMemo(() => ({ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }), [
     isExpanded,
@@ -80,6 +93,7 @@ export function TreeItem(
 
   return (
     <div
+      ref={ref}
       className={containerClasses}
       style={containerStyle}
       onClick={onClick}
@@ -106,3 +120,5 @@ export function TreeItem(
     </div>
   );
 }
+
+export const TreeItem = forwardRef<HTMLDivElement, TreeItemProps>(TreeItemComponent);

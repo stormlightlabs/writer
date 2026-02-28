@@ -3,9 +3,14 @@ import { useWorkspaceController } from "$hooks/controllers/useWorkspaceControlle
 import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
+import { f } from "$utils/serialize";
+import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import * as logger from "@tauri-apps/plugin-log";
 import type { ChangeEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
+import { type DocumentDragData } from "./DocumentItem";
 import { EmptyLocations } from "./EmptyLocations";
 import { SearchInput } from "./SearchInput";
 import { SidebarLocationItem } from "./SidebarLocationItem";
@@ -98,6 +103,35 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     document.addEventListener("pointerdown", handleOutsideMenuClick);
     return () => document.removeEventListener("pointerdown", handleOutsideMenuClick);
   }, [showLocationMenu]);
+
+  useEffect(() => {
+    return monitorForElements({
+      onDrop: ({ source, location }) => {
+        const dest = location.current.dropTargets[0];
+        if (!dest) return;
+
+        const sourceData = source.data as DocumentDragData;
+        const destData = dest.data as { locationId: number; relPath?: string };
+        const edge = extractClosestEdge(destData);
+
+        if (destData.locationId !== sourceData.locationId) {
+          const sourceFilename = sourceData.relPath.split("/").pop() || sourceData.relPath;
+          handleMoveDocument(sourceData.locationId, sourceData.relPath, sourceFilename).catch((error: unknown) => {
+            logger.error(f("Failed to move document", { source: sourceData, dest: destData, error }));
+          });
+        } else if (edge && destData.relPath) {
+          logger.info(
+            f("Document reorder requested", {
+              locationId: sourceData.locationId,
+              sourcePath: sourceData.relPath,
+              destPath: destData.relPath,
+              edge,
+            }),
+          );
+        }
+      },
+    });
+  }, [handleMoveDocument]);
 
   const locationDocuments = useMemo(
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),

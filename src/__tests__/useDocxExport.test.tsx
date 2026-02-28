@@ -67,7 +67,9 @@ describe(useDocxExport, () => {
     expect(vi.mocked(logger.info)).toHaveBeenCalledWith("DOCX export canceled before writing file");
   });
 
-  it("uses default filename when title is null", async () => {
+  it("uses default filename with timestamp when title is null", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1234567890123);
     vi.mocked(save).mockResolvedValue("/tmp/output.docx");
 
     const { result } = renderHook(() => useDocxExport());
@@ -80,8 +82,9 @@ describe(useDocxExport, () => {
 
     expect(save).toHaveBeenCalledWith({
       filters: [{ name: "Word Document", extensions: ["docx"] }],
-      defaultPath: "document.docx",
+      defaultPath: "document_1234567890123.docx",
     });
+    vi.useRealTimers();
   });
 
   it("sanitizes filename allowing spaces, dashes, and dots", async () => {

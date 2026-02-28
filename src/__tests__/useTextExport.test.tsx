@@ -67,7 +67,9 @@ describe(useTextExport, () => {
     expect(vi.mocked(logger.info)).toHaveBeenCalledWith("Text export canceled before writing file");
   });
 
-  it("uses default filename when title is null", async () => {
+  it("uses default filename with timestamp when title is null", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1234567890123);
     vi.mocked(save).mockResolvedValue("/tmp/output.txt");
 
     const { result } = renderHook(() => useTextExport());
@@ -80,8 +82,9 @@ describe(useTextExport, () => {
 
     expect(save).toHaveBeenCalledWith({
       filters: [{ name: "Text", extensions: ["txt"] }],
-      defaultPath: "document.txt",
+      defaultPath: "document_1234567890123.txt",
     });
+    vi.useRealTimers();
   });
 
   it("sanitizes filename allowing spaces, dashes, and dots", async () => {
@@ -224,7 +227,9 @@ describe(useMarkdownExport, () => {
     expect(useAppStore.getState().isExportingText).toBeFalsy();
   });
 
-  it("uses default filename when title is null", async () => {
+  it("uses default filename with timestamp when title is null", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1234567890123);
     vi.mocked(save).mockResolvedValue("/tmp/output.md");
 
     const { result } = renderHook(() => useMarkdownExport());
@@ -235,8 +240,9 @@ describe(useMarkdownExport, () => {
 
     expect(save).toHaveBeenCalledWith({
       filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: "document.md",
+      defaultPath: "document_1234567890123.md",
     });
+    vi.useRealTimers();
   });
 
   it("sanitizes filename allowing spaces, dashes, and dots", async () => {

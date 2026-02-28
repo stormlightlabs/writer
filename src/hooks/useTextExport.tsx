@@ -58,7 +58,8 @@ export function useMarkdownExport(): ExportMarkdownFn {
     try {
       const textBytes = new TextEncoder().encode(text);
       const uint8Array = new Uint8Array(textBytes);
-      const defaultFileName = title ? sanitizeExportFilename(title, "md") : "document.md";
+      const epoch = Date.now();
+      const defaultFileName = title ? sanitizeExportFilename(title, "md") : `document_${epoch}.md`;
       const filePath = await save({
         filters: [{ name: "Markdown", extensions: ["md"] }],
         defaultPath: defaultFileName,
