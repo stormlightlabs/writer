@@ -157,6 +157,15 @@ export type TextExportActions = {
   resetTextExport: () => void;
 };
 
+export type DocxExportState = { isExportingDocx: boolean; docxExportError: string | null };
+
+export type DocxExportActions = {
+  startDocxExport: () => void;
+  finishDocxExport: () => void;
+  failDocxExport: (message: string) => void;
+  resetDocxExport: () => void;
+};
+
 export type SearchState = {
   searchQuery: string;
   searchResults: SearchHit[];
@@ -211,6 +220,8 @@ export type AppStore =
   & PdfExportActions
   & TextExportState
   & TextExportActions
+  & DocxExportState
+  & DocxExportActions
   & SearchState
   & SearchActions
   & UiState

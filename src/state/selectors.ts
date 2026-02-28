@@ -1,5 +1,6 @@
 import type { StyleCheckSettings } from "$types";
 import { useShallow } from "zustand/react/shallow";
+import { useDocxExportStore } from "./stores/docx-export";
 import { useLayoutStore } from "./stores/layout";
 import { usePdfExportStore } from "./stores/pdf-export";
 import { useSearchStore } from "./stores/search";
@@ -199,6 +200,21 @@ export const useTextExportActions = () =>
       finishTextExport: state.finishTextExport,
       failTextExport: state.failTextExport,
       resetTextExport: state.resetTextExport,
+    })),
+  );
+
+export const useDocxExportState = () =>
+  useDocxExportStore(
+    useShallow((state) => ({ isExportingDocx: state.isExportingDocx, docxExportError: state.docxExportError })),
+  );
+
+export const useDocxExportActions = () =>
+  useDocxExportStore(
+    useShallow((state) => ({
+      startDocxExport: state.startDocxExport,
+      finishDocxExport: state.finishDocxExport,
+      failDocxExport: state.failDocxExport,
+      resetDocxExport: state.resetDocxExport,
     })),
   );
 

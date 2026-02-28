@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 comrak = "0.50"
+docx-rs = "0.4"
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 

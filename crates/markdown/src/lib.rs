@@ -3,7 +3,7 @@ use diagnostics::Diagnostics;
 use parser::MarkdownParser;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use transformer::MarkdownTransformer;
+use transformer::{DocxTransformer, MarkdownTransformer};
 
 mod diagnostics;
 mod parser;
@@ -212,6 +212,17 @@ pub struct PdfRenderResult {
 pub struct TextExportResult {
     /// The plaintext content
     pub text: String,
+    /// Document title from metadata
+    pub title: Option<String>,
+    /// Word count
+    pub word_count: usize,
+}
+
+/// Result of rendering Markdown for DOCX export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DocxExportResult {
+    /// The DOCX file bytes
+    pub data: Vec<u8>,
     /// Document title from metadata
     pub title: Option<String>,
     /// Word count
@@ -493,6 +504,30 @@ impl MarkdownEngine {
         let plain_text = MarkdownTransformer::transform_to_plaintext(root);
 
         Ok(TextExportResult { text: plain_text, title: metadata.title, word_count: metadata.word_count })
+    }
+
+    /// Renders Markdown text to DOCX format
+    ///
+    /// Parses the markdown and transforms it into a DOCX byte buffer
+    /// using docx-rs, supporting headings, bold, italic, code font,
+    /// ordered/unordered lists, blockquotes, and code blocks.
+    pub fn render_for_docx(&self, text: &str, profile: MarkdownProfile) -> Result<DocxExportResult, MarkdownError> {
+        let arena = Arena::new();
+        let options = profile.to_options();
+
+        let (body_text, front_matter) = if profile.supports_front_matter() {
+            MarkdownParser::extract_front_matter(text)
+        } else {
+            (text, FrontMatter::default())
+        };
+
+        let root = parse_document(&arena, body_text, &options);
+        let metadata = MarkdownParser::build_metadata(root, body_text, front_matter);
+
+        let data = DocxTransformer::transform_to_docx(root)
+            .map_err(|e| MarkdownError::ParseError(format!("DOCX generation failed: {}", e)))?;
+
+        Ok(DocxExportResult { data, title: metadata.title, word_count: metadata.word_count })
     }
 }
 
@@ -1099,7 +1134,7 @@ mod tests {
         assert!(result.text.contains("- Item 1"));
         assert!(result.text.contains("- Item 2"));
         assert!(result.text.contains("- Item 3"));
-        assert!(!result.text.contains("* ")); // Should not have markdown list markers
+        assert!(!result.text.contains("* "));
     }
 
     #[test]
@@ -1133,7 +1168,7 @@ mod tests {
 
         assert!(result.text.contains("> This is a quote"));
         assert!(result.text.contains("> with multiple lines") || result.text.contains("with multiple lines"));
-        assert!(!result.text.contains("> This is a quote\n> ")); // Check that we don't have the raw markdown
+        assert!(!result.text.contains("> This is a quote\n> "));
     }
 
     #[test]
@@ -1325,5 +1360,72 @@ mod tests {
         assert!(!result.text.contains("_"), "Italic markers should be stripped");
         assert!(!result.text.contains("`"), "Code markers should be stripped");
         assert!(!result.text.contains("~~"), "Strikethrough markers should be stripped");
+    }
+
+    #[test]
+    fn test_render_for_docx_basic() {
+        let engine = MarkdownEngine::new();
+        let markdown = "# Hello World\n\nThis is a paragraph.";
+        let result = engine.render_for_docx(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(!result.data.is_empty());
+        assert_eq!(&result.data[0..2], b"PK");
+        assert_eq!(result.title, Some("Hello World".to_string()));
+        assert!(result.word_count > 0);
+    }
+
+    #[test]
+    fn test_render_for_docx_with_front_matter() {
+        let engine = MarkdownEngine::new();
+        let markdown = "---\ntitle: My Document\n---\n\n# Content\n\nBody text.";
+        let result = engine.render_for_docx(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert_eq!(&result.data[0..2], b"PK");
+        assert_eq!(result.title, Some("My Document".to_string()));
+    }
+
+    #[test]
+    fn test_render_for_docx_empty() {
+        let engine = MarkdownEngine::new();
+        let result = engine.render_for_docx("", MarkdownProfile::GfmSafe).unwrap();
+
+        assert_eq!(&result.data[0..2], b"PK");
+        assert_eq!(result.title, None);
+        assert_eq!(result.word_count, 0);
+    }
+
+    #[test]
+    fn test_render_for_docx_all_formatting() {
+        let engine = MarkdownEngine::new();
+        let markdown = "\
+# Heading 1
+
+## Heading 2
+
+### Heading 3
+
+Paragraph with **bold**, *italic*, `code`, and ~~strikethrough~~.
+
+1. Ordered item one
+2. Ordered item two
+
+- Bullet one
+- Bullet two
+
+> A blockquote
+
+```
+code block
+```
+
+---
+";
+        let result = engine.render_for_docx(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert_eq!(&result.data[0..2], b"PK");
+        assert!(
+            result.data.len() > 500,
+            "Mixed doc should produce a reasonably sized DOCX"
+        );
     }
 }

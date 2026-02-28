@@ -3,10 +3,13 @@ import { Dialog } from "$components/Dialog";
 import { PdfPreviewPanel } from "$components/export/preview/PdfPreview";
 import { TextPreviewPanel } from "$components/export/preview/TextPreview";
 import { FileTextIcon } from "$components/icons";
+import { useDocxExportUI } from "$hooks/useDocxExport";
 import { useTextExportUI } from "$hooks/useTextExport";
 import { useViewportTier } from "$hooks/useViewportTier";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import {
+  useDocxExportActions,
+  useDocxExportState,
   usePdfDialogUiState,
   usePdfExportActions,
   usePdfExportState,
@@ -32,8 +35,8 @@ type ExportFormatTab = { id: ExportFormat; label: string; disabled: boolean };
 
 const EXPORT_FORMAT_TABS: ExportFormatTab[] = [{ id: "pdf", label: "PDF", disabled: false }, {
   id: "docx",
-  label: "DOC/DOCX",
-  disabled: true,
+  label: "DOCX",
+  disabled: false,
 }, { id: "txt", label: "Plaintext", disabled: false }];
 
 type ExportFormatTabsProps = {
@@ -164,6 +167,26 @@ function TextExportContent(
   );
 }
 
+type DocxExportContentProps = { handleDocxExport: () => Promise<void> };
+
+function DocxExportContent({ handleDocxExport }: DocxExportContentProps) {
+  const { docxExportError: error, isExportingDocx } = useDocxExportState();
+  return (
+    <>
+      <ExportError error={error} />
+      <div className="flex-1 min-h-0 flex flex-col justify-center">
+        <div className="text-center mb-4">
+          <p className="text-sm text-text-secondary mb-2">Export your document as a Word-compatible DOCX file.</p>
+          <p className="text-xs text-text-tertiary">
+            Headings, bold, italic, code, lists, and blockquotes are preserved.
+          </p>
+        </div>
+      </div>
+      <ExportDialogFooter handleExport={handleDocxExport} label="Export DOCX" isLoading={isExportingDocx} />
+    </>
+  );
+}
+
 function DocumentTitle({ title }: { title?: string }) {
   if (!title) {
     return null;
@@ -223,12 +246,15 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
   );
 
   const { handleExportText, handleExportMarkdown } = useTextExportUI({ activeTab, text: documentText });
+  const { handleExportDocx } = useDocxExportUI({ activeTab, text: documentText });
+  const { resetDocxExport } = useDocxExportActions();
 
   const handleCancel = useCallback(() => {
     setIsOpen(false);
     resetPdfExport();
     resetTextExport();
-  }, [resetPdfExport, resetTextExport, setIsOpen]);
+    resetDocxExport();
+  }, [resetPdfExport, resetTextExport, resetDocxExport, setIsOpen]);
 
   const handlePdfExportClick = useCallback(async () => {
     await onExport(options);
@@ -244,9 +270,15 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
     setIsOpen(false);
   }, [handleExportMarkdown, setIsOpen]);
 
+  const handleDocxExportClick = useCallback(async () => {
+    await handleExportDocx();
+    setIsOpen(false);
+  }, [handleExportDocx, setIsOpen]);
+
   const compactPanel = useMemo(() => isCompact || viewportWidth < 1024, [isCompact, viewportWidth]);
   const showPreview = useMemo(() => !compactPanel && viewportWidth >= 1200, [compactPanel, viewportWidth]);
   const isPdfTabActive = useMemo(() => activeExportTabId === "pdf", [activeExportTabId]);
+  const isDocxTabActive = useMemo(() => activeExportTabId === "docx", [activeExportTabId]);
   const isTextTabActive = useMemo(() => activeExportTabId === "txt", [activeExportTabId]);
 
   const containerClasses = useMemo(() => {
@@ -275,7 +307,8 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
     setActiveExportTabId(nextTabId);
     resetPdfExport();
     resetTextExport();
-  }, [resetPdfExport, resetTextExport]);
+    resetDocxExport();
+  }, [resetPdfExport, resetTextExport, resetDocxExport]);
 
   const pdfExportProps = useMemo(() => ({ showPreview, previewResult, options, editorFontFamily }), [
     showPreview,
@@ -298,6 +331,7 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
         <ExportFormatTabs activeTabId={activeExportTabId} onTabClick={handleExportFormatTabClick} />
         <DocumentTitle title={title} />
         {isPdfTabActive && <PdfExportContent {...pdfExportProps} handleExportClick={handlePdfExportClick} />}
+        {isDocxTabActive && <DocxExportContent handleDocxExport={handleDocxExportClick} />}
         {isTextTabActive && activeTab && (
           <TextExportContent
             handleTextExport={handleTextExportClick}

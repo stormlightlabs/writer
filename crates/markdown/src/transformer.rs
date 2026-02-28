@@ -3,6 +3,10 @@ use comrak::nodes::NodeValue;
 
 pub struct MarkdownTransformer;
 
+mod docx;
+
+pub use docx::DocxTransformer;
+
 impl MarkdownTransformer {
     /// Extracts plain text content from a node and its children
     fn extract_text_content<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
@@ -243,7 +247,7 @@ impl MarkdownTransformer {
                             for line in &lines[1..] {
                                 if !line.is_empty() {
                                     result.push_str(&indent);
-                                    result.push_str("  "); // Extra indent for continuation
+                                    result.push_str("  ");
                                     result.push_str(line);
                                 }
                                 result.push('\n');

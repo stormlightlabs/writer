@@ -38,6 +38,7 @@ import type {
   GlobalCaptureValidateShortcutParams,
   LocParams,
   PersistedStyleCheckSettings,
+  RenderMarkdownForDocxParams,
   RenderMarkdownForPdfParams,
   RenderMarkdownForTextParams,
   RenderMarkdownParams,
@@ -256,6 +257,28 @@ export function renderMarkdownForText(
   ).catch(() => {});
 
   return invokeCmd<TextExportResult>("markdown_render_for_text", payload, onOk, onErr);
+}
+
+export type DocxExportResult = { data: number[]; title: string | null; word_count: number };
+
+export function renderMarkdownForDocx(
+  ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownForDocxParams<DocxExportResult>
+): Cmd {
+  const payload = toSafeMarkdownPayload(locationId, relPath, text, profile);
+  void info(
+    JSON.stringify({
+      event: "renderMarkdownForDocx_payload",
+      raw: {
+        locationId: describeValueShape(locationId),
+        relPath: describeValueShape(relPath),
+        text: describeValueShape(text),
+        profile: describeValueShape(profile),
+      },
+      normalized: { ...payload, text: `<${payload.text.length} chars>` },
+    }),
+  ).catch(() => {});
+
+  return invokeCmd<DocxExportResult>("markdown_render_for_docx", payload, onOk, onErr);
 }
 
 export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd {

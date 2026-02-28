@@ -70,7 +70,7 @@ describe("PdfExportDialog", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
       expect(screen.getByText("PDF")).toBeInTheDocument();
-      expect(screen.getByText("DOC/DOCX")).toBeInTheDocument();
+      expect(screen.getByText("DOCX")).toBeInTheDocument();
       expect(screen.getByText("Plaintext")).toBeInTheDocument();
       expect(screen.getByText("Page Size")).toBeInTheDocument();
       expect(screen.getByText("Orientation")).toBeInTheDocument();
@@ -131,14 +131,14 @@ describe("PdfExportDialog", () => {
       expect(exportingButton).toBeDisabled();
     });
 
-    it("disables docx export format tab but enables plaintext tab", () => {
+    it("enables docx and plaintext export format tabs", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
 
-      const docxTab = screen.getByRole("button", { name: "DOC/DOCX export tab" });
+      const docxTab = screen.getByRole("button", { name: "DOCX export tab" });
       const txtTab = screen.getByRole("button", { name: "Plaintext export tab" });
 
-      expect(docxTab).toBeDisabled();
+      expect(docxTab).toBeEnabled();
       expect(txtTab).toBeEnabled();
       expect(screen.getByText("Export PDF")).toBeEnabled();
     });

@@ -1,5 +1,6 @@
 import type { AppStore } from "$state/types";
 import { useMemo } from "react";
+import { resetDocxExportStore, useDocxExportStore } from "./docx-export";
 import { resetLayoutStore, useLayoutStore } from "./layout";
 import { resetPdfExportStore, usePdfExportStore } from "./pdf-export";
 import { resetSearchStore, useSearchStore } from "./search";
@@ -16,6 +17,7 @@ function getMergedState(): AppStore {
     ...useTabsStore.getState(),
     ...usePdfExportStore.getState(),
     ...useTextExportStore.getState(),
+    ...useDocxExportStore.getState(),
     ...useSearchStore.getState(),
     ...useUiStore.getState(),
   } as AppStore;
@@ -29,12 +31,14 @@ export function useAppStore<T>(selector?: (state: AppStore) => T): AppStore | T 
   const tabs = useTabsStore();
   const pdfExport = usePdfExportStore();
   const textExport = useTextExportStore();
+  const docxExport = useDocxExportStore();
   const search = useSearchStore();
   const ui = useUiStore();
 
   const state = useMemo(
-    () => ({ ...layout, ...workspace, ...tabs, ...pdfExport, ...textExport, ...search, ...ui }) as AppStore,
-    [layout, workspace, tabs, pdfExport, textExport, search, ui],
+    () =>
+      ({ ...layout, ...workspace, ...tabs, ...pdfExport, ...textExport, ...docxExport, ...search, ...ui }) as AppStore,
+    [layout, workspace, tabs, pdfExport, textExport, docxExport, search, ui],
   );
 
   if (!selector) {
@@ -52,6 +56,7 @@ export function resetAppStore(): void {
   resetTabsStore();
   resetPdfExportStore();
   resetTextExportStore();
+  resetDocxExportStore();
   resetSearchStore();
   resetUiStore();
   resetShortcutsStore();
