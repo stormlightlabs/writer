@@ -1,24 +1,26 @@
 import { Button } from "$components/Button";
-import { usePdfDialogUiState, usePdfExportActions, usePdfExportState } from "$state/selectors";
+import { usePdfDialogUiState, usePdfExportActions, usePdfExportState, useTextExportActions } from "$state/selectors";
 import { useCallback } from "react";
 
-type PdfExportDialogFooterProps = {
-  handleExportClick: () => void | Promise<void>;
-  exportLabel?: string;
-  disableExportButton?: boolean;
+type ExportDialogFooterProps = {
+  handleExport: () => void | Promise<void>;
+  label?: string;
+  disable?: boolean;
+  isLoading?: boolean;
 };
 
-export const PdfExportDialogFooter = (
-  { handleExportClick, exportLabel = "Export PDF", disableExportButton = false }: PdfExportDialogFooterProps,
-) => {
-  const { setOpen: setIsOpen } = usePdfDialogUiState();
+export function ExportDialogFooter(
+  { handleExport, label = "Export", disable = false, isLoading = false }: ExportDialogFooterProps,
+) {
+  const { setOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
-  const { isExportingPdf } = usePdfExportState();
+  const { resetTextExport } = useTextExportActions();
 
   const handleCancel = useCallback(() => {
-    setIsOpen(false);
+    setOpen(false);
     resetPdfExport();
-  }, [resetPdfExport, setIsOpen]);
+    resetTextExport();
+  }, [resetPdfExport, resetTextExport, setOpen]);
 
   return (
     <div className="mt-4 pt-4 border-t border-border-subtle flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
@@ -27,7 +29,7 @@ export const PdfExportDialogFooter = (
         variant="secondary"
         size="lg"
         onClick={handleCancel}
-        disabled={isExportingPdf}
+        disabled={isLoading}
         className="sm:flex-1">
         Cancel
       </Button>
@@ -35,11 +37,23 @@ export const PdfExportDialogFooter = (
         type="button"
         variant="primary"
         size="lg"
-        onClick={handleExportClick}
-        disabled={isExportingPdf || disableExportButton}
+        onClick={handleExport}
+        disabled={isLoading || disable}
         className="sm:flex-1">
-        {isExportingPdf ? "Exporting..." : exportLabel}
+        {isLoading ? "Exporting..." : label}
       </Button>
     </div>
   );
-};
+}
+
+type PdfExportDialogFooterProps = { handleExportClick: () => void | Promise<void>; label?: string; disable?: boolean };
+
+export function PdfExportDialogFooter(
+  { handleExportClick, label = "Export PDF", disable = false }: PdfExportDialogFooterProps,
+) {
+  const { isExportingPdf } = usePdfExportState();
+
+  return (
+    <ExportDialogFooter handleExport={handleExportClick} label={label} disable={disable} isLoading={isExportingPdf} />
+  );
+}

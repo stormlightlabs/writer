@@ -1,7 +1,14 @@
-use comrak::nodes::NodeValue;
 use comrak::{Arena, Options, parse_document};
+use diagnostics::Diagnostics;
+use parser::MarkdownParser;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use transformer::MarkdownTransformer;
+
+mod diagnostics;
+mod parser;
+mod transformer;
+mod utils;
 
 /// Front matter format for documents
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -106,122 +113,6 @@ impl MarkdownProfile {
     }
 }
 
-/// Severity level for diagnostics
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DiagnosticSeverity {
-    Error,
-    Warning,
-    Info,
-}
-
-impl std::fmt::Display for DiagnosticSeverity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DiagnosticSeverity::Error => write!(f, "error"),
-            DiagnosticSeverity::Warning => write!(f, "warning"),
-            DiagnosticSeverity::Info => write!(f, "info"),
-        }
-    }
-}
-
-/// A single diagnostic message (lint-like warning or error)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Diagnostic {
-    pub severity: DiagnosticSeverity,
-    pub code: String,
-    pub message: String,
-    /// Line number (1-indexed) where the issue occurs
-    pub line: Option<usize>,
-    /// Column number (1-indexed) where the issue occurs
-    pub column: Option<usize>,
-    /// Source text that triggered the diagnostic
-    pub source: Option<String>,
-}
-
-impl Diagnostic {
-    /// Creates a new diagnostic
-    pub fn new(severity: DiagnosticSeverity, code: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { severity, code: code.into(), message: message.into(), line: None, column: None, source: None }
-    }
-
-    /// Adds position information to the diagnostic
-    pub fn at_position(mut self, line: usize, column: usize) -> Self {
-        self.line = Some(line);
-        self.column = Some(column);
-        self
-    }
-
-    /// Adds source text to the diagnostic
-    pub fn with_source(mut self, source: impl Into<String>) -> Self {
-        self.source = Some(source.into());
-        self
-    }
-
-    /// Creates an error diagnostic
-    pub fn error(code: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(DiagnosticSeverity::Error, code, message)
-    }
-
-    /// Creates a warning diagnostic
-    pub fn warning(code: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(DiagnosticSeverity::Warning, code, message)
-    }
-
-    /// Creates an info diagnostic
-    pub fn info(code: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(DiagnosticSeverity::Info, code, message)
-    }
-}
-
-/// Collection of all diagnostics for a document
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Diagnostics {
-    pub items: Vec<Diagnostic>,
-}
-
-impl Diagnostics {
-    /// Creates an empty diagnostics collection
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Adds a diagnostic to the collection
-    pub fn push(&mut self, diagnostic: Diagnostic) {
-        self.items.push(diagnostic);
-    }
-
-    /// Returns true if there are no diagnostics
-    pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
-    }
-
-    /// Returns the number of diagnostics
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
-    /// Returns all errors
-    pub fn errors(&self) -> Vec<&Diagnostic> {
-        self.items
-            .iter()
-            .filter(|d| matches!(d.severity, DiagnosticSeverity::Error))
-            .collect()
-    }
-
-    /// Returns all warnings
-    pub fn warnings(&self) -> Vec<&Diagnostic> {
-        self.items
-            .iter()
-            .filter(|d| matches!(d.severity, DiagnosticSeverity::Warning))
-            .collect()
-    }
-
-    /// Returns diagnostics filtered by severity
-    pub fn by_severity(&self, severity: DiagnosticSeverity) -> Vec<&Diagnostic> {
-        self.items.iter().filter(|d| d.severity == severity).collect()
-    }
-}
-
 /// A heading in the document outline
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Heading {
@@ -285,6 +176,53 @@ pub struct RenderResult {
 pub enum MarkdownError {
     #[error("Failed to parse markdown: {0}")]
     ParseError(String),
+}
+
+/// PDF node types for structured PDF export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum PdfNode {
+    /// Heading with level and content
+    Heading { level: u8, content: String },
+    /// Paragraph text
+    Paragraph { content: String },
+    /// Code block with optional language
+    Code { content: String, language: Option<String> },
+    /// List with items and ordering flag
+    List { items: Vec<PdfNode>, ordered: bool },
+    /// Blockquote content
+    Blockquote { content: String },
+    /// Footnote with id and content
+    Footnote { id: String, content: String },
+}
+
+/// Result of rendering Markdown for PDF export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PdfRenderResult {
+    /// The PDF AST nodes
+    pub nodes: Vec<PdfNode>,
+    /// Document title from metadata
+    pub title: Option<String>,
+    /// Word count
+    pub word_count: usize,
+}
+
+/// Result of rendering Markdown for plaintext export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextExportResult {
+    /// The plaintext content
+    pub text: String,
+    /// Document title from metadata
+    pub title: Option<String>,
+    /// Word count
+    pub word_count: usize,
+}
+
+/// A list item for PDF export
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PdfListItem {
+    /// Content of the list item (typically a paragraph)
+    pub content: String,
 }
 
 /// Options for HTML export
@@ -353,141 +291,14 @@ impl ExportOptions {
     }
 }
 
-/// Default CSS styles for HTML export
-const DEFAULT_EXPORT_CSS: &str = r#"
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        line-height: 1.6;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 2rem;
-        color: #333;
-        background: #fff;
-    }
-
-    header {
-        border-bottom: 2px solid #eee;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-    }
-
-    header h1 {
-        margin: 0 0 0.5rem 0;
-        color: #222;
-    }
-
-    .metadata {
-        color: #666;
-        font-size: 0.9rem;
-    }
-
-    .metadata span {
-        margin-right: 1rem;
-    }
-
-    main h1, main h2, main h3, main h4, main h5, main h6 {
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-        color: #222;
-    }
-
-    main p {
-        margin-bottom: 1rem;
-    }
-
-    main a {
-        color: #0066cc;
-        text-decoration: none;
-    }
-
-    main a:hover {
-        text-decoration: underline;
-    }
-
-    main code {
-        background: #f4f4f4;
-        padding: 0.2rem 0.4rem;
-        border-radius: 3px;
-        font-family: "SF Mono", Monaco, Inconsolata, "Fira Code", monospace;
-        font-size: 0.9em;
-    }
-
-    main pre {
-        background: #f4f4f4;
-        padding: 1rem;
-        border-radius: 5px;
-        overflow-x: auto;
-        margin-bottom: 1rem;
-    }
-
-    main pre code {
-        background: none;
-        padding: 0;
-    }
-
-    main blockquote {
-        border-left: 4px solid #ddd;
-        padding-left: 1rem;
-        margin-left: 0;
-        color: #666;
-    }
-
-    main table {
-        border-collapse: collapse;
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    main th, main td {
-        border: 1px solid #ddd;
-        padding: 0.5rem;
-        text-align: left;
-    }
-
-    main th {
-        background: #f8f8f8;
-        font-weight: 600;
-    }
-
-    main ul, main ol {
-        margin-bottom: 1rem;
-        padding-left: 2rem;
-    }
-
-    main li {
-        margin-bottom: 0.25rem;
-    }
-
-    main input[type="checkbox"] {
-        margin-right: 0.5rem;
-    }
-
-    main del {
-        text-decoration: line-through;
-        color: #666;
-    }
-
-    footer {
-        margin-top: 3rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-        color: #666;
-        font-size: 0.9rem;
-        text-align: center;
-    }
-"#;
-
-/// Escapes HTML special characters
-fn html_escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
-}
-
 /// The main Markdown engine for parsing and rendering
 pub struct MarkdownEngine;
+
+impl Default for MarkdownEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl MarkdownEngine {
     /// Creates a new Markdown engine
@@ -501,13 +312,13 @@ impl MarkdownEngine {
         let options = profile.to_options();
 
         let (body_text, front_matter) = if profile.supports_front_matter() {
-            Self::extract_front_matter(text)
+            MarkdownParser::extract_front_matter(text)
         } else {
             (text, FrontMatter::default())
         };
 
         let root = parse_document(&arena, body_text, &options);
-        Ok(Self::build_metadata(root, body_text, front_matter))
+        Ok(MarkdownParser::build_metadata(root, body_text, front_matter))
     }
 
     /// Renders Markdown text to HTML using the specified profile
@@ -516,287 +327,24 @@ impl MarkdownEngine {
         let options = profile.to_options();
 
         let (body_text, front_matter) = if profile.supports_front_matter() {
-            Self::extract_front_matter(text)
+            MarkdownParser::extract_front_matter(text)
         } else {
             (text, FrontMatter::default())
         };
 
         let root = parse_document(&arena, body_text, &options);
-
-        let metadata = Self::build_metadata(root, body_text, front_matter);
+        let metadata = MarkdownParser::build_metadata(root, body_text, front_matter);
 
         let mut html_output = String::new();
         comrak::format_html(root, &options, &mut html_output).map_err(|e| MarkdownError::ParseError(e.to_string()))?;
 
-        let diagnostics = Self::run_diagnostics(text, &metadata);
+        let diagnostics = Diagnostics::run(text, &metadata);
         Ok(RenderResult { html: html_output, metadata, diagnostics })
-    }
-
-    fn build_metadata<'a>(
-        root: &'a comrak::nodes::AstNode<'a>, body_text: &str, front_matter: FrontMatter,
-    ) -> DocumentMetadata {
-        let mut metadata = DocumentMetadata {
-            title: None,
-            outline: Vec::new(),
-            links: Vec::new(),
-            task_items: TaskStats::default(),
-            word_count: 0,
-            front_matter,
-        };
-
-        Self::extract_metadata_from_node(root, &mut metadata, &mut true);
-
-        if let Some(title) = metadata.front_matter.fields.get("title") {
-            metadata.title = Some(title.clone());
-        }
-
-        metadata.word_count = Self::estimate_word_count(body_text);
-        metadata
-    }
-
-    /// Extracts front matter from the beginning of the document
-    ///
-    /// Supports YAML (---) and TOML (+++) front matter delimiters
-    fn extract_front_matter(text: &str) -> (&str, FrontMatter) {
-        let trimmed = text.trim_start();
-
-        if let Some(rest) = trimmed.strip_prefix("---")
-            && let Some(end_pos) = rest.find("\n---")
-        {
-            let fm_content = &rest[..end_pos];
-            let delimiter_end = end_pos + "\n---".len();
-            let body = rest[delimiter_end..]
-                .strip_prefix('\n')
-                .map_or(&rest[delimiter_end..], |value| value);
-
-            let fields = Self::parse_yaml_like_front_matter(fm_content);
-
-            return (
-                body,
-                FrontMatter { raw: Some(fm_content.to_string()), format: Some(FrontMatterFormat::Yaml), fields },
-            );
-        }
-
-        if let Some(rest) = trimmed.strip_prefix("+++")
-            && let Some(end_pos) = rest.find("\n+++")
-        {
-            let fm_content = &rest[..end_pos];
-            let delimiter_end = end_pos + "\n+++".len();
-            let body = rest[delimiter_end..]
-                .strip_prefix('\n')
-                .map_or(&rest[delimiter_end..], |value| value);
-
-            let fields = Self::parse_toml_like_front_matter(fm_content);
-
-            return (
-                body,
-                FrontMatter { raw: Some(fm_content.to_string()), format: Some(FrontMatterFormat::Toml), fields },
-            );
-        }
-
-        (text, FrontMatter::default())
-    }
-
-    /// Parses YAML-like front matter into key-value pairs
-    ///
-    /// This is a simple parser that handles basic "key: value" pairs.
-    /// For complex YAML, a full YAML parser would be needed.
-    fn parse_yaml_like_front_matter(content: &str) -> HashMap<String, String> {
-        let mut fields = HashMap::new();
-
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                continue;
-            }
-
-            if let Some(pos) = trimmed.find(':') {
-                let key = trimmed[..pos].trim().to_string();
-                let value = trimmed[pos + 1..]
-                    .trim()
-                    .trim_matches('"')
-                    .trim_matches('\'')
-                    .to_string();
-                if !key.is_empty() {
-                    fields.insert(key, value);
-                }
-            }
-        }
-
-        fields
-    }
-
-    /// Parses TOML-like front matter into key-value pairs
-    ///
-    /// This is a simple parser that handles basic "key = value" pairs.
-    /// For complex TOML, a full TOML parser would be needed.
-    fn parse_toml_like_front_matter(content: &str) -> HashMap<String, String> {
-        let mut fields = HashMap::new();
-
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() || trimmed.starts_with('#') {
-                continue;
-            }
-
-            if let Some(pos) = trimmed.find('=') {
-                let key = trimmed[..pos].trim().to_string();
-                let value = trimmed[pos + 1..]
-                    .trim()
-                    .trim_matches('"')
-                    .trim_matches('\'')
-                    .to_string();
-                if !key.is_empty() {
-                    fields.insert(key, value);
-                }
-            }
-        }
-
-        fields
-    }
-
-    /// Runs all diagnostic checks on the document
-    fn run_diagnostics(text: &str, metadata: &DocumentMetadata) -> Diagnostics {
-        let mut diagnostics = Diagnostics::new();
-
-        Self::check_duplicate_heading_ids(&mut diagnostics, metadata);
-        Self::check_malformed_links(&mut diagnostics, metadata);
-        Self::check_mixed_line_endings(&mut diagnostics, text);
-
-        diagnostics
-    }
-
-    /// Checks for duplicate heading IDs
-    fn check_duplicate_heading_ids(diagnostics: &mut Diagnostics, metadata: &DocumentMetadata) {
-        let mut seen_anchors: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
-
-        for (idx, heading) in metadata.outline.iter().enumerate() {
-            if let Some(anchor) = &heading.anchor {
-                seen_anchors.entry(anchor.clone()).or_default().push(idx);
-            }
-        }
-
-        for (anchor, indices) in seen_anchors {
-            if indices.len() > 1 {
-                for idx in &indices {
-                    if let Some(heading) = metadata.outline.get(*idx) {
-                        diagnostics.push(
-                            Diagnostic::warning("dup-heading-id", format!("Duplicate heading ID: {}", anchor))
-                                .at_position(*idx + 1, 1)
-                                .with_source(format!("{} {}", "#".repeat(heading.level as usize), heading.text)),
-                        );
-                    }
-                }
-            }
-        }
-    }
-
-    /// Checks for malformed links (empty URLs, invalid protocols)
-    fn check_malformed_links(diagnostics: &mut Diagnostics, metadata: &DocumentMetadata) {
-        for link in &metadata.links {
-            if link.url.is_empty() {
-                diagnostics.push(
-                    Diagnostic::warning("empty-link-url", "Link has empty URL")
-                        .with_source(format!("[{}]", link.title.as_deref().unwrap_or("text"))),
-                );
-            } else if link.url.starts_with("javascript:") {
-                diagnostics.push(
-                    Diagnostic::error("javascript-link", format!("JavaScript URL detected: {}", link.url))
-                        .with_source(link.url.clone()),
-                );
-            }
-        }
-    }
-
-    /// Checks for mixed line endings (CRLF and LF)
-    fn check_mixed_line_endings(diagnostics: &mut Diagnostics, text: &str) {
-        let has_crlf = text.contains("\r\n");
-        let has_lf = text.contains('\n') && text.replace("\r\n", "").contains('\n');
-
-        if has_crlf && has_lf {
-            diagnostics.push(Diagnostic::warning(
-                "mixed-line-endings",
-                "Document contains mixed line endings (CRLF and LF)",
-            ));
-        }
     }
 
     /// Renders Markdown using the default GfmSafe profile
     pub fn render_default(&self, text: &str) -> Result<RenderResult, MarkdownError> {
         self.render(text, MarkdownProfile::default())
-    }
-
-    /// Extracts metadata by traversing the AST
-    fn extract_metadata_from_node<'a>(
-        node: &'a comrak::nodes::AstNode<'a>, metadata: &mut DocumentMetadata, first_h1: &mut bool,
-    ) {
-        match &node.data.borrow().value {
-            NodeValue::Heading(heading) => {
-                let level = heading.level;
-                let text = Self::extract_text_from_node(node);
-
-                if level == 1 && *first_h1 {
-                    metadata.title = Some(text.clone());
-                    *first_h1 = false;
-                }
-
-                metadata.outline.push(Heading { level, text, anchor: None });
-            }
-            NodeValue::Link(link) => {
-                metadata.links.push(LinkRef {
-                    url: link.url.clone(),
-                    title: if link.title.is_empty() { None } else { Some(link.title.clone()) },
-                });
-            }
-            NodeValue::TaskItem(task_item) => {
-                metadata.task_items.total += 1;
-                if let Some(symbol) = task_item.symbol
-                    && (symbol == 'x' || symbol == 'X')
-                {
-                    metadata.task_items.completed += 1;
-                }
-            }
-            _ => {}
-        }
-
-        for child in node.children() {
-            Self::extract_metadata_from_node(child, metadata, first_h1);
-        }
-    }
-
-    /// Extracts plain text from a node and its children
-    fn extract_text_from_node<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
-        let mut text = String::new();
-
-        match &node.data.borrow().value {
-            NodeValue::Text(t) => {
-                text.push_str(t);
-            }
-            NodeValue::Code(code) => {
-                text.push_str(&code.literal);
-            }
-            _ => {
-                for child in node.children() {
-                    text.push_str(&Self::extract_text_from_node(child));
-                }
-            }
-        }
-
-        text
-    }
-
-    /// Estimates word count from Markdown text
-    ///
-    /// This is a simple estimation that counts whitespace-separated tokens
-    fn estimate_word_count(text: &str) -> usize {
-        text.split_whitespace().filter(|s| !s.is_empty()).count()
-    }
-
-    /// Validates that HTML output contains source position attributes
-    ///
-    /// This is useful for testing that sourcepos is enabled
-    pub fn has_sourcepos(html: &str) -> bool {
-        html.contains("data-sourcepos")
     }
 
     /// Exports Markdown to a complete HTML document
@@ -821,11 +369,11 @@ impl MarkdownEngine {
             .clone()
             .or_else(|| render_result.metadata.title.clone())
             .unwrap_or_else(|| "Exported Document".to_string());
-        output.push_str(&format!("  <title>{}</title>\n", html_escape(&title)));
+        output.push_str(&format!("  <title>{}</title>\n", utils::html_escape(&title)));
 
         if options.include_default_styles {
             output.push_str("  <style>\n");
-            output.push_str(DEFAULT_EXPORT_CSS);
+            output.push_str(include_str!("assets/export.css"));
             output.push_str("  </style>\n");
         }
 
@@ -838,7 +386,7 @@ impl MarkdownEngine {
         for css_url in &options.external_css_urls {
             output.push_str(&format!(
                 "  <link rel=\"stylesheet\" href=\"{}\">\n",
-                html_escape(css_url)
+                utils::html_escape(css_url)
             ));
         }
 
@@ -848,7 +396,7 @@ impl MarkdownEngine {
 
         if options.include_header && !title.is_empty() {
             output.push_str("  <header>\n");
-            output.push_str(&format!("    <h1>{}</h1>\n", html_escape(&title)));
+            output.push_str(&format!("    <h1>{}</h1>\n", utils::html_escape(&title)));
 
             if options.include_metadata {
                 output.push_str("    <div class=\"metadata\">\n");
@@ -856,12 +404,15 @@ impl MarkdownEngine {
                 if let Some(author) = render_result.metadata.front_matter.fields.get("author") {
                     output.push_str(&format!(
                         "      <span class=\"author\">{}</span>\n",
-                        html_escape(author)
+                        utils::html_escape(author)
                     ));
                 }
 
                 if let Some(date) = render_result.metadata.front_matter.fields.get("date") {
-                    output.push_str(&format!("      <span class=\"date\">{}</span>\n", html_escape(date)));
+                    output.push_str(&format!(
+                        "      <span class=\"date\">{}</span>\n",
+                        utils::html_escape(date)
+                    ));
                 }
 
                 if render_result.metadata.word_count > 0 {
@@ -900,51 +451,7 @@ impl MarkdownEngine {
         let render_result = self.render(text, profile)?;
         Ok(render_result.html)
     }
-}
 
-impl Default for MarkdownEngine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// PDF node types for structured PDF export
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
-pub enum PdfNode {
-    /// Heading with level and content
-    Heading { level: u8, content: String },
-    /// Paragraph text
-    Paragraph { content: String },
-    /// Code block with optional language
-    Code { content: String, language: Option<String> },
-    /// List with items and ordering flag
-    List { items: Vec<PdfNode>, ordered: bool },
-    /// Blockquote content
-    Blockquote { content: String },
-    /// Footnote with id and content
-    Footnote { id: String, content: String },
-}
-
-/// Result of rendering Markdown for PDF export
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PdfRenderResult {
-    /// The PDF AST nodes
-    pub nodes: Vec<PdfNode>,
-    /// Document title from metadata
-    pub title: Option<String>,
-    /// Word count
-    pub word_count: usize,
-}
-
-/// A list item for PDF export
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PdfListItem {
-    /// Content of the list item (typically a paragraph)
-    pub content: String,
-}
-
-impl MarkdownEngine {
     /// Renders Markdown text to a PDF-compatible AST
     ///
     /// Parses the markdown and transforms it into a structured format
@@ -954,110 +461,38 @@ impl MarkdownEngine {
         let options = profile.to_options();
 
         let (body_text, front_matter) = if profile.supports_front_matter() {
-            Self::extract_front_matter(text)
+            MarkdownParser::extract_front_matter(text)
         } else {
             (text, FrontMatter::default())
         };
 
         let root = parse_document(&arena, body_text, &options);
-        let metadata = Self::build_metadata(root, body_text, front_matter);
-
-        let nodes = Self::transform_to_pdf_nodes(root);
+        let metadata = MarkdownParser::build_metadata(root, body_text, front_matter);
+        let nodes = MarkdownTransformer::transform_to_pdf_nodes(root);
 
         Ok(PdfRenderResult { nodes, title: metadata.title, word_count: metadata.word_count })
     }
 
-    /// Transforms a Comrak AST node into PDF nodes
-    fn transform_to_pdf_nodes<'a>(node: &'a comrak::nodes::AstNode<'a>) -> Vec<PdfNode> {
-        use comrak::nodes::NodeValue;
+    /// Renders Markdown text to plaintext format
+    ///
+    /// Parses the markdown and transforms it into plain text with preserved
+    /// logical structure (paragraph breaks, list indentation, horizontal rules).
+    pub fn render_for_text(&self, text: &str, profile: MarkdownProfile) -> Result<TextExportResult, MarkdownError> {
+        let arena = Arena::new();
+        let options = profile.to_options();
 
-        let mut nodes = Vec::new();
+        let (body_text, front_matter) = if profile.supports_front_matter() {
+            MarkdownParser::extract_front_matter(text)
+        } else {
+            (text, FrontMatter::default())
+        };
 
-        for child in node.children() {
-            match &child.data.borrow().value {
-                NodeValue::Document => nodes.extend(Self::transform_to_pdf_nodes(child)),
-                NodeValue::Heading(heading) => {
-                    let content = Self::extract_text_content(child);
-                    nodes.push(PdfNode::Heading { level: heading.level, content });
-                }
-                NodeValue::Paragraph => {
-                    let content = Self::extract_text_content(child);
-                    if !content.is_empty() {
-                        nodes.push(PdfNode::Paragraph { content });
-                    }
-                }
-                NodeValue::CodeBlock(code_block) => {
-                    let content = code_block.literal.clone();
-                    let language = if code_block.info.is_empty() { None } else { Some(code_block.info.clone()) };
-                    nodes.push(PdfNode::Code { content, language });
-                }
-                NodeValue::List(list) => {
-                    let items = Self::transform_list_items(child, list.list_type == comrak::nodes::ListType::Ordered);
-                    if !items.is_empty() {
-                        nodes
-                            .push(PdfNode::List { items, ordered: list.list_type == comrak::nodes::ListType::Ordered });
-                    }
-                }
-                NodeValue::BlockQuote => {
-                    let content = Self::extract_text_content(child);
-                    nodes.push(PdfNode::Blockquote { content });
-                }
-                NodeValue::FootnoteDefinition(footnote) => {
-                    let content = Self::extract_text_content(child);
-                    nodes.push(PdfNode::Footnote { id: footnote.name.clone(), content });
-                }
-                _ => nodes.extend(Self::transform_to_pdf_nodes(child)),
-            }
-        }
+        let root = parse_document(&arena, body_text, &options);
+        let metadata = MarkdownParser::build_metadata(root, body_text, front_matter);
 
-        nodes
-    }
+        let plain_text = MarkdownTransformer::transform_to_plaintext(root);
 
-    /// Transforms list items from a list node
-    fn transform_list_items<'a>(list_node: &'a comrak::nodes::AstNode<'a>, _ordered: bool) -> Vec<PdfNode> {
-        let mut items = Vec::new();
-
-        for child in list_node.children() {
-            match &child.data.borrow().value {
-                comrak::nodes::NodeValue::Item(_) => {
-                    let content = Self::extract_text_content(child);
-                    if !content.is_empty() {
-                        items.push(PdfNode::Paragraph { content });
-                    }
-                }
-                _ => items.extend(Self::transform_list_items(child, _ordered)),
-            }
-        }
-
-        items
-    }
-
-    /// Extracts plain text content from a node and its children
-    fn extract_text_content<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
-        use comrak::nodes::NodeValue;
-
-        let mut text = String::new();
-
-        for child in node.children() {
-            match &child.data.borrow().value {
-                NodeValue::Text(t) => text.push_str(t),
-                NodeValue::SoftBreak | NodeValue::LineBreak => text.push(' '),
-                NodeValue::Code(code) => text.push_str(&code.literal),
-                NodeValue::Emph | NodeValue::Strong => text.push_str(&Self::extract_text_content(child)),
-                NodeValue::Link(link) => {
-                    let link_text = Self::extract_text_content(child);
-                    if link_text.is_empty() {
-                        text.push_str(&link.url);
-                    } else {
-                        text.push_str(&link_text);
-                    }
-                }
-                NodeValue::Strikethrough => text.push_str(&Self::extract_text_content(child)),
-                _ => text.push_str(&Self::extract_text_content(child)),
-            }
-        }
-
-        text.trim().to_string()
+        Ok(TextExportResult { text: plain_text, title: metadata.title, word_count: metadata.word_count })
     }
 }
 
@@ -1113,7 +548,7 @@ mod tests {
         let markdown = "# Hello\n\nParagraph here.";
         let result = engine.render(markdown, MarkdownProfile::GfmSafe).unwrap();
 
-        assert!(MarkdownEngine::has_sourcepos(&result.html));
+        assert!(utils::has_sourcepos(&result.html));
         assert!(result.html.contains("data-sourcepos"));
     }
 
@@ -1227,7 +662,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_basic_markdown() {
+    fn test_basic_markdown() {
         let engine = MarkdownEngine::new();
         let fixtures = fixtures_dir();
         let markdown = fs::read_to_string(fixtures.join("basic.md")).expect("Failed to read basic.md");
@@ -1242,7 +677,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_basic_outline() {
+    fn test_basic_outline() {
         let engine = MarkdownEngine::new();
         let fixtures = fixtures_dir();
         let markdown = fs::read_to_string(fixtures.join("basic.md")).expect("Failed to read basic.md");
@@ -1260,7 +695,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_basic_task_stats() {
+    fn test_basic_task_stats() {
         let engine = MarkdownEngine::new();
         let fixtures = fixtures_dir();
         let markdown = fs::read_to_string(fixtures.join("basic.md")).expect("Failed to read basic.md");
@@ -1270,7 +705,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_sourcepos_present_in_fixture() {
+    fn test_sourcepos_present_in_fixture() {
         let engine = MarkdownEngine::new();
         let fixtures = fixtures_dir();
         let markdown = fs::read_to_string(fixtures.join("basic.md")).expect("Failed to read basic.md");
@@ -1294,7 +729,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_xss_safety() {
+    fn test_xss_safety() {
         let engine = MarkdownEngine::new();
         let fixtures = render_fixtures_dir();
 
@@ -1419,7 +854,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_frontmatter_yaml() {
+    fn test_frontmatter_yaml() {
         let engine = MarkdownEngine::new();
         let fixtures = fixtures_dir();
 
@@ -1435,7 +870,7 @@ mod tests {
     }
 
     #[test]
-    fn test_golden_frontmatter_toml() {
+    fn test_frontmatter_toml() {
         let engine = MarkdownEngine::new();
         let fixtures = fixtures_dir();
 
@@ -1623,10 +1058,272 @@ mod tests {
 
     #[test]
     fn test_html_escape_function() {
-        assert_eq!(html_escape("<script>"), "&lt;script&gt;");
-        assert_eq!(html_escape("&"), "&amp;");
-        assert_eq!(html_escape("\""), "&quot;");
-        assert_eq!(html_escape("'"), "&#x27;");
-        assert_eq!(html_escape(">"), "&gt;");
+        assert_eq!(utils::html_escape("<script>"), "&lt;script&gt;");
+        assert_eq!(utils::html_escape("&"), "&amp;");
+        assert_eq!(utils::html_escape("\""), "&quot;");
+        assert_eq!(utils::html_escape("'"), "&#x27;");
+        assert_eq!(utils::html_escape(">"), "&gt;");
+    }
+
+    #[test]
+    fn test_render_for_text_basic() {
+        let engine = MarkdownEngine::new();
+        let markdown = "# Hello World\n\nThis is a paragraph with **bold** and _italic_ text.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("Hello World"));
+        assert!(result.text.contains("This is a paragraph with bold and italic text."));
+        assert!(!result.text.contains("**"));
+        assert!(!result.text.contains("_"));
+        assert!(!result.text.contains("#"));
+        assert_eq!(result.title, Some("Hello World".to_string()));
+    }
+
+    #[test]
+    fn test_render_for_text_preserves_structure() {
+        let engine = MarkdownEngine::new();
+        let markdown = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+        let lines: Vec<&str> = result.text.lines().collect();
+        assert!(lines.contains(&"First paragraph."));
+        assert!(lines.contains(&"Second paragraph."));
+        assert!(lines.contains(&"Third paragraph."));
+    }
+
+    #[test]
+    fn test_render_for_text_unordered_list() {
+        let engine = MarkdownEngine::new();
+        let markdown = "- Item 1\n- Item 2\n- Item 3";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("- Item 1"));
+        assert!(result.text.contains("- Item 2"));
+        assert!(result.text.contains("- Item 3"));
+        assert!(!result.text.contains("* ")); // Should not have markdown list markers
+    }
+
+    #[test]
+    fn test_render_for_text_ordered_list() {
+        let engine = MarkdownEngine::new();
+        let markdown = "1. First\n2. Second\n3. Third";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("1. First"));
+        assert!(result.text.contains("2. Second"));
+        assert!(result.text.contains("3. Third"));
+    }
+
+    #[test]
+    fn test_render_for_text_codeblock() {
+        let engine = MarkdownEngine::new();
+        let markdown = "```rust\nfn main() {\n    println!(\"Hello\");\n}\n```";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("fn main()"));
+        assert!(result.text.contains("println!"));
+        assert!(!result.text.contains("```"));
+        assert!(!result.text.contains("rust"));
+    }
+
+    #[test]
+    fn test_render_for_text_blockquote() {
+        let engine = MarkdownEngine::new();
+        let markdown = "> This is a quote\n> with multiple lines";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("> This is a quote"));
+        assert!(result.text.contains("> with multiple lines") || result.text.contains("with multiple lines"));
+        assert!(!result.text.contains("> This is a quote\n> ")); // Check that we don't have the raw markdown
+    }
+
+    #[test]
+    fn test_render_for_text_horizontal_rule() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Before\n\n---\n\nAfter";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("---"));
+        assert!(result.text.contains("Before"));
+        assert!(result.text.contains("After"));
+    }
+
+    #[test]
+    fn test_render_for_text_links() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Check out [this link](https://example.com) for more info.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("Check out this link for more info."));
+        assert!(!result.text.contains("["));
+        assert!(!result.text.contains("]"));
+        assert!(!result.text.contains("https://example.com"));
+    }
+
+    #[test]
+    fn test_render_for_text_inline_code() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Use the `print()` function to output text.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("Use the print() function to output text."));
+        assert!(!result.text.contains("`"));
+    }
+
+    #[test]
+    fn test_render_for_text_strikethrough() {
+        let engine = MarkdownEngine::new();
+        let markdown = "This is ~~deleted~~ text.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("This is deleted text."));
+        assert!(!result.text.contains("~~"));
+    }
+
+    #[test]
+    fn test_render_for_text_with_front_matter() {
+        let engine = MarkdownEngine::new();
+        let markdown = "---\ntitle: My Document\nauthor: John Doe\n---\n\n# Introduction\n\nThis is the content.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert_eq!(result.title, Some("My Document".to_string()));
+        assert!(result.text.contains("Introduction"));
+        assert!(result.text.contains("This is the content."));
+        assert!(!result.text.contains("---"));
+        assert!(!result.text.contains("title:"));
+    }
+
+    #[test]
+    fn test_render_for_text_word_count() {
+        let engine = MarkdownEngine::new();
+        let markdown = "One two three four five.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert_eq!(result.word_count, 5);
+    }
+
+    #[test]
+    fn test_render_for_text_nested_lists() {
+        let engine = MarkdownEngine::new();
+        let markdown = "- Parent 1\n  - Child 1\n  - Child 2\n- Parent 2";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(result.text.contains("- Parent 1"));
+        assert!(result.text.contains("- Child 1") || result.text.contains("  - Child 1"));
+        assert!(result.text.contains("- Child 2") || result.text.contains("  - Child 2"));
+        assert!(result.text.contains("- Parent 2"));
+    }
+
+    #[test]
+    fn test_render_for_text_footnotes() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Text with a footnote[^1].\n\n[^1]: This is the footnote.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::Extended).unwrap();
+
+        assert!(result.text.contains("Text with a footnote"));
+        assert!(result.text.contains("[^1]: This is the footnote."));
+
+        let text_before_def = result.text.split("[^1]:").next().unwrap_or("");
+        assert!(
+            !text_before_def.contains("[^1]"),
+            "Footnote reference should be removed from text, got: {}",
+            text_before_def
+        );
+    }
+
+    #[test]
+    fn test_render_for_text_tables() {
+        let engine = MarkdownEngine::new();
+        let markdown = "| Name | Value |\n|------|-------|\n| Foo  | 123   |\n| Bar  | 456   |";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(
+            result.text.contains("Name\tValue"),
+            "Table header should be tab-separated, got: {}",
+            result.text
+        );
+        assert!(
+            result.text.contains("Foo\t123") || result.text.contains("Foo  \t123"),
+            "Table row should be tab-separated, got: {}",
+            result.text
+        );
+        assert!(!result.text.contains("|"), "Table markers should be stripped");
+    }
+
+    #[test]
+    fn test_render_for_text_task_items() {
+        let engine = MarkdownEngine::new();
+        let markdown = "- [x] Completed task\n- [ ] Incomplete task\n- Regular item";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(
+            result.text.contains("Completed task"),
+            "Checked task content should be preserved"
+        );
+        assert!(
+            result.text.contains("Incomplete task"),
+            "Unchecked task content should be preserved"
+        );
+        assert!(
+            result.text.contains("Regular item"),
+            "Regular list item content should be preserved"
+        );
+    }
+
+    #[test]
+    fn test_render_for_text_html_block() {
+        let engine = MarkdownEngine::new();
+        let markdown = "<div>Some HTML content</div>\n\nRegular paragraph.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(
+            result.text.contains("<div>Some HTML content</div>") || result.text.contains("Some HTML content"),
+            "HTML block content should be included"
+        );
+        assert!(result.text.contains("Regular paragraph."));
+    }
+
+    #[test]
+    fn test_render_for_text_images() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Here is an ![alt text](image.png) image.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(
+            result.text.contains("Here is an alt text image."),
+            "Image alt text should be included"
+        );
+        assert!(!result.text.contains("!["), "Image markdown should be stripped");
+        assert!(!result.text.contains("image.png"), "Image URL should be stripped");
+    }
+
+    #[test]
+    fn test_render_for_text_empty_document() {
+        let engine = MarkdownEngine::new();
+        let markdown = "";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert_eq!(result.text, "");
+        assert_eq!(result.word_count, 0);
+        assert_eq!(result.title, None);
+    }
+
+    #[test]
+    fn test_render_for_text_mixed_formatting() {
+        let engine = MarkdownEngine::new();
+        let markdown = "# Title with **bold** and _italic_\n\nParagraph with `code` and ~~strikethrough~~.";
+        let result = engine.render_for_text(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(
+            result.text.contains("Title with bold and italic"),
+            "Heading content should have formatting stripped"
+        );
+        assert!(
+            result.text.contains("Paragraph with code and strikethrough"),
+            "Paragraph content should have formatting stripped"
+        );
+        assert!(!result.text.contains("**"), "Bold markers should be stripped");
+        assert!(!result.text.contains("_"), "Italic markers should be stripped");
+        assert!(!result.text.contains("`"), "Code markers should be stripped");
+        assert!(!result.text.contains("~~"), "Strikethrough markers should be stripped");
     }
 }

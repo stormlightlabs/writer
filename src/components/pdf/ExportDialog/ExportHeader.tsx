@@ -3,7 +3,7 @@ import { XIcon } from "$icons";
 import { usePdfDialogUiState, usePdfExportActions } from "$state/selectors";
 import { useCallback } from "react";
 
-export const PdfExportDialogHeader = () => {
+export function ExportDialogHeader() {
   const { setOpen: setIsOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
 
@@ -20,4 +20,4 @@ export const PdfExportDialogHeader = () => {
       </Button>
     </div>
   );
-};
+}

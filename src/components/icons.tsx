@@ -192,3 +192,21 @@ export const DragIcon = ({ size = "md", className = "", style }: IconProps) => (
     <i className="i-ri-drag-move-line" />
   </span>
 );
+
+export const InfoIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-information-line" />
+  </span>
+);
+
+export const DangerIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-error-warning-line" />
+  </span>
+);
+
+export const WarningIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-error-warning-fill" />
+  </span>
+);

@@ -138,3 +138,5 @@ export type CaptureSubmitInput = {
 export type Maybe<T> = T | null | undefined;
 
 export type SettingsScope = "basic" | "full";
+
+export type ExportFormat = "pdf" | "docx" | "txt";

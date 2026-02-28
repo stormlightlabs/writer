@@ -1,4 +1,4 @@
-import { PdfExportDialog } from "$components/pdf/ExportDialog/ExportDialog";
+import { ExportDialog } from "$components/pdf/ExportDialog/ExportDialog";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useAppStore } from "$state/stores/app";
@@ -33,9 +33,7 @@ function renderExportDialog(
   { previewResult = mockRenderResult, editorFontFamily = "IBM Plex Sans Variable", onExport = mockOnExport }:
     RenderDialogArgs = {},
 ) {
-  return render(
-    <PdfExportDialog onExport={onExport} previewResult={previewResult} editorFontFamily={editorFontFamily} />,
-  );
+  return render(<ExportDialog onExport={onExport} previewResult={previewResult} editorFontFamily={editorFontFamily} />);
 }
 
 describe("PdfExportDialog", () => {
@@ -133,7 +131,7 @@ describe("PdfExportDialog", () => {
       expect(exportingButton).toBeDisabled();
     });
 
-    it("disables future export format tabs and disables export button for them", () => {
+    it("disables docx export format tab but enables plaintext tab", () => {
       useUiStore.getState().setPdfExportDialogOpen(true);
       renderExportDialog();
 
@@ -141,7 +139,7 @@ describe("PdfExportDialog", () => {
       const txtTab = screen.getByRole("button", { name: "Plaintext export tab" });
 
       expect(docxTab).toBeDisabled();
-      expect(txtTab).toBeDisabled();
+      expect(txtTab).toBeEnabled();
       expect(screen.getByText("Export PDF")).toBeEnabled();
     });
   });

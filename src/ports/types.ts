@@ -136,6 +136,7 @@ export type SearchParams<T> = Parameters<
 
 export type RenderMarkdownParams<T> = [...LocationPathTextParams, profile?: MarkdownProfile, ...LocParams<T>];
 export type RenderMarkdownForPdfParams<T> = [...LocationPathTextParams, profile?: MarkdownProfile, ...LocParams<T>];
+export type RenderMarkdownForTextParams<T> = [...LocationPathTextParams, profile?: MarkdownProfile, ...LocParams<T>];
 
 export type UiLayoutSetParams<T> = Parameters<
   (settings: UiLayoutSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void

@@ -1,8 +1,12 @@
 // TODO: make the options section collapsible
 // TODO: pin the toolbar/make sticky or render above the scrollable portion of the preview
 // FIXME: Fit Page and Fit Width do the same thing
+import { Button } from "$components/Button";
 import { Dialog } from "$components/Dialog";
+import { TextPreviewPanel } from "$components/export/TextPreview";
+import { FileTextIcon } from "$components/icons";
 import { PdfPreviewPanel } from "$components/pdf/PdfPreview";
+import { useTextExportUI } from "$hooks/useTextExport";
 import { useViewportTier } from "$hooks/useViewportTier";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import {
@@ -10,27 +14,30 @@ import {
   usePdfExportActions,
   usePdfExportState,
   useTabsState,
+  useTextExportActions,
+  useTextExportState,
   useWorkspaceDocumentsState,
 } from "$state/selectors";
-import type { EditorFontFamily } from "$types";
+import type { EditorFontFamily, ExportFormat } from "$types";
 import { type MouseEvent, useCallback, useMemo, useState } from "react";
-import { PdfExportDialogFooter } from "./ExportFooter";
-import { PdfExportDialogHeader } from "./ExportHeader";
+import { ExportDialogFooter, PdfExportDialogFooter } from "./ExportFooter";
+import { ExportDialogHeader } from "./ExportHeader";
 import { PdfExportDialogOptions } from "./ExportOptions";
 
-export type PdfExportDialogProps = {
+export type ExportDialogProps = {
   onExport: (options: PdfExportOptions) => Promise<void>;
-  previewResult?: PdfRenderResult | null;
+  previewResult: PdfRenderResult | null;
   editorFontFamily: EditorFontFamily;
+  documentText?: string;
 };
 
-type ExportFormatTab = { id: "pdf" | "docx" | "txt"; label: string; disabled: boolean };
+type ExportFormatTab = { id: ExportFormat; label: string; disabled: boolean };
 
 const EXPORT_FORMAT_TABS: ExportFormatTab[] = [{ id: "pdf", label: "PDF", disabled: false }, {
   id: "docx",
   label: "DOC/DOCX",
   disabled: true,
-}, { id: "txt", label: "Plaintext", disabled: true }];
+}, { id: "txt", label: "Plaintext", disabled: false }];
 
 type ExportFormatTabsProps = {
   activeTabId: ExportFormatTab["id"];
@@ -77,38 +84,100 @@ type PdfExportContentProps = {
   handleExportClick: () => Promise<void>;
 };
 
-const PdfExportContent = (
+function PdfExportContent(
   { showPreview, previewResult, options, editorFontFamily, handleExportClick }: PdfExportContentProps,
-) => (
-  <>
-    <div className={`flex-1 min-h-0 ${showPreview ? "grid grid-cols-[1fr,320px] gap-6" : ""}`}>
-      {showPreview
-        ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
-        : null}
-      <OptionsPane isFullWidth={!showPreview} />
-    </div>
-    <PdfExportDialogFooter handleExportClick={handleExportClick} exportLabel="Export PDF" />
-  </>
+) {
+  const { pdfExportError: error } = usePdfExportState();
+  return (
+    <>
+      <ExportError error={error} />
+      <div className={`flex-1 min-h-0 ${showPreview ? "grid grid-cols-[1fr,320px] gap-6" : ""}`}>
+        {showPreview
+          ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
+          : null}
+        <OptionsPane isFullWidth={!showPreview} />
+      </div>
+      <PdfExportDialogFooter handleExportClick={handleExportClick} label="Export PDF" />
+    </>
+  );
+}
+
+const ExportInfo = () => (
+  <div className="text-center mb-4">
+    <p className="text-sm text-text-secondary mb-2">
+      Export your document as plain text with Markdown formatting removed.
+    </p>
+    <p className="text-xs text-text-tertiary">Logical structure (paragraphs, lists, blockquotes) will be preserved.</p>
+  </div>
 );
 
-const PlannedFormatContent = ({ handleExportClick }: { handleExportClick: () => Promise<void> }) => (
-  <>
-    <div className="flex-1 min-h-0 flex items-center justify-center rounded-lg border border-dashed border-border-subtle bg-layer-02/40 p-6">
-      <p className="text-sm text-text-secondary text-center">
-        This export format is planned in the roadmap and is not available yet.
-      </p>
+function ExportMarkdownButton({ handleClick }: { handleClick: () => Promise<void> }) {
+  const { isExportingText } = useTextExportState();
+  return (
+    <div className="flex justify-center">
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={handleClick}
+        disabled={isExportingText}
+        className="flex items-center gap-2">
+        <FileTextIcon size="sm" />
+        Save Original Markdown
+      </Button>
     </div>
-    <PdfExportDialogFooter handleExportClick={handleExportClick} exportLabel="Coming soon" disableExportButton />
-  </>
+  );
+}
+
+type TextExportContentProps = {
+  handleMarkdownExport: () => Promise<void>;
+  handleTextExport: () => Promise<void>;
+  showPreview: boolean;
+  locationId: number;
+  relPath: string;
+  text: string;
+};
+
+const MarkdownExporter = ({ handleClick, showPreview }: { handleClick: () => Promise<void>; showPreview: boolean }) => (
+  <div className={`flex flex-col min-h-0 overflow-auto ${showPreview ? "shrink-0" : "flex-1"}`}>
+    <div className="flex-1 flex flex-col justify-center rounded-lg border border-dashed border-border-subtle bg-layer-02/40 p-6">
+      <ExportInfo />
+      <ExportMarkdownButton handleClick={handleClick} />
+    </div>
+  </div>
 );
 
-const PdfTitle = ({ title }: { title?: string }) => (title
-  ? (
+function TextExportContent(
+  { handleMarkdownExport, handleTextExport, showPreview, locationId, relPath, text }: TextExportContentProps,
+) {
+  const { textExportError: error, isExportingText } = useTextExportState();
+  return (
+    <>
+      <ExportError error={error} />
+      <div className={`flex-1 min-h-0 ${showPreview ? "grid grid-cols-[1fr,320px] gap-6" : ""}`}>
+        {showPreview && (
+          <div className="min-h-0 flex-1 overflow-auto">
+            <TextPreviewPanel locationId={locationId} relPath={relPath} text={text} />
+          </div>
+        )}
+        <MarkdownExporter handleClick={handleMarkdownExport} showPreview={showPreview} />
+      </div>
+      <ExportDialogFooter handleExport={handleTextExport} label="Export Text" isLoading={isExportingText} />
+    </>
+  );
+}
+
+function DocumentTitle({ title }: { title?: string }) {
+  if (!title) {
+    return null;
+  }
+
+  return (
     <p className="text-sm text-text-secondary mb-4">
       Exporting: <span className="font-medium text-text-primary">{title}</span>
     </p>
-  )
-  : null);
+  );
+}
 
 const PreviewPane = (
   { previewResult, options, editorFontFamily }: {
@@ -128,41 +197,60 @@ const OptionsPane = ({ isFullWidth }: { isFullWidth: boolean }) => (
   </div>
 );
 
-export function PdfExportDialog({ onExport, previewResult, editorFontFamily }: PdfExportDialogProps) {
+function ExportError({ error }: { error: string | null }) {
+  if (error) {
+    return <p className="text-sm text-support-error mb-4">{error}</p>;
+  }
+
+  return null;
+}
+
+export function ExportDialog({ onExport, previewResult, editorFontFamily, documentText = "" }: ExportDialogProps) {
   const { isOpen, setOpen: setIsOpen, options } = usePdfDialogUiState();
-  const { pdfExportError } = usePdfExportState();
   const { resetPdfExport } = usePdfExportActions();
+  const { resetTextExport } = useTextExportActions();
   const { tabs, activeTabId } = useTabsState();
   const { documents } = useWorkspaceDocumentsState();
-
   const { isCompact, viewportWidth } = useViewportTier();
   const [activeExportTabId, setActiveExportTabId] = useState<ExportFormatTab["id"]>("pdf");
-  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
-  const title = activeTab
-    ? documents.find((doc) =>
-      doc.location_id === activeTab.docRef.location_id && doc.rel_path === activeTab.docRef.rel_path
-    )?.title
-    : undefined;
+  const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [tabs, activeTabId]);
+
+  const title = useMemo(
+    () =>
+      activeTab
+        ? documents.find((doc) =>
+          doc.location_id === activeTab.docRef.location_id && doc.rel_path === activeTab.docRef.rel_path
+        )?.title
+        : undefined,
+    [activeTab, documents],
+  );
+
+  const { handleExportText, handleExportMarkdown } = useTextExportUI({ activeTab, text: documentText });
 
   const handleCancel = useCallback(() => {
     setIsOpen(false);
     resetPdfExport();
-  }, [resetPdfExport, setIsOpen]);
+    resetTextExport();
+  }, [resetPdfExport, resetTextExport, setIsOpen]);
 
-  const handleExportClick = useCallback(async () => {
+  const handlePdfExportClick = useCallback(async () => {
     await onExport(options);
   }, [onExport, options]);
 
+  const handleTextExportClick = useCallback(async () => {
+    await handleExportText();
+    setIsOpen(false);
+  }, [handleExportText, setIsOpen]);
+
+  const handleMarkdownExportClick = useCallback(async () => {
+    await handleExportMarkdown();
+    setIsOpen(false);
+  }, [handleExportMarkdown, setIsOpen]);
+
   const compactPanel = useMemo(() => isCompact || viewportWidth < 1024, [isCompact, viewportWidth]);
   const showPreview = useMemo(() => !compactPanel && viewportWidth >= 1200, [compactPanel, viewportWidth]);
-  const isPdfTabActive = activeExportTabId === "pdf";
-  const handleExportFormatTabClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-    const nextTabId = event.currentTarget.dataset.tabId as ExportFormatTab["id"] | undefined;
-    if (!nextTabId) {
-      return;
-    }
-    setActiveExportTabId(nextTabId);
-  }, []);
+  const isPdfTabActive = useMemo(() => activeExportTabId === "pdf", [activeExportTabId]);
+  const isTextTabActive = useMemo(() => activeExportTabId === "txt", [activeExportTabId]);
 
   const containerClasses = useMemo(() => {
     if (compactPanel) {
@@ -181,6 +269,24 @@ export function PdfExportDialog({ onExport, previewResult, editorFontFamily }: P
     return "pointer-events-auto bg-layer-01 border border-border-subtle shadow-xl w-full max-w-xl max-h-[85vh] rounded-lg flex flex-col";
   }, [compactPanel, showPreview]);
 
+  const handleExportFormatTabClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    const nextTabId = event.currentTarget.dataset.tabId as ExportFormatTab["id"] | undefined;
+    if (!nextTabId) {
+      return;
+    }
+
+    setActiveExportTabId(nextTabId);
+    resetPdfExport();
+    resetTextExport();
+  }, [resetPdfExport, resetTextExport]);
+
+  const pdfExportProps = useMemo(() => ({ showPreview, previewResult, options, editorFontFamily }), [
+    showPreview,
+    previewResult,
+    options,
+    editorFontFamily,
+  ]);
+
   return (
     <Dialog
       isOpen={isOpen}
@@ -191,21 +297,19 @@ export function PdfExportDialog({ onExport, previewResult, editorFontFamily }: P
       containerClassName={containerClasses}
       panelClassName={panelClasses}>
       <div className={`flex flex-col min-h-0 ${compactPanel ? "p-4" : "p-6"}`}>
-        <PdfExportDialogHeader />
+        <ExportDialogHeader />
         <ExportFormatTabs activeTabId={activeExportTabId} onTabClick={handleExportFormatTabClick} />
-        <PdfTitle title={title} />
-        {pdfExportError ? <p className="text-sm text-support-error mb-4">{pdfExportError}</p> : null}
-
-        {isPdfTabActive
-          ? (
-            <PdfExportContent
-              showPreview={showPreview}
-              previewResult={previewResult ?? null}
-              options={options}
-              editorFontFamily={editorFontFamily}
-              handleExportClick={handleExportClick} />
-          )
-          : <PlannedFormatContent handleExportClick={handleExportClick} />}
+        <DocumentTitle title={title} />
+        {isPdfTabActive && <PdfExportContent {...pdfExportProps} handleExportClick={handlePdfExportClick} />}
+        {isTextTabActive && activeTab && (
+          <TextExportContent
+            handleTextExport={handleTextExportClick}
+            handleMarkdownExport={handleMarkdownExportClick}
+            showPreview={showPreview}
+            locationId={activeTab.docRef.location_id}
+            relPath={activeTab.docRef.rel_path}
+            text={documentText} />
+        )}
       </div>
     </Dialog>
   );

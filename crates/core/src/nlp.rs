@@ -407,7 +407,6 @@ mod tests {
     fn reports_utf16_ranges_for_multibyte_characters() {
         let matcher = matcher(&[("just", PatternCategory::Filler)]);
 
-        // "🙂" is two UTF-16 code units, so "just" starts at 3 in UTF-16 offsets.
         let matches = matcher.scan("a🙂just");
 
         assert_eq!(matches.len(), 1);

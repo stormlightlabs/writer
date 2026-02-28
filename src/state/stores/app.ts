@@ -5,6 +5,7 @@ import { resetPdfExportStore, usePdfExportStore } from "./pdf-export";
 import { resetSearchStore, useSearchStore } from "./search";
 import { resetShortcutsStore } from "./shortcuts";
 import { resetTabsStore, useTabsStore } from "./tabs";
+import { resetTextExportStore, useTextExportStore } from "./text-export";
 import { resetUiStore, useUiStore } from "./ui";
 import { resetWorkspaceStore, useWorkspaceStore } from "./workspace";
 
@@ -14,6 +15,7 @@ function getMergedState(): AppStore {
     ...useWorkspaceStore.getState(),
     ...useTabsStore.getState(),
     ...usePdfExportStore.getState(),
+    ...useTextExportStore.getState(),
     ...useSearchStore.getState(),
     ...useUiStore.getState(),
   } as AppStore;
@@ -26,17 +28,14 @@ export function useAppStore<T>(selector?: (state: AppStore) => T): AppStore | T 
   const workspace = useWorkspaceStore();
   const tabs = useTabsStore();
   const pdfExport = usePdfExportStore();
+  const textExport = useTextExportStore();
   const search = useSearchStore();
   const ui = useUiStore();
 
-  const state = useMemo(() => ({ ...layout, ...workspace, ...tabs, ...pdfExport, ...search, ...ui }) as AppStore, [
-    layout,
-    workspace,
-    tabs,
-    pdfExport,
-    search,
-    ui,
-  ]);
+  const state = useMemo(
+    () => ({ ...layout, ...workspace, ...tabs, ...pdfExport, ...textExport, ...search, ...ui }) as AppStore,
+    [layout, workspace, tabs, pdfExport, textExport, search, ui],
+  );
 
   if (!selector) {
     return state;
@@ -52,6 +51,7 @@ export function resetAppStore(): void {
   resetWorkspaceStore();
   resetTabsStore();
   resetPdfExportStore();
+  resetTextExportStore();
   resetSearchStore();
   resetUiStore();
   resetShortcutsStore();

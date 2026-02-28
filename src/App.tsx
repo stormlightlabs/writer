@@ -6,13 +6,14 @@ import { FocusModePanel } from "./components/layout/FocusModePanel";
 import { LayoutSettingsPanel, RoutedSettingsSheet } from "./components/layout/LayoutSettingsPanel";
 import { SearchOverlay } from "./components/layout/SearchOverlay";
 import { WorkspacePanel } from "./components/layout/WorkspacePanel";
-import { PdfExportDialog } from "./components/pdf/ExportDialog/ExportDialog";
+import { ExportDialog } from "./components/pdf/ExportDialog/ExportDialog";
+import { Toaster } from "./components/Toaster";
 import { useAppChromeController } from "./hooks/controllers/useAppChromeController";
 import { useWorkspaceViewController } from "./hooks/controllers/useWorkspaceViewController";
 import { useHelpSheetState } from "./state/selectors";
 
 const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
-  const { workspacePanelProps, focusModePanelProps, handleExportPdf, previewResult, editorFontFamily } =
+  const { workspacePanelProps, focusModePanelProps, handleExportPdf, previewResult, editorFontFamily, editorText } =
     useWorkspaceViewController();
   const { isOpen: isHelpSheetOpen, setOpen: setHelpSheetOpen } = useHelpSheetState();
   const closeHelpSheet = useCallback(() => setHelpSheetOpen(false), [setHelpSheetOpen]);
@@ -22,6 +23,7 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
       <>
         <FocusModePanel {...focusModePanelProps} />
         <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
+        <Toaster />
       </>
     );
   }
@@ -30,10 +32,15 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
     <>
       <WorkspacePanel {...workspacePanelProps} />
       <LayoutSettingsPanel />
-      <PdfExportDialog onExport={handleExportPdf} previewResult={previewResult} editorFontFamily={editorFontFamily} />
+      <ExportDialog
+        onExport={handleExportPdf}
+        previewResult={previewResult}
+        editorFontFamily={editorFontFamily}
+        documentText={editorText} />
       <SearchOverlay />
       <BackendAlerts />
       <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
+      <Toaster />
     </>
   );
 };

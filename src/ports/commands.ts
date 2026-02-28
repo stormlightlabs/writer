@@ -39,6 +39,7 @@ import type {
   LocParams,
   PersistedStyleCheckSettings,
   RenderMarkdownForPdfParams,
+  RenderMarkdownForTextParams,
   RenderMarkdownParams,
   SaveResult,
   SearchFiltersPayload,
@@ -233,6 +234,28 @@ export function renderMarkdownForPdf(
   ).catch(() => {});
 
   return invokeCmd<PdfRenderResult>("markdown_render_for_pdf", payload, onOk, onErr);
+}
+
+export type TextExportResult = { text: string; title: string | null; word_count: number };
+
+export function renderMarkdownForText(
+  ...[locationId, relPath, text, profile, onOk, onErr]: RenderMarkdownForTextParams<TextExportResult>
+): Cmd {
+  const payload = toSafeMarkdownPayload(locationId, relPath, text, profile);
+  void info(
+    JSON.stringify({
+      event: "renderMarkdownForText_payload",
+      raw: {
+        locationId: describeValueShape(locationId),
+        relPath: describeValueShape(relPath),
+        text: describeValueShape(text),
+        profile: describeValueShape(profile),
+      },
+      normalized: { ...payload, text: `<${payload.text.length} chars>` },
+    }),
+  ).catch(() => {});
+
+  return invokeCmd<TextExportResult>("markdown_render_for_text", payload, onOk, onErr);
 }
 
 export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd {

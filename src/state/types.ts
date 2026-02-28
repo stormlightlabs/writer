@@ -148,6 +148,15 @@ export type PdfExportActions = {
   resetPdfExport: () => void;
 };
 
+export type TextExportState = { isExportingText: boolean; textExportError: string | null };
+
+export type TextExportActions = {
+  startTextExport: () => void;
+  finishTextExport: () => void;
+  failTextExport: (message: string) => void;
+  resetTextExport: () => void;
+};
+
 export type SearchState = {
   searchQuery: string;
   searchResults: SearchHit[];
@@ -200,6 +209,8 @@ export type AppStore =
   & TabsActions
   & PdfExportState
   & PdfExportActions
+  & TextExportState
+  & TextExportActions
   & SearchState
   & SearchActions
   & UiState

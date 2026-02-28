@@ -104,6 +104,7 @@ pub fn run() {
             cmd::search,
             cmd::markdown_render,
             cmd::markdown_render_for_pdf,
+            cmd::markdown_render_for_text,
             cmd::ui_layout_get,
             cmd::ui_layout_set,
             cmd::session_get,

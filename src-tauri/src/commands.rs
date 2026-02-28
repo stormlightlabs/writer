@@ -12,7 +12,7 @@ use writer_core::{
     LocationDescriptor, LocationId, SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch,
     StylePatternInput, StyleScanInput,
 };
-use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult};
+use writer_md::{MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult, TextExportResult};
 use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
 
 type CommandResponse<T> = std::result::Result<CommandResult<T>, AppError>;
@@ -899,6 +899,47 @@ pub fn markdown_render_for_pdf(
             Ok(CommandResult::err(AppError::new(
                 writer_core::ErrorCode::Parse,
                 format!("Failed to render markdown for PDF: {}", e),
+            )))
+        }
+    }
+}
+
+/// Renders markdown text to plaintext format
+///
+/// This command takes document text and returns plain text with
+/// Markdown formatting stripped but logical structure preserved.
+#[tauri::command]
+pub fn markdown_render_for_text(
+    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
+) -> CommandResponse<TextExportResult> {
+    let location_id = LocationId(location_id);
+    let rel_path = PathBuf::from(&rel_path);
+
+    log::debug!(
+        "Rendering markdown for text export: location={:?}, path={:?}, profile={:?}, text_len={}",
+        location_id,
+        rel_path,
+        profile,
+        text.len()
+    );
+
+    let engine = MarkdownEngine::new();
+    let profile = profile.unwrap_or(MarkdownProfile::Extended);
+
+    match engine.render_for_text(&text, profile) {
+        Ok(result) => {
+            log::debug!(
+                "Markdown rendered for text export successfully: text_len={}, word_count={}",
+                result.text.len(),
+                result.word_count
+            );
+            Ok(CommandResult::ok(result))
+        }
+        Err(e) => {
+            log::error!("Failed to render markdown for text export: {}", e);
+            Ok(CommandResult::err(AppError::new(
+                writer_core::ErrorCode::Parse,
+                format!("Failed to render markdown for text export: {}", e),
             )))
         }
     }

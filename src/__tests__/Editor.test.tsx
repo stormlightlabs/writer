@@ -143,7 +143,6 @@ describe(Editor, () => {
         }, { timeout: 1200 });
       }
     });
-
   });
 
   describe("prop updates", () => {

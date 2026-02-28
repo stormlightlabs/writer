@@ -33,6 +33,7 @@ export type WorkspaceViewController = {
   handleExportPdf: (options: PdfExportOptions) => Promise<void>;
   previewResult: PdfRenderResult | null;
   editorFontFamily: EditorFontFamily;
+  editorText: string;
 };
 
 export function deriveWordCount(text: string, renderWordCount: number | undefined): number {
@@ -307,5 +308,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     handleExportPdf,
     previewResult,
     editorFontFamily: editorPresentation.fontFamily,
+    editorText: editorModel.text,
   };
 }

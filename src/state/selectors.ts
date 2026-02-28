@@ -4,6 +4,7 @@ import { useLayoutStore } from "./stores/layout";
 import { usePdfExportStore } from "./stores/pdf-export";
 import { useSearchStore } from "./stores/search";
 import { useTabsStore } from "./stores/tabs";
+import { useTextExportStore } from "./stores/text-export";
 import { useUiStore } from "./stores/ui";
 import { useWorkspaceStore } from "./stores/workspace";
 import type { EditorPresentation } from "./types";
@@ -183,6 +184,21 @@ export const usePdfExportActions = () =>
       finishPdfExport: state.finishPdfExport,
       failPdfExport: state.failPdfExport,
       resetPdfExport: state.resetPdfExport,
+    })),
+  );
+
+export const useTextExportState = () =>
+  useTextExportStore(
+    useShallow((state) => ({ isExportingText: state.isExportingText, textExportError: state.textExportError })),
+  );
+
+export const useTextExportActions = () =>
+  useTextExportStore(
+    useShallow((state) => ({
+      startTextExport: state.startTextExport,
+      finishTextExport: state.finishTextExport,
+      failTextExport: state.failTextExport,
+      resetTextExport: state.resetTextExport,
     })),
   );
 
