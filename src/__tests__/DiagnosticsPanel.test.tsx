@@ -1,4 +1,4 @@
-import { DiagnosticsPanel } from "$components/layout/DiagnosticsPanel";
+import { DiagnosticsPanel } from "$components/AppLayout/DiagnosticsPanel";
 import type { StyleMatch } from "$editor/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

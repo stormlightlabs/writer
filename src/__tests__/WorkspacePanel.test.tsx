@@ -1,7 +1,7 @@
 /* oxlint-disable eslint-plugin-react-perf/jsx-no-new-object-as-prop */
+import { WorkspacePanel } from "$components/AppLayout/WorkspacePanel";
+import type { WorkspaceDiagnosticsProps, WorkspacePanelProps } from "$components/AppLayout/WorkspacePanel";
 import { EditorProps } from "$components/Editor";
-import { WorkspacePanel } from "$components/layout/WorkspacePanel";
-import type { WorkspaceDiagnosticsProps, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
 import { PreviewProps } from "$components/Preview";
 import { StatusBarProps } from "$components/StatusBar";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";

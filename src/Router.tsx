@@ -1,4 +1,4 @@
-import { QuickCaptureApp } from "$components/capture";
+import { QuickCaptureApp } from "$components/QuickCapture";
 import { Route, Router, Switch, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import App from "./App";

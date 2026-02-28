@@ -1,4 +1,4 @@
-import { AppHeaderBar } from "$components/layout/AppHeaderBar";
+import { AppHeaderBar } from "$components/AppLayout/AppHeaderBar";
 import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";

@@ -1,4 +1,4 @@
-import type { WorkspaceEditorProps, WorkspacePanelProps } from "$components/layout/WorkspacePanel";
+import type { WorkspaceEditorProps, WorkspacePanelProps } from "$components/AppLayout/WorkspacePanel";
 import { StatusBarProps } from "$components/StatusBar";
 import type { StyleMatch } from "$editor/types";
 import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects";

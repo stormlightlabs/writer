@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { QuickCaptureForm } from "../components/capture/QuickCaptureForm";
+import { QuickCaptureForm } from "../components/QuickCapture/QuickCaptureForm";
 
 describe("QuickCaptureForm", () => {
   it("submits on Enter in quick note mode", () => {

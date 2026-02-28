@@ -1,4 +1,4 @@
-import { MarkdownPdfDocument } from "$components/pdf/MarkdownPdfDocument";
+import { MarkdownPdfDocument } from "$components/export/MarkdownPdfDocument";
 import { PDFError } from "$pdf/errors";
 import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
 import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";

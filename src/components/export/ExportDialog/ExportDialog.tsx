@@ -3,9 +3,9 @@
 // FIXME: Fit Page and Fit Width do the same thing
 import { Button } from "$components/Button";
 import { Dialog } from "$components/Dialog";
-import { TextPreviewPanel } from "$components/export/TextPreview";
+import { PdfPreviewPanel } from "$components/export/preview/PdfPreview";
+import { TextPreviewPanel } from "$components/export/preview/TextPreview";
 import { FileTextIcon } from "$components/icons";
-import { PdfPreviewPanel } from "$components/pdf/PdfPreview";
 import { useTextExportUI } from "$hooks/useTextExport";
 import { useViewportTier } from "$hooks/useViewportTier";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";

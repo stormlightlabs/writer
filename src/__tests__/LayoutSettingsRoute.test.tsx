@@ -1,4 +1,4 @@
-import { LayoutSettingsPanel, RoutedSettingsSheet } from "$components/layout/LayoutSettingsPanel";
+import { LayoutSettingsPanel, RoutedSettingsSheet } from "$components/AppLayout/LayoutSettingsPanel";
 import { resetLayoutStore } from "$state/stores/layout";
 import { resetUiStore, useUiStore } from "$state/stores/ui";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";

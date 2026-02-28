@@ -1,4 +1,4 @@
-import { PdfPreviewPanel, usePdfPreview } from "$components/pdf/PdfPreview";
+import { PdfPreviewPanel, usePdfPreview } from "$components/export/preview/PdfPreview";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import { ensurePdfFontRegistered } from "$pdf/fonts";
 import type { PdfRenderResult } from "$pdf/types";

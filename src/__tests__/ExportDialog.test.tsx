@@ -1,4 +1,4 @@
-import { ExportDialog } from "$components/pdf/ExportDialog/ExportDialog";
+import { ExportDialog } from "$components/export/ExportDialog/ExportDialog";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useAppStore } from "$state/stores/app";
