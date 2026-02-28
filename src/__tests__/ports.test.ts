@@ -1,4 +1,5 @@
 import {
+  appVersionGet,
   backendEvents,
   batch,
   docList,
@@ -1059,6 +1060,18 @@ describe("global capture Commands", () => {
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("markdown_help_get");
+      expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe(appVersionGet, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = appVersionGet(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("app_version_get");
       expect(cmd.payload).toStrictEqual({});
     });
   });

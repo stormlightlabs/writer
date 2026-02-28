@@ -1,20 +1,44 @@
 import { Button } from "$components/Button";
+import { Version } from "$components/Version";
 import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { CheckIcon, ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
+import { appVersionGet, runCmd } from "$ports";
 import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const AppTitle = ({ hideTitle }: { hideTitle: boolean }) => (
+const AppTitle = ({ hideTitle, version }: { hideTitle: boolean; version: string }) => (
   <div className="flex items-center gap-3">
     <div className={`h-8 ${hideTitle ? "w-8" : "px-2.5"} flex items-center justify-center`}>
       <PenIcon size="lg" />
     </div>
-    {hideTitle ? null : <h1 className="m-0 text-[0.9375rem] font-semibold text-text-primary">Writer</h1>}
+    {hideTitle ? null : (
+      <div className="flex items-end gap-1.5">
+        <h1 className="m-0 text-[0.9375rem] font-semibold text-text-primary">Writer</h1>
+        <Version value={version} />
+      </div>
+    )}
   </div>
 );
 
-const SearchRow = (
+type SearchRowProps = {
+  onOpenSearch: () => void;
+  onOpenHelp: () => void;
+  onToggleSidebar: () => void;
+  onToggleTabBar: () => void;
+  onToggleStatusBar: () => void;
+  onToggleStyleDiagnostics: () => void;
+  sidebarCollapsed: boolean;
+  tabBarCollapsed: boolean;
+  statusBarCollapsed: boolean;
+  styleDiagnosticsOpen: boolean;
+  iconOnly: boolean;
+  showSearchShortcut: boolean;
+  showHelpShortcut: boolean;
+  compactTabLabel: boolean;
+};
+
+function SearchRow(
   {
     onOpenSearch,
     onOpenHelp,
@@ -30,23 +54,8 @@ const SearchRow = (
     showSearchShortcut,
     showHelpShortcut,
     compactTabLabel,
-  }: {
-    onOpenSearch: () => void;
-    onOpenHelp: () => void;
-    onToggleSidebar: () => void;
-    onToggleTabBar: () => void;
-    onToggleStatusBar: () => void;
-    onToggleStyleDiagnostics: () => void;
-    sidebarCollapsed: boolean;
-    tabBarCollapsed: boolean;
-    statusBarCollapsed: boolean;
-    styleDiagnosticsOpen: boolean;
-    iconOnly: boolean;
-    showSearchShortcut: boolean;
-    showHelpShortcut: boolean;
-    compactTabLabel: boolean;
-  },
-) => {
+  }: SearchRowProps,
+) {
   const statusbarId = useMemo(() => {
     if (compactTabLabel) {
       return {
@@ -143,9 +152,10 @@ const SearchRow = (
       </Button>
     </div>
   );
-};
+}
 
-export const AppHeaderBar = () => {
+export function AppHeaderBar() {
+  const [version, setVersion] = useState("");
   const { setOpen: setHelpSheetOpen } = useHelpSheetState();
   const { isOpen: styleDiagnosticsOpen, open: openStyleDiagnostics, close: closeStyleDiagnostics } = useRoutedSheet(
     "/diagnostics",
@@ -164,6 +174,22 @@ export const AppHeaderBar = () => {
   const showHelpShortcut = useMemo(() => viewportWidth >= 1240, [viewportWidth]);
   const iconOnly = useMemo(() => viewportWidth < 760, [viewportWidth]);
 
+  useEffect(() => {
+    let isUnmounted = false;
+
+    void runCmd(appVersionGet((value) => {
+      if (isUnmounted || typeof value !== "string") {
+        return;
+      }
+
+      setVersion(value);
+    }, () => {}));
+
+    return () => {
+      isUnmounted = true;
+    };
+  }, []);
+
   const handleOpenSearch = useCallback(() => {
     setShowSearch(true);
   }, [setShowSearch]);
@@ -181,7 +207,7 @@ export const AppHeaderBar = () => {
 
   return (
     <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
-      <AppTitle hideTitle={isCompact} />
+      <AppTitle hideTitle={isCompact} version={version} />
       <SearchRow
         onOpenSearch={handleOpenSearch}
         onOpenHelp={handleOpenHelp}
@@ -199,4 +225,4 @@ export const AppHeaderBar = () => {
         compactTabLabel={isNarrow} />
     </header>
   );
-};
+}

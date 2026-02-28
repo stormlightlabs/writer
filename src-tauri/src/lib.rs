@@ -83,6 +83,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            cmd::app_version_get,
             cmd::location_add_via_dialog,
             cmd::location_list,
             cmd::location_remove,

@@ -336,4 +336,8 @@ export function markdownHelpGet(...[onOk, onErr]: LocParams<string>): Cmd {
   return invokeCmd<string>("markdown_help_get", {}, onOk, onErr);
 }
 
+export function appVersionGet(...[onOk, onErr]: LocParams<string>): Cmd {
+  return invokeCmd<string>("app_version_get", {}, onOk, onErr);
+}
+
 export type { MarkdownProfile, SearchFiltersPayload };

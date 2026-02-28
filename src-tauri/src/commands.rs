@@ -29,6 +29,15 @@ impl AppState {
     }
 }
 
+#[tauri::command]
+pub fn app_version_get() -> CommandResponse<String> {
+    Ok(CommandResult::ok(
+        option_env!("WRITER_APP_VERSION")
+            .unwrap_or(concat!("v", env!("CARGO_PKG_VERSION")))
+            .to_string(),
+    ))
+}
+
 /// Adds a new location via the folder picker dialog
 #[tauri::command]
 pub async fn location_add_via_dialog(
