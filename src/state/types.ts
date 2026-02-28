@@ -109,12 +109,16 @@ export type WorkspaceLocationsState = {
 
 export type SidebarRefreshReason = "manual" | "external";
 
+type MoveDialogState = { locationId: number; relPath: string };
+
 export type WorkspaceDocumentsState = {
   selectedDocPath?: string;
   documents: DocMeta[];
   isLoadingDocuments: boolean;
   refreshingLocationId?: number;
   sidebarRefreshReason: SidebarRefreshReason | null;
+  externalDropTargetId?: number;
+  moveDialog: MoveDialogState | null;
 };
 
 export type WorkspaceLocationsActions = {
@@ -129,6 +133,9 @@ export type WorkspaceDocumentsActions = {
   setDocuments: (documents: DocMeta[]) => void;
   setLoadingDocuments: (value: boolean) => void;
   setSidebarRefreshState: (locationId?: number, reason?: SidebarRefreshReason | null) => void;
+  setExternalDropTarget: (locationId?: number) => void;
+  openMoveDialog: (locationId: number, relPath: string) => void;
+  closeMoveDialog: () => void;
 };
 
 export type WorkspaceState = WorkspaceLocationsState & WorkspaceDocumentsState;

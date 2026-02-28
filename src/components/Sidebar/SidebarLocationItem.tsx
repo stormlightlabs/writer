@@ -4,6 +4,7 @@ import { useSkipAnimation } from "$hooks/useMotion";
 import { FolderIcon, MoreVerticalIcon, RefreshIcon, TrashIcon } from "$icons";
 import type { SidebarRefreshReason } from "$state/types";
 import { DocMeta, LocationDescriptor } from "$types";
+import { cn } from "$utils/tw";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
@@ -196,6 +197,7 @@ type SidebarLocationItemProps = {
   filterText: string;
   isMenuOpen: boolean;
   filenameVisibility: boolean;
+  isExternalDropTarget?: boolean;
 };
 
 type NestedDirectoryItemProps = {
@@ -228,13 +230,43 @@ function NestedDirectoryItem(
   }: NestedDirectoryItemProps,
 ) {
   const isExpanded = expandedDirectories.has(node.path);
+  const folderRef = useRef<HTMLDivElement>(null);
+  const [isDropTarget, setIsDropTarget] = useState(false);
+  const skipAnimation = useSkipAnimation();
+
+  useEffect(() => {
+    const element = folderRef.current;
+    if (!element) return;
+
+    return combine(
+      dropTargetForElements({
+        element,
+        getData: () => ({ locationId, folderPath: node.path, targetType: "folder" as const }),
+        canDrop: ({ source }) => {
+          const data = source.data as DocumentDragData;
+          return data.type === "document" && data.locationId === locationId
+            && !data.relPath.startsWith(node.path + "/");
+        },
+        onDragEnter: () => setIsDropTarget(true),
+        onDragLeave: () => setIsDropTarget(false),
+        onDrop: () => setIsDropTarget(false),
+      }),
+    );
+  }, [locationId, node.path]);
 
   const handleToggle = useCallback(() => {
     onToggleDirectory(node.path);
   }, [node.path, onToggleDirectory]);
 
   return (
-    <div>
+    <div
+      ref={folderRef}
+      data-folder-path={node.path}
+      data-location-id={locationId}
+      className={cn(
+        isDropTarget ? "ring-2 ring-border-interactive rounded" : "",
+        skipAnimation ? "" : "transition-all duration-150",
+      )}>
       <TreeItem
         icon={nestedFolderIcon}
         label={node.name}
@@ -306,12 +338,14 @@ function SidebarLocationItemComponent(
     filterText,
     isMenuOpen,
     filenameVisibility,
+    isExternalDropTarget = false,
   }: SidebarLocationItemProps,
 ) {
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
   const locationRef = useRef<HTMLDivElement>(null);
   const [isDropTarget, setIsDropTarget] = useState(false);
   const skipAnimation = useSkipAnimation();
+  const showHighlight = isDropTarget || isExternalDropTarget;
 
   useEffect(() => {
     const element = locationRef.current;
@@ -320,10 +354,10 @@ function SidebarLocationItemComponent(
     return combine(
       dropTargetForElements({
         element,
-        getData: () => ({ locationId: location.id }),
+        getData: () => ({ locationId: location.id, targetType: "location" as const }),
         canDrop: ({ source }) => {
           const data = source.data as DocumentDragData;
-          return data.type === "document" && data.locationId !== location.id;
+          return data.type === "document";
         },
         onDragEnter: () => setIsDropTarget(true),
         onDragLeave: () => setIsDropTarget(false),
@@ -400,7 +434,7 @@ function SidebarLocationItemComponent(
     <div
       ref={locationRef}
       data-location-id={location.id}
-      className={`${isDropTarget ? "ring-2 ring-border-interactive rounded" : ""} ${
+      className={`${showHighlight ? "ring-2 ring-border-interactive rounded" : ""} ${
         skipAnimation ? "" : "transition-all duration-150"
       }`}>
       <FolderItem

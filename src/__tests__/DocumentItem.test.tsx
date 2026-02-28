@@ -15,7 +15,7 @@ const createMockDoc = (overrides: Partial<DocMeta> = {}): DocMeta => ({
   ...overrides,
 });
 
-const mockSidebarState = { filenameVisibility: false };
+const mockSidebarState = { filenameVisibility: false, setDocuments: vi.fn() };
 
 const createProps = (overrides: Partial<Parameters<typeof DocumentItem>[0]> = {}) => ({
   doc: createMockDoc(),
@@ -33,7 +33,7 @@ const createProps = (overrides: Partial<Parameters<typeof DocumentItem>[0]> = {}
 describe("DocumentItem", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSidebarState).mockReturnValue(mockSidebarState as ReturnType<typeof useSidebarState>);
+    vi.mocked(useSidebarState).mockReturnValue(mockSidebarState as unknown as ReturnType<typeof useSidebarState>);
   });
 
   describe("display", () => {

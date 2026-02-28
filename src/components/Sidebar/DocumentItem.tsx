@@ -271,7 +271,7 @@ export function DocumentItem(
           return data.type === "document" && data.locationId === id && data.relPath !== doc.rel_path;
         },
         getData: ({ input }) =>
-          attachClosestEdge({ locationId: id, relPath: doc.rel_path }, {
+          attachClosestEdge({ locationId: id, relPath: doc.rel_path, targetType: "document" as const }, {
             input,
             element,
             allowedEdges: ["top", "bottom"],

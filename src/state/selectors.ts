@@ -148,6 +148,7 @@ export const useWorkspaceDocumentsState = () =>
       isLoadingDocuments: state.isLoadingDocuments,
       refreshingLocationId: state.refreshingLocationId,
       sidebarRefreshReason: state.sidebarRefreshReason,
+      externalDropTargetId: state.externalDropTargetId,
     })),
   );
 
@@ -158,6 +159,7 @@ export const useWorkspaceDocumentsActions = () =>
       setDocuments: state.setDocuments,
       setLoadingDocuments: state.setLoadingDocuments,
       setSidebarRefreshState: state.setSidebarRefreshState,
+      setExternalDropTarget: state.setExternalDropTarget,
     })),
   );
 
@@ -373,9 +375,12 @@ export const useSidebarState = () => {
       isLoadingDocuments: state.isLoadingDocuments,
       refreshingLocationId: state.refreshingLocationId,
       sidebarRefreshReason: state.sidebarRefreshReason,
+      externalDropTargetId: state.externalDropTargetId,
       filterText: state.sidebarFilter,
       setFilterText: state.setSidebarFilter,
       selectLocation: state.setSelectedLocation,
+      setDocuments: state.setDocuments,
+      setExternalDropTarget: state.setExternalDropTarget,
     })),
   );
 
@@ -387,11 +392,14 @@ export const useSidebarState = () => {
     isLoading: workspaceState.isLoadingLocations || workspaceState.isLoadingDocuments,
     refreshingLocationId: workspaceState.refreshingLocationId,
     sidebarRefreshReason: workspaceState.sidebarRefreshReason,
+    externalDropTargetId: workspaceState.externalDropTargetId,
     filterText: workspaceState.filterText,
     setFilterText: workspaceState.setFilterText,
     selectLocation: workspaceState.selectLocation,
+    setDocuments: workspaceState.setDocuments,
     toggleSidebarCollapsed: layoutState.toggleSidebarCollapsed,
     filenameVisibility: layoutState.filenameVisibility,
+    setExternalDropTarget: workspaceState.setExternalDropTarget,
   };
 };
 

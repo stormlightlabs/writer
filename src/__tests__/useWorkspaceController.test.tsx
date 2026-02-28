@@ -2,6 +2,7 @@ import { useWorkspaceController } from "$hooks/controllers/useWorkspaceControlle
 import {
   docDelete,
   docList,
+  docMove,
   docRename,
   runCmd,
   sessionDropDoc,
@@ -25,6 +26,7 @@ vi.mock(
     docDelete: vi.fn(() => ({ type: "None" })),
     docMove: vi.fn(() => ({ type: "None" })),
     docRename: vi.fn(() => ({ type: "None" })),
+    docSave: vi.fn(() => ({ type: "None" })),
     locationAddViaDialog: vi.fn(() => ({ type: "None" })),
     locationList: vi.fn(() => ({ type: "None" })),
     locationRemove: vi.fn(() => ({ type: "None" })),
@@ -177,5 +179,42 @@ describe("useWorkspaceController", () => {
     expect(deleted).toBeTruthy();
     expect(useAppStore.getState().documents).toStrictEqual([originalDoc]);
     expect(sessionDropDoc).toHaveBeenCalledWith(1, "delete-me.md", expect.any(Function), expect.any(Function));
+  });
+
+  it("updates session tab location when moving a document across locations", async () => {
+    vi.mocked(docMove).mockImplementation((_locationId, _relPath, _newRelPath, onOk) => {
+      onOk({
+        location_id: 2,
+        rel_path: "archive/moved.md",
+        title: "Moved",
+        updated_at: "2024-01-01T00:00:00Z",
+        word_count: 3,
+      });
+      return { type: "None" };
+    });
+
+    const { result } = renderHook(() => useWorkspaceController());
+
+    const moved = await act(async () => {
+      return await result.current.handleMoveDocument(1, "draft.md", "archive/moved.md", 2);
+    });
+
+    expect(moved).toBeTruthy();
+    expect(docMove).toHaveBeenCalledWith(
+      1,
+      "draft.md",
+      "archive/moved.md",
+      expect.any(Function),
+      expect.any(Function),
+      2,
+    );
+    expect(sessionUpdateTabDoc).toHaveBeenCalledWith(
+      1,
+      "draft.md",
+      { location_id: 2, rel_path: "archive/moved.md" },
+      "Moved",
+      expect.any(Function),
+      expect.any(Function),
+    );
   });
 });

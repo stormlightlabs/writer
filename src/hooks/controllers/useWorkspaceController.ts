@@ -4,6 +4,7 @@ import {
   docList,
   docMove,
   docRename,
+  docSave,
   locationAddViaDialog,
   locationList,
   locationRemove,
@@ -273,26 +274,33 @@ export function useWorkspaceController() {
   }, [applySession]);
 
   const handleMoveDocument = useCallback(
-    (locationId: number, relPath: string, newRelPath: string): Promise<boolean> => {
+    (locationId: number, relPath: string, newRelPath: string, targetLocationId?: number): Promise<boolean> => {
       return new Promise((resolve) => {
         runCmd(docMove(locationId, relPath, newRelPath, (newMeta) => {
           void runCmd(
             sessionUpdateTabDoc(
               locationId,
               relPath,
-              { location_id: locationId, rel_path: newMeta.rel_path },
+              { location_id: newMeta.location_id, rel_path: newMeta.rel_path },
               newMeta.title,
               applySession,
               () => {},
             ),
           );
 
-          logger.info(f("Document moved", { locationId, oldPath: relPath, newPath: newMeta.rel_path }));
+          logger.info(
+            f("Document moved", {
+              sourceLocationId: locationId,
+              targetLocationId: newMeta.location_id,
+              oldPath: relPath,
+              newPath: newMeta.rel_path,
+            }),
+          );
           resolve(true);
         }, (error: AppError) => {
-          logger.error(f("Failed to move document", { locationId, relPath, newRelPath, error }));
+          logger.error(f("Failed to move document", { locationId, relPath, newRelPath, targetLocationId, error }));
           resolve(false);
-        }));
+        }, targetLocationId));
       });
     },
     [applySession],
@@ -316,6 +324,21 @@ export function useWorkspaceController() {
       }));
     });
   }, [applySession]);
+
+  const handleImportExternalFile = useCallback(
+    (locationId: number, relPath: string, content: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        runCmd(docSave(locationId, relPath, content, (result) => {
+          logger.info(f("External file imported", { locationId, relPath, result }));
+          resolve(true);
+        }, (error: AppError) => {
+          logger.error(f("Failed to import external file", { locationId, relPath, error }));
+          resolve(false);
+        }));
+      });
+    },
+    [],
+  );
 
   const handleCreateDirectory = useCallback(
     (locationId: number, parentRelPath: string, newDirectoryName: string): Promise<boolean> => {
@@ -372,6 +395,7 @@ export function useWorkspaceController() {
       handleMoveDocument,
       handleDeleteDocument,
       handleCreateDirectory,
+      handleImportExternalFile,
     }),
     [
       locations,
@@ -404,6 +428,7 @@ export function useWorkspaceController() {
       handleMoveDocument,
       handleDeleteDocument,
       handleCreateDirectory,
+      handleImportExternalFile,
     ],
   );
 }

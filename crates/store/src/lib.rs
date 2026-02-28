@@ -26,7 +26,6 @@ const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
 const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
 const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
 const SESSION_STATE_SETTINGS_KEY: &str = "session_state";
-
 const README_TEMPLATE: &str = include_str!("../assets/README_TEMPLATE.md");
 
 pub fn get_markdown_help() -> &'static str {
@@ -1277,6 +1276,84 @@ impl Store {
         Ok(new_meta)
     }
 
+    /// Moves a document to a relative path in a different location.
+    ///
+    /// If the target location is the same as the source location, this falls back to `doc_move`.
+    pub fn doc_move_to_location(
+        &self, doc_id: &DocId, target_location_id: LocationId, new_rel_path: &Path,
+    ) -> Result<DocMeta, AppError> {
+        if target_location_id == doc_id.location_id {
+            return self.doc_move(doc_id, new_rel_path);
+        }
+
+        let source_location = self
+            .location_get(doc_id.location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", doc_id.location_id)))?;
+        let target_location = self
+            .location_get(target_location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", target_location_id)))?;
+
+        let old_path = doc_id.resolve(&source_location.root_path);
+        if !old_path.exists() {
+            return Err(AppError::not_found(format!("Document not found: {:?}", old_path)));
+        }
+
+        let normalized_new_rel_path = normalize_relative_path(new_rel_path)?;
+        let new_doc_id = DocId::new(target_location_id, normalized_new_rel_path.clone())?;
+        let new_path = new_doc_id.resolve(&target_location.root_path);
+
+        if new_path.exists() {
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file at the destination already exists",
+            ));
+        }
+
+        if let Some(parent) = new_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| AppError::io(format!("Failed to create destination directory: {}", e)))?;
+        }
+
+        std::fs::copy(&old_path, &new_path).map_err(|e| AppError::io(format!("Failed to copy file: {}", e)))?;
+        if let Err(error) = std::fs::remove_file(&old_path) {
+            let _ = std::fs::remove_file(&new_path);
+            return Err(AppError::io(format!(
+                "Failed to remove source file after copy: {}",
+                error
+            )));
+        }
+
+        self.remove_document_from_index(doc_id)?;
+
+        let filename = new_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let new_meta = self.read_doc_metadata(
+            &new_path,
+            target_location_id,
+            normalized_new_rel_path.clone(),
+            &filename,
+        )?;
+
+        if file_utils::is_indexable_text_path(&new_path) {
+            let text = std::fs::read_to_string(&new_path)
+                .map_err(|e| AppError::io(format!("Failed to read moved file: {}", e)))?;
+            self.index_document_text(&new_doc_id, &new_meta, &text)?;
+        }
+
+        log::info!(
+            "Moved document across locations: {:?} ({:?}) -> {:?} ({:?})",
+            doc_id.rel_path,
+            doc_id.location_id,
+            new_doc_id.rel_path,
+            target_location_id
+        );
+
+        Ok(new_meta)
+    }
+
     /// Deletes a document from disk and removes it from the index
     pub fn doc_delete(&self, doc_id: &DocId) -> Result<bool, AppError> {
         let location = self
@@ -2146,6 +2223,44 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(location_path.join("level1/level2/file.md").exists());
+    }
+
+    #[test]
+    fn test_doc_move_to_different_location() {
+        let (store, _temp) = create_test_store();
+        let source_dir = TempDir::new().unwrap();
+        let target_dir = TempDir::new().unwrap();
+
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
+        store.ui_layout_set(&settings).unwrap();
+
+        let source_location = store
+            .location_add("Source".to_string(), source_dir.path().to_path_buf())
+            .unwrap();
+        let target_location = store
+            .location_add("Target".to_string(), target_dir.path().to_path_buf())
+            .unwrap();
+
+        let source_doc_id = DocId::new(source_location.id, PathBuf::from("notes/source.md")).unwrap();
+        store
+            .doc_save(&source_doc_id, "# Cross Location\n\nMove me safely.", None)
+            .unwrap();
+
+        let moved_meta = store
+            .doc_move_to_location(&source_doc_id, target_location.id, Path::new("archive/moved.md"))
+            .unwrap();
+
+        assert_eq!(moved_meta.id.location_id, target_location.id);
+        assert_eq!(moved_meta.id.rel_path, PathBuf::from("archive/moved.md"));
+        assert!(!source_dir.path().join("notes/source.md").exists());
+        assert!(target_dir.path().join("archive/moved.md").exists());
+
+        let moved_doc_id = DocId::new(target_location.id, PathBuf::from("archive/moved.md")).unwrap();
+        let moved_doc = store.doc_open(&moved_doc_id).unwrap();
+        assert_eq!(moved_doc.text, "# Cross Location\n\nMove me safely.");
+
+        let source_docs = store.doc_list(source_location.id, None).unwrap();
+        assert!(source_docs.is_empty());
     }
 
     #[test]

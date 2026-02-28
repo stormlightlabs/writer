@@ -3,6 +3,7 @@ import {
   backendEvents,
   batch,
   docList,
+  docMove,
   docOpen,
   docSave,
   err,
@@ -705,6 +706,31 @@ describe("document Commands", () => {
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("doc_save");
       expect(cmd.payload).toStrictEqual({ locationId: 11, relPath: "notes/today.md", text: "# Draft" });
+    });
+  });
+
+  describe(docMove, () => {
+    it("should create command payload without target location by default", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = docMove(11, "notes/today.md", "archive/today.md", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("doc_move");
+      expect(cmd.payload).toStrictEqual({ locationId: 11, relPath: "notes/today.md", newRelPath: "archive/today.md" });
+    });
+
+    it("should include target location for cross-location moves", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = docMove(11, "notes/today.md", "today.md", onOk, onErr, 22) as InvokeCmd;
+
+      expect(cmd.payload).toStrictEqual({
+        locationId: 11,
+        relPath: "notes/today.md",
+        newRelPath: "today.md",
+        targetLocationId: 22,
+      });
     });
   });
 

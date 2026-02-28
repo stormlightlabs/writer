@@ -169,8 +169,15 @@ export function docRename(...[locationId, relPath, newName, onOk, onErr]: DocRen
   return invokeCmd<DocMeta>("doc_rename", { locationId, relPath, newName }, onOk, onErr);
 }
 
-export function docMove(...[locationId, relPath, newRelPath, onOk, onErr]: DocMoveParams<DocMeta>): Cmd {
-  return invokeCmd<DocMeta>("doc_move", { locationId, relPath, newRelPath }, onOk, onErr);
+export function docMove(
+  ...[locationId, relPath, newRelPath, onOk, onErr, targetLocationId]: DocMoveParams<DocMeta>
+): Cmd {
+  return invokeCmd<DocMeta>(
+    "doc_move",
+    { locationId, relPath, newRelPath, ...(targetLocationId === undefined ? {} : { targetLocationId }) },
+    onOk,
+    onErr,
+  );
 }
 
 export function docDelete(...[locationId, relPath, onOk, onErr]: DocDeleteParams<boolean>): Cmd {

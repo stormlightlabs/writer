@@ -567,20 +567,26 @@ pub fn doc_rename(
 #[tauri::command]
 pub fn doc_move(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
+    target_location_id: Option<i64>,
 ) -> CommandResponse<DocMeta> {
     let location_id = LocationId(location_id);
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
+    let target_location_id = target_location_id.map(LocationId).unwrap_or(location_id);
 
     log::debug!(
-        "Moving document: location={:?}, path={:?}, new_path={:?}",
+        "Moving document: source_location={:?}, path={:?}, new_path={:?}, target_location={:?}",
         location_id,
         rel_path,
-        new_rel_path
+        new_rel_path,
+        target_location_id
     );
 
     match DocId::new(location_id, rel_path) {
-        Ok(doc_id) => match state.store.doc_move(&doc_id, &new_rel_path) {
+        Ok(doc_id) => match state
+            .store
+            .doc_move_to_location(&doc_id, target_location_id, &new_rel_path)
+        {
             Ok(new_meta) => {
                 log::info!("Document moved successfully: {:?}", doc_id.rel_path);
                 Ok(CommandResult::ok(new_meta))

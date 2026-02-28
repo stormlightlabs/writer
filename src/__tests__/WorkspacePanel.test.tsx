@@ -68,11 +68,14 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   isLoading: false,
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
+  externalDropTargetId: undefined,
   filterText: "",
   setFilterText: vi.fn(),
+  setDocuments: vi.fn(),
   selectLocation: vi.fn(),
   toggleSidebarCollapsed: vi.fn(),
   filenameVisibility: false,
+  setExternalDropTarget: vi.fn(),
   ...overrides,
 });
 
@@ -161,6 +164,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
     handleMoveDocument: vi.fn(),
     handleDeleteDocument: vi.fn(),
     handleCreateDirectory: vi.fn(),
+    handleImportExternalFile: vi.fn(),
   });
 };
 

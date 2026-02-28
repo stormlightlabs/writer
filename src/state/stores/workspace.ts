@@ -27,6 +27,8 @@ export const getInitialWorkspaceDocumentsState = (): WorkspaceDocumentsState => 
   isLoadingDocuments: false,
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
+  externalDropTargetId: undefined,
+  moveDialog: null,
 });
 
 export const getInitialWorkspaceState = (): WorkspaceState => ({
@@ -49,6 +51,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
   setLoadingDocuments: (value) => set({ isLoadingDocuments: value }),
   setSidebarRefreshState: (locationId, reason: SidebarRefreshReason | null = null) =>
     set({ refreshingLocationId: locationId, sidebarRefreshReason: locationId === undefined ? null : reason }),
+  setExternalDropTarget: (locationId) => set({ externalDropTargetId: locationId }),
+  openMoveDialog: (locationId, relPath) => set({ moveDialog: { locationId, relPath } }),
+  closeMoveDialog: () => set({ moveDialog: null }),
 }));
 
 export function resetWorkspaceStore(): void {

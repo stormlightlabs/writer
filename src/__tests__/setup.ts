@@ -48,6 +48,26 @@ vi.mock("@tauri-apps/api/event", () => ({
   }),
 }));
 
+vi.mock(
+  "@tauri-apps/api/window",
+  () => ({ getCurrentWindow: vi.fn(() => ({ onDragDropEvent: vi.fn(() => Promise.resolve(() => {})) })) }),
+);
+
+vi.mock("@tauri-apps/plugin-fs", () => ({ readTextFile: vi.fn(() => "") }));
+
+vi.mock(
+  "$state/stores/toasts",
+  () => ({
+    useToastStore: vi.fn(() => ({ toasts: [], addToast: vi.fn(), removeToast: vi.fn(), clearToasts: vi.fn() })),
+    showToast: vi.fn(),
+    showSuccessToast: vi.fn(),
+    showErrorToast: vi.fn(),
+    showInfoToast: vi.fn(),
+    showWarnToast: vi.fn(),
+    dismissToast: vi.fn(),
+  }),
+);
+
 const originalWarn = console.warn;
 console.warn = (...args: unknown[]) => {
   const message = String(args[0]);

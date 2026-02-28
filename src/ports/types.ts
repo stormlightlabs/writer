@@ -105,7 +105,14 @@ export type DocRenameParams<T> = Parameters<
   (locationId: LocationId, relPath: string, newName: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
 export type DocMoveParams<T> = Parameters<
-  (locationId: LocationId, relPath: string, newRelPath: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+  (
+    locationId: LocationId,
+    relPath: string,
+    newRelPath: string,
+    onOk: SuccessCallback<T>,
+    onErr: ErrorCallback,
+    targetLocationId?: LocationId,
+  ) => void
 >;
 export type DocDeleteParams<T> = [...LocationPathParams, ...LocParams<T>];
 export type DirCreateParams<T> = [...LocationPathParams, ...LocParams<T>];
