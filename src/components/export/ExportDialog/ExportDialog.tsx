@@ -19,7 +19,9 @@ import {
   useWorkspaceDocumentsState,
 } from "$state/selectors";
 import type { EditorFontFamily, ExportFormat } from "$types";
-import { type MouseEvent, useCallback, useMemo, useState } from "react";
+import { f } from "$utils/serialize";
+import * as logger from "@tauri-apps/plugin-log";
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ExportDialogFooter, PdfExportDialogFooter } from "./ExportFooter";
 import { ExportDialogHeader } from "./ExportHeader";
 import { PdfExportDialogOptions } from "./ExportOptions";
@@ -90,7 +92,7 @@ function ExportError({ error }: { error: string | null }) {
 }
 
 const FormatSummary = ({ title, description }: { title: string; description: string }) => (
-  <div className="mb-3 rounded-lg border border-border-subtle bg-layer-02/35 px-3 py-2.5">
+  <div className="mb-3 shrink-0 rounded-lg border border-border-subtle bg-layer-02/35 px-3 py-2.5">
     <p className="m-0 text-sm font-medium text-text-primary">{title}</p>
     <p className="m-0 mt-1 text-xs text-text-secondary">{description}</p>
   </div>
@@ -103,13 +105,13 @@ type PreviewPaneProps = {
 };
 
 const PreviewPane = ({ previewResult, options, editorFontFamily }: PreviewPaneProps) => (
-  <section className="min-h-0 overflow-hidden rounded-lg border border-border-subtle bg-layer-02/35 p-2">
+  <section className="min-h-0 h-full overflow-hidden rounded-lg border border-border-subtle bg-layer-02/35 p-2">
     <PdfPreviewPanel result={previewResult} options={options} editorFontFamily={editorFontFamily} />
   </section>
 );
 
 const OptionsPane = ({ isFullWidth }: { isFullWidth: boolean }) => (
-  <section className={`min-h-0 overflow-auto ${isFullWidth ? "flex-1" : "shrink-0"}`}>
+  <section className={`min-h-0 overflow-hidden ${isFullWidth ? "flex-1" : "w-[min(32vw,320px)]"}`}>
     <PdfExportDialogOptions />
   </section>
 );
@@ -129,19 +131,22 @@ function PdfExportContent(
   const { pdfExportError: error } = usePdfExportState();
 
   return (
-    <>
+    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <FormatSummary
         title="PDF Export"
         description="Tune pagination and typography, then export a polished, print-ready PDF." />
       <ExportError error={error} />
-      <div className={`min-h-0 flex-1 ${showPreview ? "grid grid-cols-[minmax(0,1fr),336px] gap-4" : "flex"}`}>
+      <div
+        className={`min-h-0 flex-1 overflow-hidden ${
+          showPreview ? "grid grid-cols-[minmax(0,1fr),minmax(280px,320px)] gap-3" : "flex"
+        }`}>
         {showPreview
           ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
           : null}
         <OptionsPane isFullWidth={!showPreview} />
       </div>
       <PdfExportDialogFooter handleExportClick={handleExportClick} onCancel={onCancel} label="Export PDF" />
-    </>
+    </section>
   );
 }
 
@@ -187,12 +192,15 @@ function TextExportContent(
   const { textExportError: error, isExportingText } = useTextExportState();
 
   return (
-    <>
+    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <FormatSummary
         title="Plain Text Export"
         description="Generate a clean text version or save the untouched markdown source." />
       <ExportError error={error} />
-      <div className={`min-h-0 flex-1 ${showPreview ? "grid grid-cols-[minmax(0,1fr),336px] gap-4" : "flex"}`}>
+      <div
+        className={`min-h-0 flex-1 overflow-hidden ${
+          showPreview ? "grid grid-cols-[minmax(0,1fr),minmax(280px,320px)] gap-3" : "flex"
+        }`}>
         {showPreview
           ? (
             <section className="min-h-0 overflow-hidden rounded-lg border border-border-subtle bg-layer-02/35 p-2">
@@ -207,7 +215,7 @@ function TextExportContent(
         onCancel={onCancel}
         label="Export Text"
         isLoading={isExportingText} />
-    </>
+    </section>
   );
 }
 
@@ -217,12 +225,12 @@ function DocxExportContent({ onCancel, handleDocxExport }: DocxExportContentProp
   const { docxExportError: error, isExportingDocx } = useDocxExportState();
 
   return (
-    <>
+    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <FormatSummary
         title="DOCX Export"
         description="Create a Word-compatible document preserving key Markdown formatting." />
       <ExportError error={error} />
-      <section className="min-h-0 flex-1 rounded-lg border border-border-subtle bg-layer-02/30 p-4">
+      <section className="min-h-0 flex-1 overflow-auto rounded-lg border border-border-subtle bg-layer-02/30 p-4">
         <h3 className="m-0 text-sm font-medium text-text-primary">Included formatting</h3>
         <p className="m-0 mt-1 text-xs text-text-secondary">
           Headings, emphasis, code, lists, and blockquotes are retained.
@@ -238,7 +246,7 @@ function DocxExportContent({ onCancel, handleDocxExport }: DocxExportContentProp
         onCancel={onCancel}
         label="Export DOCX"
         isLoading={isExportingDocx} />
-    </>
+    </section>
   );
 }
 
@@ -305,10 +313,18 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
   }, [handleCancel, handleExportDocx]);
 
   const compactPanel = useMemo(() => isCompact || viewportWidth < 1024, [isCompact, viewportWidth]);
-  const showPreview = useMemo(() => !compactPanel && viewportWidth >= 1200, [compactPanel, viewportWidth]);
+  const showPreview = useMemo(() => !compactPanel && viewportWidth >= 1280, [compactPanel, viewportWidth]);
   const isPdfTabActive = useMemo(() => activeExportTabId === "pdf", [activeExportTabId]);
   const isDocxTabActive = useMemo(() => activeExportTabId === "docx", [activeExportTabId]);
   const isTextTabActive = useMemo(() => activeExportTabId === "txt", [activeExportTabId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    logger.debug(f("Export dialog layout resolved", { viewportWidth, compactPanel, showPreview, activeExportTabId }));
+  }, [activeExportTabId, compactPanel, isOpen, showPreview, viewportWidth]);
 
   const containerClasses = useMemo(() => {
     if (compactPanel) {
@@ -319,12 +335,12 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
 
   const panelClasses = useMemo(() => {
     if (compactPanel) {
-      return "pointer-events-auto flex w-full max-w-[980px] max-h-[calc(100vh-4.25rem)] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl";
+      return "pointer-events-auto flex h-[min(90vh,760px)] w-full max-w-[980px] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl";
     }
 
     return showPreview
-      ? "pointer-events-auto flex w-[min(88vw,1120px)] max-h-[85vh] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl"
-      : "pointer-events-auto flex w-full max-w-3xl max-h-[85vh] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl";
+      ? "pointer-events-auto flex h-[min(86vh,820px)] w-[min(84vw,1020px)] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl"
+      : "pointer-events-auto flex h-[min(82vh,720px)] w-[min(84vw,760px)] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl";
   }, [compactPanel, showPreview]);
 
   const handleExportFormatTabClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
@@ -355,24 +371,26 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
       backdropClassName="bg-black/40"
       containerClassName={containerClasses}
       panelClassName={panelClasses}>
-      <div className={`flex min-h-0 flex-col ${compactPanel ? "p-4" : "p-5"}`}>
+      <div className={`flex h-full min-h-0 flex-col overflow-hidden ${compactPanel ? "p-4" : "p-5"}`}>
         <ExportDialogHeader onCancel={handleCancel} title={title} />
         <ExportFormatTabs activeTabId={activeExportTabId} onTabClick={handleExportFormatTabClick} />
-        {isPdfTabActive && (
-          <PdfExportContent {...pdfExportProps} onCancel={handleCancel} handleExportClick={handlePdfExportClick} />
-        )}
-        {isDocxTabActive && <DocxExportContent onCancel={handleCancel} handleDocxExport={handleDocxExportClick} />}
-        {isTextTabActive && activeTab && (
-          <TextExportContent
-            onCancel={handleCancel}
-            handleTextExport={handleTextExportClick}
-            handleMarkdownExport={handleMarkdownExportClick}
-            showPreview={showPreview}
-            locationId={activeTab.docRef.location_id}
-            relPath={activeTab.docRef.rel_path}
-            text={documentText} />
-        )}
-        {isTextTabActive && !activeTab ? <EmptyExportState /> : null}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {isPdfTabActive && (
+            <PdfExportContent {...pdfExportProps} onCancel={handleCancel} handleExportClick={handlePdfExportClick} />
+          )}
+          {isDocxTabActive && <DocxExportContent onCancel={handleCancel} handleDocxExport={handleDocxExportClick} />}
+          {isTextTabActive && activeTab && (
+            <TextExportContent
+              onCancel={handleCancel}
+              handleTextExport={handleTextExportClick}
+              handleMarkdownExport={handleMarkdownExportClick}
+              showPreview={showPreview}
+              locationId={activeTab.docRef.location_id}
+              relPath={activeTab.docRef.rel_path}
+              text={documentText} />
+          )}
+          {isTextTabActive && !activeTab ? <EmptyExportState /> : null}
+        </div>
       </div>
     </Dialog>
   );

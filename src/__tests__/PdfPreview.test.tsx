@@ -11,7 +11,7 @@ const toBlobMock = vi.fn();
 const mockPdfDoc = { numPages: 3, getPage: vi.fn(), destroy: vi.fn() };
 const mockGetDocument = vi.fn();
 
-vi.mock("$components/pdf/MarkdownPdfDocument", () => ({ MarkdownPdfDocument: () => null }));
+vi.mock("$components/export/MarkdownPdfDocument", () => ({ MarkdownPdfDocument: () => null }));
 
 vi.mock("$pdf/fonts", () => ({ ensurePdfFontRegistered: vi.fn() }));
 

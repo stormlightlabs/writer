@@ -1,7 +1,7 @@
+import type { FocusDimmingMode } from "$types";
 import { RangeSetBuilder } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import type { FocusDimmingMode } from "../types";
 
 const DIMMED_CLASS = "cm-dimmed-text";
 type Region = { start: number; end: number };

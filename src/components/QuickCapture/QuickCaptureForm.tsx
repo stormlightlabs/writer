@@ -39,7 +39,7 @@ const ModeButton = ({ currentMode, setMode, isSubmitting, mode }: ModeButtonProp
   const classes = useMemo(
     () =>
       cn(
-        "px-2.5 py-1.5 text-xs sm:text-sm font-medium border rounded transition-all",
+        "px-2.5 py-1.5 text-xs sm:text-sm font-medium border rounded transition-[color,background-color,opacity,border-color] duration-150",
         mode === currentMode
           ? "bg-accent-blue text-white border-accent-blue"
           : "bg-field-02 text-text-secondary border-border-subtle hover:bg-field-hover-02 hover:text-text-primary",
@@ -78,7 +78,7 @@ const FooterActions = (
     </span>
 
     <Button
-      className="w-full sm:w-auto px-4 py-2 text-sm font-semibold bg-accent-blue text-white rounded hover:bg-link-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full sm:w-auto px-4 py-2 text-sm font-semibold bg-accent-blue text-white rounded hover:bg-link-hover transition-[background-color,opacity,color] duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={handleSubmit}
       disabled={isSubmitting || !text.trim()}>
       {isSubmitting ? "Saving..." : "Save"}
@@ -93,7 +93,7 @@ const QuickCaptureFormHeader = (
     <ModeButtons currentMode={currentMode} setMode={setMode} isSubmitting={isSubmitting} />
 
     <Button
-      className="w-7 h-7 shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-all"
+      className="w-7 h-7 shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-[color,background-color] duration-150"
       onClick={onClose}
       disabled={isSubmitting}
       aria-label="Close">

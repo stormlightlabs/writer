@@ -145,6 +145,7 @@ export const useWorkspaceDocumentsState = () =>
     useShallow((state) => ({
       selectedDocPath: state.selectedDocPath,
       documents: state.documents,
+      directories: state.directories,
       isLoadingDocuments: state.isLoadingDocuments,
       refreshingLocationId: state.refreshingLocationId,
       sidebarRefreshReason: state.sidebarRefreshReason,
@@ -157,6 +158,7 @@ export const useWorkspaceDocumentsActions = () =>
     useShallow((state) => ({
       setSelectedDocPath: state.setSelectedDocPath,
       setDocuments: state.setDocuments,
+      setDirectories: state.setDirectories,
       setLoadingDocuments: state.setLoadingDocuments,
       setSidebarRefreshState: state.setSidebarRefreshState,
       setExternalDropTarget: state.setExternalDropTarget,
@@ -371,6 +373,7 @@ export const useSidebarState = () => {
       selectedLocationId: state.selectedLocationId,
       selectedDocPath: state.selectedDocPath,
       documents: state.documents,
+      directories: state.directories,
       isLoadingLocations: state.isLoadingLocations,
       isLoadingDocuments: state.isLoadingDocuments,
       refreshingLocationId: state.refreshingLocationId,
@@ -380,6 +383,7 @@ export const useSidebarState = () => {
       setFilterText: state.setSidebarFilter,
       selectLocation: state.setSelectedLocation,
       setDocuments: state.setDocuments,
+      setDirectories: state.setDirectories,
       setExternalDropTarget: state.setExternalDropTarget,
     })),
   );
@@ -389,6 +393,7 @@ export const useSidebarState = () => {
     selectedLocationId: workspaceState.selectedLocationId,
     selectedDocPath: workspaceState.selectedDocPath,
     documents: workspaceState.documents,
+    directories: workspaceState.directories,
     isLoading: workspaceState.isLoadingLocations || workspaceState.isLoadingDocuments,
     refreshingLocationId: workspaceState.refreshingLocationId,
     sidebarRefreshReason: workspaceState.sidebarRefreshReason,
@@ -397,6 +402,7 @@ export const useSidebarState = () => {
     setFilterText: workspaceState.setFilterText,
     selectLocation: workspaceState.selectLocation,
     setDocuments: workspaceState.setDocuments,
+    setDirectories: workspaceState.setDirectories,
     toggleSidebarCollapsed: layoutState.toggleSidebarCollapsed,
     filenameVisibility: layoutState.filenameVisibility,
     setExternalDropTarget: workspaceState.setExternalDropTarget,

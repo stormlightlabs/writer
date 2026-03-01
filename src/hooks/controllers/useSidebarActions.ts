@@ -1,5 +1,4 @@
 import {
-  dirCreate,
   dirList,
   dirMove,
   docDelete,
@@ -11,31 +10,23 @@ import {
   locationList,
   locationRemove,
   runCmd,
-  sessionCloseTab,
   sessionDropDoc,
-  sessionGet,
-  sessionMarkTabModified,
   sessionOpenTab,
-  sessionPruneLocations,
-  sessionReorderTabs,
-  sessionSelectTab,
   sessionUpdateTabDoc,
 } from "$ports";
 import {
   useTabsActions,
   useTabsState,
   useWorkspaceDocumentsActions,
-  useWorkspaceDocumentsState,
   useWorkspaceLocationsActions,
-  useWorkspaceLocationsState,
 } from "$state/selectors";
 import { useWorkspaceStore } from "$state/stores/workspace";
 import type { SidebarRefreshReason } from "$state/types";
-import type { AppError, DocMeta, DocRef, SessionState, Tab } from "$types";
+import type { AppError, DocMeta, DocRef, SessionState } from "$types";
 import { buildDraftRelPath, getDraftTitle } from "$utils/paths";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 const TRANSIENT_EMPTY_REFRESH_RETRY_DELAY_MS = 120;
 
@@ -95,42 +86,15 @@ function mapDirectoryMovedRelPath(sourceDir: string, destinationDir: string, can
   return suffix ? `${destinationDir}/${suffix}` : destinationDir;
 }
 
-export function useWorkspaceController() {
-  const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();
-  const { selectedDocPath, documents, isLoadingDocuments, refreshingLocationId, sidebarRefreshReason } =
-    useWorkspaceDocumentsState();
+export function useSidebarActions() {
   const { setSidebarRefreshState } = useWorkspaceDocumentsActions();
-  const { setSidebarFilter, setSelectedLocation, setLocations } = useWorkspaceLocationsActions();
-  const { tabs, activeTabId, isSessionHydrated } = useTabsState();
+  const { setLocations, setSelectedLocation } = useWorkspaceLocationsActions();
+  const { tabs } = useTabsState();
   const { applySessionState } = useTabsActions();
-  const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [activeTabId, tabs]);
 
   const applySession = useCallback((session: SessionState) => {
     applySessionState(session);
   }, [applySessionState]);
-
-  useEffect(() => {
-    void runCmd(sessionGet(applySession, (error) => {
-      logger.error(f("Failed to load session state", { error }));
-      applySession({ tabs: [], activeTabId: null });
-    }));
-  }, [applySession]);
-
-  useEffect(() => {
-    if (!isSessionHydrated || isLoadingLocations) {
-      return;
-    }
-
-    const validLocationIds = locations.map((location) => location.id);
-    void runCmd(sessionPruneLocations(validLocationIds, applySession, (error) => {
-      logger.error(f("Failed to prune session tabs by location", { error, validLocationIds }));
-    }));
-  }, [locations, isSessionHydrated, isLoadingLocations, applySession]);
-
-  const locationDocuments = useMemo(
-    () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
-    [documents, selectedLocationId],
-  );
 
   const refreshLocations = useCallback((nextSelectedLocationId?: number) => {
     runCmd(locationList((nextLocations) => {
@@ -174,40 +138,6 @@ export function useWorkspaceController() {
 
     const title = docTitle || path.split("/").pop() || "Untitled";
     openTab({ location_id: locationId, rel_path: path }, title);
-  }, [openTab]);
-
-  const handleSelectLocation = setSelectedLocation;
-
-  const handleSelectTab = useCallback((tabId: string) => {
-    void runCmd(sessionSelectTab(tabId, applySession, (error) => {
-      logger.error(f("Failed to select session tab", { tabId, error }));
-    }));
-  }, [applySession]);
-
-  const handleCloseTab = useCallback((tabId: string) => {
-    void runCmd(sessionCloseTab(tabId, applySession, (error) => {
-      logger.error(f("Failed to close session tab", { tabId, error }));
-    }));
-  }, [applySession]);
-
-  const handleReorderTabs = useCallback((nextTabs: Tab[]) => {
-    void runCmd(sessionReorderTabs(nextTabs.map((tab) => tab.id), applySession, (error) => {
-      logger.error(f("Failed to reorder session tabs", { error }));
-    }));
-  }, [applySession]);
-
-  const markActiveTabModified = useCallback((isModified: boolean) => {
-    if (!activeTabId) {
-      return;
-    }
-
-    void runCmd(sessionMarkTabModified(activeTabId, isModified, applySession, (error) => {
-      logger.error(f("Failed to mark session tab modified", { activeTabId, isModified, error }));
-    }));
-  }, [activeTabId, applySession]);
-
-  const handleCreateDraftTab = useCallback((docRef: DocRef, title: string) => {
-    openTab(docRef, title);
   }, [openTab]);
 
   const handleCreateNewDocument = useCallback((locationId?: number) => {
@@ -420,96 +350,29 @@ export function useWorkspaceController() {
     [],
   );
 
-  const handleCreateDirectory = useCallback(
-    (locationId: number, parentRelPath: string, newDirectoryName: string): Promise<boolean> => {
-      return new Promise((resolve) => {
-        const trimmedName = newDirectoryName.trim();
-        if (!trimmedName) {
-          resolve(false);
-          return;
-        }
-
-        const normalizedParent = parentRelPath.trim().replaceAll(/[/\\]+$/g, "");
-        const directoryRelPath = normalizedParent ? `${normalizedParent}/${trimmedName}` : trimmedName;
-
-        runCmd(dirCreate(locationId, directoryRelPath, (created) => {
-          logger.info(f("Directory create command completed", { locationId, directoryRelPath, created }));
-          resolve(created);
-        }, (error: AppError) => {
-          logger.error(f("Failed to create nested directory", { locationId, directoryRelPath, error }));
-          resolve(false);
-        }));
-      });
-    },
-    [],
-  );
-
   return useMemo(
     () => ({
-      locations,
-      documents,
-      selectedLocationId,
-      selectedDocPath,
-      locationDocuments,
-      sidebarFilter,
-      isSidebarLoading: isLoadingLocations || isLoadingDocuments,
-      isSessionHydrated,
-      refreshingLocationId,
-      sidebarRefreshReason,
-      tabs,
-      activeTabId,
-      activeTab,
-      setSidebarFilter,
-      markActiveTabModified,
       handleAddLocation,
       handleRemoveLocation,
-      handleSelectLocation,
       handleSelectDocument,
-      handleSelectTab,
-      handleCloseTab,
-      handleReorderTabs,
-      handleCreateDraftTab,
       handleCreateNewDocument,
       handleRefreshSidebar,
       handleRenameDocument,
       handleMoveDocument,
       handleMoveDirectory,
       handleDeleteDocument,
-      handleCreateDirectory,
       handleImportExternalFile,
     }),
     [
-      locations,
-      documents,
-      selectedLocationId,
-      selectedDocPath,
-      locationDocuments,
-      sidebarFilter,
-      isLoadingLocations,
-      isLoadingDocuments,
-      isSessionHydrated,
-      refreshingLocationId,
-      sidebarRefreshReason,
-      tabs,
-      activeTabId,
-      activeTab,
-      setSidebarFilter,
-      markActiveTabModified,
       handleAddLocation,
       handleRemoveLocation,
-      handleSelectLocation,
       handleSelectDocument,
-      handleSelectTab,
-      handleCloseTab,
-      handleReorderTabs,
-      handleCreateDraftTab,
       handleCreateNewDocument,
       handleRefreshSidebar,
       handleRenameDocument,
       handleMoveDocument,
       handleMoveDirectory,
       handleDeleteDocument,
-      handleCreateDirectory,
       handleImportExternalFile,
     ],
   );

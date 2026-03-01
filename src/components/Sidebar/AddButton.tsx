@@ -15,7 +15,7 @@ export const AddButton = (
     size="iconMd"
     onClick={onClick}
     disabled={disabled}
-    className="transition-all duration-150 hover:bg-layer-hover-01 hover:text-icon-primary"
+    className="transition-colors duration-150 hover:bg-layer-hover-01 hover:text-icon-primary"
     title={title}>
     <Icon size="md" />
   </Button>

@@ -4,6 +4,7 @@ import type { WorkspaceDiagnosticsProps, WorkspacePanelProps } from "$components
 import { EditorProps } from "$components/Editor";
 import { PreviewProps } from "$components/Preview";
 import { StatusBarProps } from "$components/StatusBar";
+import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import {
   useEditorPresentationState,
@@ -40,6 +41,7 @@ vi.mock(
     useWorkspacePanelStatusBarCollapsed: vi.fn(),
   }),
 );
+vi.mock("$hooks/controllers/useSidebarActions", () => ({ useSidebarActions: vi.fn() }));
 vi.mock("$hooks/controllers/useWorkspaceController", () => ({ useWorkspaceController: vi.fn() }));
 
 type SelectorOverrides = {
@@ -65,6 +67,7 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   selectedLocationId: undefined,
   selectedDocPath: undefined,
   documents: [],
+  directories: [],
   isLoading: false,
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
@@ -72,6 +75,7 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   filterText: "",
   setFilterText: vi.fn(),
   setDocuments: vi.fn(),
+  setDirectories: vi.fn(),
   selectLocation: vi.fn(),
   toggleSidebarCollapsed: vi.fn(),
   filenameVisibility: false,
@@ -162,8 +166,21 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
     handleRefreshSidebar: vi.fn(),
     handleRenameDocument: vi.fn(),
     handleMoveDocument: vi.fn(),
+    handleMoveDirectory: vi.fn(),
     handleDeleteDocument: vi.fn(),
     handleCreateDirectory: vi.fn(),
+    handleImportExternalFile: vi.fn(),
+  });
+  vi.mocked(useSidebarActions).mockReturnValue({
+    handleAddLocation: vi.fn(),
+    handleRemoveLocation: vi.fn(),
+    handleSelectDocument: vi.fn(),
+    handleCreateNewDocument: vi.fn(),
+    handleRefreshSidebar: vi.fn(),
+    handleRenameDocument: vi.fn(),
+    handleMoveDocument: vi.fn(),
+    handleMoveDirectory: vi.fn(),
+    handleDeleteDocument: vi.fn(),
     handleImportExternalFile: vi.fn(),
   });
 };

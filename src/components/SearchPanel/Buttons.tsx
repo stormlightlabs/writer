@@ -22,7 +22,7 @@ export function ToggleButton({ toggleFilters, showFilters, activeFilterCount, co
     const base = [
       compact ? "px-3 py-2" : "px-4 py-2.5",
       "border border-border-subtle rounded-md",
-      "text-sm cursor-pointer flex items-center gap-1.5 transition-all duration-150",
+      "text-sm cursor-pointer flex items-center gap-1.5 transition-colors duration-150",
     ];
 
     if (showFilters) {
@@ -79,7 +79,7 @@ export function FilterLocationButton({ location, filters, handleToggleLocation }
     const base = [
       "px-3 py-1.5",
       "border border-border-subtle rounded",
-      "text-[0.8125rem] cursor-pointer transition-all duration-150",
+      "text-[0.8125rem] cursor-pointer transition-colors duration-150",
     ];
 
     if (filters.locations?.includes(location.id)) {

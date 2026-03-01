@@ -1,5 +1,7 @@
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import {
+  dirList,
+  dirMove,
   docDelete,
   docList,
   docMove,
@@ -23,6 +25,10 @@ vi.mock(
     docList: vi.fn((_locationId: number, _onOk: (docs: unknown[]) => void, _onErr: (error: unknown) => void) => ({
       type: "None",
     })),
+    dirList: vi.fn((_locationId: number, _onOk: (dirs: string[]) => void, _onErr: (error: unknown) => void) => ({
+      type: "None",
+    })),
+    dirMove: vi.fn(() => ({ type: "None" })),
     docDelete: vi.fn(() => ({ type: "None" })),
     docMove: vi.fn(() => ({ type: "None" })),
     docRename: vi.fn(() => ({ type: "None" })),
@@ -77,6 +83,7 @@ describe("useWorkspaceController", () => {
     });
 
     expect(docList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
+    expect(dirList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
     expect(runCmd).toHaveBeenCalled();
   });
 
@@ -213,6 +220,52 @@ describe("useWorkspaceController", () => {
       "draft.md",
       { location_id: 2, rel_path: "archive/moved.md" },
       "Moved",
+      expect.any(Function),
+      expect.any(Function),
+    );
+  });
+
+  it("updates open tabs under a moved directory", async () => {
+    useTabsStore.setState({
+      tabs: [{
+        id: "tab-1",
+        docRef: { location_id: 1, rel_path: "Samples/some-file.md" },
+        title: "Some File",
+        isModified: false,
+      }, {
+        id: "tab-2",
+        docRef: { location_id: 1, rel_path: "Samples/nested/deeper.md" },
+        title: "Deeper",
+        isModified: false,
+      }],
+      activeTabId: "tab-1",
+      isSessionHydrated: true,
+    });
+    vi.mocked(dirMove).mockImplementation((_locationId, _relPath, _newRelPath, onOk) => {
+      onOk("Archive/Samples");
+      return { type: "None" };
+    });
+
+    const { result } = renderHook(() => useWorkspaceController());
+
+    const moved = await act(async () => {
+      return await result.current.handleMoveDirectory(1, "Samples", "Archive/Samples");
+    });
+
+    expect(moved).toBeTruthy();
+    expect(sessionUpdateTabDoc).toHaveBeenCalledWith(
+      1,
+      "Samples/some-file.md",
+      { location_id: 1, rel_path: "Archive/Samples/some-file.md" },
+      "Some File",
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(sessionUpdateTabDoc).toHaveBeenCalledWith(
+      1,
+      "Samples/nested/deeper.md",
+      { location_id: 1, rel_path: "Archive/Samples/nested/deeper.md" },
+      "Deeper",
       expect.any(Function),
       expect.any(Function),
     );

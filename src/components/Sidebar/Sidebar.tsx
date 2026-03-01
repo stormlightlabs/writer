@@ -1,90 +1,25 @@
 import { Button } from "$components/Button";
-import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
+import { extractClosestEdge } from "$dnd";
+import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
 import { useExternalDropHandler } from "$hooks/useExternalDropHandler";
 import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
-import { f } from "$utils/serialize";
-import { type Edge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
-import { announce, cleanup as cleanupLiveRegion } from "@atlaskit/pragmatic-drag-and-drop-live-region";
-import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import * as logger from "@tauri-apps/plugin-log";
-import type { ChangeEventHandler, FormEvent } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
-import { type DocumentDragData } from "./DocumentItem";
+import {
+  DocumentOperationDialog,
+  type DocumentOperationRequest,
+  type DocumentOperationType,
+} from "./DocumentOperationDialog";
 import { EmptyLocations } from "./EmptyLocations";
-import { OperationDialog } from "./OperationDialog";
 import { SearchInput } from "./SearchInput";
-import { SidebarLocationItem } from "./SidebarLocationItem";
+import { SidebarLocationItem, SidebarLocationProvider } from "./SidebarLocationItem";
 import { Title } from "./Title";
+import { useSidebarInternalDnD } from "./useSidebarInternalDnD";
 
 const EMPTY_DOCUMENTS: DocMeta[] = [];
-
-type DestinationData = {
-  locationId: number;
-  relPath?: string;
-  folderPath?: string;
-  targetType?: "location" | "document" | "folder";
-};
-
-type MoveDropDialogState = {
-  sourceLocationId: number;
-  sourceRelPath: string;
-  sourceTitle: string;
-  targetLocationId: number;
-};
-
-function isDocumentDragData(value: unknown): value is DocumentDragData {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const maybe = value as Partial<DocumentDragData>;
-  return maybe.type === "document" && typeof maybe.locationId === "number" && typeof maybe.relPath === "string";
-}
-
-function getFilename(relPath: string): string {
-  return relPath.split("/").pop() || relPath;
-}
-
-function reorderDocumentsInLocation(
-  documents: DocMeta[],
-  locationId: number,
-  sourceRelPath: string,
-  destinationRelPath: string,
-  edge: Edge | null,
-): DocMeta[] {
-  if (edge !== "top" && edge !== "bottom") {
-    return documents;
-  }
-
-  const locationDocuments = documents.filter((doc) => doc.location_id === locationId);
-  const sourceIndex = locationDocuments.findIndex((doc) => doc.rel_path === sourceRelPath);
-  if (sourceIndex === -1) {
-    return documents;
-  }
-
-  const [sourceDoc] = locationDocuments.splice(sourceIndex, 1);
-  const destinationIndex = locationDocuments.findIndex((doc) => doc.rel_path === destinationRelPath);
-  if (destinationIndex === -1) {
-    return documents;
-  }
-
-  const insertIndex = edge === "top" ? destinationIndex : destinationIndex + 1;
-  locationDocuments.splice(insertIndex, 0, sourceDoc);
-
-  let locationCursor = 0;
-  return documents.map((doc) => {
-    if (doc.location_id !== locationId) {
-      return doc;
-    }
-
-    const next = locationDocuments[locationCursor];
-    locationCursor += 1;
-    return next;
-  });
-}
+const EMPTY_DIRECTORIES: string[] = [];
 
 export type SidebarProps = { onNewDocument?: (locationId?: number) => void };
 
@@ -92,9 +27,9 @@ type SidebarActionsProps = {
   onAddLocation: () => void;
   onAddDocument: () => void;
   onRefresh: () => void;
-  isAddDocumentDisabled: boolean;
-  isRefreshDisabled: boolean;
   onToggleCollapse: () => void;
+  addDocumentDisabled: boolean;
+  refreshDisabled: boolean;
 };
 
 const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
@@ -111,13 +46,13 @@ const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void 
 );
 
 const SidebarActions = (
-  { onAddLocation, onAddDocument, onRefresh, isAddDocumentDisabled, isRefreshDisabled, onToggleCollapse }:
+  { onAddLocation, onAddDocument, onRefresh, onToggleCollapse, addDocumentDisabled, refreshDisabled }:
     SidebarActionsProps,
 ) => (
   <div className="flex items-center gap-2">
     <AddButton onClick={onAddLocation} icon={FolderAddIcon} title="New Location" />
-    <AddButton onClick={onAddDocument} icon={FileAddIcon} title="New Document" disabled={isAddDocumentDisabled} />
-    <AddButton onClick={onRefresh} icon={RefreshIcon} title="Refresh Sidebar" disabled={isRefreshDisabled} />
+    <AddButton onClick={onAddDocument} icon={FileAddIcon} title="New Document" disabled={addDocumentDisabled} />
+    <AddButton onClick={onRefresh} icon={RefreshIcon} title="Refresh Sidebar" disabled={refreshDisabled} />
     <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
 );
@@ -131,18 +66,20 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     handleRefreshSidebar,
     handleRenameDocument,
     handleMoveDocument,
+    handleMoveDirectory,
     handleDeleteDocument,
-  } = useWorkspaceController();
+    handleImportExternalFile,
+  } = useSidebarActions();
   const {
     locations,
     selectedLocationId,
     selectedDocPath,
     documents,
+    directories,
     isLoading,
     refreshingLocationId,
     sidebarRefreshReason,
     filterText,
-    setFilterText,
     setDocuments,
     selectLocation,
     toggleSidebarCollapsed,
@@ -150,181 +87,36 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     externalDropTargetId,
     setExternalDropTarget,
   } = useSidebarState();
+
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
-  const [showLocationMenu, setShowLocationMenu] = useState<number | null>(null);
-  const [moveDropDialog, setMoveDropDialog] = useState<MoveDropDialogState | null>(null);
-  const [moveDropPath, setMoveDropPath] = useState("");
-  const [isMovingDrop, setIsMovingDrop] = useState(false);
+  const [documentOperation, setDocumentOperation] = useState<DocumentOperationRequest | null>(null);
 
-  useExternalDropHandler(selectedLocationId, documents, setExternalDropTarget, handleRefreshSidebar);
+  const internalDnd = useSidebarInternalDnD({
+    locations,
+    documents,
+    setDocuments,
+    handleMoveDocument,
+    handleMoveDirectory,
+    handleRefreshSidebar,
+  });
 
-  useEffect(() => {
-    if (showLocationMenu === null) {
-      return;
-    }
-
-    const handleOutsideMenuClick = (event: PointerEvent) => {
-      if (!(event.target instanceof HTMLElement)) {
-        setShowLocationMenu(null);
-        return;
-      }
-
-      if (event.target.closest("[data-location-menu-root]")) {
-        return;
-      }
-
-      setShowLocationMenu(null);
-    };
-
-    document.addEventListener("pointerdown", handleOutsideMenuClick);
-    return () => document.removeEventListener("pointerdown", handleOutsideMenuClick);
-  }, [showLocationMenu]);
-
-  useEffect(() => {
-    const getLocationName = (locationId: number): string =>
-      locations.find((location) => location.id === locationId)?.name ?? "location";
-
-    const stop = monitorForElements({
-      canMonitor: ({ source }) => isDocumentDragData(source.data),
-      onDragStart: ({ source }) => {
-        if (!isDocumentDragData(source.data)) {
-          return;
-        }
-        announce(`Picked up ${source.data.title}`);
-      },
-      onDropTargetChange: ({ source, location }) => {
-        if (!isDocumentDragData(source.data)) {
-          return;
-        }
-
-        const destination = location.current.dropTargets[0];
-        if (!destination) {
-          return;
-        }
-
-        const destinationData = destination.data as DestinationData;
-        if (destinationData.folderPath) {
-          announce(`Over ${destinationData.folderPath} in ${getLocationName(destinationData.locationId)}`);
-          return;
-        }
-
-        if (destinationData.targetType === "document" && destinationData.relPath) {
-          announce(`Over ${getFilename(destinationData.relPath)}`);
-          return;
-        }
-
-        announce(`Over ${getLocationName(destinationData.locationId)}`);
-      },
-      onDrop: ({ source, location }) => {
-        if (!isDocumentDragData(source.data)) {
-          return;
-        }
-
-        const destination = location.current.dropTargets[0];
-        if (!destination) {
-          announce(`Dropped ${source.data.title}`);
-          return;
-        }
-
-        const sourceData = source.data;
-        const destinationData = destination.data as DestinationData;
-        const destinationEdge = extractClosestEdge(destinationData);
-        const sourceFilename = getFilename(sourceData.relPath);
-        const modifierDrop = location.current.input.altKey;
-        const resolvedTargetLocationId = destinationData.locationId;
-
-        if (modifierDrop && resolvedTargetLocationId) {
-          const initialPath = destinationData.folderPath
-            ? `${destinationData.folderPath}/${sourceFilename}`
-            : (resolvedTargetLocationId === sourceData.locationId ? sourceData.relPath : sourceFilename);
-
-          setMoveDropDialog({
-            sourceLocationId: sourceData.locationId,
-            sourceRelPath: sourceData.relPath,
-            sourceTitle: sourceData.title,
-            targetLocationId: resolvedTargetLocationId,
-          });
-          setMoveDropPath(initialPath);
-          announce(`Choose destination path for ${sourceData.title}`);
-          return;
-        }
-
-        const refreshDocumentLists = () => {
-          handleRefreshSidebar(sourceData.locationId);
-          if (resolvedTargetLocationId && resolvedTargetLocationId !== sourceData.locationId) {
-            handleRefreshSidebar(resolvedTargetLocationId);
-          }
-        };
-
-        if (destinationData.folderPath) {
-          const newRelPath = `${destinationData.folderPath}/${sourceFilename}`;
-          void handleMoveDocument(sourceData.locationId, sourceData.relPath, newRelPath, resolvedTargetLocationId).then(
-            (moved) => {
-              if (!moved) {
-                announce(`Could not move ${sourceData.title}`);
-                return;
-              }
-
-              refreshDocumentLists();
-              announce(`Moved ${sourceData.title} to ${getLocationName(resolvedTargetLocationId)}`);
-            },
-          ).catch((error: unknown) => {
-            logger.error(
-              f("Failed to move document into folder", { source: sourceData, dest: destinationData, error }),
-            );
-          });
-          return;
-        }
-
-        if (resolvedTargetLocationId !== sourceData.locationId) {
-          void handleMoveDocument(sourceData.locationId, sourceData.relPath, sourceFilename, resolvedTargetLocationId)
-            .then((moved) => {
-              if (!moved) {
-                announce(`Could not move ${sourceData.title}`);
-                return;
-              }
-
-              refreshDocumentLists();
-              announce(`Moved ${sourceData.title} to ${getLocationName(resolvedTargetLocationId)}`);
-            }).catch((error: unknown) => {
-              logger.error(f("Failed to move document", { source: sourceData, dest: destinationData, error }));
-            });
-          return;
-        }
-
-        if (destinationData.relPath && (destinationEdge === "top" || destinationEdge === "bottom")) {
-          setDocuments(
-            reorderDocumentsInLocation(
-              documents,
-              sourceData.locationId,
-              sourceData.relPath,
-              destinationData.relPath,
-              destinationEdge,
-            ),
-          );
-          announce(
-            `Moved ${sourceData.title} ${destinationEdge === "top" ? "before" : "after"} ${
-              getFilename(destinationData.relPath)
-            }`,
-          );
-        }
-      },
-    });
-
-    return () => {
-      stop();
-      cleanupLiveRegion();
-    };
-  }, [documents, handleMoveDocument, handleRefreshSidebar, locations, setDocuments]);
+  useExternalDropHandler(
+    selectedLocationId,
+    documents,
+    setExternalDropTarget,
+    handleRefreshSidebar,
+    handleImportExternalFile,
+  );
 
   const locationDocuments = useMemo(
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
     [documents, selectedLocationId],
   );
+  const locationDirectories = useMemo(() => (selectedLocationId ? directories : []), [directories, selectedLocationId]);
 
   const toggleLocation = useCallback((locationId: number) => {
-    setExpandedLocations((prev) => {
-      const next = new Set(prev);
+    setExpandedLocations((previous) => {
+      const next = new Set(previous);
       if (next.has(locationId)) {
         next.delete(locationId);
       } else {
@@ -344,10 +136,14 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
         : locationDocuments,
     [locationDocuments, filterText],
   );
+  const filteredDirectories = useMemo(
+    () =>
+      filterText
+        ? locationDirectories.filter((directoryPath) => directoryPath.toLowerCase().includes(filterText.toLowerCase()))
+        : locationDirectories,
+    [locationDirectories, filterText],
+  );
 
-  const handleInputChange: ChangeEventHandler<HTMLInputElement> = useCallback((e) => {
-    setFilterText(e.currentTarget.value);
-  }, [setFilterText]);
   const handleAddDocument = useCallback(() => {
     if (!selectedLocationId) {
       return;
@@ -361,60 +157,77 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     handleRefreshSidebar(selectedLocationId);
   }, [handleRefreshSidebar, selectedLocationId]);
 
-  const closeMoveDropDialog = useCallback(() => {
-    if (isMovingDrop) {
-      return;
-    }
-    setMoveDropDialog(null);
-    setMoveDropPath("");
-  }, [isMovingDrop]);
+  const documentActions = useMemo(
+    () => ({
+      onSelectDocument: handleSelectDocument,
+      onRenameDocument: handleRenameDocument,
+      onMoveDocument: handleMoveDocument,
+      onDeleteDocument: handleDeleteDocument,
+    }),
+    [handleDeleteDocument, handleMoveDocument, handleRenameDocument, handleSelectDocument],
+  );
 
-  const handleMoveDropPathChange: ChangeEventHandler<HTMLInputElement> = useCallback((event) => {
-    setMoveDropPath(event.currentTarget.value);
+  const openDocumentOperation = useCallback(
+    (type: DocumentOperationType, doc: DocMeta, anchor?: { x: number; y: number }) => {
+      setDocumentOperation({ type, doc, anchor });
+    },
+    [],
+  );
+
+  const closeDocumentOperation = useCallback(() => {
+    setDocumentOperation(null);
   }, []);
 
-  const handleMoveDropSubmit = useCallback(async (event: FormEvent) => {
-    event.preventDefault();
-    if (!moveDropDialog) {
-      return;
-    }
+  const locationSharedContext = useMemo(
+    () => ({ filenameVisibility, documentActions, onToggleLocation: toggleLocation, openDocumentOperation }),
+    [documentActions, filenameVisibility, openDocumentOperation, toggleLocation],
+  );
 
-    const nextPath = moveDropPath.trim();
-    if (!nextPath) {
-      return;
-    }
+  const locationItemViewModels = useMemo(() =>
+    locations.map((location) => {
+      const isSelectedLocation = selectedLocationId === location.id;
+      const isRefreshingLocation = refreshingLocationId === location.id;
+      const locationDocs = isSelectedLocation ? filteredDocuments : EMPTY_DOCUMENTS;
+      const locationDirs = isSelectedLocation ? filteredDirectories : EMPTY_DIRECTORIES;
+      const isActiveDropLocation = internalDnd.activeInternalDropTarget?.locationId === location.id;
+      const activeDropDocumentPath =
+        isActiveDropLocation && internalDnd.activeInternalDropTarget?.targetType === "document"
+          ? internalDnd.activeInternalDropTarget.relPath
+          : undefined;
+      const activeDropDocumentEdge =
+        isActiveDropLocation && internalDnd.activeInternalDropTarget?.targetType === "document"
+          ? extractClosestEdge(internalDnd.activeInternalDropTarget)
+          : null;
 
-    setIsMovingDrop(true);
-    try {
-      const moved = await handleMoveDocument(
-        moveDropDialog.sourceLocationId,
-        moveDropDialog.sourceRelPath,
-        nextPath,
-        moveDropDialog.targetLocationId,
-      );
-
-      if (!moved) {
-        announce(`Could not move ${moveDropDialog.sourceTitle}`);
-        return;
-      }
-
-      handleRefreshSidebar(moveDropDialog.sourceLocationId);
-      if (moveDropDialog.targetLocationId !== moveDropDialog.sourceLocationId) {
-        handleRefreshSidebar(moveDropDialog.targetLocationId);
-      }
-      announce(`Moved ${moveDropDialog.sourceTitle}`);
-      setMoveDropDialog(null);
-      setMoveDropPath("");
-    } finally {
-      setIsMovingDrop(false);
-    }
-  }, [handleMoveDocument, handleRefreshSidebar, moveDropDialog, moveDropPath]);
-  const moveDropPathTrimmed = moveDropPath.trim();
-  const isMoveDropUnchanged = moveDropDialog
-    ? moveDropDialog.sourceLocationId === moveDropDialog.targetLocationId
-      && moveDropDialog.sourceRelPath === moveDropPathTrimmed
-    : false;
-  const moveDropFormId = "sidebar-drop-move-form";
+      return {
+        location,
+        isSelected: isSelectedLocation,
+        selectedDocPath,
+        isExpanded: expandedLocations.has(location.id),
+        documents: locationDocs,
+        directories: locationDirs,
+        filterText,
+        isRefreshing: isRefreshingLocation,
+        refreshReason: sidebarRefreshReason,
+        isExternalDropTarget: externalDropTargetId === location.id,
+        isInternalDropTarget: isActiveDropLocation && internalDnd.activeInternalDropTarget?.targetType === "location",
+        activeDropFolderPath: isActiveDropLocation ? internalDnd.activeInternalDropTarget?.folderPath : undefined,
+        activeDropDocumentPath,
+        activeDropDocumentEdge,
+      };
+    }), [
+    expandedLocations,
+    externalDropTargetId,
+    filterText,
+    filteredDirectories,
+    filteredDocuments,
+    internalDnd.activeInternalDropTarget,
+    locations,
+    refreshingLocationId,
+    selectedDocPath,
+    selectedLocationId,
+    sidebarRefreshReason,
+  ]);
 
   return (
     <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">
@@ -424,42 +237,32 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
           onAddLocation={handleAddLocation}
           onAddDocument={handleAddDocument}
           onRefresh={handleRefresh}
-          isAddDocumentDisabled={!selectedLocationId}
-          isRefreshDisabled={!selectedLocationId || refreshingLocationId === selectedLocationId}
-          onToggleCollapse={toggleSidebarCollapsed} />
+          onToggleCollapse={toggleSidebarCollapsed}
+          addDocumentDisabled={!selectedLocationId}
+          refreshDisabled={!selectedLocationId || refreshingLocationId === selectedLocationId} />
       </div>
-      <SearchInput filterText={filterText} handleInputChange={handleInputChange} />
-      <div className="flex-1 overflow-y-auto pt-2 pb-2">
-        {locations.length === 0 ? <EmptyLocations onAddLocation={handleAddLocation} /> : locations.map((location) => {
-          const isSelectedLocation = selectedLocationId === location.id;
-          const isRefreshingLocation = refreshingLocationId === location.id;
-          const locationDocs = isSelectedLocation ? filteredDocuments : EMPTY_DOCUMENTS;
 
-          return (
-            <SidebarLocationItem
-              key={location.id}
-              location={location}
-              isSelected={isSelectedLocation}
-              selectedDocPath={selectedDocPath}
-              isExpanded={expandedLocations.has(location.id)}
-              onSelect={selectLocation}
-              onToggle={toggleLocation}
-              onRemove={handleRemoveLocation}
-              onRefresh={handleRefreshSidebar}
-              onSelectDocument={handleSelectDocument}
-              onRenameDocument={handleRenameDocument}
-              onMoveDocument={handleMoveDocument}
-              onDeleteDocument={handleDeleteDocument}
-              setShowLocationMenu={setShowLocationMenu}
-              isMenuOpen={showLocationMenu === location.id}
-              documents={locationDocs}
-              isRefreshing={isRefreshingLocation}
-              refreshReason={sidebarRefreshReason}
-              filterText={filterText}
-              filenameVisibility={filenameVisibility}
-              isExternalDropTarget={externalDropTargetId === location.id} />
-          );
-        })}
+      <SearchInput />
+
+      <div
+        ref={internalDnd.dropZoneRef}
+        className="flex-1 overflow-y-auto pt-2 pb-2"
+        onDragOver={internalDnd.handleDragOver}
+        onDragLeave={internalDnd.handleDragLeave}>
+        {locations.length === 0
+          ? <EmptyLocations onAddLocation={handleAddLocation} />
+          : (
+            <SidebarLocationProvider value={locationSharedContext}>
+              {locationItemViewModels.map((item) => (
+                <SidebarLocationItem
+                  key={item.location.id}
+                  {...item}
+                  onRemoveLocation={handleRemoveLocation}
+                  onSelectLocation={selectLocation}
+                  onRefreshLocation={handleRefreshSidebar} />
+              ))}
+            </SidebarLocationProvider>
+          )}
       </div>
 
       <div className="px-4 py-2 border-t border-border-subtle text-xs text-text-placeholder flex items-center justify-between">
@@ -468,35 +271,15 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
           {selectedLocationId ? `${locationDocuments.length} document${locationDocuments.length === 1 ? "" : "s"}` : ""}
         </span>
       </div>
-      <OperationDialog
-        isOpen={moveDropDialog !== null}
-        onClose={closeMoveDropDialog}
-        ariaLabel="Move document"
-        title="Move Document"
-        description="Update the destination path. Use slashes to create nested folders automatically."
-        confirmLabel="Move"
-        pendingLabel="Moving..."
-        confirmButtonType="submit"
-        confirmFormId={moveDropFormId}
-        confirmDisabled={!moveDropPathTrimmed || isMoveDropUnchanged}
-        isPending={isMovingDrop}
-        widthClassName="w-[min(94vw,460px)]">
-        <form id={moveDropFormId} onSubmit={handleMoveDropSubmit} className="space-y-2">
-          <label
-            htmlFor="sidebar-drop-move-input"
-            className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-            Destination path
-          </label>
-          <input
-            id="sidebar-drop-move-input"
-            type="text"
-            value={moveDropPath}
-            onChange={handleMoveDropPathChange}
-            className="w-full rounded-md border border-border-subtle bg-layer-02 px-3 py-2 font-mono text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
-            autoFocus
-            disabled={isMovingDrop} />
-        </form>
-      </OperationDialog>
+
+      <DocumentOperationDialog
+        operation={documentOperation}
+        onClose={closeDocumentOperation}
+        onRenameDocument={handleRenameDocument}
+        onMoveDocument={handleMoveDocument}
+        onDeleteDocument={handleDeleteDocument}
+        onRefreshSidebar={handleRefreshSidebar} />
+      {internalDnd.moveDialog}
     </aside>
   );
 }

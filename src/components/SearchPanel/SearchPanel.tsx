@@ -121,7 +121,7 @@ function SearchResult({ hit, onSelectResult }: SearchResultProps) {
   return (
     <Button
       onClick={handleClick}
-      className="w-full px-4 py-3 bg-layer-01 border border-border-subtle rounded-md text-left cursor-pointer transition-all duration-150 hover:bg-layer-hover-01 hover:border-border-strong">
+      className="w-full px-4 py-3 bg-layer-01 border border-border-subtle rounded-md text-left cursor-pointer transition-[border-color,background-color,box-shadow] duration-150 hover:bg-layer-hover-01 hover:border-border-strong">
       <HighlightLabel hit={hit} />
       <HighlightedSnippet text={hit.snippet} matches={hit.matches} />
     </Button>
@@ -191,7 +191,7 @@ function SearchInput({ query, handleQueryChange, clearQuery, compact = false }: 
         onChange={handleQueryChange}
         placeholder="Search across all documents..."
         autoFocus
-        className={`w-full pl-10 pr-3 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-all duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
+        className={`w-full pl-10 pr-3 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
           compact ? "py-2" : "py-2.5"
         }`} />
       {query && (

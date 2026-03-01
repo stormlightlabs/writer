@@ -1,10 +1,7 @@
 import { DocumentItem } from "$components/Sidebar/DocumentItem";
-import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("$state/selectors", () => ({ useSidebarState: vi.fn() }));
 
 const createMockDoc = (overrides: Partial<DocMeta> = {}): DocMeta => ({
   location_id: 1,
@@ -15,25 +12,18 @@ const createMockDoc = (overrides: Partial<DocMeta> = {}): DocMeta => ({
   ...overrides,
 });
 
-const mockSidebarState = { filenameVisibility: false, setDocuments: vi.fn() };
-
 const createProps = (overrides: Partial<Parameters<typeof DocumentItem>[0]> = {}) => ({
   doc: createMockDoc(),
   isSelected: false,
-  selectedDocPath: undefined,
   onSelectDocument: vi.fn(),
-  onRenameDocument: vi.fn().mockResolvedValue(true),
-  onMoveDocument: vi.fn().mockResolvedValue(true),
-  onDeleteDocument: vi.fn().mockResolvedValue(true),
+  onOpenDocumentOperation: vi.fn(),
   filenameVisibility: false,
-  id: 1,
   ...overrides,
 });
 
 describe("DocumentItem", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSidebarState).mockReturnValue(mockSidebarState as unknown as ReturnType<typeof useSidebarState>);
   });
 
   describe("display", () => {
@@ -53,10 +43,7 @@ describe("DocumentItem", () => {
     });
 
     it("displays filename when title is empty", () => {
-      const props = createProps({
-        doc: createMockDoc({ title: "", rel_path: "notes/untitled.md" }),
-        filenameVisibility: false,
-      });
+      const props = createProps({ doc: createMockDoc({ title: "", rel_path: "notes/untitled.md" }) });
       render(<DocumentItem {...props} />);
       expect(screen.getByText("untitled.md")).toBeInTheDocument();
     });
@@ -67,9 +54,7 @@ describe("DocumentItem", () => {
       const props = createProps();
       render(<DocumentItem {...props} />);
 
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
-
+      fireEvent.contextMenu(screen.getByText("Test Document"));
       expect(screen.getByRole("menu")).toBeInTheDocument();
     });
 
@@ -77,8 +62,7 @@ describe("DocumentItem", () => {
       const props = createProps();
       render(<DocumentItem {...props} />);
 
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
+      fireEvent.contextMenu(screen.getByText("Test Document"));
 
       expect(screen.getByRole("menuitem", { name: "Rename" })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: "Move" })).toBeInTheDocument();
@@ -90,134 +74,46 @@ describe("DocumentItem", () => {
       const props = createProps({ onSelectDocument });
       render(<DocumentItem {...props} />);
 
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
+      fireEvent.contextMenu(screen.getByText("Test Document"), { clientX: 120, clientY: 180 });
       fireEvent.click(screen.getByRole("menuitem", { name: "Open" }));
 
       expect(onSelectDocument).toHaveBeenCalledWith(1, "notes/test.md");
     });
-  });
 
-  describe("rename dialog", () => {
-    it("opens rename dialog when Rename is clicked", () => {
-      const props = createProps();
+    it("opens rename operation with anchor position", () => {
+      const onOpenDocumentOperation = vi.fn();
+      const doc = createMockDoc();
+      const props = createProps({ doc, onOpenDocumentOperation });
       render(<DocumentItem {...props} />);
 
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
+      fireEvent.contextMenu(screen.getByText("Test Document"), { clientX: 120, clientY: 180 });
       fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
 
-      expect(screen.getByText("Rename Document")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("test.md")).toBeInTheDocument();
+      expect(onOpenDocumentOperation).toHaveBeenCalledWith("rename", doc, { x: 120, y: 180 });
     });
 
-    it("pins rename dialog near the operation trigger location", async () => {
-      const props = createProps();
+    it("opens move operation", () => {
+      const onOpenDocumentOperation = vi.fn();
+      const doc = createMockDoc();
+      const props = createProps({ doc, onOpenDocumentOperation });
       render(<DocumentItem {...props} />);
 
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item, { clientX: 120, clientY: 180 });
-      fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
-
-      await waitFor(() => {
-        const dialog = screen.getByRole("dialog", { name: "Rename document" });
-        expect(dialog).toHaveStyle({ left: "132px", top: "192px" });
-      });
-    });
-
-    it("closes rename dialog on outside click", async () => {
-      const props = createProps();
-      render(<DocumentItem {...props} />);
-
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
-      fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
-
-      expect(screen.getByText("Rename Document")).toBeInTheDocument();
-      fireEvent.pointerDown(document.body);
-
-      await waitFor(() => {
-        expect(screen.queryByText("Rename Document")).not.toBeInTheDocument();
-      });
-    });
-
-    it("calls onRenameDocument with new name", async () => {
-      const onRenameDocument = vi.fn().mockResolvedValue(true);
-      const props = createProps({ onRenameDocument });
-      render(<DocumentItem {...props} />);
-
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
-      fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
-
-      const input = screen.getByDisplayValue("test.md");
-      fireEvent.change(input, { target: { value: "renamed.md" } });
-      fireEvent.click(screen.getByRole("button", { name: "Rename" }));
-
-      await waitFor(() => {
-        expect(onRenameDocument).toHaveBeenCalledWith(1, "notes/test.md", "renamed.md");
-      });
-    });
-  });
-
-  describe("move dialog", () => {
-    it("opens move dialog when Move is clicked", () => {
-      const props = createProps();
-      render(<DocumentItem {...props} />);
-
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
+      fireEvent.contextMenu(screen.getByText("Test Document"), { clientX: 40, clientY: 50 });
       fireEvent.click(screen.getByRole("menuitem", { name: "Move" }));
 
-      expect(screen.getByText("Move Document")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("notes/test.md")).toBeInTheDocument();
+      expect(onOpenDocumentOperation).toHaveBeenCalledWith("move", doc, { x: 40, y: 50 });
     });
 
-    it("calls onMoveDocument with new path", async () => {
-      const onMoveDocument = vi.fn().mockResolvedValue(true);
-      const props = createProps({ onMoveDocument });
+    it("opens delete operation", () => {
+      const onOpenDocumentOperation = vi.fn();
+      const doc = createMockDoc();
+      const props = createProps({ doc, onOpenDocumentOperation });
       render(<DocumentItem {...props} />);
 
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
-      fireEvent.click(screen.getByRole("menuitem", { name: "Move" }));
-
-      const input = screen.getByDisplayValue("notes/test.md");
-      fireEvent.change(input, { target: { value: "archive/test.md" } });
-      fireEvent.click(screen.getByRole("button", { name: "Move" }));
-
-      await waitFor(() => {
-        expect(onMoveDocument).toHaveBeenCalledWith(1, "notes/test.md", "archive/test.md");
-      });
-    });
-  });
-
-  describe("delete dialog", () => {
-    it("opens delete confirmation dialog when Delete is clicked", () => {
-      const props = createProps();
-      render(<DocumentItem {...props} />);
-
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
+      fireEvent.contextMenu(screen.getByText("Test Document"), { clientX: 12, clientY: 34 });
       fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
-      expect(screen.getByText("Delete Document")).toBeInTheDocument();
-    });
-
-    it("calls onDeleteDocument when confirmed", async () => {
-      const onDeleteDocument = vi.fn().mockResolvedValue(true);
-      const props = createProps({ onDeleteDocument });
-      render(<DocumentItem {...props} />);
-
-      const item = screen.getByText("Test Document");
-      fireEvent.contextMenu(item);
-      fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
-
-      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-
-      await waitFor(() => {
-        expect(onDeleteDocument).toHaveBeenCalledWith(1, "notes/test.md");
-      });
+      expect(onOpenDocumentOperation).toHaveBeenCalledWith("delete", doc, { x: 12, y: 34 });
     });
   });
 });

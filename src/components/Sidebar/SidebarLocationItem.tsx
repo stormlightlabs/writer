@@ -1,139 +1,160 @@
 import { Button } from "$components/Button";
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
+import { draggable, type Edge } from "$dnd";
+import type { FolderDragData } from "$dnd/sidebar";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { FolderIcon, MoreVerticalIcon, RefreshIcon, TrashIcon } from "$icons";
 import type { SidebarRefreshReason } from "$state/types";
-import { DocMeta, LocationDescriptor } from "$types";
+import type { DocMeta, LocationDescriptor } from "$types";
 import { cn } from "$utils/tw";
-import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
-import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type DocumentDragData, DocumentItem } from "./DocumentItem";
+import type { MouseEventHandler, ReactNode } from "react";
+import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { buildDocumentTree, type DirectoryTreeNode, parentDirectoryPaths } from "./buildDocumentTree";
+import { DocumentItem } from "./DocumentItem";
+import type { DocumentOperationType } from "./DocumentOperationDialog";
 import { EmptyDocuments } from "./EmptyDocuments";
-import { RemoveButton } from "./RemoveButton";
+import type { DialogAnchor } from "./OperationDialog";
 import { TreeItem } from "./TreeItem";
 
 const folderIcon = { Component: FolderIcon, size: "md" as const };
 const nestedFolderIcon = { Component: FolderIcon, size: "sm" as const };
 
-type DirectoryTreeNode = { type: "directory"; name: string; path: string; children: TreeNode[] };
+export { canDropDocumentIntoFolder, canDropFolderIntoFolder } from "$dnd/sidebar";
 
-type FileTreeNode = { type: "file"; name: string; path: string; doc: DocMeta };
+export type SidebarDocumentActions = {
+  onSelectDocument: (id: number, path: string) => void;
+  onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
+  onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
+  onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
+};
 
-type TreeNode = DirectoryTreeNode | FileTreeNode;
+type SidebarLocationItemProps = {
+  location: LocationDescriptor;
+  isSelected: boolean;
+  selectedDocPath?: string;
+  isExpanded: boolean;
+  documents: DocMeta[];
+  directories: string[];
+  filterText: string;
+  isRefreshing: boolean;
+  refreshReason: SidebarRefreshReason | null;
+  isExternalDropTarget?: boolean;
+  isInternalDropTarget?: boolean;
+  activeDropFolderPath?: string;
+  activeDropDocumentPath?: string;
+  activeDropDocumentEdge?: Edge | null;
+  onRemoveLocation: (locationId: number) => void;
+  onSelectLocation: (locationId: number) => void;
+  onRefreshLocation: (locationId: number) => void;
+};
 
-function splitPathSegments(relPath: string): string[] {
-  return relPath.split(/[\\/]+/).filter(Boolean);
-}
+type SidebarLocationContextValue = {
+  filenameVisibility: boolean;
+  documentActions: SidebarDocumentActions;
+  onToggleLocation: (locationId: number) => void;
+  openDocumentOperation: (type: DocumentOperationType, doc: DocMeta, anchor?: DialogAnchor) => void;
+};
 
-function ensureDirectoryNode(parent: DirectoryTreeNode, name: string, path: string): DirectoryTreeNode {
-  const existing = parent.children.find((node) => node.type === "directory" && node.path === path);
-  if (existing && existing.type === "directory") {
-    return existing;
-  }
-
-  const directoryNode: DirectoryTreeNode = { type: "directory", name, path, children: [] };
-  parent.children.push(directoryNode);
-  return directoryNode;
-}
-
-function sortTreeNodes(children: TreeNode[]): TreeNode[] {
-  return children.toSorted((left, right) => {
-    if (left.type !== right.type) {
-      return left.type === "directory" ? -1 : 1;
-    }
-
-    return left.name.localeCompare(right.name, void 0, { sensitivity: "base" });
-  });
-}
-
-function normalizeTree(node: DirectoryTreeNode): DirectoryTreeNode {
-  const normalizedChildren = sortTreeNodes(node.children).map((child) =>
-    child.type === "directory" ? normalizeTree(child) : child
-  );
-  return { ...node, children: normalizedChildren };
-}
-
-function buildDocumentTree(documents: DocMeta[]): DirectoryTreeNode {
-  const root: DirectoryTreeNode = { type: "directory", name: "", path: "", children: [] };
-
-  for (const doc of documents) {
-    const segments = splitPathSegments(doc.rel_path);
-    if (segments.length === 0) {
-      continue;
-    }
-
-    const fileName = segments.at(-1) ?? doc.rel_path;
-    const parentSegments = segments.slice(0, -1);
-
-    let currentParent = root;
-    let currentPath = "";
-
-    for (const segment of parentSegments) {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      currentParent = ensureDirectoryNode(currentParent, segment, currentPath);
-    }
-
-    currentParent.children.push({ type: "file", name: fileName, path: doc.rel_path, doc });
-  }
-
-  return normalizeTree(root);
-}
-
-function parentDirectoryPaths(relPath: string): string[] {
-  const parts = splitPathSegments(relPath);
-  const directories = parts.slice(0, -1);
-  const paths: string[] = [];
-  let currentPath = "";
-
-  for (const directory of directories) {
-    currentPath = currentPath ? `${currentPath}/${directory}` : directory;
-    paths.push(currentPath);
-  }
-
-  return paths;
-}
+type LocationActionProps = { handleMenuClick: MouseEventHandler<HTMLButtonElement> };
 
 type FolderItemProps = {
   name: string;
   isSelected: boolean;
   selectedDocPath?: string;
   isExpanded: boolean;
+  isDropTarget?: boolean;
   isRefreshing: boolean;
   onItemClick: () => void;
   onToggleClick: () => void;
   onRefresh: () => void;
-  actionProps: LocationActionProps;
+  onRemove: () => void;
 };
 
-function FolderItem(
-  { name, isSelected, selectedDocPath, isExpanded, isRefreshing, onItemClick, onToggleClick, onRefresh, actionProps }:
-    FolderItemProps,
-) {
-  const { isOpen, position, open, close } = useContextMenu();
+type SidebarTreeContextValue = {
+  locationId: number;
+  selectedDocPath?: string;
+  filenameVisibility: boolean;
+  documentActions: SidebarDocumentActions;
+  onOpenDocumentOperation: (type: DocumentOperationType, doc: DocMeta, anchor?: DialogAnchor) => void;
+  dropIndicators: {
+    activeDropFolderPath?: string;
+    activeDropDocumentPath?: string;
+    activeDropDocumentEdge?: Edge | null;
+  };
+};
 
-  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    open(e);
+type NestedDirectoryItemProps = {
+  node: DirectoryTreeNode;
+  level: number;
+  expandedDirectories: Set<string>;
+  onToggleDirectory: (path: string) => void;
+};
+
+const SidebarTreeContext = createContext<SidebarTreeContextValue | null>(null);
+const SidebarLocationContext = createContext<SidebarLocationContextValue | null>(null);
+
+function useSidebarTreeContext(): SidebarTreeContextValue {
+  const context = useContext(SidebarTreeContext);
+  if (!context) {
+    throw new Error("SidebarTreeContext is required");
+  }
+
+  return context;
+}
+
+function useSidebarLocationContext(): SidebarLocationContextValue {
+  const context = useContext(SidebarLocationContext);
+  if (!context) {
+    throw new Error("SidebarLocationContext is required");
+  }
+
+  return context;
+}
+
+export function SidebarLocationProvider(
+  { value, children }: { value: SidebarLocationContextValue; children: ReactNode },
+) {
+  return <SidebarLocationContext.Provider value={value}>{children}</SidebarLocationContext.Provider>;
+}
+
+function FolderItem(
+  {
+    name,
+    isSelected,
+    selectedDocPath,
+    isExpanded,
+    isDropTarget = false,
+    isRefreshing,
+    onItemClick,
+    onToggleClick,
+    onRefresh,
+    onRemove,
+  }: FolderItemProps,
+) {
+  const { isOpen, position, open, openAt, close } = useContextMenu();
+
+  const handleContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    open(event);
   }, [open]);
+
+  const handleMenuClick: MouseEventHandler<HTMLButtonElement> = useCallback((event) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    openAt(rect.right, rect.bottom + 4);
+  }, [openAt]);
 
   const contextMenuItems = useMemo<(ContextMenuItem | ContextMenuDivider)[]>(
     () => [{ label: "Refresh", onClick: onRefresh, icon: <RefreshIcon size="sm" />, disabled: isRefreshing }, {
       divider: true,
-    }, {
-      label: "Remove Location",
-      onClick: actionProps.handleRemoveClick,
-      icon: <TrashIcon size="sm" />,
-      danger: true,
-    }],
-    [onRefresh, isRefreshing, actionProps.handleRemoveClick],
+    }, { label: "Remove Location", onClick: onRemove, icon: <TrashIcon size="sm" />, danger: true }],
+    [onRefresh, isRefreshing, onRemove],
   );
 
   return (
     <>
-      <div className="relative">
+      <div className="relative mb-0.5">
         <TreeItem
           icon={folderIcon}
           label={name}
@@ -141,10 +162,11 @@ function FolderItem(
           isExpanded={isExpanded}
           hasChildItems
           level={0}
+          isDropTarget={isDropTarget}
           onClick={onItemClick}
           onToggle={onToggleClick}
           onContextMenu={handleContextMenu}>
-          <LocationActions {...actionProps} />
+          <LocationActions handleMenuClick={handleMenuClick} />
         </TreeItem>
       </div>
       <ContextMenu isOpen={isOpen} position={position} onClose={close} items={contextMenuItems} />
@@ -152,13 +174,7 @@ function FolderItem(
   );
 }
 
-type LocationActionProps = {
-  isMenuOpen: boolean;
-  handleMenuClick: MouseEventHandler<HTMLButtonElement>;
-  handleRemoveClick: () => void;
-};
-
-const LocationActions = ({ isMenuOpen, handleMenuClick, handleRemoveClick }: LocationActionProps) => (
+const LocationActions = ({ handleMenuClick }: LocationActionProps) => (
   <div className="relative" data-location-menu-root>
     <Button
       onClick={handleMenuClick}
@@ -166,7 +182,6 @@ const LocationActions = ({ isMenuOpen, handleMenuClick, handleRemoveClick }: Loc
       className="location-actions-btn w-5 h-5 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded opacity-0 transition-opacity duration-150 group-hover:opacity-100">
       <MoreVerticalIcon size="sm" />
     </Button>
-    <RemoveButton isMenuOpen={isMenuOpen} handleRemoveClick={handleRemoveClick} />
   </div>
 );
 
@@ -177,82 +192,45 @@ const RefreshStatus = ({ reason }: { reason: SidebarRefreshReason | null }) => (
   </div>
 );
 
-type SidebarLocationItemProps = {
-  location: LocationDescriptor;
-  isSelected: boolean;
-  selectedDocPath?: string;
-  isExpanded: boolean;
-  onSelect: (id: number) => void;
-  onToggle: (id: number) => void;
-  onRemove: (id: number) => void;
-  onRefresh: (id: number) => void;
-  onSelectDocument: (id: number, path: string) => void;
-  onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
-  onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
-  onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
-  setShowLocationMenu: Dispatch<SetStateAction<number | null>>;
-  documents: DocMeta[];
-  isRefreshing: boolean;
-  refreshReason: SidebarRefreshReason | null;
-  filterText: string;
-  isMenuOpen: boolean;
-  filenameVisibility: boolean;
-  isExternalDropTarget?: boolean;
-};
+function TreeDocumentNode({ doc, level }: { doc: DocMeta; level: number }) {
+  const { selectedDocPath, filenameVisibility, documentActions, onOpenDocumentOperation, dropIndicators } =
+    useSidebarTreeContext();
 
-type NestedDirectoryItemProps = {
-  node: DirectoryTreeNode;
-  level: number;
-  selectedDocPath?: string;
-  expandedDirectories: Set<string>;
-  onToggleDirectory: (path: string) => void;
-  onSelectDocument: (id: number, path: string) => void;
-  onRenameDocument: (locationId: number, relPath: string, newName: string) => Promise<boolean>;
-  onMoveDocument: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
-  onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
-  filenameVisibility: boolean;
-  locationId: number;
-};
+  return (
+    <DocumentItem
+      key={doc.rel_path}
+      doc={doc}
+      isSelected={selectedDocPath === doc.rel_path}
+      onSelectDocument={documentActions.onSelectDocument}
+      onOpenDocumentOperation={onOpenDocumentOperation}
+      filenameVisibility={filenameVisibility}
+      level={level}
+      activeDropDocumentPath={dropIndicators.activeDropDocumentPath}
+      activeDropDocumentEdge={dropIndicators.activeDropDocumentEdge} />
+  );
+}
 
-function NestedDirectoryItem(
-  {
-    node,
-    level,
-    selectedDocPath,
-    expandedDirectories,
-    onToggleDirectory,
-    onSelectDocument,
-    onRenameDocument,
-    onMoveDocument,
-    onDeleteDocument,
-    filenameVisibility,
-    locationId,
-  }: NestedDirectoryItemProps,
-) {
+function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirectory }: NestedDirectoryItemProps) {
+  const { locationId, dropIndicators } = useSidebarTreeContext();
   const isExpanded = expandedDirectories.has(node.path);
-  const folderRef = useRef<HTMLDivElement>(null);
-  const [isDropTarget, setIsDropTarget] = useState(false);
+  const folderRowRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<"idle" | "dragging">("idle");
   const skipAnimation = useSkipAnimation();
+  const showDropTarget = dropIndicators.activeDropFolderPath === node.path;
 
   useEffect(() => {
-    const element = folderRef.current;
-    if (!element) return;
+    const rowElement = folderRowRef.current;
+    if (!rowElement) {
+      return;
+    }
 
-    return combine(
-      dropTargetForElements({
-        element,
-        getData: () => ({ locationId, folderPath: node.path, targetType: "folder" as const }),
-        canDrop: ({ source }) => {
-          const data = source.data as DocumentDragData;
-          return data.type === "document" && data.locationId === locationId
-            && !data.relPath.startsWith(node.path + "/");
-        },
-        onDragEnter: () => setIsDropTarget(true),
-        onDragLeave: () => setIsDropTarget(false),
-        onDrop: () => setIsDropTarget(false),
-      }),
-    );
-  }, [locationId, node.path]);
+    return draggable({
+      element: rowElement,
+      getInitialData: (): FolderDragData => ({ type: "folder", locationId, relPath: node.path, title: node.name }),
+      onDragStart: () => setDragState("dragging"),
+      onDrop: () => setDragState("idle"),
+    });
+  }, [locationId, node.name, node.path]);
 
   const handleToggle = useCallback(() => {
     onToggleDirectory(node.path);
@@ -260,21 +238,33 @@ function NestedDirectoryItem(
 
   return (
     <div
-      ref={folderRef}
+      data-drop-folder-zone="true"
       data-folder-path={node.path}
       data-location-id={locationId}
-      className={cn(
-        isDropTarget ? "ring-2 ring-border-interactive rounded" : "",
-        skipAnimation ? "" : "transition-all duration-150",
-      )}>
-      <TreeItem
-        icon={nestedFolderIcon}
-        label={node.name}
-        isExpanded={isExpanded}
-        hasChildItems
-        level={level}
-        onClick={handleToggle}
-        onToggle={handleToggle} />
+      data-folder-depth={level}>
+      <div
+        ref={folderRowRef}
+        data-drop-folder-row="true"
+        data-folder-path={node.path}
+        data-location-id={locationId}
+        data-folder-depth={level}
+        className={cn(
+          "pb-0.5",
+          showDropTarget ? "ring-2 ring-border-interactive rounded bg-layer-hover-01" : "",
+          skipAnimation ? "" : "transition-[box-shadow,background-color] duration-150",
+        )}>
+        <TreeItem
+          icon={nestedFolderIcon}
+          label={node.name}
+          isExpanded={isExpanded}
+          hasChildItems
+          level={level}
+          isDragging={dragState === "dragging"}
+          isDropTarget={showDropTarget}
+          onClick={handleToggle}
+          onToggle={handleToggle} />
+      </div>
+
       {isExpanded
         ? (
           <div>
@@ -285,30 +275,10 @@ function NestedDirectoryItem(
                     key={child.path}
                     node={child}
                     level={level + 1}
-                    selectedDocPath={selectedDocPath}
                     expandedDirectories={expandedDirectories}
-                    onToggleDirectory={onToggleDirectory}
-                    onSelectDocument={onSelectDocument}
-                    onRenameDocument={onRenameDocument}
-                    onMoveDocument={onMoveDocument}
-                    onDeleteDocument={onDeleteDocument}
-                    filenameVisibility={filenameVisibility}
-                    locationId={locationId} />
+                    onToggleDirectory={onToggleDirectory} />
                 )
-                : (
-                  <DocumentItem
-                    key={child.path}
-                    doc={child.doc}
-                    isSelected={selectedDocPath === child.doc.rel_path}
-                    selectedDocPath={selectedDocPath}
-                    onSelectDocument={onSelectDocument}
-                    onRenameDocument={onRenameDocument}
-                    onMoveDocument={onMoveDocument}
-                    onDeleteDocument={onDeleteDocument}
-                    filenameVisibility={filenameVisibility}
-                    id={locationId}
-                    level={level + 1} />
-                )
+                : <TreeDocumentNode key={child.path} doc={child.doc} level={level + 1} />
             )}
           </div>
         )
@@ -323,77 +293,44 @@ function SidebarLocationItemComponent(
     isSelected,
     selectedDocPath,
     isExpanded,
-    onSelect,
-    onToggle,
-    onRemove,
-    onRefresh,
-    onSelectDocument,
-    onRenameDocument,
-    onMoveDocument,
-    onDeleteDocument,
-    setShowLocationMenu,
     documents,
+    directories,
+    filterText,
     isRefreshing,
     refreshReason,
-    filterText,
-    isMenuOpen,
-    filenameVisibility,
-    isExternalDropTarget = false,
+    isExternalDropTarget,
+    isInternalDropTarget,
+    activeDropFolderPath,
+    activeDropDocumentPath,
+    activeDropDocumentEdge,
+    onRemoveLocation,
+    onSelectLocation,
+    onRefreshLocation,
   }: SidebarLocationItemProps,
 ) {
+  const { filenameVisibility, documentActions, onToggleLocation, openDocumentOperation } = useSidebarLocationContext();
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
-  const locationRef = useRef<HTMLDivElement>(null);
-  const [isDropTarget, setIsDropTarget] = useState(false);
   const skipAnimation = useSkipAnimation();
-  const showHighlight = isDropTarget || isExternalDropTarget;
-
-  useEffect(() => {
-    const element = locationRef.current;
-    if (!element) return;
-
-    return combine(
-      dropTargetForElements({
-        element,
-        getData: () => ({ locationId: location.id, targetType: "location" as const }),
-        canDrop: ({ source }) => {
-          const data = source.data as DocumentDragData;
-          return data.type === "document";
-        },
-        onDragEnter: () => setIsDropTarget(true),
-        onDragLeave: () => setIsDropTarget(false),
-        onDrop: () => setIsDropTarget(false),
-      }),
-    );
-  }, [location.id]);
+  const showHighlight = Boolean(isExternalDropTarget) || Boolean(isInternalDropTarget);
+  const showRootDropIndicator = Boolean(isInternalDropTarget) && !activeDropFolderPath && !activeDropDocumentPath;
 
   const handleRemoveClick = useCallback(() => {
-    onRemove(location.id);
-    setShowLocationMenu(null);
-  }, [location.id, onRemove, setShowLocationMenu]);
-
-  const handleMenuClick: MouseEventHandler<HTMLButtonElement> = useCallback((event) => {
-    event.stopPropagation();
-    setShowLocationMenu((current) => current === location.id ? null : location.id);
-  }, [location.id, setShowLocationMenu]);
+    onRemoveLocation(location.id);
+  }, [location.id, onRemoveLocation]);
 
   const handleRefresh = useCallback(() => {
-    onRefresh(location.id);
-  }, [location.id, onRefresh]);
+    onRefreshLocation(location.id);
+  }, [location.id, onRefreshLocation]);
 
   const onItemClick = useCallback(() => {
-    onSelect(location.id);
-  }, [location.id, onSelect]);
+    onSelectLocation(location.id);
+  }, [location.id, onSelectLocation]);
 
   const onToggleClick = useCallback(() => {
-    onToggle(location.id);
-  }, [location.id, onToggle]);
+    onToggleLocation(location.id);
+  }, [location.id, onToggleLocation]);
 
-  const actionProps = useMemo(() => ({ isMenuOpen, handleMenuClick, handleRemoveClick }), [
-    isMenuOpen,
-    handleMenuClick,
-    handleRemoveClick,
-  ]);
-  const documentTree = useMemo(() => buildDocumentTree(documents), [documents]);
+  const documentTree = useMemo(() => buildDocumentTree(documents, directories), [documents, directories]);
 
   useEffect(() => {
     if (!selectedDocPath) {
@@ -430,64 +367,88 @@ function SidebarLocationItemComponent(
     });
   }, []);
 
+  const treeContextValue = useMemo<SidebarTreeContextValue>(
+    () => ({
+      locationId: location.id,
+      selectedDocPath,
+      filenameVisibility,
+      documentActions: {
+        onSelectDocument: documentActions.onSelectDocument,
+        onRenameDocument: documentActions.onRenameDocument,
+        onMoveDocument: documentActions.onMoveDocument,
+        onDeleteDocument: documentActions.onDeleteDocument,
+      },
+      onOpenDocumentOperation: openDocumentOperation,
+      dropIndicators: { activeDropFolderPath, activeDropDocumentPath, activeDropDocumentEdge },
+    }),
+    [
+      activeDropDocumentEdge,
+      activeDropDocumentPath,
+      activeDropFolderPath,
+      documentActions,
+      filenameVisibility,
+      location.id,
+      openDocumentOperation,
+      selectedDocPath,
+    ],
+  );
+
+  const renderedTreeNodes = useMemo(
+    () =>
+      documentTree.children.map((node) =>
+        node.type === "directory"
+          ? (
+            <NestedDirectoryItem
+              key={node.path}
+              node={node}
+              level={1}
+              expandedDirectories={expandedDirectories}
+              onToggleDirectory={handleToggleDirectory} />
+          )
+          : <TreeDocumentNode key={node.path} doc={node.doc} level={1} />
+      ),
+    [documentTree.children, expandedDirectories, handleToggleDirectory],
+  );
+
   return (
     <div
-      ref={locationRef}
       data-location-id={location.id}
       className={`${showHighlight ? "ring-2 ring-border-interactive rounded" : ""} ${
-        skipAnimation ? "" : "transition-all duration-150"
+        skipAnimation ? "" : "transition-[box-shadow,background-color] duration-150"
       }`}>
       <FolderItem
         name={location.name}
         isSelected={isSelected && !selectedDocPath}
         selectedDocPath={selectedDocPath}
         isExpanded={isExpanded}
+        isDropTarget={showHighlight}
         isRefreshing={isRefreshing}
         onItemClick={onItemClick}
         onToggleClick={onToggleClick}
         onRefresh={handleRefresh}
-        actionProps={actionProps} />
+        onRemove={handleRemoveClick} />
 
       {isExpanded && isSelected && (
         <div>
+          <div
+            data-drop-location-root="true"
+            data-location-id={location.id}
+            className={cn(
+              "mx-3 rounded border",
+              showRootDropIndicator
+                ? "mb-1 mt-0.5 h-1.5 border-border-interactive bg-layer-hover-01 sidebar-drop-edge-pulse"
+                : "mb-0 mt-0 h-0 border-transparent bg-transparent",
+              skipAnimation ? "" : "transition-colors duration-150",
+            )} />
+
           {isRefreshing ? <RefreshStatus reason={refreshReason} /> : null}
-          {documents.length === 0
+
+          {documentTree.children.length === 0
             ? <EmptyDocuments filterText={filterText} />
             : (
-              <div>
-                {documentTree.children.map((node) =>
-                  node.type === "directory"
-                    ? (
-                      <NestedDirectoryItem
-                        key={node.path}
-                        node={node}
-                        level={1}
-                        selectedDocPath={selectedDocPath}
-                        expandedDirectories={expandedDirectories}
-                        onToggleDirectory={handleToggleDirectory}
-                        onSelectDocument={onSelectDocument}
-                        onRenameDocument={onRenameDocument}
-                        onMoveDocument={onMoveDocument}
-                        onDeleteDocument={onDeleteDocument}
-                        filenameVisibility={filenameVisibility}
-                        locationId={location.id} />
-                    )
-                    : (
-                      <DocumentItem
-                        key={node.path}
-                        doc={node.doc}
-                        isSelected={selectedDocPath === node.doc.rel_path}
-                        selectedDocPath={selectedDocPath}
-                        onSelectDocument={onSelectDocument}
-                        onRenameDocument={onRenameDocument}
-                        onMoveDocument={onMoveDocument}
-                        onDeleteDocument={onDeleteDocument}
-                        filenameVisibility={filenameVisibility}
-                        id={location.id}
-                        level={1} />
-                    )
-                )}
-              </div>
+              <SidebarTreeContext.Provider value={treeContextValue}>
+                <div>{renderedTreeNodes}</div>
+              </SidebarTreeContext.Provider>
             )}
         </div>
       )}

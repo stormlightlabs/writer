@@ -52,12 +52,19 @@ export const CollapsibleSection = (
     CollapsibleSectionProps,
 ) => {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const [isAnimatingPanel, setIsAnimatingPanel] = useState(false);
   const sectionId = useId();
   const skipAnimation = useSkipAnimation();
   const buttonId = useMemo(() => `${sectionId}-trigger`, [sectionId]);
   const panelId = useMemo(() => `${sectionId}-panel`, [sectionId]);
   const isControlled = useMemo(() => typeof open === "boolean", [open]);
   const isOpen = useMemo(() => isControlled ? open : internalOpen, [isControlled, internalOpen, open]);
+  const handlePanelAnimationStart = useCallback(() => {
+    setIsAnimatingPanel(true);
+  }, []);
+  const handlePanelAnimationComplete = useCallback(() => {
+    setIsAnimatingPanel(false);
+  }, []);
 
   const handleToggle = useCallback(() => {
     const next = !isOpen;
@@ -89,7 +96,13 @@ export const CollapsibleSection = (
               id={panelId}
               role="region"
               aria-labelledby={buttonId}
-              className={cn("overflow-hidden pb-1", contentClassName)}
+              className={cn(
+                "overflow-hidden pb-1",
+                isAnimatingPanel ? "will-change-[height,opacity]" : "",
+                contentClassName,
+              )}
+              onAnimationStart={handlePanelAnimationStart}
+              onAnimationComplete={handlePanelAnimationComplete}
               {...getPanelAnimationProps(skipAnimation)}>
               {children}
             </motion.div>

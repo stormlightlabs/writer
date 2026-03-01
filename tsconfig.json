@@ -26,7 +26,9 @@
       "$state/*": ["./state/*"],
       "$hooks/*": ["./hooks/*"],
       "$utils/*": ["./utils/*"],
-      "$constants": ["./constants.ts"]
+      "$constants": ["./constants.ts"],
+      "$dnd": ["./dnd/index.ts"],
+      "$dnd/*": ["./dnd/*"]
     }
   },
   "include": ["src"],

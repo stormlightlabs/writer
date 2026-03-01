@@ -89,6 +89,7 @@ pub fn run() {
             cmd::location_remove,
             cmd::location_validate,
             cmd::doc_list,
+            cmd::dir_list,
             cmd::doc_open,
             cmd::doc_save,
             cmd::doc_exists,

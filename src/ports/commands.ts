@@ -23,6 +23,7 @@ import type {
   Cmd,
   DirCreateParams,
   DirDeleteParams,
+  DirListParams,
   DirMoveParams,
   DirRenameParams,
   DocDeleteParams,
@@ -151,6 +152,10 @@ export function locationValidate(...[onOk, onErr]: LocParams<Array<[LocationId, 
 
 export function docList(...[locationId, onOk, onErr]: DocListParams<DocMeta[]>): Cmd {
   return invokeCmd<DocMeta[]>("doc_list", { locationId }, onOk, onErr);
+}
+
+export function dirList(...[locationId, onOk, onErr]: DirListParams<string[]>): Cmd {
+  return invokeCmd<string[]>("dir_list", { locationId }, onOk, onErr);
 }
 
 export function docOpen(...[locationId, relPath, onOk, onErr]: DocOpenParams<DocContent>): Cmd {

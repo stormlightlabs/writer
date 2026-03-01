@@ -152,14 +152,18 @@ export function useContextMenu() {
     position: { x: 0, y: 0 },
   });
 
+  const openAt = useCallback((x: number, y: number) => {
+    setState({ isOpen: true, position: { x, y } });
+  }, []);
+
   const open = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setState({ isOpen: true, position: { x: e.clientX, y: e.clientY } });
-  }, []);
+    openAt(e.clientX, e.clientY);
+  }, [openAt]);
 
   const close = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  return { ...state, open, close };
+  return { ...state, open, openAt, close };
 }

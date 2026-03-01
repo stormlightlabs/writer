@@ -39,18 +39,6 @@ function TreeItemComponent(
 ) {
   const paddingLeft = level * 16 + 12;
 
-  const handleMouseEnter: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
-    if (!isSelected) {
-      (e.currentTarget as HTMLDivElement).classList.add("bg-layer-hover-01");
-    }
-  }, [isSelected]);
-
-  const handleMouseLeave: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
-    if (!isSelected) {
-      (e.currentTarget as HTMLDivElement).classList.remove("bg-layer-hover-01");
-    }
-  }, [isSelected]);
-
   const handleButtonClick: MouseEventHandler<HTMLButtonElement> = useCallback((e) => {
     e.stopPropagation();
     onToggle?.();
@@ -64,7 +52,8 @@ function TreeItemComponent(
   const containerClasses = useMemo(() => {
     const base = [
       "sidebar-item group flex items-center gap-2",
-      "cursor-pointer rounded mx-2 mb-0.5 text-[0.8125rem]",
+      "cursor-pointer rounded mx-2 text-[0.8125rem]",
+      isSelected ? "sidebar-item--selected" : "sidebar-item--unselected",
       isDragging || isDropTarget ? "" : "transition-colors duration-150",
     ];
 
@@ -73,7 +62,7 @@ function TreeItemComponent(
     }
 
     if (isDropTarget) {
-      base.push("ring-2 ring-border-interactive");
+      base.push("ring-2 ring-border-interactive !bg-layer-hover-01 text-text-primary sidebar-drop-pulse");
     }
 
     if (isSelected) {
@@ -92,14 +81,7 @@ function TreeItemComponent(
   const labelStyle: CSSProperties = useMemo(() => ({ fontWeight: isSelected ? 500 : 400 }), [isSelected]);
 
   return (
-    <div
-      ref={ref}
-      className={containerClasses}
-      style={containerStyle}
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}>
+    <div ref={ref} className={containerClasses} style={containerStyle} onClick={onClick} onContextMenu={onContextMenu}>
       {hasChildItems
         ? (
           <Button

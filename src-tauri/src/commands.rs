@@ -386,6 +386,28 @@ pub fn doc_list(
     }
 }
 
+/// Lists directories in a location
+#[tauri::command]
+pub fn dir_list(state: State<'_, AppState>, location_id: i64) -> CommandResponse<Vec<String>> {
+    let id = LocationId(location_id);
+    log::debug!("Listing directories for location: id={}", location_id);
+
+    match state.store.dir_list(id) {
+        Ok(directories) => {
+            let values = directories
+                .into_iter()
+                .map(|path| path.to_string_lossy().to_string())
+                .collect::<Vec<_>>();
+            log::debug!("Found {} directories in location {}", values.len(), location_id);
+            Ok(CommandResult::ok(values))
+        }
+        Err(e) => {
+            log::error!("Failed to list directories: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
 /// Opens a document by location_id and relative path
 #[tauri::command]
 pub fn doc_open(state: State<'_, AppState>, location_id: i64, rel_path: String) -> CommandResponse<DocContent> {
