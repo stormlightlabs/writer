@@ -4,6 +4,7 @@ import type { EditorProps } from "$components/Editor";
 import { StatusBar } from "$components/StatusBar";
 import type { StatusBarProps } from "$components/StatusBar";
 import { SaveStatusIndicator } from "$components/Toolbar/SaveStatusIndicator";
+import { FOCUS, NO_MOTION_TRANSITION } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { FocusIcon } from "$icons";
 import { useFocusModePanelState, useHelpSheetState } from "$state/selectors";
@@ -18,12 +19,6 @@ type FocusModePanelProps = {
   hasActiveDocument: boolean;
   onSave: () => void;
 };
-
-const PANEL_INITIAL = { opacity: 0 } as const;
-const PANEL_ANIMATE = { opacity: 1 } as const;
-const PANEL_EXIT = { opacity: 0 } as const;
-const PANEL_TRANSITION = { duration: 0.25, ease: "easeOut" } as const;
-const NO_MOTION_TRANSITION = { duration: 0 } as const;
 
 type FocusHeaderProps = {
   onExit: () => void;
@@ -62,7 +57,7 @@ export function FocusModePanel({ editor, statusBar, saveStatus, hasActiveDocumen
   const { statusBarCollapsed, setFocusMode } = useFocusModePanelState();
   const { setOpen: setHelpSheetOpen } = useHelpSheetState();
   const skipAnimation = useSkipAnimation();
-  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : PANEL_TRANSITION, [skipAnimation]);
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : FOCUS.TRANSITION, [skipAnimation]);
   const handleExit = useCallback(() => {
     setFocusMode(false);
   }, [setFocusMode]);
@@ -74,9 +69,9 @@ export function FocusModePanel({ editor, statusBar, saveStatus, hasActiveDocumen
   return (
     <AnimatePresence>
       <motion.div
-        initial={PANEL_INITIAL}
-        animate={PANEL_ANIMATE}
-        exit={PANEL_EXIT}
+        initial={FOCUS.INITIAL}
+        animate={FOCUS.ANIMATE}
+        exit={FOCUS.EXIT}
         transition={transition}
         className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
         <FocusHeader

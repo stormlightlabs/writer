@@ -1,5 +1,6 @@
 import { Button } from "$components/Button";
 import { Dialog } from "$components/Dialog";
+import { NO_MOTION_TRANSITION } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { FileTextIcon, SearchIcon, XIcon } from "$icons";
@@ -207,12 +208,11 @@ function SearchInput({ query, handleQueryChange, clearQuery, compact = false }: 
 
 function getAnimationProps(skipAnimation: boolean) {
   const filters = { duration: 0.2, ease: "easeOut" } as const;
-  const noMotion = { duration: 0 } as const;
   return {
     initial: { height: 0, opacity: 0 },
     animate: { height: "auto", opacity: 1 },
     exit: { height: 0, opacity: 0 },
-    transition: skipAnimation ? noMotion : filters,
+    transition: skipAnimation ? NO_MOTION_TRANSITION : filters,
   };
 }
 

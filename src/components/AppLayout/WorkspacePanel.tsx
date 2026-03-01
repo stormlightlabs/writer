@@ -4,6 +4,7 @@ import { Preview, type PreviewProps } from "$components/Preview";
 import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
 import { Toolbar, type ToolbarProps } from "$components/Toolbar";
+import { CHROME_SECTION, NO_MOTION_TRANSITION } from "$constants";
 import type { StyleMatch } from "$editor/types";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useResizable } from "$hooks/useResizable";
@@ -66,8 +67,6 @@ const SPLIT_PANEL_THRESHOLD = SPLIT_PANEL_MIN_WIDTH * 2 + 96;
 const SIDEBAR_MIN_WIDTH = 220;
 const SIDEBAR_MAX_WIDTH = 480;
 const FALLBACK_VIEWPORT_WIDTH = 1280;
-const NO_MOTION_TRANSITION = { duration: 0 };
-const CHROME_SECTION_TRANSITION = { duration: 0.2, ease: "easeOut" as const };
 
 type MainPanelProps = {
   panelMode: PanelMode;
@@ -226,7 +225,7 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostic
 
   const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
 
-  const sectionTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : CHROME_SECTION_TRANSITION, [
+  const sectionTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : CHROME_SECTION.TRANSITION, [
     skipAnimation,
   ]);
 

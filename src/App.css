@@ -132,7 +132,6 @@ body,
 * {
     scrollbar-width: thin;
     scrollbar-color: #525252 #161616;
-    @apply duration-300 transition-all;
 }
 
 *::-webkit-scrollbar {

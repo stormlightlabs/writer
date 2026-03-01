@@ -140,3 +140,5 @@ export type Maybe<T> = T | null | undefined;
 export type SettingsScope = "basic" | "full";
 
 export type ExportFormat = "pdf" | "docx" | "txt";
+
+export type DialogMotionPreset = "scale" | "slideUp" | "slideRight";

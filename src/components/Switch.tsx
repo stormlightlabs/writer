@@ -1,3 +1,4 @@
+import { SWITCH } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { cn } from "$utils/tw";
 import { motion } from "motion/react";
@@ -12,17 +13,12 @@ type SwitchProps = {
   className?: string;
 };
 
-const SWITCH_THUMB_OFF = { x: 0 } as const;
-const SWITCH_THUMB_ON = { x: 20 } as const;
-const SWITCH_THUMB_NO_MOTION = { duration: 0 } as const;
-const SWITCH_THUMB_MOTION = { type: "spring", stiffness: 580, damping: 38, mass: 0.65 } as const;
-
 export const Switch = ({ checked, onCheckedChange, ariaLabel, id, disabled = false, className }: SwitchProps) => {
   const generatedId = useId();
   const inputId = useMemo(() => id ?? generatedId, [id, generatedId]);
   const skipAnimation = useSkipAnimation();
-  const thumbAnimate = useMemo(() => checked ? SWITCH_THUMB_ON : SWITCH_THUMB_OFF, [checked]);
-  const thumbTransition = useMemo(() => skipAnimation ? SWITCH_THUMB_NO_MOTION : SWITCH_THUMB_MOTION, [skipAnimation]);
+  const thumbAnimate = useMemo(() => checked ? SWITCH.THUMB_ON : SWITCH.THUMB_OFF, [checked]);
+  const thumbTransition = useMemo(() => skipAnimation ? SWITCH.THUMB_NO_MOTION : SWITCH.THUMB_MOTION, [skipAnimation]);
 
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onCheckedChange(event.target.checked);

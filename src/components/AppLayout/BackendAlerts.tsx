@@ -1,22 +1,15 @@
+import { ALERT, type AlertTransition, NO_MOTION_TRANSITION } from "$constants";
 import { useBackendEvents } from "$hooks/useBackendEvents";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
 
-const ALERT_INITIAL = { opacity: 0, y: 12 } as const;
-const ALERT_ANIMATE = { opacity: 1, y: 0 } as const;
-const ALERT_EXIT = { opacity: 0, y: 8 } as const;
-const ALERT_TRANSITION = { duration: 0.18, ease: "easeOut" } as const;
-const NO_MOTION_TRANSITION = { duration: 0 } as const;
-
-type AlertTransition = typeof ALERT_TRANSITION | typeof NO_MOTION_TRANSITION;
-
 const MissingLocationsAlert = ({ count, transition }: { count: number; transition: AlertTransition }) => (
   <motion.div
     key="missing-locations"
-    initial={ALERT_INITIAL}
-    animate={ALERT_ANIMATE}
-    exit={ALERT_EXIT}
+    initial={ALERT.INITIAL}
+    animate={ALERT.ANIMATE}
+    exit={ALERT.EXIT}
     transition={transition}
     className="bg-support-error text-white px-4 py-3 rounded-md shadow-xl">
     <strong>Missing Locations</strong>
@@ -29,9 +22,9 @@ const MissingLocationsAlert = ({ count, transition }: { count: number; transitio
 const ConflictsAlert = ({ count, transition }: { count: number; transition: AlertTransition }) => (
   <motion.div
     key="conflicts"
-    initial={ALERT_INITIAL}
-    animate={ALERT_ANIMATE}
-    exit={ALERT_EXIT}
+    initial={ALERT.INITIAL}
+    animate={ALERT.ANIMATE}
+    exit={ALERT.EXIT}
     transition={transition}
     className="bg-accent-yellow text-bg-primary px-4 py-3 rounded-md shadow-xl">
     <strong>Conflicts Detected</strong>
@@ -42,7 +35,7 @@ const ConflictsAlert = ({ count, transition }: { count: number; transition: Aler
 export const BackendAlerts = () => {
   const { missingLocations, conflicts } = useBackendEvents();
   const skipAnimation = useSkipAnimation();
-  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : ALERT_TRANSITION, [skipAnimation]);
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : ALERT.TRANSITION, [skipAnimation]);
 
   const hasMissingLocations = missingLocations.length > 0;
   const hasConflicts = conflicts.length > 0;

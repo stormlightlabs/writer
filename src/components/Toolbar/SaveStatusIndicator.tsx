@@ -1,10 +1,9 @@
+import { NO_MOTION_TRANSITION, STATUS } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { CheckIcon, SaveIcon } from "$icons";
 import type { SaveStatus } from "$types";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
-
-const STATUS_TRANSITION = { duration: 0.15, ease: "easeOut" } as const;
 
 function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
   switch (status) {
@@ -71,7 +70,7 @@ export function SaveStatusIndicator(
 ) {
   const skipAnimation = useSkipAnimation();
   const animationProps = useMemo(() => {
-    const transition = skipAnimation ? { duration: 0 } : STATUS_TRANSITION;
+    const transition = skipAnimation ? NO_MOTION_TRANSITION : STATUS.TRANSITION;
     return { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition };
   }, [skipAnimation]);
 

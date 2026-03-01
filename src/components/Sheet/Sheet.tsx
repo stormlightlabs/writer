@@ -1,3 +1,4 @@
+import { NO_MOTION_TRANSITION, SHEET } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { DragIcon } from "$icons";
 import { cn } from "$utils/tw";
@@ -27,9 +28,6 @@ type SheetProps = {
 
 type DragConfig = { axis: "x" | "y"; closeDirection: -1 | 1 };
 
-const BACKDROP_MOTION = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } } as const;
-const TRANSITION = { type: "spring", damping: 30, stiffness: 300 } as const;
-const NO_MOTION_TRANSITION = { duration: 0 } as const;
 const FOCUSABLE_SELECTOR =
   "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
@@ -157,7 +155,7 @@ export function Sheet(
   const motionConfig = useMemo(() => getMotionConfig(position), [position]);
   const positionClassName = useMemo(() => getPositionClassName(position), [position]);
   const sizeClassName = useMemo(() => getSizeClassName(position, size), [position, size]);
-  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : TRANSITION, [skipAnimation]);
+  const transition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : SHEET.TRANSITION, [skipAnimation]);
   const backdropTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : { duration: 0.15 }, [skipAnimation]);
   const sheetStyle = useMemo(() => {
     if (dragConfig.axis === "x") {
@@ -306,9 +304,9 @@ export function Sheet(
               aria-label={backdropAriaLabel}
               className={cn("absolute inset-0 bg-black/40 pointer-events-auto border-none p-0 m-0", backdropClassName)}
               onClick={closeOnBackdrop ? onClose : undefined}
-              initial={BACKDROP_MOTION.initial}
-              animate={BACKDROP_MOTION.animate}
-              exit={BACKDROP_MOTION.exit}
+              initial={SHEET.BACKDROP.initial}
+              animate={SHEET.BACKDROP.animate}
+              exit={SHEET.BACKDROP.exit}
               transition={backdropTransition} />
           )}
           <motion.div

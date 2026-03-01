@@ -1,10 +1,10 @@
+import { DIALOG, DIALOG_MOTION_PRESETS, NO_MOTION_TRANSITION } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
+import { DialogMotionPreset } from "$types";
 import { cn } from "$utils/tw";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
-
-export type DialogMotionPreset = "scale" | "slideUp" | "slideRight";
 
 type DialogProps = {
   isOpen: boolean;
@@ -21,23 +21,6 @@ type DialogProps = {
   motionPreset?: DialogMotionPreset;
 };
 
-const DIALOG_MOTION_PRESETS: Record<
-  DialogMotionPreset,
-  { initial: Record<string, number>; animate: Record<string, number>; exit: Record<string, number> }
-> = {
-  scale: {
-    initial: { opacity: 0, scale: 0.97, y: 8 },
-    animate: { opacity: 1, scale: 1, y: 0 },
-    exit: { opacity: 0, scale: 0.97, y: 6 },
-  },
-  slideUp: { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 18 } },
-  slideRight: { initial: { opacity: 0, x: 18 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 12 } },
-};
-
-const BACKDROP_FADE_MOTION = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } } as const;
-const BACKDROP_FADE_TRANSITION = { duration: 0.16, ease: "easeOut" } as const;
-const NO_MOTION_TRANSITION = { duration: 0 } as const;
-const DIALOG_SURFACE_TRANSITION = { duration: 0.2, ease: "easeOut" } as const;
 const FOCUSABLE_SELECTOR =
   "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
@@ -66,10 +49,10 @@ export function Dialog(
   const skipAnimation = useSkipAnimation();
   const motionConfig = DIALOG_MOTION_PRESETS[motionPreset];
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const backdropTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : BACKDROP_FADE_TRANSITION, [
+  const backdropTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : DIALOG.BACKDROP.FADE_TRANSITION, [
     skipAnimation,
   ]);
-  const surfaceTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : DIALOG_SURFACE_TRANSITION, [
+  const surfaceTransition = useMemo(() => skipAnimation ? NO_MOTION_TRANSITION : DIALOG.SURFACE.TRANSITION, [
     skipAnimation,
   ]);
 
@@ -149,9 +132,9 @@ export function Dialog(
                 backdropClassName,
               )}
               onClick={handleBackdropClick}
-              initial={BACKDROP_FADE_MOTION.initial}
-              animate={BACKDROP_FADE_MOTION.animate}
-              exit={BACKDROP_FADE_MOTION.exit}
+              initial={DIALOG.BACKDROP.FADE_MOTION.initial}
+              animate={DIALOG.BACKDROP.FADE_MOTION.animate}
+              exit={DIALOG.BACKDROP.FADE_MOTION.exit}
               transition={backdropTransition} />
           )}
 

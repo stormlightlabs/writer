@@ -1,4 +1,5 @@
 import { Button } from "$components/Button";
+import { CHEVRON, NO_MOTION_TRANSITION, PANEL } from "$constants";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { cn } from "$utils/tw";
 import { AnimatePresence, motion } from "motion/react";
@@ -15,28 +16,19 @@ type CollapsibleSectionProps = {
   contentClassName?: string;
 };
 
-const CHEVRON_OPEN = { rotate: 0 } as const;
-const CHEVRON_CLOSED = { rotate: -90 } as const;
-const NO_MOTION_TRANSITION = { duration: 0 } as const;
-const CHEVRON_TRANSITION = { duration: 0.16, ease: "easeOut" } as const;
-const PANEL_INITIAL = { height: 0, opacity: 0 } as const;
-const PANEL_EXPANDED = { height: "auto", opacity: 1 } as const;
-const PANEL_COLLAPSED = { height: 0, opacity: 0 } as const;
-const PANEL_TRANSITION = { duration: 0.2, ease: "easeOut" } as const;
-
 function getPanelAnimationProps(skipAnimation: boolean = false) {
   return {
-    initial: skipAnimation ? { height: "auto", opacity: 1 } : PANEL_INITIAL,
-    animate: skipAnimation ? { height: "auto", opacity: 1 } : PANEL_EXPANDED,
-    exit: skipAnimation ? { height: "auto", opacity: 1 } : PANEL_COLLAPSED,
-    transition: skipAnimation ? NO_MOTION_TRANSITION : PANEL_TRANSITION,
+    initial: skipAnimation ? { height: "auto", opacity: 1 } : PANEL.INITIAL,
+    animate: skipAnimation ? { height: "auto", opacity: 1 } : PANEL.EXPANDED,
+    exit: skipAnimation ? { height: "auto", opacity: 1 } : PANEL.COLLAPSED,
+    transition: skipAnimation ? NO_MOTION_TRANSITION : PANEL.TRANSITION,
   };
 }
 
 function getChevronAnimationProps(skipAnimation: boolean = false, isOpen: boolean = false) {
   return {
-    animate: isOpen ? CHEVRON_OPEN : CHEVRON_CLOSED,
-    transition: skipAnimation ? NO_MOTION_TRANSITION : CHEVRON_TRANSITION,
+    animate: isOpen ? CHEVRON.OPEN : CHEVRON.CLOSED,
+    transition: skipAnimation ? NO_MOTION_TRANSITION : CHEVRON.TRANSITION,
   };
 }
 
