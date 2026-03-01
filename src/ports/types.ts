@@ -116,6 +116,7 @@ export type DocMoveParams<T> = Parameters<
 >;
 export type DocDeleteParams<T> = [...LocationPathParams, ...LocParams<T>];
 export type DirCreateParams<T> = [...LocationPathParams, ...LocParams<T>];
+export type DirListParams<T> = [...LocationIdParams, ...LocParams<T>];
 export type DirDeleteParams<T> = [...LocationPathParams, ...LocParams<T>];
 export type DirRenameParams<T> = Parameters<
   (locationId: LocationId, relPath: string, newName: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void

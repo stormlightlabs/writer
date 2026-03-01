@@ -40,6 +40,12 @@ function ToastItem({ id, type, message, onDismiss }: ToastItemProps) {
   const handleDismiss = useCallback(() => {
     onDismiss(id);
   }, [id, onDismiss]);
+  const dismissButtonClasses = cn(
+    "flex items-center shrink-0 p-1 rounded transition-colors",
+    type === "success" || type === "error"
+      ? "text-white/90 hover:text-white hover:bg-white/15"
+      : "text-text-primary hover:bg-black/10 dark:hover:bg-white/10",
+  );
 
   return (
     <div
@@ -61,7 +67,7 @@ function ToastItem({ id, type, message, onDismiss }: ToastItemProps) {
         type="button"
         variant="iconGhost"
         onClick={handleDismiss}
-        className="flex items-center shrink-0 p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+        className={dismissButtonClasses}
         aria-label="Dismiss notification">
         <XIcon size="xs" />
       </Button>

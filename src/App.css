@@ -132,6 +132,7 @@ body,
 * {
     scrollbar-width: thin;
     scrollbar-color: #525252 #161616;
+    @apply duration-300 transition-all;
 }
 
 *::-webkit-scrollbar {
@@ -163,8 +164,44 @@ body,
     color: #f2f4f8;
 }
 
+@keyframes sidebar-drop-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(51, 177, 255, 0.45);
+    }
+    70% {
+        box-shadow: 0 0 0 7px rgba(51, 177, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(51, 177, 255, 0);
+    }
+}
+
+@keyframes sidebar-drop-edge-pulse {
+    0% {
+        opacity: 0.55;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.55;
+    }
+}
+
+.sidebar-drop-pulse {
+    animation: sidebar-drop-pulse 1.05s ease-in-out infinite;
+}
+
+.sidebar-drop-edge-pulse {
+    animation: sidebar-drop-edge-pulse 0.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-spin {
+        animation: none;
+    }
+    .sidebar-drop-pulse,
+    .sidebar-drop-edge-pulse {
         animation: none;
     }
 }

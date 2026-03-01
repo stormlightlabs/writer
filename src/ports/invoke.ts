@@ -276,6 +276,13 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
       }
       return value.map((doc) => normalizeDocMeta(doc));
     }
+    case "dir_list": {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+
+      return value.filter((entry): entry is string => typeof entry === "string");
+    }
     case "doc_open": {
       if (!isRecord(value)) {
         return value;

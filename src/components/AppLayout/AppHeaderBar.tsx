@@ -13,7 +13,7 @@ const AppTitle = ({ hideTitle, version }: { hideTitle: boolean; version: string 
       <PenIcon size="lg" />
     </div>
     {hideTitle ? null : (
-      <div className="flex items-end gap-1.5">
+      <div className="flex items-center gap-2">
         <h1 className="m-0 text-[0.9375rem] font-semibold text-text-primary">Writer</h1>
         <Version value={version} />
       </div>

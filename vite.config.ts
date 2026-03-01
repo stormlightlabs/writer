@@ -43,6 +43,7 @@ export default defineConfig({
       "$hooks": resolveFromRoot("./src/hooks"),
       "$utils": resolveFromRoot("./src/utils"),
       "$constants": resolveFromRoot("./src/constants.ts"),
+      "$dnd": resolveFromRoot("./src/dnd.ts"),
     },
   },
 });

@@ -1,12 +1,11 @@
 import { Button } from "$components/Button";
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
+import { draggable, type Edge } from "$dnd";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { FolderIcon, MoreVerticalIcon, RefreshIcon, TrashIcon } from "$icons";
 import type { SidebarRefreshReason } from "$state/types";
 import { DocMeta, LocationDescriptor } from "$types";
 import { cn } from "$utils/tw";
-import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
-import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { Dispatch, MouseEventHandler, SetStateAction } from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type DocumentDragData, DocumentItem } from "./DocumentItem";
@@ -25,6 +24,63 @@ type TreeNode = DirectoryTreeNode | FileTreeNode;
 
 function splitPathSegments(relPath: string): string[] {
   return relPath.split(/[\\/]+/).filter(Boolean);
+}
+
+function parentDirectoryPath(relPath: string): string {
+  const segments = splitPathSegments(relPath);
+  return segments.length > 1 ? segments.slice(0, -1).join("/") : "";
+}
+
+export type FolderDragData = { type: "folder"; locationId: number; relPath: string; title: string };
+
+export function canDropDocumentIntoFolder(sourceData: unknown, locationId: number, folderPath: string): boolean {
+  if (!sourceData || typeof sourceData !== "object") {
+    return false;
+  }
+
+  const data = sourceData as Partial<DocumentDragData>;
+  if (data.type !== "document" || typeof data.locationId !== "number" || typeof data.relPath !== "string") {
+    return false;
+  }
+
+  if (data.locationId !== locationId) {
+    return true;
+  }
+
+  return parentDirectoryPath(data.relPath) !== folderPath;
+}
+
+function isFolderDragData(sourceData: unknown): sourceData is FolderDragData {
+  if (!sourceData || typeof sourceData !== "object") {
+    return false;
+  }
+
+  const data = sourceData as Partial<FolderDragData>;
+  return data.type === "folder" && typeof data.locationId === "number" && typeof data.relPath === "string";
+}
+
+function isFolderDropNoop(sourcePath: string, destinationParentPath: string): boolean {
+  return parentDirectoryPath(sourcePath) === destinationParentPath;
+}
+
+export function canDropFolderIntoFolder(sourceData: unknown, locationId: number, folderPath: string): boolean {
+  if (!isFolderDragData(sourceData)) {
+    return false;
+  }
+
+  if (sourceData.locationId !== locationId) {
+    return false;
+  }
+
+  if (sourceData.relPath === folderPath) {
+    return false;
+  }
+
+  if (folderPath.startsWith(`${sourceData.relPath}/`)) {
+    return false;
+  }
+
+  return !isFolderDropNoop(sourceData.relPath, folderPath);
 }
 
 function ensureDirectoryNode(parent: DirectoryTreeNode, name: string, path: string): DirectoryTreeNode {
@@ -55,8 +111,22 @@ function normalizeTree(node: DirectoryTreeNode): DirectoryTreeNode {
   return { ...node, children: normalizedChildren };
 }
 
-function buildDocumentTree(documents: DocMeta[]): DirectoryTreeNode {
+function buildDocumentTree(documents: DocMeta[], directories: string[]): DirectoryTreeNode {
   const root: DirectoryTreeNode = { type: "directory", name: "", path: "", children: [] };
+
+  for (const directoryPath of directories) {
+    const segments = splitPathSegments(directoryPath);
+    if (segments.length === 0) {
+      continue;
+    }
+
+    let currentParent = root;
+    let currentPath = "";
+    for (const segment of segments) {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+      currentParent = ensureDirectoryNode(currentParent, segment, currentPath);
+    }
+  }
 
   for (const doc of documents) {
     const segments = splitPathSegments(doc.rel_path);
@@ -100,6 +170,7 @@ type FolderItemProps = {
   isSelected: boolean;
   selectedDocPath?: string;
   isExpanded: boolean;
+  isDropTarget?: boolean;
   isRefreshing: boolean;
   onItemClick: () => void;
   onToggleClick: () => void;
@@ -108,8 +179,18 @@ type FolderItemProps = {
 };
 
 function FolderItem(
-  { name, isSelected, selectedDocPath, isExpanded, isRefreshing, onItemClick, onToggleClick, onRefresh, actionProps }:
-    FolderItemProps,
+  {
+    name,
+    isSelected,
+    selectedDocPath,
+    isExpanded,
+    isDropTarget = false,
+    isRefreshing,
+    onItemClick,
+    onToggleClick,
+    onRefresh,
+    actionProps,
+  }: FolderItemProps,
 ) {
   const { isOpen, position, open, close } = useContextMenu();
 
@@ -133,7 +214,7 @@ function FolderItem(
 
   return (
     <>
-      <div className="relative">
+      <div className="relative mb-0.5">
         <TreeItem
           icon={folderIcon}
           label={name}
@@ -141,6 +222,7 @@ function FolderItem(
           isExpanded={isExpanded}
           hasChildItems
           level={0}
+          isDropTarget={isDropTarget}
           onClick={onItemClick}
           onToggle={onToggleClick}
           onContextMenu={handleContextMenu}>
@@ -192,12 +274,17 @@ type SidebarLocationItemProps = {
   onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
   setShowLocationMenu: Dispatch<SetStateAction<number | null>>;
   documents: DocMeta[];
+  directories: string[];
   isRefreshing: boolean;
   refreshReason: SidebarRefreshReason | null;
   filterText: string;
   isMenuOpen: boolean;
   filenameVisibility: boolean;
   isExternalDropTarget?: boolean;
+  isInternalDropTarget?: boolean;
+  activeDropFolderPath?: string;
+  activeDropDocumentPath?: string;
+  activeDropDocumentEdge?: Edge | null;
 };
 
 type NestedDirectoryItemProps = {
@@ -212,6 +299,9 @@ type NestedDirectoryItemProps = {
   onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
   filenameVisibility: boolean;
   locationId: number;
+  activeDropFolderPath?: string;
+  activeDropDocumentPath?: string;
+  activeDropDocumentEdge?: Edge | null;
 };
 
 function NestedDirectoryItem(
@@ -227,32 +317,29 @@ function NestedDirectoryItem(
     onDeleteDocument,
     filenameVisibility,
     locationId,
+    activeDropFolderPath,
+    activeDropDocumentPath,
+    activeDropDocumentEdge,
   }: NestedDirectoryItemProps,
 ) {
   const isExpanded = expandedDirectories.has(node.path);
-  const folderRef = useRef<HTMLDivElement>(null);
-  const [isDropTarget, setIsDropTarget] = useState(false);
+  const folderRowRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<"idle" | "dragging">("idle");
   const skipAnimation = useSkipAnimation();
+  const isActiveDropFolder = activeDropFolderPath === node.path;
+  const showDropTarget = isActiveDropFolder;
 
   useEffect(() => {
-    const element = folderRef.current;
-    if (!element) return;
+    const rowElement = folderRowRef.current;
+    if (!rowElement) return;
 
-    return combine(
-      dropTargetForElements({
-        element,
-        getData: () => ({ locationId, folderPath: node.path, targetType: "folder" as const }),
-        canDrop: ({ source }) => {
-          const data = source.data as DocumentDragData;
-          return data.type === "document" && data.locationId === locationId
-            && !data.relPath.startsWith(node.path + "/");
-        },
-        onDragEnter: () => setIsDropTarget(true),
-        onDragLeave: () => setIsDropTarget(false),
-        onDrop: () => setIsDropTarget(false),
-      }),
-    );
-  }, [locationId, node.path]);
+    return draggable({
+      element: rowElement,
+      getInitialData: (): FolderDragData => ({ type: "folder", locationId, relPath: node.path, title: node.name }),
+      onDragStart: () => setDragState("dragging"),
+      onDrop: () => setDragState("idle"),
+    });
+  }, [locationId, node.name, node.path]);
 
   const handleToggle = useCallback(() => {
     onToggleDirectory(node.path);
@@ -260,21 +347,32 @@ function NestedDirectoryItem(
 
   return (
     <div
-      ref={folderRef}
+      data-drop-folder-zone="true"
       data-folder-path={node.path}
       data-location-id={locationId}
-      className={cn(
-        isDropTarget ? "ring-2 ring-border-interactive rounded" : "",
-        skipAnimation ? "" : "transition-all duration-150",
-      )}>
-      <TreeItem
-        icon={nestedFolderIcon}
-        label={node.name}
-        isExpanded={isExpanded}
-        hasChildItems
-        level={level}
-        onClick={handleToggle}
-        onToggle={handleToggle} />
+      data-folder-depth={level}>
+      <div
+        ref={folderRowRef}
+        data-drop-folder-row="true"
+        data-folder-path={node.path}
+        data-location-id={locationId}
+        data-folder-depth={level}
+        className={cn(
+          "pb-0.5",
+          showDropTarget ? "ring-2 ring-border-interactive rounded bg-layer-hover-01" : "",
+          skipAnimation ? "" : "transition-all duration-150",
+        )}>
+        <TreeItem
+          icon={nestedFolderIcon}
+          label={node.name}
+          isExpanded={isExpanded}
+          hasChildItems
+          level={level}
+          isDragging={dragState === "dragging"}
+          isDropTarget={showDropTarget}
+          onClick={handleToggle}
+          onToggle={handleToggle} />
+      </div>
       {isExpanded
         ? (
           <div>
@@ -293,7 +391,10 @@ function NestedDirectoryItem(
                     onMoveDocument={onMoveDocument}
                     onDeleteDocument={onDeleteDocument}
                     filenameVisibility={filenameVisibility}
-                    locationId={locationId} />
+                    locationId={locationId}
+                    activeDropFolderPath={activeDropFolderPath}
+                    activeDropDocumentPath={activeDropDocumentPath}
+                    activeDropDocumentEdge={activeDropDocumentEdge} />
                 )
                 : (
                   <DocumentItem
@@ -307,7 +408,9 @@ function NestedDirectoryItem(
                     onDeleteDocument={onDeleteDocument}
                     filenameVisibility={filenameVisibility}
                     id={locationId}
-                    level={level + 1} />
+                    level={level + 1}
+                    activeDropDocumentPath={activeDropDocumentPath}
+                    activeDropDocumentEdge={activeDropDocumentEdge} />
                 )
             )}
           </div>
@@ -333,38 +436,23 @@ function SidebarLocationItemComponent(
     onDeleteDocument,
     setShowLocationMenu,
     documents,
+    directories,
     isRefreshing,
     refreshReason,
     filterText,
     isMenuOpen,
     filenameVisibility,
     isExternalDropTarget = false,
+    isInternalDropTarget = false,
+    activeDropFolderPath,
+    activeDropDocumentPath,
+    activeDropDocumentEdge,
   }: SidebarLocationItemProps,
 ) {
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
-  const locationRef = useRef<HTMLDivElement>(null);
-  const [isDropTarget, setIsDropTarget] = useState(false);
   const skipAnimation = useSkipAnimation();
-  const showHighlight = isDropTarget || isExternalDropTarget;
-
-  useEffect(() => {
-    const element = locationRef.current;
-    if (!element) return;
-
-    return combine(
-      dropTargetForElements({
-        element,
-        getData: () => ({ locationId: location.id, targetType: "location" as const }),
-        canDrop: ({ source }) => {
-          const data = source.data as DocumentDragData;
-          return data.type === "document";
-        },
-        onDragEnter: () => setIsDropTarget(true),
-        onDragLeave: () => setIsDropTarget(false),
-        onDrop: () => setIsDropTarget(false),
-      }),
-    );
-  }, [location.id]);
+  const showHighlight = isExternalDropTarget || isInternalDropTarget;
+  const showRootDropIndicator = isInternalDropTarget && !activeDropFolderPath && !activeDropDocumentPath;
 
   const handleRemoveClick = useCallback(() => {
     onRemove(location.id);
@@ -393,7 +481,7 @@ function SidebarLocationItemComponent(
     handleMenuClick,
     handleRemoveClick,
   ]);
-  const documentTree = useMemo(() => buildDocumentTree(documents), [documents]);
+  const documentTree = useMemo(() => buildDocumentTree(documents, directories), [directories, documents]);
 
   useEffect(() => {
     if (!selectedDocPath) {
@@ -432,7 +520,6 @@ function SidebarLocationItemComponent(
 
   return (
     <div
-      ref={locationRef}
       data-location-id={location.id}
       className={`${showHighlight ? "ring-2 ring-border-interactive rounded" : ""} ${
         skipAnimation ? "" : "transition-all duration-150"
@@ -442,6 +529,7 @@ function SidebarLocationItemComponent(
         isSelected={isSelected && !selectedDocPath}
         selectedDocPath={selectedDocPath}
         isExpanded={isExpanded}
+        isDropTarget={showHighlight}
         isRefreshing={isRefreshing}
         onItemClick={onItemClick}
         onToggleClick={onToggleClick}
@@ -450,8 +538,18 @@ function SidebarLocationItemComponent(
 
       {isExpanded && isSelected && (
         <div>
+          <div
+            data-drop-location-root="true"
+            data-location-id={location.id}
+            className={cn(
+              "mx-3 rounded border",
+              showRootDropIndicator
+                ? "mb-1 mt-0.5 h-1.5 border-border-interactive bg-layer-hover-01 sidebar-drop-edge-pulse"
+                : "mb-0 mt-0 h-0 border-transparent bg-transparent",
+              skipAnimation ? "" : "transition-colors duration-150",
+            )} />
           {isRefreshing ? <RefreshStatus reason={refreshReason} /> : null}
-          {documents.length === 0
+          {documentTree.children.length === 0
             ? <EmptyDocuments filterText={filterText} />
             : (
               <div>
@@ -470,7 +568,10 @@ function SidebarLocationItemComponent(
                         onMoveDocument={onMoveDocument}
                         onDeleteDocument={onDeleteDocument}
                         filenameVisibility={filenameVisibility}
-                        locationId={location.id} />
+                        locationId={location.id}
+                        activeDropFolderPath={activeDropFolderPath}
+                        activeDropDocumentPath={activeDropDocumentPath}
+                        activeDropDocumentEdge={activeDropDocumentEdge} />
                     )
                     : (
                       <DocumentItem
@@ -484,7 +585,9 @@ function SidebarLocationItemComponent(
                         onDeleteDocument={onDeleteDocument}
                         filenameVisibility={filenameVisibility}
                         id={location.id}
-                        level={1} />
+                        level={1}
+                        activeDropDocumentPath={activeDropDocumentPath}
+                        activeDropDocumentEdge={activeDropDocumentEdge} />
                     )
                 )}
               </div>

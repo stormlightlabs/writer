@@ -1,16 +1,10 @@
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
+import { draggable, type Edge } from "$dnd";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, TrashIcon } from "$icons";
 import type { DocMeta } from "$types";
 import { f } from "$utils/serialize";
 import { cn } from "$utils/tw";
-import {
-  attachClosestEdge,
-  type Edge,
-  extractClosestEdge,
-} from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
-import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
-import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type DialogAnchor, OperationDialog } from "./OperationDialog";
@@ -31,6 +25,8 @@ type DocumentItemProps = {
   onDeleteDocument: (locationId: number, relPath: string) => Promise<boolean>;
   filenameVisibility: boolean;
   id: number;
+  activeDropDocumentPath?: string;
+  activeDropDocumentEdge?: Edge | null;
 };
 
 type RenameDialogProps = {
@@ -235,6 +231,8 @@ export function DocumentItem(
     onDeleteDocument,
     filenameVisibility,
     id,
+    activeDropDocumentPath,
+    activeDropDocumentEdge,
   }: DocumentItemProps,
 ) {
   const { isOpen, position, open, close } = useContextMenu();
@@ -244,55 +242,23 @@ export function DocumentItem(
   const [operationAnchor, setOperationAnchor] = useState<DialogAnchor | undefined>();
   const treeItemRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<"idle" | "dragging">("idle");
-  const [dropState, setDropState] = useState<"idle" | "over">("idle");
-  const [closestEdge, setClosestEdge] = useState<Edge | null>(null);
   const skipAnimation = useSkipAnimation();
 
   useEffect(() => {
     const element = treeItemRef.current;
     if (!element) return;
 
-    return combine(
-      draggable({
-        element,
-        getInitialData: (): DocumentDragData => ({
-          type: "document",
-          locationId: id,
-          relPath: doc.rel_path,
-          title: doc.title || doc.rel_path.split("/").pop() || "Untitled",
-        }),
-        onDragStart: () => setDragState("dragging"),
-        onDrop: () => setDragState("idle"),
+    return draggable({
+      element,
+      getInitialData: (): DocumentDragData => ({
+        type: "document",
+        locationId: id,
+        relPath: doc.rel_path,
+        title: doc.title || doc.rel_path.split("/").pop() || "Untitled",
       }),
-      dropTargetForElements({
-        element,
-        canDrop: ({ source }) => {
-          const data = source.data as DocumentDragData;
-          return data.type === "document" && data.locationId === id && data.relPath !== doc.rel_path;
-        },
-        getData: ({ input }) =>
-          attachClosestEdge({ locationId: id, relPath: doc.rel_path, targetType: "document" as const }, {
-            input,
-            element,
-            allowedEdges: ["top", "bottom"],
-          }),
-        onDragEnter: (args) => {
-          setDropState("over");
-          setClosestEdge(extractClosestEdge(args.self.data));
-        },
-        onDrag: (args) => {
-          setClosestEdge(extractClosestEdge(args.self.data));
-        },
-        onDragLeave: () => {
-          setDropState("idle");
-          setClosestEdge(null);
-        },
-        onDrop: () => {
-          setDropState("idle");
-          setClosestEdge(null);
-        },
-      }),
-    );
+      onDragStart: () => setDragState("dragging"),
+      onDrop: () => setDragState("idle"),
+    });
   }, [id, doc.rel_path, doc.title]);
 
   const displayLabel = useMemo(() => {
@@ -381,6 +347,8 @@ export function DocumentItem(
   );
 
   const currentFilename = useMemo(() => doc.rel_path.split("/").pop() || "", [doc.rel_path]);
+  const isActiveDropDocument = activeDropDocumentPath === doc.rel_path;
+  const closestEdge = isActiveDropDocument ? activeDropDocumentEdge ?? null : null;
   const edgeStyle = useMemo(() => {
     if (!closestEdge) return {};
     return { [closestEdge === "top" ? "top" : "bottom"]: "-1px" };
@@ -388,7 +356,12 @@ export function DocumentItem(
 
   return (
     <>
-      <div ref={treeItemRef} className="relative">
+      <div
+        ref={treeItemRef}
+        className="relative mb-0.5"
+        data-drop-document-row="true"
+        data-document-path={doc.rel_path}
+        data-location-id={id}>
         <TreeItem
           key={doc.rel_path}
           icon={FILE_TEXT_ICON}
@@ -398,12 +371,13 @@ export function DocumentItem(
           onClick={handleClick}
           onContextMenu={handleContextMenu}
           isDragging={dragState === "dragging"}
-          isDropTarget={dropState === "over"} />
+          isDropTarget={isActiveDropDocument} />
         {closestEdge && (
           <div
-            className={cn("absolute left-0 right-0 h-0.5 bg-accent-cyan z-10 pointer-events-none", {
-              "transition-all duration-150": !skipAnimation,
-            })}
+            className={cn(
+              "absolute left-1 right-1 h-0.5 rounded-full bg-accent-cyan z-10 pointer-events-none sidebar-drop-edge-pulse",
+              { "transition-all duration-150": !skipAnimation },
+            )}
             style={edgeStyle} />
         )}
       </div>

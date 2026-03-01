@@ -894,6 +894,21 @@ impl Store {
         Ok(docs)
     }
 
+    /// Lists all directories in a location (excluding the location root).
+    pub fn dir_list(&self, location_id: LocationId) -> Result<Vec<PathBuf>, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        let root_path = &location.root_path;
+        let mut directories = Vec::new();
+        self.collect_dirs_recursive(root_path, root_path, &mut directories)?;
+        directories.sort();
+
+        log::debug!("Listed {} directories in location {:?}", directories.len(), location_id);
+        Ok(directories)
+    }
+
     fn collect_docs_shallow(
         &self, root: &Path, current: &Path, location_id: LocationId, options: &DocListOptions, docs: &mut Vec<DocMeta>,
     ) -> Result<(), AppError> {
@@ -975,6 +990,37 @@ impl Store {
             } else if path.is_dir() {
                 self.collect_docs_recursive(root, &path, location_id, options, docs)?;
             }
+        }
+
+        Ok(())
+    }
+
+    fn collect_dirs_recursive(
+        &self, root: &Path, current: &Path, directories: &mut Vec<PathBuf>,
+    ) -> Result<(), AppError> {
+        let entries =
+            std::fs::read_dir(current).map_err(|e| AppError::io(format!("Failed to read directory: {}", e)))?;
+
+        for entry in entries {
+            let entry = entry.map_err(|e| AppError::io(format!("Failed to read entry: {}", e)))?;
+            let file_type = entry
+                .file_type()
+                .map_err(|e| AppError::io(format!("Failed to read entry type: {}", e)))?;
+            if !file_type.is_dir() {
+                continue;
+            }
+
+            let path = entry.path();
+            let rel_path = path
+                .strip_prefix(root)
+                .map_err(|_| AppError::io("Path not within root"))?
+                .to_path_buf();
+
+            if !rel_path.as_os_str().is_empty() {
+                directories.push(rel_path);
+            }
+
+            self.collect_dirs_recursive(root, &path, directories)?;
         }
 
         Ok(())
@@ -2313,6 +2359,34 @@ mod tests {
         let deep_hits = store.search("deeptoken", None, 10).unwrap();
         assert_eq!(deep_hits.len(), 1);
         assert_eq!(deep_hits[0].rel_path, "new/archive/deep/b.md");
+    }
+
+    #[test]
+    fn test_directory_list_includes_empty_and_nested_directories() {
+        let (store, _temp) = create_test_store();
+        let location_dir = TempDir::new().unwrap();
+        let location = store
+            .location_add("Directory List".to_string(), location_dir.path().to_path_buf())
+            .unwrap();
+
+        store.dir_create(location.id, Path::new("Samples")).unwrap();
+        store.dir_create(location.id, Path::new("Samples/sibling")).unwrap();
+        store.dir_create(location.id, Path::new("Empty")).unwrap();
+
+        let directories = store.dir_list(location.id).unwrap();
+        let as_strings = directories
+            .iter()
+            .map(|path| path.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            as_strings,
+            vec![
+                "Empty".to_string(),
+                "Samples".to_string(),
+                "Samples/sibling".to_string()
+            ]
+        );
     }
 
     #[test]

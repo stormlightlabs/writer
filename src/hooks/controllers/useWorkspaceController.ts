@@ -1,5 +1,7 @@
 import {
   dirCreate,
+  dirList,
+  dirMove,
   docDelete,
   docList,
   docMove,
@@ -63,6 +65,34 @@ function areDocumentsEqual(left: DocMeta[], right: DocMeta[]): boolean {
   }
 
   return true;
+}
+
+function areDirectoriesEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function mapDirectoryMovedRelPath(sourceDir: string, destinationDir: string, candidate: string): string | null {
+  if (candidate === sourceDir) {
+    return destinationDir;
+  }
+
+  const prefix = `${sourceDir}/`;
+  if (!candidate.startsWith(prefix)) {
+    return null;
+  }
+
+  const suffix = candidate.slice(prefix.length);
+  return suffix ? `${destinationDir}/${suffix}` : destinationDir;
 }
 
 export function useWorkspaceController() {
@@ -211,6 +241,19 @@ export function useWorkspaceController() {
 
     setSidebarRefreshState(targetLocationId, source);
 
+    runCmd(dirList(targetLocationId, (nextDirectories) => {
+      const latestState = useWorkspaceStore.getState();
+      if (latestState.selectedLocationId !== targetLocationId) {
+        return;
+      }
+
+      if (!areDirectoriesEqual(latestState.directories, nextDirectories)) {
+        latestState.setDirectories(nextDirectories);
+      }
+    }, (error) => {
+      logger.error(f("Failed to refresh sidebar directories", { locationId: targetLocationId, error }));
+    }));
+
     runCmd(docList(targetLocationId, (nextDocuments) => {
       const latestState = useWorkspaceStore.getState();
       if (latestState.selectedLocationId !== targetLocationId) {
@@ -325,6 +368,43 @@ export function useWorkspaceController() {
     });
   }, [applySession]);
 
+  const handleMoveDirectory = useCallback(
+    (locationId: number, relPath: string, newRelPath: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        runCmd(dirMove(locationId, relPath, newRelPath, (resolvedPath) => {
+          for (const tab of tabs) {
+            if (tab.docRef.location_id !== locationId) {
+              continue;
+            }
+
+            const remappedRelPath = mapDirectoryMovedRelPath(relPath, resolvedPath, tab.docRef.rel_path);
+            if (!remappedRelPath) {
+              continue;
+            }
+
+            void runCmd(
+              sessionUpdateTabDoc(
+                locationId,
+                tab.docRef.rel_path,
+                { location_id: locationId, rel_path: remappedRelPath },
+                tab.title,
+                applySession,
+                () => {},
+              ),
+            );
+          }
+
+          logger.info(f("Directory moved", { locationId, relPath, newRelPath: resolvedPath }));
+          resolve(true);
+        }, (error: AppError) => {
+          logger.error(f("Failed to move directory", { locationId, relPath, newRelPath, error }));
+          resolve(false);
+        }));
+      });
+    },
+    [applySession, tabs],
+  );
+
   const handleImportExternalFile = useCallback(
     (locationId: number, relPath: string, content: string): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -393,6 +473,7 @@ export function useWorkspaceController() {
       handleRefreshSidebar,
       handleRenameDocument,
       handleMoveDocument,
+      handleMoveDirectory,
       handleDeleteDocument,
       handleCreateDirectory,
       handleImportExternalFile,
@@ -426,6 +507,7 @@ export function useWorkspaceController() {
       handleRefreshSidebar,
       handleRenameDocument,
       handleMoveDocument,
+      handleMoveDirectory,
       handleDeleteDocument,
       handleCreateDirectory,
       handleImportExternalFile,

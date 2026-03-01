@@ -64,7 +64,7 @@ function TreeItemComponent(
   const containerClasses = useMemo(() => {
     const base = [
       "sidebar-item group flex items-center gap-2",
-      "cursor-pointer rounded mx-2 mb-0.5 text-[0.8125rem]",
+      "cursor-pointer rounded mx-2 text-[0.8125rem]",
       isDragging || isDropTarget ? "" : "transition-colors duration-150",
     ];
 
@@ -73,7 +73,7 @@ function TreeItemComponent(
     }
 
     if (isDropTarget) {
-      base.push("ring-2 ring-border-interactive");
+      base.push("ring-2 ring-border-interactive !bg-layer-hover-01 text-text-primary sidebar-drop-pulse");
     }
 
     if (isSelected) {
