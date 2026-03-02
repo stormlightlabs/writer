@@ -85,3 +85,12 @@ export const DIALOG_MOTION_PRESETS: Record<
   slideUp: { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 18 } },
   slideRight: { initial: { opacity: 0, x: 18 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 12 } },
 };
+
+export const QUICK_CAPTURE = {
+  FORM: { INITIAL: { opacity: 0, y: 8 } as const, ANIMATE: { opacity: 1, y: 0 } as const },
+  TEXT: {
+    INITIAL: { opacity: 0, y: 4 } as const,
+    ANIMATE: { opacity: 1, y: 0 } as const,
+    EXIT: { opacity: 0, y: 2 } as const,
+  },
+};

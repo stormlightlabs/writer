@@ -6,6 +6,7 @@ import {
   NO_MOTION_TRANSITION,
 } from "$constants";
 import { PlusIcon } from "$icons";
+import { formatShortcut } from "$utils/shortcuts";
 import { motion } from "motion/react";
 
 type TransitionType = typeof EMPTY_NEW_DOC_TRANSITION | typeof NO_MOTION_TRANSITION;
@@ -21,7 +22,7 @@ export function NewButton({ onNewDocument, hasTabs, transition }: NewButtonProps
           size="iconMd"
           onClick={onNewDocument}
           className="text-text-secondary hover:text-text-primary"
-          title="New Document (Ctrl+N)">
+          title={`New Document (${formatShortcut("Cmd+N")})`}>
           <PlusIcon size="sm" />
         </Button>
       </div>

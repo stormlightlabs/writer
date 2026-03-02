@@ -2,8 +2,21 @@
 
 ## Unreleased
 
+### 2026-03-01
+
+- Show version in the UI.
+- Drag & drop powered file browser
+
+### 2026-02-28
+
+- Resizable markdown preview split view.
+- (WIP) Project website.
+
 ### 2026-02-27
 
+- Migrated session state management to Rust.
+  - Moved NLP algorithm logic from frontend to Tauri/Rust for better performance.
+  - Transitioned to event-driven filesystem updates.
 - Added PDF Preview on Export
 - Implemented file operations (move, rename, delete) with sidebar context menu support.
 - Added a draggable "Help" sheet and integrated diagnostics/style checking into routed sheets.

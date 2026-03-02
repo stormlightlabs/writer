@@ -25,6 +25,7 @@ import type {
   WorkspacePanelModeStateReturn,
   WorkspacePanelSidebarStateReturn,
 } from "$state/selectors";
+import { formatShortcut } from "$utils/shortcuts";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -253,7 +254,7 @@ describe("WorkspacePanel", () => {
       workspacePanelSidebarState: { sidebarCollapsed: false },
     });
 
-    fireEvent.click(screen.getByTitle("Hide sidebar (Ctrl+B)"));
+    fireEvent.click(screen.getByTitle(`Hide sidebar (${formatShortcut("Cmd+B")})`));
     expect(onToggleSidebar).toHaveBeenCalledOnce();
 
     const separator = screen.getByRole("separator", { name: "Resize sidebar" });

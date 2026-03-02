@@ -9,6 +9,7 @@ import { useSkipAnimation } from "$hooks/useMotion";
 import { FocusIcon } from "$icons";
 import { useFocusModePanelState, useHelpSheetState } from "$state/selectors";
 import type { SaveStatus } from "$types";
+import { formatShortcut } from "$utils/shortcuts";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useMemo } from "react";
 
@@ -29,6 +30,9 @@ type FocusHeaderProps = {
 };
 
 function FocusHeader({ onExit, onOpenHelp, onSave, saveStatus, hasActiveDocument }: FocusHeaderProps) {
+  const saveShortcut = formatShortcut("Cmd+S");
+  const helpShortcut = formatShortcut("Cmd+/");
+
   return (
     <div className="px-6 py-4 flex items-center justify-between">
       <h1 className="m-0 text-sm font-medium text-text-secondary flex items-center gap-2">
@@ -41,9 +45,9 @@ function FocusHeader({ onExit, onOpenHelp, onSave, saveStatus, hasActiveDocument
           compact
           onClick={onSave}
           disabled={!hasActiveDocument || saveStatus === "Saved" || saveStatus === "Saving"}
-          title="Save (Cmd+S)" />
+          title={`Save (${saveShortcut})`} />
         <Button variant="surface" size="lg" onClick={onOpenHelp} className="rounded-md text-[0.8125rem]">
-          Help (Cmd+/)
+          Help ({helpShortcut})
         </Button>
         <Button variant="surface" size="lg" onClick={onExit} className="rounded-md text-[0.8125rem]">
           Exit Focus Mode (Esc)

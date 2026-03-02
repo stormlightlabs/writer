@@ -2,6 +2,7 @@ import { AppHeaderBar } from "$components/AppLayout/AppHeaderBar";
 import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
+import { formatShortcut } from "$utils/shortcuts";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -39,7 +40,7 @@ describe("AppHeaderBar", () => {
     vi.mocked(useHelpSheetState).mockReturnValue({ isOpen: false, setOpen: setHelpSheetOpen, toggle: vi.fn() });
 
     render(<AppHeaderBar />);
-    fireEvent.click(screen.getByTitle("Open help sheet (Cmd+/)"));
+    fireEvent.click(screen.getByTitle(`Open help sheet (${formatShortcut("Cmd+/")})`));
 
     expect(setHelpSheetOpen).toHaveBeenCalledWith(true);
   });

@@ -5,6 +5,7 @@ import { useViewportTier } from "$hooks/useViewportTier";
 import { CheckIcon, ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
 import { appVersionGet, runCmd } from "$ports";
 import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
+import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const AppTitle = ({ hideTitle, version }: { hideTitle: boolean; version: string }) => (
@@ -56,6 +57,11 @@ function SearchRow(
     compactTabLabel,
   }: SearchRowProps,
 ) {
+  const searchShortcut = useMemo(() => formatShortcut("Cmd+Shift+F"), []);
+  const helpShortcut = useMemo(() => formatShortcut("Cmd+/"), []);
+  const toggleTabBarShortcut = useMemo(() => formatShortcut("Cmd+Shift+B"), []);
+  const toggleSidebarShortcut = useMemo(() => formatShortcut("Cmd+B"), []);
+
   const statusbarId = useMemo(() => {
     if (compactTabLabel) {
       return {
@@ -70,18 +76,18 @@ function SearchRow(
   }, [compactTabLabel, statusBarCollapsed]);
 
   const tabbarId = useMemo(() => {
-    const title = `${tabBarCollapsed ? "Show" : "Hide"} tab bar (Ctrl+Shift+B)`;
+    const title = `${tabBarCollapsed ? "Show" : "Hide"} tab bar (${toggleTabBarShortcut})`;
     if (compactTabLabel) {
       return { label: tabBarCollapsed ? "Show Tabs" : "Hide Tabs", title };
     }
     return { label: tabBarCollapsed ? "Show Tab Bar" : "Hide Tab Bar", title };
-  }, [compactTabLabel, tabBarCollapsed]);
+  }, [compactTabLabel, tabBarCollapsed, toggleTabBarShortcut]);
 
   const sidebarId = useMemo(() => {
-    const title = `${sidebarCollapsed ? "Show" : "Hide"} sidebar (Ctrl+B)`;
+    const title = `${sidebarCollapsed ? "Show" : "Hide"} sidebar (${toggleSidebarShortcut})`;
     const label = sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar";
     return { label, title };
-  }, [sidebarCollapsed]);
+  }, [sidebarCollapsed, toggleSidebarShortcut]);
 
   return (
     <div className="flex items-center gap-2">
@@ -90,11 +96,11 @@ function SearchRow(
         className={`flex items-center gap-1.5 px-3 py-1.5 bg-field-01 border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer ${
           iconOnly ? "w-8 h-8 px-0 justify-center" : ""
         }`}
-        title="Search (Ctrl+Shift+F)">
+        title={`Search (${searchShortcut})`}>
         <SearchIcon size="sm" />
         {iconOnly ? null : <span>Search</span>}
         {!iconOnly && showSearchShortcut && (
-          <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Ctrl+Shift+F</kbd>
+          <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">{searchShortcut}</kbd>
         )}
       </Button>
       <Button
@@ -102,12 +108,12 @@ function SearchRow(
         variant="outline"
         size="sm"
         className={`flex items-center gap-1.5 ${iconOnly ? "w-8 h-8 p-0 justify-center" : ""}`}
-        title="Open help sheet (Cmd+/)"
+        title={`Open help sheet (${helpShortcut})`}
         aria-label={iconOnly ? "Open help sheet" : undefined}>
         <QuestionIcon size="sm" />
         {iconOnly ? null : <span>Help</span>}
         {!iconOnly && showHelpShortcut && (
-          <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">Cmd+/</kbd>
+          <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">{helpShortcut}</kbd>
         )}
       </Button>
       <Button

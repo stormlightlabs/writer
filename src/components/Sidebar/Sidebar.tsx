@@ -3,6 +3,7 @@ import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
 import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
+import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
 import {
@@ -38,7 +39,7 @@ const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void 
     size="sm"
     onClick={onToggleCollapse}
     className="flex items-center gap-1.5"
-    title="Hide sidebar (Ctrl+B)">
+    title={`Hide sidebar (${formatShortcut("Cmd+B")})`}>
     <CollapseIcon size="sm" />
     Hide
   </Button>

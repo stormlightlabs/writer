@@ -14,6 +14,7 @@ import {
 } from "$icons";
 import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
 import { SaveStatus } from "$types";
+import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useMemo } from "react";
 import { SaveStatusIndicator } from "./SaveStatusIndicator";
 import { ToolbarButton } from "./ToolbarButton";
@@ -80,7 +81,6 @@ export function Toolbar(
     [],
   );
 
-  const iconOnly = useMemo(() => isNarrow, [isNarrow]);
   const hideRefresh = useMemo(() => viewportWidth < 1080, [viewportWidth]);
   const compactStatus = useMemo(() => viewportWidth < 960, [viewportWidth]);
   const isEditorOnly = useMemo(() => !isSplitView && !isPreviewVisible, [isSplitView, isPreviewVisible]);
@@ -93,7 +93,7 @@ export function Toolbar(
           label="Save"
           onClick={onSave}
           disabled={saveStatus === "Saved" || saveStatus === "Saving"}
-          shortcut="Ctrl+S"
+          shortcut={formatShortcut("Cmd+S")}
           iconOnly={isCompact} />
         {onNewDocument && (
           <ToolbarButton
@@ -101,12 +101,12 @@ export function Toolbar(
             label="New Document"
             onClick={onNewDocument}
             disabled={isNewDocumentDisabled}
-            shortcut="Ctrl+N"
+            shortcut={formatShortcut("Cmd+N")}
             iconOnly={isCompact} />
         )}
         {hasActiveDocument ? <SaveStatusIndicator status={saveStatus} compact={compactStatus} /> : null}
         {onRefresh && !hideRefresh && (
-          <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly={iconOnly} />
+          <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly={isNarrow} />
         )}
       </div>
 
@@ -116,31 +116,31 @@ export function Toolbar(
           label="Editor"
           isActive={isEditorOnly}
           onClick={setEditorOnlyMode}
-          iconOnly={iconOnly} />
+          iconOnly={isNarrow} />
 
         <ToolbarButton
           icon={icons.splitView}
           label="Split"
           isActive={isSplitView}
           onClick={toggleSplitView}
-          shortcut="Ctrl+\\"
-          iconOnly={iconOnly} />
+          shortcut={formatShortcut("Cmd+\\")}
+          iconOnly={isNarrow} />
 
         <ToolbarButton
           icon={icons.eye}
           label="Preview"
           isActive={isPreviewVisible}
           onClick={togglePreviewVisible}
-          shortcut="Ctrl+P"
-          iconOnly={iconOnly} />
+          shortcut={formatShortcut("Cmd+P")}
+          iconOnly={isNarrow} />
 
         <ToolbarButton
           icon={icons.focus}
           label="Focus"
           isActive={isFocusMode}
           onClick={toggleFocusMode}
-          shortcut="Ctrl+F"
-          iconOnly={iconOnly} />
+          shortcut={formatShortcut("Cmd+F")}
+          iconOnly={isNarrow} />
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
@@ -150,9 +150,9 @@ export function Toolbar(
             label={isExportingPdf ? "Exporting" : "Export PDF"}
             onClick={onExportPdf}
             disabled={isExportingPdf || isPdfExportDisabled}
-            iconOnly={iconOnly} />
+            iconOnly={isNarrow} />
         )}
-        <SettingsToolbarButton icon={icons.settings} iconOnly={iconOnly} />
+        <SettingsToolbarButton icon={icons.settings} iconOnly={isNarrow} />
       </div>
     </div>
   );

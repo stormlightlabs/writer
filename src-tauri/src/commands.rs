@@ -1157,12 +1157,30 @@ pub async fn global_capture_submit(
         settings.append_target.clone()
     };
 
+    let quick_note_inbox_dir: &str = if matches!(
+        mode,
+        writer_store::CaptureMode::QuickNote | writer_store::CaptureMode::WritingSession
+    ) {
+        if let Some(ref dest) = destination {
+            let requested_dir = dest.rel_path.trim();
+            if requested_dir.is_empty() {
+                &settings.inbox_relative_dir
+            } else {
+                requested_dir
+            }
+        } else {
+            &settings.inbox_relative_dir
+        }
+    } else {
+        &settings.inbox_relative_dir
+    };
+
     match crate::capture::handle_capture_submit(
         &app,
         mode,
         text,
         target_location,
-        &settings.inbox_relative_dir,
+        quick_note_inbox_dir,
         &append_target,
         settings.close_after_save,
     )
