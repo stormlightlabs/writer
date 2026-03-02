@@ -25,7 +25,7 @@ const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, ClassValue> = {
   outline:
     "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-300",
   surface:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-01 text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-01 text-text-secondary hover:bg-surface-active hover:text-text-primary cursor-pointer transition-colors duration-300",
   secondary:
     "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer transition-colors duration-300",
   primary:

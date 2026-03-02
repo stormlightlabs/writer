@@ -29,8 +29,23 @@ export function SettingsHeader({ title, scope, onClose, closeAriaLabel, onViewMo
         )}
       </div>
       <div className="flex items-center gap-2">
-        {onViewMore && <Button type="button" variant="outline" size="sm" onClick={onViewMore}>View more</Button>}
-        <Button type="button" variant="iconSubtle" size="iconLg" onClick={onClose} aria-label={closeAriaLabel}>
+        {onViewMore && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onViewMore}
+            className="hover:bg-accent-blue/10 hover:text-accent-blue">
+            View more
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="iconSubtle"
+          size="iconLg"
+          onClick={onClose}
+          aria-label={closeAriaLabel}
+          className="hover:bg-support-error/10 hover:text-support-error">
           <XIcon size="sm" />
         </Button>
       </div>

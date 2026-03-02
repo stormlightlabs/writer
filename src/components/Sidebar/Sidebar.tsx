@@ -60,7 +60,7 @@ const SidebarActions = (
 );
 
 const CountPill = ({ count, label, singularLabel }: CountPillProps) => (
-  <span className="inline-flex h-6 items-center rounded-md border border-stroke-subtle bg-layer-02 px-2.5 text-[0.6875rem] leading-none tabular-nums text-text-placeholder">
+  <span className="inline-flex h-6 items-center rounded-md border border-stroke-subtle bg-layer-02 px-2.5 text-[0.6875rem] leading-none tabular-nums text-text-primary">
     {count.toLocaleString()} {count === 1 ? singularLabel : label}
   </span>
 );

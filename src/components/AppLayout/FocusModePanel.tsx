@@ -47,7 +47,7 @@ function FocusHeader({ onExit, onOpenHelp, onSave, saveStatus, hasActiveDocument
           onClick={onSave}
           disabled={!hasActiveDocument || saveStatus === "Saved" || saveStatus === "Saving"}
           title={`Save (${saveShortcut})`} />
-        <Button variant="surface" size="lg" onClick={onOpenHelp} className="rounded-md text-[0.8125rem]">
+        <Button variant="surface" size="lg" onClick={onOpenHelp} className="rounded-md text-[0.8125rem] ">
           Help ({helpShortcut})
         </Button>
         <Button variant="surface" size="lg" onClick={onExit} className="rounded-md text-[0.8125rem]">

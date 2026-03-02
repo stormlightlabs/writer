@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 
 export function useLayoutHotkeys(): void {
   const { toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed } = useLayoutChromeActions();
-  const { toggleFocusMode, toggleSplitView } = useViewModeActions();
+  const { toggleFocusMode, toggleSplitView, togglePreviewVisible } = useViewModeActions();
   const registerShortcut = useShortcutsStore((state) => state.registerShortcut);
   const unregisterShortcut = useShortcutsStore((state) => state.unregisterShortcut);
 
@@ -33,6 +33,12 @@ export function useLayoutHotkeys(): void {
       label: "Toggle Tab Bar",
       keys: ["Cmd", "Shift", "B"],
       description: "Show or hide the tab bar",
+    }, {
+      id: "toggle-preview",
+      category: "View",
+      label: "Toggle Preview",
+      keys: ["Cmd", "P"],
+      description: "Show or hide the markdown preview",
     }, {
       id: "toggle-split-view",
       category: "View",
@@ -79,6 +85,11 @@ export function useLayoutHotkeys(): void {
         toggleSidebarCollapsed();
       }
 
+      if (hasMod && !event.shiftKey && lowerKey === "p") {
+        event.preventDefault();
+        togglePreviewVisible();
+      }
+
       if (hasMod && event.key === "\\") {
         event.preventDefault();
         toggleSplitView();
@@ -89,5 +100,5 @@ export function useLayoutHotkeys(): void {
     return () => {
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
-  }, [toggleFocusMode, toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed, toggleSplitView]);
+  }, [toggleFocusMode, togglePreviewVisible, toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed, toggleSplitView]);
 }
