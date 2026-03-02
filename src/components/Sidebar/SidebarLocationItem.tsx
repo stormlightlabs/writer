@@ -87,6 +87,7 @@ type SidebarTreeContextValue = {
     activeDropFolderPath?: string;
     activeDropFolderEdge?: Edge | null;
     activeDropFolderIntent?: "into" | "between";
+    pendingSpringFolderPath?: string | null;
     activeDropDocumentPath?: string;
     activeDropDocumentEdge?: Edge | null;
     activeDropDocumentIsReorder?: boolean;
@@ -236,6 +237,7 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
   const folderEdge = isActiveFolderTarget ? dropIndicators.activeDropFolderEdge ?? null : null;
   const showInsertionLine = isActiveFolderTarget && dropIndicators.activeDropFolderIntent === "between"
     && (folderEdge === "top" || folderEdge === "bottom");
+  const isSpringPending = dropIndicators.pendingSpringFolderPath === node.path && !isExpanded;
   const edgeStyle = useMemo(() => {
     if (!folderEdge) {
       return {};
@@ -276,6 +278,7 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
         className={cn(
           "pb-0.5",
           isDropIntoTarget ? "rounded border-2 border-border-interactive bg-layer-hover-01" : "",
+          isSpringPending ? "sidebar-folder-spring-pending rounded" : "",
           skipAnimation ? "" : "transition-[box-shadow,background-color] duration-150",
         )}>
         <TreeItem
@@ -292,11 +295,11 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
           ? (
             <div
               className={cn(
-                "absolute left-1 right-1 h-0.5 bg-accent-cyan z-10 pointer-events-none sidebar-drop-edge-pulse",
+                "sidebar-drop-insertion-line absolute left-0 right-0 h-0.5 z-10 pointer-events-none sidebar-drop-edge-pulse",
                 { "transition-[top,bottom] duration-150": !skipAnimation },
               )}
               style={edgeStyle}>
-              <div className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-border-interactive bg-layer-02" />
+              <div className="sidebar-drop-insertion-dot absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border-interactive bg-layer-02" />
             </div>
           )
           : null}
@@ -354,6 +357,7 @@ function SidebarLocationItemComponent(
 ) {
   const { filenameVisibility, documentActions, onToggleLocation, openDocumentOperation } = useSidebarLocationContext();
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
+  const [pendingSpringFolderPath, setPendingSpringFolderPath] = useState<string | null>(null);
   const hoverExpandRef = useRef<{ path: string; timer: ReturnType<typeof setTimeout> } | null>(null);
   const dragExpandedSnapshotRef = useRef<Set<string> | null>(null);
   const autoExpandedDuringDragRef = useRef<Set<string>>(new Set());
@@ -420,10 +424,12 @@ function SidebarLocationItemComponent(
 
   const clearHoverExpand = useCallback(() => {
     if (!hoverExpandRef.current) {
+      setPendingSpringFolderPath(null);
       return;
     }
     globalThis.clearTimeout(hoverExpandRef.current.timer);
     hoverExpandRef.current = null;
+    setPendingSpringFolderPath(null);
   }, []);
 
   useEffect(() => {
@@ -441,6 +447,7 @@ function SidebarLocationItemComponent(
 
     clearHoverExpand();
     const folderPath = activeDropFolderPath;
+    setPendingSpringFolderPath(folderPath);
     hoverExpandRef.current = {
       path: folderPath,
       timer: globalThis.setTimeout(() => {
@@ -453,6 +460,7 @@ function SidebarLocationItemComponent(
           }
           return new Set([...previous, folderPath]);
         });
+        setPendingSpringFolderPath((currentPath) => currentPath === folderPath ? null : currentPath);
         hoverExpandRef.current = null;
       }, 800),
     };
@@ -508,6 +516,7 @@ function SidebarLocationItemComponent(
         activeDropFolderPath,
         activeDropFolderEdge,
         activeDropFolderIntent,
+        pendingSpringFolderPath,
         activeDropDocumentPath,
         activeDropDocumentEdge,
         activeDropDocumentIsReorder,
@@ -522,6 +531,7 @@ function SidebarLocationItemComponent(
       activeDropFolderEdge,
       activeDropFolderIntent,
       activeDropFolderPath,
+      pendingSpringFolderPath,
       activeDragDocumentPath,
       documentActions,
       filenameVisibility,

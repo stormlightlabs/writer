@@ -154,6 +154,7 @@ export function useSidebarInternalDnD(
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const nativeDragPosRef = useRef<{ x: number; y: number } | null>(null);
   const resolvedDestinationRef = useRef<DestinationData | null | typeof UNSET_DROP_DESTINATION>(UNSET_DROP_DESTINATION);
+  const activeDragTitleRef = useRef<string | null>(null);
   const edgeScrollRafRef = useRef<number | null>(null);
   const edgeScrollDirectionRef = useRef<1 | -1 | 0>(0);
   const dragLeaveClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -275,13 +276,20 @@ export function useSidebarInternalDnD(
   }, [cancelDeferredDragLeaveClear, stopEdgeScroll]);
 
   useEffect(() => {
-    const handleGlobalDragEnd = () => {
+    const handleGlobalDragEnd = (event: Event) => {
+      const dropEffect = (event as globalThis.DragEvent).dataTransfer?.dropEffect;
+      const dragTitle = activeDragTitleRef.current;
+      if (dropEffect === "none" && dragTitle) {
+        announce(`Cancelled drag for ${dragTitle}`);
+      }
+
       setActiveDropTarget(null);
       setIsDraggingInternal(false);
       setDragGhostLabel(null);
       setSuppressActiveDragSourceOpacity(false);
       setActiveDragDocumentPath(null);
       setActiveDragDocumentLocationId(null);
+      activeDragTitleRef.current = null;
       resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
       cancelDeferredDragLeaveClear();
       stopEdgeScroll();
@@ -325,6 +333,7 @@ export function useSidebarInternalDnD(
         }
         setIsDraggingInternal(true);
         setDragGhostLabel(source.data.title);
+        activeDragTitleRef.current = source.data.title;
         resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
         setActiveDropTarget(null);
         setSuppressActiveDragSourceOpacity(false);
@@ -390,6 +399,7 @@ export function useSidebarInternalDnD(
         setSuppressActiveDragSourceOpacity(false);
         setActiveDragDocumentPath(null);
         setActiveDragDocumentLocationId(null);
+        activeDragTitleRef.current = null;
         cancelDeferredDragLeaveClear();
         stopEdgeScroll();
 
@@ -670,6 +680,7 @@ export function useSidebarInternalDnD(
       setSuppressActiveDragSourceOpacity(false);
       setActiveDragDocumentPath(null);
       setActiveDragDocumentLocationId(null);
+      activeDragTitleRef.current = null;
       resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
       cancelDeferredDragLeaveClear();
       stopEdgeScroll();
