@@ -138,7 +138,7 @@ function PdfExportContent(
       <ExportError error={error} />
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
-          showPreview ? "grid grid-cols-[minmax(0,_1fr)_minmax(280px,_320px)] gap-3" : "flex"
+          showPreview ? "grid grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-3" : "flex"
         }`}>
         {showPreview
           ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
@@ -199,7 +199,7 @@ function TextExportContent(
       <ExportError error={error} />
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
-          showPreview ? "grid grid-cols-[minmax(0,_1fr)_minmax(280px,_320px)] gap-3" : "flex"
+          showPreview ? "grid grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-3" : "flex"
         }`}>
         {showPreview
           ? (
@@ -313,7 +313,7 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
   }, [handleCancel, handleExportDocx]);
 
   const compactPanel = useMemo(() => isCompact || viewportWidth < 1024, [isCompact, viewportWidth]);
-  const showPreview = useMemo(() => !compactPanel && viewportWidth >= 1280, [compactPanel, viewportWidth]);
+  const showPreview = useMemo(() => !compactPanel, [compactPanel]);
   const isPdfTabActive = useMemo(() => activeExportTabId === "pdf", [activeExportTabId]);
   const isDocxTabActive = useMemo(() => activeExportTabId === "docx", [activeExportTabId]);
   const isTextTabActive = useMemo(() => activeExportTabId === "txt", [activeExportTabId]);

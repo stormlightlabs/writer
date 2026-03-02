@@ -21,20 +21,21 @@ const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, ClassValue> = {
   iconGhost:
     "inline-flex items-center justify-center rounded bg-transparent border-none text-icon-secondary cursor-pointer",
   iconSubtle:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-icon-secondary hover:text-icon-primary cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-icon-secondary hover:text-icon-primary cursor-pointer transition-colors duration-300",
   outline:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-text-secondary hover:text-text-primary cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-300",
   surface:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-01 text-text-secondary hover:text-text-primary cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-01 text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-300",
   secondary:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer transition-colors duration-300",
   primary:
-    "inline-flex items-center justify-center rounded border border-accent-cyan bg-accent-cyan text-white hover:opacity-90 cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-accent-cyan bg-accent-cyan text-white hover:opacity-90 cursor-pointer transition-colors duration-300",
   primaryBlue:
-    "inline-flex items-center justify-center rounded border border-accent-blue bg-accent-blue text-white hover:bg-link-hover cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-accent-blue bg-accent-blue text-white hover:bg-link-hover cursor-pointer transition-colors duration-300",
   link:
-    "inline-flex items-center justify-center bg-transparent border-none text-link-primary underline underline-offset-2 cursor-pointer",
-  dangerGhost: "inline-flex items-center justify-center bg-transparent border-none text-support-error cursor-pointer",
+    "inline-flex items-center justify-center bg-transparent border-none text-link-primary underline underline-offset-2 cursor-pointer transition-colors duration-300",
+  dangerGhost:
+    "inline-flex items-center justify-center bg-transparent border-none text-support-error cursor-pointer transition-colors duration-300",
 };
 
 const BUTTON_SIZE_CLASSES: Record<ButtonSize, ClassValue> = {

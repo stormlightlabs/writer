@@ -18,7 +18,13 @@ export const ExportDialogHeader = ({ title, onCancel }: ExportDialogHeaderProps)
         )
         : null}
     </div>
-    <Button type="button" variant="iconSubtle" size="iconLg" onClick={onCancel} aria-label="Close export dialog">
+    <Button
+      type="button"
+      variant="iconSubtle"
+      size="iconLg"
+      onClick={onCancel}
+      aria-label="Close export dialog"
+      className="hover:bg-support-error/10 hover:text-support-error transition-colors duration-200">
       <XIcon size="sm" />
     </Button>
   </div>

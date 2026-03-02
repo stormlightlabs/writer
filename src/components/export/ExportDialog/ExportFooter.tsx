@@ -18,7 +18,7 @@ export const ExportDialogFooter = (
     </Button>
     <Button
       type="button"
-      variant="primary"
+      variant="primaryBlue"
       size="lg"
       onClick={handleExport}
       disabled={isLoading || disable}
