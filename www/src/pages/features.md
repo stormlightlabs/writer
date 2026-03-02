@@ -1,6 +1,6 @@
 ---
-title: Features - Writer
-description: Everything Writer can do for your writing workflow
+title: Features — Writer
+description: What Writer does and how it works.
 template: page
 ---
 
@@ -8,84 +8,79 @@ template: page
 
 ## Markdown Editor
 
-The editor is built on CodeMirror 6 - fast, accessible, and keyboard-friendly.
+Built on CodeMirror 6. Fast, accessible, keyboard-driven.
 
-- **Live Preview** - See your rendered output alongside raw markdown
-- **Split Panes** - Editor-only, preview-only, or side-by-side layouts
-- **Resizable Divider** - Drag to adjust how much space each pane gets
-- **Document Tabs** - Keep multiple files open and drag to reorder them
+- **Live Preview** — Rendered output alongside raw markdown
+- **Split Panes** — Editor-only, preview-only, or side-by-side
+- **Resizable Divider** — Drag to set pane ratio
+- **Document Tabs** — Multiple open files, draggable to reorder
 
-![Split pane editor](https://placehold.co/700x437/161616/33b1ff?text=Split+Pane+Editor)
-
----
+![split-pane editor](/static/images/split-pane-editor.png)
 
 ## Focus Mode
 
-When you need to concentrate, focus mode strips the interface down to what matters.
+Strips the interface down to the text.
 
-- **Typewriter Scrolling** - Your cursor stays centered on screen as you type
-- **Dimming** - Surrounding text fades so you're only looking at the current context
-- **Minimal Chrome** - Toolbars and panels step aside
+- **Typewriter Scrolling** — Cursor stays centered as you type
+- **Dimming** — Surrounding text fades to keep you in the current paragraph
+- **Minimal Chrome** — Toolbars and panels step aside until needed
 
-![Focus mode](https://placehold.co/700x437/161616/be95ff?text=Focus+Mode)
+![focus mode with dimming](/static/images/focus-mode-with-dimming.png)
 
 ---
 
 ## Writing Assistance
 
-Writer gives you real-time feedback without being overbearing about it.
+Real-time feedback without getting in the way.
 
-- **Style Check** - Flags filler words, redundancies, and clichés as you type
-- **Parts-of-Speech Highlighting** - Visualize the structure of your sentences
-- **Custom Patterns** - Add your own rules to match your style guide
+- **Style Check** — Flags fillers, redundancies, and clichés as you type
+- **Parts-of-Speech Highlighting** — Visualize sentence structure (nouns, verbs, etc.)
+- **Custom Patterns** — Add rules to match your own style guide
 
-![Style check decorations](https://placehold.co/700x437/161616/ee5396?text=Style+Check)
+![style check decorations](/static/images/style-check-decorations.png)
 
 ---
 
-## Workspace Management
+## File Management
 
-Point Writer at your folders and it handles the rest.
+The sidebar is a full file browser backed by atomic Rust operations.
 
-- **Multiple Locations** - Add any folder on your system as a workspace
-- **File Operations** - Create, rename, move, and delete files and folders from the sidebar
-- **Filesystem Watching** - Changes made outside Writer are picked up automatically
-- **Conflict Detection** - If a file is modified externally while you have it open, Writer lets you know
+- **Drag and Drop** — Reorder documents, move between locations, import `.md` files from your OS
+- **Context Menu** — Right-click to move, rename, or delete
+- **Nested Directories** — Full folder tree support with create/rename/delete
+- **Filesystem Watching** — External changes are picked up automatically
+- **Conflict Detection** — Writer tells you when a file was modified outside the editor
 
-![Workspace sidebar](https://placehold.co/700x437/161616/3ddbd9?text=Workspace+Sidebar)
+![context menu in sidebar](/static/images/context-menu-in-sidebar.png)
 
 ---
 
 ## Quick Capture
 
-Ideas show up at inconvenient times. Quick capture lets you grab them without breaking stride.
+A global hotkey opens a capture window from anywhere on your system. Three modes:
 
-- **Global Hotkey** - Open the capture window from anywhere on your system
-- **Quick Note** - Creates a timestamped markdown file in your inbox folder
-- **Append Mode** - Add text to an existing document
-- **Writing Session** - Create a note and jump straight into the editor
+- **Quick Note** — Timestamped markdown file in your inbox folder
+- **Append** — Add text to an existing document
+- **Writing Session** — Create a note and jump into the editor
 
-![Quick capture window](https://placehold.co/700x437/161616/42be65?text=Quick+Capture)
+![quick capture](/static/images/quick-capture.png)
 
 ---
 
-## PDF Export
+## Export
 
-Turn your markdown into a formatted PDF when you need to share or print.
+Turn your markdown into something you can hand to someone else.
 
-- **Page Layout** - Configure page size, orientation, and margins
-- **Custom Fonts** - Pick the typography that fits the document
-- **Headers & Footers** - Add page numbers, titles, or dates
-- **Rust-Powered Parsing** - Markdown processing happens in Rust for speed
+- **PDF** — Configurable page size, margins, fonts, headers, and footers. Inline preview before export.
+- **DOCX** — Word-compatible output for collaborators who need it.
+- **Plaintext** — Strip formatting and export raw text.
 
-![PDF export dialog](https://placehold.co/700x437/161616/ff6f00?text=PDF+Export)
+Markdown processing runs in Rust. Filename sanitization is handled automatically.
+
+![pdf export](/static/images/pdf-export.png)
 
 ---
 
 ## Session Persistence
 
-Close Writer, come back later, and everything is where you left it.
-
-- **Tab State** - Your open documents are remembered between sessions
-- **Layout Settings** - Pane sizes and positions are preserved
-- **Conflict Detection** - If a file changed while you were away, you'll know about it
+Close Writer, reopen it, and everything is where you left it. Open tabs, pane sizes, layout state — all restored.

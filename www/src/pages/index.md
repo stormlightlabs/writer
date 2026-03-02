@@ -1,22 +1,21 @@
 ---
-title: Writer - Local-First Markdown Editor
-description: A distraction-free, local-first markdown writing environment built with Tauri
+title: Writer — Local-First Markdown Editor
+description: A distraction-free, local-first markdown editor built with Tauri and Rust.
 template: home
 ---
 
 ## Local-First
 
-Most writing apps want your content living on their servers, wrapped in proprietary formats. Writer doesn't. Your documents are plain markdown files sitting in whatever folder structure you already use. Bring your own sync, your own backups, your own workflow. Writer just gets out of the way and lets you write.
+Your documents are plain markdown files on your filesystem. No cloud dependency, no proprietary format, no sync service you didn't ask for. Bring your own folder structure and Writer stays out of the way.
 
-## Distraction-free Writing
+## Distraction-Free
 
-The interface is minimal on purpose. Focus mode centers your cursor and fades everything else out so you can stay in flow.
-When you need to check formatting, split the editor and preview side by side. When you don't, go full-screen and forget the UI is there.
+Focus mode centers your cursor and dims everything else. Split the editor and preview when you need to check formatting. Go full-screen when you don't. The interface defaults to minimal chrome — toolbars surface when you need them and disappear when you don't.
 
-## Make it yours
+## Writing Tools
 
-Writer ships with a built-in style checker that flags filler words, redundancies, and clichés as you type, and you can add your own patterns too. Set up a global hotkey for quick capture so ideas don't slip away. Tweak the layout to match how you think.
+A built-in style checker flags filler words, redundancies, and clichés in real-time using Aho-Corasick pattern matching in Rust. Parts-of-speech highlighting lets you see sentence structure at a glance. Add your own patterns to match a house style guide.
 
 ## Open Source
 
-Writer is open source and built with modern tools: Tauri 2, React 19, CodeMirror 6, and Rust. Contribute, fork, or just peek under the hood.
+Writer is built on Tauri 2, React 19, CodeMirror 6, and Rust. The source is open. Contribute, fork, or read the code.

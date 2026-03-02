@@ -9,7 +9,7 @@
   --color-accent-2: #5f7dff;
   --color-success: #42be65;
   --color-warm: #ff8a3d;
-  --color-pink: #ee5396;
+  --color-pink: #14b8a6;
   --color-violet: #be95ff;
 
   --radius-sm: 8px;
@@ -56,7 +56,7 @@ body {
   color: var(--color-text);
   background:
     radial-gradient(circle at 10% 0%, rgba(95, 125, 255, 0.2) 0%, transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(238, 83, 150, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(20, 184, 166, 0.18) 0%, transparent 40%),
     var(--color-bg);
 }
 
@@ -106,15 +106,10 @@ main {
 }
 
 .logo-icon {
-  display: grid;
-  place-items: center;
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-pink), var(--color-violet));
-  box-shadow: var(--shadow-soft);
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
+  object-fit: contain;
 }
 
 .nav {
@@ -184,7 +179,7 @@ main {
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 28px rgba(238, 83, 150, 0.35);
+  box-shadow: 0 10px 28px rgba(20, 184, 166, 0.35);
 }
 
 .btn-secondary {
@@ -253,7 +248,8 @@ main {
   height: 48px;
   margin-bottom: var(--space-5);
   border-radius: 10px;
-  font-size: 1.4rem;
+  font-size: 1.25rem;
+  color: #fff;
   background: linear-gradient(135deg, var(--color-accent-2), var(--color-accent));
 }
 
