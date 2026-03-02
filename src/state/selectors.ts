@@ -150,6 +150,9 @@ export const useWorkspaceDocumentsState = () =>
       refreshingLocationId: state.refreshingLocationId,
       sidebarRefreshReason: state.sidebarRefreshReason,
       externalDropTargetId: state.externalDropTargetId,
+      externalDropFolderPath: state.externalDropFolderPath,
+      activeDropTarget: state.activeDropTarget,
+      folderSortOrderByLocation: state.folderSortOrderByLocation,
     })),
   );
 
@@ -162,6 +165,8 @@ export const useWorkspaceDocumentsActions = () =>
       setLoadingDocuments: state.setLoadingDocuments,
       setSidebarRefreshState: state.setSidebarRefreshState,
       setExternalDropTarget: state.setExternalDropTarget,
+      setActiveDropTarget: state.setActiveDropTarget,
+      reorderFolderSortOrder: state.reorderFolderSortOrder,
     })),
   );
 
@@ -379,12 +384,17 @@ export const useSidebarState = () => {
       refreshingLocationId: state.refreshingLocationId,
       sidebarRefreshReason: state.sidebarRefreshReason,
       externalDropTargetId: state.externalDropTargetId,
+      externalDropFolderPath: state.externalDropFolderPath,
+      activeDropTarget: state.activeDropTarget,
+      folderSortOrderByLocation: state.folderSortOrderByLocation,
       filterText: state.sidebarFilter,
       setFilterText: state.setSidebarFilter,
       selectLocation: state.setSelectedLocation,
       setDocuments: state.setDocuments,
       setDirectories: state.setDirectories,
       setExternalDropTarget: state.setExternalDropTarget,
+      setActiveDropTarget: state.setActiveDropTarget,
+      reorderFolderSortOrder: state.reorderFolderSortOrder,
     })),
   );
 
@@ -398,6 +408,9 @@ export const useSidebarState = () => {
     refreshingLocationId: workspaceState.refreshingLocationId,
     sidebarRefreshReason: workspaceState.sidebarRefreshReason,
     externalDropTargetId: workspaceState.externalDropTargetId,
+    externalDropFolderPath: workspaceState.externalDropFolderPath,
+    activeDropTarget: workspaceState.activeDropTarget,
+    folderSortOrderByLocation: workspaceState.folderSortOrderByLocation,
     filterText: workspaceState.filterText,
     setFilterText: workspaceState.setFilterText,
     selectLocation: workspaceState.selectLocation,
@@ -406,6 +419,8 @@ export const useSidebarState = () => {
     toggleSidebarCollapsed: layoutState.toggleSidebarCollapsed,
     filenameVisibility: layoutState.filenameVisibility,
     setExternalDropTarget: workspaceState.setExternalDropTarget,
+    setActiveDropTarget: workspaceState.setActiveDropTarget,
+    reorderFolderSortOrder: workspaceState.reorderFolderSortOrder,
   };
 };
 

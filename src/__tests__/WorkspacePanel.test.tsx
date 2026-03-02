@@ -72,6 +72,9 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
   externalDropTargetId: undefined,
+  externalDropFolderPath: undefined,
+  activeDropTarget: null,
+  folderSortOrderByLocation: {},
   filterText: "",
   setFilterText: vi.fn(),
   setDocuments: vi.fn(),
@@ -80,6 +83,8 @@ const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): Sideba
   toggleSidebarCollapsed: vi.fn(),
   filenameVisibility: false,
   setExternalDropTarget: vi.fn(),
+  setActiveDropTarget: vi.fn(),
+  reorderFolderSortOrder: vi.fn(),
   ...overrides,
 });
 

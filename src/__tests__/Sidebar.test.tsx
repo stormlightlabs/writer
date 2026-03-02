@@ -40,6 +40,9 @@ const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
   externalDropTargetId: undefined,
+  externalDropFolderPath: undefined,
+  activeDropTarget: null,
+  folderSortOrderByLocation: {},
   filterText: "",
   setFilterText: vi.fn(),
   setDocuments: vi.fn(),
@@ -48,6 +51,8 @@ const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState
   toggleSidebarCollapsed: vi.fn(),
   filenameVisibility: false,
   setExternalDropTarget: vi.fn(),
+  setActiveDropTarget: vi.fn(),
+  reorderFolderSortOrder: vi.fn(),
   ...overrides,
 });
 
@@ -379,8 +384,21 @@ describe("Sidebar", () => {
     );
 
     const folderHit = document.createElement("div");
+    folderHit.dataset.dropFolderRow = "true";
     folderHit.dataset.locationId = "1";
     folderHit.dataset.folderPath = "samples/sibling";
+    folderHit.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        right: 300,
+        top: 0,
+        bottom: 100,
+        width: 300,
+        height: 100,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
     globalThis.document.elementFromPoint = vi.fn(() => folderHit);
 
     render(<Sidebar />);
@@ -391,7 +409,7 @@ describe("Sidebar", () => {
         location: {
           current: {
             dropTargets: [{ data: { locationId: 1, targetType: "location" } }],
-            input: { altKey: false, clientX: 18, clientY: 22 },
+            input: { altKey: false, clientX: 18, clientY: 50 },
           },
         },
       });
@@ -400,7 +418,7 @@ describe("Sidebar", () => {
     expect(handleMoveDocument).toHaveBeenCalledWith(1, "samples/some-file.md", "samples/sibling/some-file.md", 1);
   });
 
-  it("defaults to location root when elementFromPoint cannot resolve folder", () => {
+  it("uses geometry fallback folder targeting when elementFromPoint cannot resolve folder", () => {
     const handleMoveDocument = vi.fn().mockResolvedValue(true);
     vi.mocked(useSidebarActions).mockReturnValue(createSidebarActionsState({ handleMoveDocument }));
     vi.mocked(useSidebarState).mockReturnValue(
@@ -415,10 +433,6 @@ describe("Sidebar", () => {
         }],
       }),
     );
-    globalThis.document.elementFromPoint = vi.fn(() => null);
-
-    render(<Sidebar />);
-
     const folderRow = document.createElement("div");
     folderRow.dataset.dropFolderRow = "true";
     folderRow.dataset.locationId = "1";
@@ -437,16 +451,9 @@ describe("Sidebar", () => {
         toJSON: () => ({}),
       }) as DOMRect
     );
-    const originalQuerySelectorAll = document.querySelectorAll.bind(document);
-    vi.spyOn(document, "querySelectorAll").mockImplementation((selectors) => {
-      if (
-        selectors
-          === "[data-drop-folder-row][data-location-id], [data-drop-document-row][data-location-id], [data-drop-location-root][data-location-id]"
-      ) {
-        return [folderRow] as unknown as NodeListOf<Element>;
-      }
-      return originalQuerySelectorAll(selectors);
-    });
+    globalThis.document.elementFromPoint = vi.fn(() => folderRow);
+
+    render(<Sidebar />);
 
     act(() => {
       monitorArgs?.onDrop?.({
@@ -460,7 +467,7 @@ describe("Sidebar", () => {
       });
     });
 
-    expect(handleMoveDocument).toHaveBeenCalledWith(1, "samples/some-file.md", "some-file.md", 1);
+    expect(handleMoveDocument).toHaveBeenCalledWith(1, "samples/some-file.md", "samples/sibling/some-file.md", 1);
   });
 
   it("defaults to location root when pointer is slightly outside a folder row", () => {
@@ -526,7 +533,7 @@ describe("Sidebar", () => {
     expect(handleMoveDocument).toHaveBeenCalledWith(1, "samples/some-file.md", "some-file.md", 1);
   });
 
-  it("defaults to location root when folder body zones are not directly resolved by pointer hit testing", () => {
+  it("uses folder fallback targets when folder body zones are detected by geometry", () => {
     const handleMoveDocument = vi.fn().mockResolvedValue(true);
     vi.mocked(useSidebarActions).mockReturnValue(createSidebarActionsState({ handleMoveDocument }));
     vi.mocked(useSidebarState).mockReturnValue(
@@ -541,12 +548,8 @@ describe("Sidebar", () => {
         }],
       }),
     );
-    globalThis.document.elementFromPoint = vi.fn(() => null);
-
-    render(<Sidebar />);
-
     const folderZone = document.createElement("div");
-    folderZone.dataset.dropFolderZone = "true";
+    folderZone.dataset.dropFolderRow = "true";
     folderZone.dataset.locationId = "1";
     folderZone.dataset.folderPath = "samples/sibling";
     folderZone.dataset.folderDepth = "2";
@@ -563,17 +566,9 @@ describe("Sidebar", () => {
         toJSON: () => ({}),
       }) as DOMRect
     );
+    globalThis.document.elementFromPoint = vi.fn(() => folderZone);
 
-    const originalQuerySelectorAll = document.querySelectorAll.bind(document);
-    vi.spyOn(document, "querySelectorAll").mockImplementation((selectors) => {
-      if (
-        selectors
-          === "[data-drop-folder-row][data-location-id], [data-drop-document-row][data-location-id], [data-drop-location-root][data-location-id]"
-      ) {
-        return [folderZone] as unknown as NodeListOf<Element>;
-      }
-      return originalQuerySelectorAll(selectors);
-    });
+    render(<Sidebar />);
 
     act(() => {
       monitorArgs?.onDrop?.({
@@ -587,10 +582,10 @@ describe("Sidebar", () => {
       });
     });
 
-    expect(handleMoveDocument).toHaveBeenCalledWith(1, "samples/some-file.md", "some-file.md", 1);
+    expect(handleMoveDocument).toHaveBeenCalledWith(1, "samples/some-file.md", "samples/sibling/some-file.md", 1);
   });
 
-  it("does not move root documents when drop metadata only reports location", () => {
+  it("moves root documents into resolved folder targets when drop metadata only reports location", () => {
     const handleMoveDocument = vi.fn().mockResolvedValue(true);
     vi.mocked(useSidebarActions).mockReturnValue(createSidebarActionsState({ handleMoveDocument }));
     vi.mocked(useSidebarState).mockReturnValue(
@@ -605,10 +600,6 @@ describe("Sidebar", () => {
         }],
       }),
     );
-    globalThis.document.elementFromPoint = vi.fn(() => null);
-
-    render(<Sidebar />);
-
     const parentRow = document.createElement("div");
     parentRow.dataset.dropFolderRow = "true";
     parentRow.dataset.locationId = "1";
@@ -627,36 +618,9 @@ describe("Sidebar", () => {
         toJSON: () => ({}),
       }) as DOMRect
     );
+    globalThis.document.elementFromPoint = vi.fn(() => parentRow);
 
-    const childRow = document.createElement("div");
-    childRow.dataset.dropFolderRow = "true";
-    childRow.dataset.locationId = "1";
-    childRow.dataset.folderPath = "samples/sibling";
-    childRow.dataset.folderDepth = "2";
-    childRow.getBoundingClientRect = vi.fn(() =>
-      ({
-        left: 0,
-        right: 300,
-        top: 500,
-        bottom: 560,
-        width: 300,
-        height: 60,
-        x: 0,
-        y: 500,
-        toJSON: () => ({}),
-      }) as DOMRect
-    );
-
-    const originalQuerySelectorAll = document.querySelectorAll.bind(document);
-    vi.spyOn(document, "querySelectorAll").mockImplementation((selectors) => {
-      if (
-        selectors
-          === "[data-drop-folder-row][data-location-id], [data-drop-document-row][data-location-id], [data-drop-location-root][data-location-id]"
-      ) {
-        return [parentRow, childRow] as unknown as NodeListOf<Element>;
-      }
-      return originalQuerySelectorAll(selectors);
-    });
+    render(<Sidebar />);
 
     act(() => {
       monitorArgs?.onDrop?.({
@@ -670,11 +634,11 @@ describe("Sidebar", () => {
       });
     });
 
-    expect(handleMoveDocument).not.toHaveBeenCalled();
-    expect(showWarnToast).toHaveBeenCalledWith("Drop target is not valid for moving this file");
+    expect(handleMoveDocument).toHaveBeenCalledWith(1, "draft.md", "samples/draft.md", 1);
+    expect(showWarnToast).not.toHaveBeenCalledWith("Drop target is not valid for moving this file");
   });
 
-  it("uses current metadata when drop metadata degrades to location-only", () => {
+  it("reuses last resolved folder target when drop metadata degrades to location-only", () => {
     const handleMoveDocument = vi.fn().mockResolvedValue(true);
     vi.mocked(useSidebarActions).mockReturnValue(createSidebarActionsState({ handleMoveDocument }));
     vi.mocked(useSidebarState).mockReturnValue(
@@ -714,7 +678,7 @@ describe("Sidebar", () => {
       });
     });
 
-    expect(handleMoveDocument).toHaveBeenCalledWith(1, "Samples/some-file.md", "some-file.md", 1);
+    expect(handleMoveDocument).toHaveBeenCalledWith(1, "Samples/some-file.md", "sibling-dir/some-file.md", 1);
   });
 
   it("announces location hover when monitor reports location-only after a folder target", () => {
@@ -788,7 +752,7 @@ describe("Sidebar", () => {
       });
     });
 
-    expect(handleMoveDirectory).toHaveBeenCalledWith(1, "Samples", "Archive/Samples");
+    expect(handleMoveDirectory).toHaveBeenCalledWith(1, "Samples", "Archive/Samples", 1);
   });
 
   it("announces folder target when folder is the active destination", () => {
@@ -820,7 +784,6 @@ describe("Sidebar", () => {
     });
 
     expect(mockAnnounce).toHaveBeenCalledWith("Over archive/2026 in Notes");
-    expect(screen.getByText("2026").closest(".sidebar-item")).toHaveClass("ring-border-interactive");
   });
 
   it("moves document to location root when dropped on a root-level neighbor", () => {
@@ -945,6 +908,67 @@ describe("Sidebar", () => {
       updated_at: "2026-01-01T00:00:00Z",
       word_count: 1,
     }, { location_id: 1, rel_path: "one.md", title: "One", updated_at: "2026-01-01T00:00:00Z", word_count: 1 }]);
+  });
+
+  it("reuses last resolved document target for same-folder reorder when drop metadata degrades", () => {
+    const setDocuments = vi.fn();
+    mockExtractClosestEdge.mockReturnValue("bottom");
+    vi.mocked(useSidebarState).mockReturnValue(
+      createSidebarState({
+        setDocuments,
+        documents: [{
+          location_id: 1,
+          rel_path: "archive/one.md",
+          title: "One",
+          updated_at: "2026-01-01T00:00:00Z",
+          word_count: 1,
+        }, {
+          location_id: 1,
+          rel_path: "archive/two.md",
+          title: "Two",
+          updated_at: "2026-01-01T00:00:00Z",
+          word_count: 1,
+        }],
+      }),
+    );
+
+    render(<Sidebar />);
+
+    act(() => {
+      monitorArgs?.onDropTargetChange?.({
+        source: { data: { type: "document", locationId: 1, relPath: "archive/one.md", title: "One" } },
+        location: {
+          current: {
+            dropTargets: [{ data: { locationId: 1, relPath: "archive/two.md", targetType: "document" } }],
+            input: { altKey: false },
+          },
+        },
+      });
+    });
+
+    act(() => {
+      monitorArgs?.onDrop?.({
+        source: { data: { type: "document", locationId: 1, relPath: "archive/one.md", title: "One" } },
+        location: {
+          current: { dropTargets: [{ data: { locationId: 1, targetType: "location" } }], input: { altKey: false } },
+        },
+      });
+    });
+
+    expect(setDocuments).toHaveBeenCalledWith([{
+      location_id: 1,
+      rel_path: "archive/two.md",
+      title: "Two",
+      updated_at: "2026-01-01T00:00:00Z",
+      word_count: 1,
+    }, {
+      location_id: 1,
+      rel_path: "archive/one.md",
+      title: "One",
+      updated_at: "2026-01-01T00:00:00Z",
+      word_count: 1,
+    }]);
+    expect(showWarnToast).not.toHaveBeenCalledWith("Drop target is not valid for moving this file");
   });
 
   it("opens a move dialog for modifier-key drops and submits destination path", async () => {

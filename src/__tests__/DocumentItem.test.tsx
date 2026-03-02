@@ -47,6 +47,19 @@ describe("DocumentItem", () => {
       render(<DocumentItem {...props} />);
       expect(screen.getByText("untitled.md")).toBeInTheDocument();
     });
+
+    it("uses edge-only indicator for reorder targets", () => {
+      const props = createProps({
+        activeDropDocumentPath: "notes/test.md",
+        activeDropDocumentEdge: "bottom",
+        activeDropDocumentIsReorder: true,
+      });
+      render(<DocumentItem {...props} />);
+
+      const item = screen.getByText("Test Document").closest(".sidebar-item");
+      expect(item).not.toHaveClass("ring-border-interactive");
+      expect(document.querySelector(".sidebar-drop-edge-pulse")).toBeTruthy();
+    });
   });
 
   describe("context menu", () => {

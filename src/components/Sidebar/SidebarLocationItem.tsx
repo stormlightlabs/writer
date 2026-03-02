@@ -40,9 +40,16 @@ type SidebarLocationItemProps = {
   refreshReason: SidebarRefreshReason | null;
   isExternalDropTarget?: boolean;
   isInternalDropTarget?: boolean;
+  isDragInProgress?: boolean;
   activeDropFolderPath?: string;
+  activeDropFolderEdge?: Edge | null;
+  activeDropFolderIntent?: "into" | "between";
   activeDropDocumentPath?: string;
   activeDropDocumentEdge?: Edge | null;
+  activeDropDocumentIsReorder?: boolean;
+  activeDragDocumentPath?: string | null;
+  suppressActiveDragSourceOpacity?: boolean;
+  folderSortOrder?: string[];
   onRemoveLocation: (locationId: number) => void;
   onSelectLocation: (locationId: number) => void;
   onRefreshLocation: (locationId: number) => void;
@@ -78,8 +85,13 @@ type SidebarTreeContextValue = {
   onOpenDocumentOperation: (type: DocumentOperationType, doc: DocMeta, anchor?: DialogAnchor) => void;
   dropIndicators: {
     activeDropFolderPath?: string;
+    activeDropFolderEdge?: Edge | null;
+    activeDropFolderIntent?: "into" | "between";
     activeDropDocumentPath?: string;
     activeDropDocumentEdge?: Edge | null;
+    activeDropDocumentIsReorder?: boolean;
+    activeDragDocumentPath?: string | null;
+    suppressActiveDragSourceOpacity?: boolean;
   };
 };
 
@@ -206,7 +218,10 @@ function TreeDocumentNode({ doc, level }: { doc: DocMeta; level: number }) {
       filenameVisibility={filenameVisibility}
       level={level}
       activeDropDocumentPath={dropIndicators.activeDropDocumentPath}
-      activeDropDocumentEdge={dropIndicators.activeDropDocumentEdge} />
+      activeDropDocumentEdge={dropIndicators.activeDropDocumentEdge}
+      activeDropDocumentIsReorder={dropIndicators.activeDropDocumentIsReorder}
+      suppressDraggingAppearance={Boolean(dropIndicators.suppressActiveDragSourceOpacity)
+        && dropIndicators.activeDragDocumentPath === doc.rel_path} />
   );
 }
 
@@ -216,7 +231,17 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
   const folderRowRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<"idle" | "dragging">("idle");
   const skipAnimation = useSkipAnimation();
-  const showDropTarget = dropIndicators.activeDropFolderPath === node.path;
+  const isActiveFolderTarget = dropIndicators.activeDropFolderPath === node.path;
+  const isDropIntoTarget = isActiveFolderTarget && dropIndicators.activeDropFolderIntent !== "between";
+  const folderEdge = isActiveFolderTarget ? dropIndicators.activeDropFolderEdge ?? null : null;
+  const showInsertionLine = isActiveFolderTarget && dropIndicators.activeDropFolderIntent === "between"
+    && (folderEdge === "top" || folderEdge === "bottom");
+  const edgeStyle = useMemo(() => {
+    if (!folderEdge) {
+      return {};
+    }
+    return { [folderEdge === "top" ? "top" : "bottom"]: "-1px" };
+  }, [folderEdge]);
 
   useEffect(() => {
     const rowElement = folderRowRef.current;
@@ -250,7 +275,7 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
         data-folder-depth={level}
         className={cn(
           "pb-0.5",
-          showDropTarget ? "ring-2 ring-border-interactive rounded bg-layer-hover-01" : "",
+          isDropIntoTarget ? "rounded border-2 border-border-interactive bg-layer-hover-01" : "",
           skipAnimation ? "" : "transition-[box-shadow,background-color] duration-150",
         )}>
         <TreeItem
@@ -260,9 +285,21 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
           hasChildItems
           level={level}
           isDragging={dragState === "dragging"}
-          isDropTarget={showDropTarget}
+          isDropTarget={false}
           onClick={handleToggle}
           onToggle={handleToggle} />
+        {showInsertionLine
+          ? (
+            <div
+              className={cn(
+                "absolute left-1 right-1 h-0.5 bg-accent-cyan z-10 pointer-events-none sidebar-drop-edge-pulse",
+                { "transition-[top,bottom] duration-150": !skipAnimation },
+              )}
+              style={edgeStyle}>
+              <div className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-border-interactive bg-layer-02" />
+            </div>
+          )
+          : null}
       </div>
 
       {isExpanded
@@ -300,9 +337,16 @@ function SidebarLocationItemComponent(
     refreshReason,
     isExternalDropTarget,
     isInternalDropTarget,
+    isDragInProgress = false,
     activeDropFolderPath,
+    activeDropFolderEdge,
+    activeDropFolderIntent,
     activeDropDocumentPath,
     activeDropDocumentEdge,
+    activeDropDocumentIsReorder,
+    activeDragDocumentPath,
+    suppressActiveDragSourceOpacity,
+    folderSortOrder = [],
     onRemoveLocation,
     onSelectLocation,
     onRefreshLocation,
@@ -310,6 +354,9 @@ function SidebarLocationItemComponent(
 ) {
   const { filenameVisibility, documentActions, onToggleLocation, openDocumentOperation } = useSidebarLocationContext();
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
+  const hoverExpandRef = useRef<{ path: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const dragExpandedSnapshotRef = useRef<Set<string> | null>(null);
+  const autoExpandedDuringDragRef = useRef<Set<string>>(new Set());
   const skipAnimation = useSkipAnimation();
   const showHighlight = Boolean(isExternalDropTarget) || Boolean(isInternalDropTarget);
   const showRootDropIndicator = Boolean(isInternalDropTarget) && !activeDropFolderPath && !activeDropDocumentPath;
@@ -330,7 +377,11 @@ function SidebarLocationItemComponent(
     onToggleLocation(location.id);
   }, [location.id, onToggleLocation]);
 
-  const documentTree = useMemo(() => buildDocumentTree(documents, directories), [documents, directories]);
+  const documentTree = useMemo(() => buildDocumentTree(documents, directories, folderSortOrder), [
+    documents,
+    directories,
+    folderSortOrder,
+  ]);
 
   useEffect(() => {
     if (!selectedDocPath) {
@@ -367,6 +418,80 @@ function SidebarLocationItemComponent(
     });
   }, []);
 
+  const clearHoverExpand = useCallback(() => {
+    if (!hoverExpandRef.current) {
+      return;
+    }
+    globalThis.clearTimeout(hoverExpandRef.current.timer);
+    hoverExpandRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (
+      !isDragInProgress || activeDropFolderIntent !== "into" || !activeDropFolderPath
+      || expandedDirectories.has(activeDropFolderPath)
+    ) {
+      clearHoverExpand();
+      return;
+    }
+
+    if (hoverExpandRef.current?.path === activeDropFolderPath) {
+      return;
+    }
+
+    clearHoverExpand();
+    const folderPath = activeDropFolderPath;
+    hoverExpandRef.current = {
+      path: folderPath,
+      timer: globalThis.setTimeout(() => {
+        setExpandedDirectories((previous) => {
+          if (previous.has(folderPath)) {
+            return previous;
+          }
+          if (!dragExpandedSnapshotRef.current?.has(folderPath)) {
+            autoExpandedDuringDragRef.current.add(folderPath);
+          }
+          return new Set([...previous, folderPath]);
+        });
+        hoverExpandRef.current = null;
+      }, 800),
+    };
+  }, [activeDropFolderIntent, activeDropFolderPath, clearHoverExpand, expandedDirectories, isDragInProgress]);
+
+  useEffect(() => {
+    if (isDragInProgress) {
+      if (!dragExpandedSnapshotRef.current) {
+        dragExpandedSnapshotRef.current = new Set(expandedDirectories);
+        autoExpandedDuringDragRef.current = new Set();
+      }
+      return;
+    }
+
+    clearHoverExpand();
+    const snapshot = dragExpandedSnapshotRef.current;
+    if (!snapshot) {
+      return;
+    }
+
+    const autoExpanded = autoExpandedDuringDragRef.current;
+    if (autoExpanded.size > 0) {
+      setExpandedDirectories((previous) => {
+        const next = new Set(previous);
+        for (const path of autoExpanded) {
+          if (!snapshot.has(path)) {
+            next.delete(path);
+          }
+        }
+        return next;
+      });
+    }
+
+    dragExpandedSnapshotRef.current = null;
+    autoExpandedDuringDragRef.current = new Set();
+  }, [clearHoverExpand, expandedDirectories, isDragInProgress]);
+
+  useEffect(() => () => clearHoverExpand(), [clearHoverExpand]);
+
   const treeContextValue = useMemo<SidebarTreeContextValue>(
     () => ({
       locationId: location.id,
@@ -379,17 +504,31 @@ function SidebarLocationItemComponent(
         onDeleteDocument: documentActions.onDeleteDocument,
       },
       onOpenDocumentOperation: openDocumentOperation,
-      dropIndicators: { activeDropFolderPath, activeDropDocumentPath, activeDropDocumentEdge },
+      dropIndicators: {
+        activeDropFolderPath,
+        activeDropFolderEdge,
+        activeDropFolderIntent,
+        activeDropDocumentPath,
+        activeDropDocumentEdge,
+        activeDropDocumentIsReorder,
+        activeDragDocumentPath,
+        suppressActiveDragSourceOpacity,
+      },
     }),
     [
       activeDropDocumentEdge,
+      activeDropDocumentIsReorder,
       activeDropDocumentPath,
+      activeDropFolderEdge,
+      activeDropFolderIntent,
       activeDropFolderPath,
+      activeDragDocumentPath,
       documentActions,
       filenameVisibility,
       location.id,
       openDocumentOperation,
       selectedDocPath,
+      suppressActiveDragSourceOpacity,
     ],
   );
 

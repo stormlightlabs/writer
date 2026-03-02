@@ -1,24 +1,28 @@
 import {
   announce,
-  attachClosestEdge,
   cleanup as cleanupLiveRegion,
   type DestinationData,
   dropTargetForElements,
+  type Edge,
   extractClosestEdge,
   monitorForElements,
+  normalizePointerCoordinates,
   resolveDestinationFromPointer,
 } from "$dnd";
 import {
+  checkDropDocumentIntoFolder,
   getFilename,
   getParentDirectoryPath,
   isSidebarDragData,
   pointerFromInput,
   reorderDocumentsInLocation,
   resolveDestinationFromDropTargets,
+  type SidebarDragData,
   summarizePointerInput,
   walkUpToValidDestination,
 } from "$dnd/sidebar";
 import { showErrorToast, showSuccessToast, showWarnToast } from "$state/stores/toasts";
+import type { SidebarActiveDropTarget } from "$state/types";
 import type { DocMeta, LocationDescriptor } from "$types";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
@@ -38,42 +42,256 @@ type UseSidebarInternalDnDArgs = {
   locations: LocationDescriptor[];
   documents: DocMeta[];
   setDocuments: (documents: DocMeta[]) => void;
+  setActiveDropTarget: (target: SidebarActiveDropTarget | null) => void;
+  reorderFolderSortOrder: (locationId: number, sourcePath: string, destinationPath: string, edge: Edge) => void;
   handleMoveDocument: (
     locationId: number,
     relPath: string,
     newRelPath: string,
     targetLocationId?: number,
   ) => Promise<boolean>;
-  handleMoveDirectory: (locationId: number, relPath: string, newRelPath: string) => Promise<boolean>;
+  handleMoveDirectory: (
+    locationId: number,
+    relPath: string,
+    newRelPath: string,
+    targetLocationId?: number,
+  ) => Promise<boolean>;
   handleRefreshSidebar: (locationId?: number) => void;
 };
 
 type SidebarInternalDnDResult = {
   dropZoneRef: RefObject<HTMLDivElement | null>;
   handleDragOver: (event: DragEvent) => void;
-  handleDragLeave: () => void;
-  activeInternalDropTarget: DestinationData | null;
+  handleDragLeave: (event: DragEvent) => void;
+  isDraggingInternal: boolean;
+  dragGhostLabel: string | null;
+  activeDragDocumentPath: string | null;
+  activeDragDocumentLocationId: number | null;
+  suppressActiveDragSourceOpacity: boolean;
   moveDialog: ReactNode;
 };
 
+type ResolvedDropDestination = {
+  pointerDestination: DestinationData | null;
+  dropTargetDestination: DestinationData | null;
+  rawDestination: DestinationData | null;
+  destination: DestinationData | null;
+  isNoopDrop: boolean;
+};
+
+const UNSET_DROP_DESTINATION = Symbol("unset-drop-destination");
+const EDGE_SCROLL_THRESHOLD_PX = 40;
+const EDGE_SCROLL_STEP_PX = 14;
+const DRAG_LEAVE_CLEAR_DELAY_MS = 40;
+
+function resolveDropDestination(
+  sourceData: SidebarDragData,
+  nativeDragPos: { x: number; y: number } | null,
+  locationInput: unknown,
+  dropTargets: unknown,
+): ResolvedDropDestination {
+  const pos = nativeDragPos ?? pointerFromInput(locationInput);
+  const pointerDestination = pos ? resolveDestinationFromPointer(pos.x, pos.y)?.destination ?? null : null;
+  const dropTargetDestination = resolveDestinationFromDropTargets(dropTargets);
+
+  let rawDestination = pointerDestination && pointerDestination.targetType !== "location"
+    ? pointerDestination
+    : (dropTargetDestination ?? pointerDestination);
+
+  if (
+    rawDestination?.targetType === "document"
+    && rawDestination.relPath
+    && dropTargetDestination?.targetType === "document"
+    && dropTargetDestination.relPath === rawDestination.relPath
+    && dropTargetDestination.locationId === rawDestination.locationId
+  ) {
+    rawDestination = dropTargetDestination;
+  }
+
+  const isNoopDrop = sourceData.type === "document"
+    && rawDestination?.folderPath !== undefined
+    && checkDropDocumentIntoFolder(sourceData, rawDestination.locationId, rawDestination.folderPath) === "noop";
+  const rawEdge = rawDestination ? extractClosestEdge(rawDestination) : null;
+  const isFolderSiblingReorder = sourceData.type === "folder"
+    && rawDestination?.targetType === "folder"
+    && rawDestination.folderPath !== undefined
+    && (rawEdge === "top" || rawEdge === "bottom")
+    && sourceData.locationId === rawDestination.locationId
+    && sourceData.relPath !== rawDestination.folderPath
+    && getParentDirectoryPath(sourceData.relPath) === getParentDirectoryPath(rawDestination.folderPath);
+
+  return {
+    pointerDestination,
+    dropTargetDestination,
+    rawDestination,
+    destination: rawDestination
+      ? (isFolderSiblingReorder ? rawDestination : walkUpToValidDestination(sourceData, rawDestination))
+      : null,
+    isNoopDrop,
+  };
+}
+
 export function useSidebarInternalDnD(
-  { locations, documents, setDocuments, handleMoveDocument, handleMoveDirectory, handleRefreshSidebar }:
-    UseSidebarInternalDnDArgs,
+  {
+    locations,
+    documents,
+    setDocuments,
+    setActiveDropTarget,
+    reorderFolderSortOrder,
+    handleMoveDocument,
+    handleMoveDirectory,
+    handleRefreshSidebar,
+  }: UseSidebarInternalDnDArgs,
 ): SidebarInternalDnDResult {
   const [moveDropDialog, setMoveDropDialog] = useState<MoveDropDialogState | null>(null);
   const [moveDropPath, setMoveDropPath] = useState("");
   const [isMovingDrop, setIsMovingDrop] = useState(false);
-  const [activeInternalDropTarget, setActiveInternalDropTarget] = useState<DestinationData | null>(null);
+  const [isDraggingInternal, setIsDraggingInternal] = useState(false);
+  const [dragGhostLabel, setDragGhostLabel] = useState<string | null>(null);
+  const [activeDragDocumentPath, setActiveDragDocumentPath] = useState<string | null>(null);
+  const [activeDragDocumentLocationId, setActiveDragDocumentLocationId] = useState<number | null>(null);
+  const [suppressActiveDragSourceOpacity, setSuppressActiveDragSourceOpacity] = useState(false);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const nativeDragPosRef = useRef<{ x: number; y: number } | null>(null);
+  const resolvedDestinationRef = useRef<DestinationData | null | typeof UNSET_DROP_DESTINATION>(UNSET_DROP_DESTINATION);
+  const edgeScrollRafRef = useRef<number | null>(null);
+  const edgeScrollDirectionRef = useRef<1 | -1 | 0>(0);
+  const dragLeaveClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelDeferredDragLeaveClear = useCallback(() => {
+    if (dragLeaveClearTimerRef.current !== null) {
+      globalThis.clearTimeout(dragLeaveClearTimerRef.current);
+      dragLeaveClearTimerRef.current = null;
+    }
+  }, []);
+
+  const stopEdgeScroll = useCallback(() => {
+    if (edgeScrollRafRef.current !== null) {
+      cancelAnimationFrame(edgeScrollRafRef.current);
+      edgeScrollRafRef.current = null;
+    }
+    edgeScrollDirectionRef.current = 0;
+  }, []);
+
+  const applyEdgeScrollForY = useCallback((clientY: number | null) => {
+    const scrollContainer = dropZoneRef.current;
+    if (!scrollContainer || clientY === null) {
+      stopEdgeScroll();
+      return;
+    }
+
+    const rect = scrollContainer.getBoundingClientRect();
+    let nextDirection: 1 | -1 | 0 = 0;
+    if (clientY <= rect.top + EDGE_SCROLL_THRESHOLD_PX) {
+      nextDirection = -1;
+    } else if (clientY >= rect.bottom - EDGE_SCROLL_THRESHOLD_PX) {
+      nextDirection = 1;
+    }
+
+    if (nextDirection === 0) {
+      stopEdgeScroll();
+      return;
+    }
+
+    edgeScrollDirectionRef.current = nextDirection;
+    if (edgeScrollRafRef.current !== null) {
+      return;
+    }
+
+    const tick = () => {
+      const container = dropZoneRef.current;
+      const direction = edgeScrollDirectionRef.current;
+      if (!container || direction === 0) {
+        edgeScrollRafRef.current = null;
+        return;
+      }
+
+      const previousTop = container.scrollTop;
+      container.scrollTop = Math.max(
+        0,
+        Math.min(container.scrollHeight - container.clientHeight, previousTop + direction * EDGE_SCROLL_STEP_PX),
+      );
+
+      if (container.scrollTop === previousTop) {
+        edgeScrollRafRef.current = null;
+        return;
+      }
+
+      edgeScrollRafRef.current = requestAnimationFrame(tick);
+    };
+
+    edgeScrollRafRef.current = requestAnimationFrame(tick);
+  }, [stopEdgeScroll]);
 
   const handleDragOver = useCallback((event: DragEvent) => {
-    nativeDragPosRef.current = { x: event.clientX, y: event.clientY };
-  }, []);
+    cancelDeferredDragLeaveClear();
+    const normalized = normalizePointerCoordinates(event.clientX, event.clientY);
+    nativeDragPosRef.current = normalized;
+    applyEdgeScrollForY(normalized.y);
+  }, [applyEdgeScrollForY, cancelDeferredDragLeaveClear]);
 
-  const handleDragLeave = useCallback(() => {
-    nativeDragPosRef.current = null;
-  }, []);
+  const handleDragLeave = useCallback((event: DragEvent) => {
+    const container = dropZoneRef.current;
+    if (!container) {
+      return;
+    }
+
+    const related = event.relatedTarget;
+    if (related instanceof Node && container.contains(related)) {
+      return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const leavePoint = { x: event.clientX, y: event.clientY };
+    const pointInsideContainer = leavePoint.x >= rect.left && leavePoint.x <= rect.right
+      && leavePoint.y >= rect.top
+      && leavePoint.y <= rect.bottom;
+    if (pointInsideContainer) {
+      return;
+    }
+
+    cancelDeferredDragLeaveClear();
+    dragLeaveClearTimerRef.current = globalThis.setTimeout(() => {
+      dragLeaveClearTimerRef.current = null;
+      const currentContainer = dropZoneRef.current;
+      const latestPoint = nativeDragPosRef.current ?? leavePoint;
+      if (!currentContainer) {
+        nativeDragPosRef.current = null;
+        stopEdgeScroll();
+        return;
+      }
+
+      const currentRect = currentContainer.getBoundingClientRect();
+      const stillInside = latestPoint.x >= currentRect.left && latestPoint.x <= currentRect.right
+        && latestPoint.y >= currentRect.top
+        && latestPoint.y <= currentRect.bottom;
+      if (stillInside) {
+        return;
+      }
+
+      nativeDragPosRef.current = null;
+      stopEdgeScroll();
+    }, DRAG_LEAVE_CLEAR_DELAY_MS);
+  }, [cancelDeferredDragLeaveClear, stopEdgeScroll]);
+
+  useEffect(() => {
+    const handleGlobalDragEnd = () => {
+      setActiveDropTarget(null);
+      setIsDraggingInternal(false);
+      setDragGhostLabel(null);
+      setSuppressActiveDragSourceOpacity(false);
+      setActiveDragDocumentPath(null);
+      setActiveDragDocumentLocationId(null);
+      resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
+      cancelDeferredDragLeaveClear();
+      stopEdgeScroll();
+    };
+
+    globalThis.addEventListener("dragend", handleGlobalDragEnd);
+    return () => {
+      globalThis.removeEventListener("dragend", handleGlobalDragEnd);
+    };
+  }, [cancelDeferredDragLeaveClear, setActiveDropTarget, stopEdgeScroll]);
 
   useEffect(() => {
     const dropZoneElement = dropZoneRef.current;
@@ -90,15 +308,6 @@ export function useSidebarInternalDnD(
         if (!resolved) {
           return { targetType: "none" as const };
         }
-
-        if (resolved.destination.targetType === "document" && resolved.element) {
-          return attachClosestEdge(resolved.destination, {
-            input,
-            element: resolved.element,
-            allowedEdges: ["top", "bottom"],
-          });
-        }
-
         return resolved.destination;
       },
     });
@@ -114,28 +323,53 @@ export function useSidebarInternalDnD(
         if (!isSidebarDragData(source.data)) {
           return;
         }
+        setIsDraggingInternal(true);
+        setDragGhostLabel(source.data.title);
+        resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
+        setActiveDropTarget(null);
+        setSuppressActiveDragSourceOpacity(false);
+        if (source.data.type === "document") {
+          setActiveDragDocumentPath(source.data.relPath);
+          setActiveDragDocumentLocationId(source.data.locationId);
+        } else {
+          setActiveDragDocumentPath(null);
+          setActiveDragDocumentLocationId(null);
+        }
         announce(`Picked up ${source.data.title}`);
       },
       onDropTargetChange: ({ source, location }) => {
         if (!isSidebarDragData(source.data)) {
-          setActiveInternalDropTarget(null);
+          setActiveDropTarget(null);
+          setSuppressActiveDragSourceOpacity(false);
+          resolvedDestinationRef.current = null;
           return;
         }
 
-        const pos = nativeDragPosRef.current ?? pointerFromInput(location.current.input);
-        const pointerDestination = pos ? resolveDestinationFromPointer(pos.x, pos.y)?.destination ?? null : null;
-        const dropTargetDestination = resolveDestinationFromDropTargets(location.current.dropTargets);
-        const rawDestination = pointerDestination && pointerDestination.targetType !== "location"
-          ? pointerDestination
-          : (dropTargetDestination ?? pointerDestination);
-        const destinationData = rawDestination ? walkUpToValidDestination(source.data, rawDestination) : null;
+        const resolution = resolveDropDestination(
+          source.data,
+          nativeDragPosRef.current,
+          location.current.input,
+          location.current.dropTargets,
+        );
+        resolvedDestinationRef.current = resolution.destination;
+        setSuppressActiveDragSourceOpacity(resolution.isNoopDrop);
+        const destinationData = resolution.destination;
 
         if (!destinationData) {
-          setActiveInternalDropTarget(null);
+          setActiveDropTarget(null);
           return;
         }
 
-        setActiveInternalDropTarget(destinationData);
+        const edge = extractClosestEdge(destinationData);
+        setActiveDropTarget({
+          source: "internal",
+          locationId: destinationData.locationId,
+          targetType: destinationData.targetType ?? "location",
+          ...(destinationData.folderPath ? { folderPath: destinationData.folderPath } : {}),
+          ...(destinationData.relPath ? { relPath: destinationData.relPath } : {}),
+          ...(edge ? { edge } : {}),
+          intent: edge ? "between" : "into",
+        });
 
         if (destinationData.folderPath) {
           announce(`Over ${destinationData.folderPath} in ${getLocationName(destinationData.locationId)}`);
@@ -150,24 +384,37 @@ export function useSidebarInternalDnD(
         announce(`Over ${getLocationName(destinationData.locationId)}`);
       },
       onDrop: ({ source, location }) => {
-        setActiveInternalDropTarget(null);
+        setActiveDropTarget(null);
+        setIsDraggingInternal(false);
+        setDragGhostLabel(null);
+        setSuppressActiveDragSourceOpacity(false);
+        setActiveDragDocumentPath(null);
+        setActiveDragDocumentLocationId(null);
+        cancelDeferredDragLeaveClear();
+        stopEdgeScroll();
 
         if (!isSidebarDragData(source.data)) {
+          resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
           return;
         }
 
-        const pos = nativeDragPosRef.current ?? pointerFromInput(location.current.input);
-        const pointerDestination = pos ? resolveDestinationFromPointer(pos.x, pos.y)?.destination ?? null : null;
-        const dropTargetDestination = resolveDestinationFromDropTargets(location.current.dropTargets);
-        const rawDestination = pointerDestination && pointerDestination.targetType !== "location"
-          ? pointerDestination
-          : (dropTargetDestination ?? pointerDestination);
-        const destinationData = rawDestination ? walkUpToValidDestination(source.data, rawDestination) : null;
+        const resolution = resolveDropDestination(
+          source.data,
+          nativeDragPosRef.current,
+          location.current.input,
+          location.current.dropTargets,
+        );
+        const destinationData = resolvedDestinationRef.current === UNSET_DROP_DESTINATION
+          ? resolution.destination
+          : resolvedDestinationRef.current;
+        resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
         logger.warn(
           f("Sidebar DnD drop trace", {
             source: source.data,
             pointer: summarizePointerInput(location.current.input),
-            rawDestination,
+            pointerDestination: resolution.pointerDestination,
+            dropTargetDestination: resolution.dropTargetDestination,
+            rawDestination: resolution.rawDestination,
             resolvedDestination: destinationData,
           }),
         );
@@ -191,17 +438,37 @@ export function useSidebarInternalDnD(
           ?? (destinationData.targetType === "document" && destinationData.relPath
             ? getParentDirectoryPath(destinationData.relPath)
             : "");
+        const destinationEdge = extractClosestEdge(destinationData);
 
         if (sourceData.type === "folder") {
-          if (resolvedTargetLocationId !== sourceData.locationId) {
-            announce("Could not move folder across locations");
-            showWarnToast("Moving folders across locations is not supported yet");
+          if (
+            destinationData.targetType === "folder" && destinationData.folderPath
+            && (destinationEdge === "top" || destinationEdge === "bottom")
+            && resolvedTargetLocationId === sourceData.locationId
+            && getParentDirectoryPath(sourceData.relPath) === getParentDirectoryPath(destinationData.folderPath)
+          ) {
+            reorderFolderSortOrder(
+              sourceData.locationId,
+              sourceData.relPath,
+              destinationData.folderPath,
+              destinationEdge,
+            );
+            announce(
+              `Moved ${sourceData.title} ${destinationEdge === "top" ? "before" : "after"} ${
+                getFilename(destinationData.folderPath)
+              }`,
+            );
             return;
           }
 
-          const newRelPath = destinationData.folderPath
-            ? `${destinationData.folderPath}/${sourceFilename}`
-            : sourceFilename;
+          const destinationFolderPath = destinationData.folderPath ?? "";
+          const siblingParentPath = destinationFolderPath
+            ? getParentDirectoryPath(destinationFolderPath)
+            : destinationParentPath;
+          const nextParentPath = destinationEdge === "top" || destinationEdge === "bottom"
+            ? siblingParentPath
+            : destinationFolderPath || destinationParentPath;
+          const newRelPath = nextParentPath ? `${nextParentPath}/${sourceFilename}` : sourceFilename;
 
           if (modifierDrop) {
             setMoveDropDialog({
@@ -221,26 +488,27 @@ export function useSidebarInternalDnD(
             return;
           }
 
-          void Promise.resolve(handleMoveDirectory(sourceData.locationId, sourceData.relPath, newRelPath)).then(
-            (moved) => {
-              if (!moved) {
-                announce(`Could not move ${sourceData.title}`);
-                showErrorToast(`Could not move ${sourceData.title}`);
-                return;
-              }
+          void Promise.resolve(
+            handleMoveDirectory(sourceData.locationId, sourceData.relPath, newRelPath, resolvedTargetLocationId),
+          ).then((moved) => {
+            if (!moved) {
+              announce(`Could not move ${sourceData.title}`);
+              showErrorToast(`Could not move ${sourceData.title}`);
+              return;
+            }
 
-              handleRefreshSidebar(sourceData.locationId);
-              announce(`Moved ${sourceData.title}`);
-              showSuccessToast(`Moved ${sourceData.title}`);
-            },
-          ).catch((error: unknown) => {
+            handleRefreshSidebar(sourceData.locationId);
+            if (resolvedTargetLocationId !== sourceData.locationId) {
+              handleRefreshSidebar(resolvedTargetLocationId);
+            }
+            announce(`Moved ${sourceData.title}`);
+            showSuccessToast(`Moved ${sourceData.title}`);
+          }).catch((error: unknown) => {
             logger.error(f("Failed to move folder", { source: sourceData, dest: destinationData, error }));
             showErrorToast(`Could not move ${sourceData.title}`);
           });
           return;
         }
-
-        const destinationEdge = extractClosestEdge(destinationData);
 
         if (modifierDrop) {
           const nextPathFromDestination = destinationParentPath
@@ -396,11 +664,30 @@ export function useSidebarInternalDnD(
     });
 
     return () => {
-      setActiveInternalDropTarget(null);
+      setActiveDropTarget(null);
+      setIsDraggingInternal(false);
+      setDragGhostLabel(null);
+      setSuppressActiveDragSourceOpacity(false);
+      setActiveDragDocumentPath(null);
+      setActiveDragDocumentLocationId(null);
+      resolvedDestinationRef.current = UNSET_DROP_DESTINATION;
+      cancelDeferredDragLeaveClear();
+      stopEdgeScroll();
       stop();
       cleanupLiveRegion();
     };
-  }, [documents, handleMoveDirectory, handleMoveDocument, handleRefreshSidebar, locations, setDocuments]);
+  }, [
+    documents,
+    handleMoveDirectory,
+    handleMoveDocument,
+    handleRefreshSidebar,
+    locations,
+    reorderFolderSortOrder,
+    setDocuments,
+    setActiveDropTarget,
+    cancelDeferredDragLeaveClear,
+    stopEdgeScroll,
+  ]);
 
   const closeMoveDropDialog = useCallback(() => {
     if (isMovingDrop) {
@@ -428,7 +715,12 @@ export function useSidebarInternalDnD(
     setIsMovingDrop(true);
     try {
       const moved = moveDropDialog.sourceType === "folder"
-        ? await handleMoveDirectory(moveDropDialog.sourceLocationId, moveDropDialog.sourceRelPath, nextPath)
+        ? await handleMoveDirectory(
+          moveDropDialog.sourceLocationId,
+          moveDropDialog.sourceRelPath,
+          nextPath,
+          moveDropDialog.targetLocationId,
+        )
         : await handleMoveDocument(
           moveDropDialog.sourceLocationId,
           moveDropDialog.sourceRelPath,
@@ -443,9 +735,7 @@ export function useSidebarInternalDnD(
       }
 
       handleRefreshSidebar(moveDropDialog.sourceLocationId);
-      if (
-        moveDropDialog.sourceType === "document" && moveDropDialog.targetLocationId !== moveDropDialog.sourceLocationId
-      ) {
+      if (moveDropDialog.targetLocationId !== moveDropDialog.sourceLocationId) {
         handleRefreshSidebar(moveDropDialog.targetLocationId);
       }
       announce(`Moved ${moveDropDialog.sourceTitle}`);
@@ -478,5 +768,15 @@ export function useSidebarInternalDnD(
     confirmDisabled: !moveDropPathTrimmed || isMoveDropUnchanged,
   });
 
-  return { dropZoneRef, handleDragOver, handleDragLeave, activeInternalDropTarget, moveDialog };
+  return {
+    dropZoneRef,
+    handleDragOver,
+    handleDragLeave,
+    isDraggingInternal,
+    dragGhostLabel,
+    activeDragDocumentPath,
+    activeDragDocumentLocationId,
+    suppressActiveDragSourceOpacity,
+    moveDialog,
+  };
 }

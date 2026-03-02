@@ -1,5 +1,3 @@
-// oxlint-disable max-classes-per-file
-
 import type { PdfFontResolution, PdfFontSourceDescriptor } from "./types";
 
 export type SerializedError = {

@@ -5,12 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@react-pdf/renderer", () => ({ Font: { register: vi.fn(), load: vi.fn(async () => {}) } }));
 
 describe("pdf fonts", () => {
-  // oxlint-disable-next-line require-await
   const fetchMock = vi.fn(async () =>
-    new Response(new Uint8Array([0x00, 0x01, 0x00, 0x00, 0x00, 0x00]), {
-      status: 200,
-      headers: { "content-type": "font/ttf" },
-    })
+    await Promise.resolve(
+      new Response(new Uint8Array([0x00, 0x01, 0x00, 0x00, 0x00, 0x00]), {
+        status: 200,
+        headers: { "content-type": "font/ttf" },
+      }),
+    )
   );
 
   beforeEach(() => {

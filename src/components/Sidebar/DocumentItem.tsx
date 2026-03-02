@@ -24,6 +24,8 @@ type DocumentItemProps = {
   filenameVisibility: boolean;
   activeDropDocumentPath?: string;
   activeDropDocumentEdge?: Edge | null;
+  activeDropDocumentIsReorder?: boolean;
+  suppressDraggingAppearance?: boolean;
 };
 
 export function DocumentItem(
@@ -36,6 +38,8 @@ export function DocumentItem(
     filenameVisibility,
     activeDropDocumentPath,
     activeDropDocumentEdge,
+    activeDropDocumentIsReorder = false,
+    suppressDraggingAppearance = false,
   }: DocumentItemProps,
 ) {
   const { isOpen, position, open, close } = useContextMenu();
@@ -117,6 +121,7 @@ export function DocumentItem(
 
   const isActiveDropDocument = activeDropDocumentPath === doc.rel_path;
   const closestEdge = isActiveDropDocument ? activeDropDocumentEdge ?? null : null;
+  const isReorderTarget = isActiveDropDocument && activeDropDocumentIsReorder;
   const edgeStyle = useMemo(() => {
     if (!closestEdge) {
       return {};
@@ -140,15 +145,17 @@ export function DocumentItem(
           level={level}
           onClick={handleClick}
           onContextMenu={handleContextMenu}
-          isDragging={dragState === "dragging"}
-          isDropTarget={isActiveDropDocument} />
+          isDragging={dragState === "dragging" && !suppressDraggingAppearance}
+          isDropTarget={isActiveDropDocument && !isReorderTarget} />
         {closestEdge && (
           <div
             className={cn(
-              "absolute left-1 right-1 h-0.5 rounded-full bg-accent-cyan z-10 pointer-events-none sidebar-drop-edge-pulse",
+              "absolute left-1 right-1 h-0.5 bg-accent-cyan z-10 pointer-events-none sidebar-drop-edge-pulse",
               { "transition-[top,bottom] duration-150": !skipAnimation },
             )}
-            style={edgeStyle} />
+            style={edgeStyle}>
+            <div className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-border-interactive bg-layer-02" />
+          </div>
         )}
       </div>
       <ContextMenu isOpen={isOpen} position={position} onClose={close} items={contextMenuItems} />

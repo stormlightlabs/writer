@@ -1,7 +1,4 @@
-import {
-  DocumentOperationDialog,
-  type DocumentOperationRequest,
-} from "$components/Sidebar/DocumentOperationDialog";
+import { DocumentOperationDialog, type DocumentOperationRequest } from "$components/Sidebar/DocumentOperationDialog";
 import type { DocMeta } from "$types";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

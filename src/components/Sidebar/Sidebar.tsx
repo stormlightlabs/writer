@@ -1,7 +1,5 @@
 import { Button } from "$components/Button";
-import { extractClosestEdge } from "$dnd";
 import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
-import { useExternalDropHandler } from "$hooks/useExternalDropHandler";
 import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
@@ -12,6 +10,7 @@ import {
   type DocumentOperationRequest,
   type DocumentOperationType,
 } from "./DocumentOperationDialog";
+import { DragGhost } from "./DragGhost";
 import { EmptyLocations } from "./EmptyLocations";
 import { SearchInput } from "./SearchInput";
 import { SidebarLocationItem, SidebarLocationProvider } from "./SidebarLocationItem";
@@ -68,7 +67,6 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     handleMoveDocument,
     handleMoveDirectory,
     handleDeleteDocument,
-    handleImportExternalFile,
   } = useSidebarActions();
   const {
     locations,
@@ -81,11 +79,13 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     sidebarRefreshReason,
     filterText,
     setDocuments,
+    activeDropTarget,
+    folderSortOrderByLocation,
+    setActiveDropTarget,
+    reorderFolderSortOrder,
     selectLocation,
     toggleSidebarCollapsed,
     filenameVisibility,
-    externalDropTargetId,
-    setExternalDropTarget,
   } = useSidebarState();
 
   const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
@@ -95,18 +95,12 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
     locations,
     documents,
     setDocuments,
+    setActiveDropTarget,
+    reorderFolderSortOrder,
     handleMoveDocument,
     handleMoveDirectory,
     handleRefreshSidebar,
   });
-
-  useExternalDropHandler(
-    selectedLocationId,
-    documents,
-    setExternalDropTarget,
-    handleRefreshSidebar,
-    handleImportExternalFile,
-  );
 
   const locationDocuments = useMemo(
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
@@ -189,15 +183,22 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
       const isRefreshingLocation = refreshingLocationId === location.id;
       const locationDocs = isSelectedLocation ? filteredDocuments : EMPTY_DOCUMENTS;
       const locationDirs = isSelectedLocation ? filteredDirectories : EMPTY_DIRECTORIES;
-      const isActiveDropLocation = internalDnd.activeInternalDropTarget?.locationId === location.id;
-      const activeDropDocumentPath =
-        isActiveDropLocation && internalDnd.activeInternalDropTarget?.targetType === "document"
-          ? internalDnd.activeInternalDropTarget.relPath
-          : undefined;
-      const activeDropDocumentEdge =
-        isActiveDropLocation && internalDnd.activeInternalDropTarget?.targetType === "document"
-          ? extractClosestEdge(internalDnd.activeInternalDropTarget)
-          : null;
+      const isActiveDropLocation = activeDropTarget?.locationId === location.id;
+      const activeDropDocumentPath = isActiveDropLocation && activeDropTarget?.targetType === "document"
+        ? activeDropTarget.relPath
+        : undefined;
+      const activeDropDocumentEdge = isActiveDropLocation && activeDropTarget?.targetType === "document"
+        ? (activeDropTarget.edge ?? null)
+        : null;
+      const activeDropFolderPath = isActiveDropLocation && activeDropTarget?.targetType === "folder"
+        ? activeDropTarget.folderPath
+        : undefined;
+      const activeDropFolderEdge = isActiveDropLocation && activeDropTarget?.targetType === "folder"
+        ? (activeDropTarget.edge ?? null)
+        : null;
+      const activeDragDocumentPath = internalDnd.activeDragDocumentLocationId === location.id
+        ? internalDnd.activeDragDocumentPath
+        : null;
 
       return {
         location,
@@ -209,19 +210,34 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
         filterText,
         isRefreshing: isRefreshingLocation,
         refreshReason: sidebarRefreshReason,
-        isExternalDropTarget: externalDropTargetId === location.id,
-        isInternalDropTarget: isActiveDropLocation && internalDnd.activeInternalDropTarget?.targetType === "location",
-        activeDropFolderPath: isActiveDropLocation ? internalDnd.activeInternalDropTarget?.folderPath : undefined,
+        isExternalDropTarget: isActiveDropLocation && activeDropTarget?.source === "external",
+        isInternalDropTarget: isActiveDropLocation && activeDropTarget?.source === "internal"
+          && activeDropTarget.targetType === "location",
+        isDragInProgress: internalDnd.isDraggingInternal
+          || (isActiveDropLocation && activeDropTarget?.source === "external"),
+        activeDropFolderPath,
+        activeDropFolderEdge,
+        activeDropFolderIntent: activeDropTarget?.targetType === "folder" ? activeDropTarget.intent : undefined,
         activeDropDocumentPath,
         activeDropDocumentEdge,
+        activeDropDocumentIsReorder: isActiveDropLocation
+          && activeDropTarget?.targetType === "document"
+          && activeDropTarget.intent === "between",
+        activeDragDocumentPath,
+        suppressActiveDragSourceOpacity: internalDnd.suppressActiveDragSourceOpacity,
+        folderSortOrder: folderSortOrderByLocation[location.id] ?? [],
       };
     }), [
+    activeDropTarget,
     expandedLocations,
-    externalDropTargetId,
     filterText,
+    folderSortOrderByLocation,
     filteredDirectories,
     filteredDocuments,
-    internalDnd.activeInternalDropTarget,
+    internalDnd.isDraggingInternal,
+    internalDnd.activeDragDocumentLocationId,
+    internalDnd.activeDragDocumentPath,
+    internalDnd.suppressActiveDragSourceOpacity,
     locations,
     refreshingLocationId,
     selectedDocPath,
@@ -279,6 +295,7 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
         onMoveDocument={handleMoveDocument}
         onDeleteDocument={handleDeleteDocument}
         onRefreshSidebar={handleRefreshSidebar} />
+      <DragGhost label={internalDnd.dragGhostLabel} />
       {internalDnd.moveDialog}
     </aside>
   );

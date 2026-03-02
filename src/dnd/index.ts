@@ -1,12 +1,12 @@
 export type Edge = "top" | "bottom";
 
 type DragInput = { clientX: number; clientY: number; x: number; y: number; altKey: boolean };
-
 type DragSource = { data: unknown; element: HTMLElement };
-
 type DropTarget = { element: HTMLElement; data: unknown };
-
 type DragLocation = { dropTargets: DropTarget[]; input: DragInput };
+type EdgeWith<T extends object> = T & { [EDGE_KEY]?: Edge };
+type AttachOpts = { input: DragInput; element: HTMLElement; allowedEdges: Edge[] };
+type ResolvedDestination = { destination: DestinationData; element: HTMLElement };
 
 type DraggableArgs = {
   element: HTMLElement;
@@ -49,6 +49,9 @@ export type DestinationData = {
 const INTERNAL_MIME = "application/x-writer-sidebar-dnd";
 const EDGE_KEY = "__writerClosestEdge";
 const LIVE_REGION_ID = "writer-dnd-live-region";
+const DROP_ROW_SELECTOR =
+  "[data-drop-document-row][data-location-id], [data-drop-folder-row][data-location-id], [data-drop-location-root][data-location-id]";
+const LOCATION_SELECTOR = "[data-location-id]";
 
 const monitors = new Set<MonitorArgs>();
 let activeDrag: ActiveDrag | null = null;
@@ -107,8 +110,22 @@ function isPointInViewport(x: number, y: number): boolean {
   return x >= 0 && y >= 0 && x <= window.innerWidth && y <= window.innerHeight;
 }
 
+function isPointInsideRect(x: number, y: number, rect: DOMRect): boolean {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+/**
+ * When both are valid, check if elements exist at either position.
+ * On Tauri/macOS with Retina displays, DragEvent coordinates can be
+ * in physical pixels while the DOM layout uses CSS pixels. Prefer
+ * whichever coordinate finds an actual sidebar drop target.
+ */
 function normalizePoint(rawX: number, rawY: number): { x: number; y: number } {
   const dpr = window.devicePixelRatio || 1;
+  if (dpr <= 1) {
+    return { x: rawX, y: rawY };
+  }
+
   const direct = { x: rawX, y: rawY };
   const scaled = { x: rawX / dpr, y: rawY / dpr };
 
@@ -121,7 +138,18 @@ function normalizePoint(rawX: number, rawY: number): { x: number; y: number } {
   if (!directValid && scaledValid) {
     return scaled;
   }
+
   if (directValid && scaledValid) {
+    const selector =
+      `[data-drop-document-row], [data-drop-folder-row], [data-drop-location-root], ${LOCATION_SELECTOR}`;
+    const directHit = document.elementFromPoint(direct.x, direct.y);
+    const scaledHit = document.elementFromPoint(scaled.x, scaled.y);
+    const directMatch = directHit instanceof HTMLElement && directHit.closest(selector);
+    const scaledMatch = scaledHit instanceof HTMLElement && scaledHit.closest(selector);
+
+    if (scaledMatch && !directMatch) {
+      return scaled;
+    }
     return direct;
   }
 
@@ -218,6 +246,27 @@ function refreshDropEffect(event: DragEvent, canDrop: boolean): void {
   event.dataTransfer.dropEffect = canDrop ? "move" : "none";
 }
 
+function toDragGhostLabel(data: unknown): string {
+  if (!data || typeof data !== "object") {
+    return "Moving item";
+  }
+
+  const maybe = data as Partial<{ title: string; relPath: string; rel_path: string }>;
+  if (typeof maybe.title === "string" && maybe.title.trim()) {
+    return maybe.title.trim();
+  }
+
+  const relPath = typeof maybe.relPath === "string"
+    ? maybe.relPath
+    : (typeof maybe.rel_path === "string" ? maybe.rel_path : "");
+  if (!relPath) {
+    return "Moving item";
+  }
+
+  const parts = relPath.split(/[\\/]+/).filter(Boolean);
+  return parts.at(-1) ?? relPath;
+}
+
 function startInternalDrag(event: DragEvent, args: DraggableArgs): void {
   const data = args.getInitialData();
   if (data === undefined) {
@@ -236,6 +285,14 @@ function startInternalDrag(event: DragEvent, args: DraggableArgs): void {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(INTERNAL_MIME, "1");
     event.dataTransfer.setData("text/plain", "writer-sidebar-drag");
+
+    if (typeof event.dataTransfer.setDragImage === "function") {
+      const ghost = document.querySelector<HTMLElement>("#sidebar-drag-ghost");
+      if (ghost) {
+        ghost.textContent = toDragGhostLabel(data);
+        event.dataTransfer.setDragImage(ghost, 12, 12);
+      }
+    }
   }
 
   args.onDragStart?.();
@@ -258,6 +315,13 @@ export function draggable(args: DraggableArgs): () => void {
 
   const onDragEnd = (event: DragEvent) => {
     if (!activeDrag || activeDrag.source.element !== element) {
+      return;
+    }
+
+    if (event.dataTransfer?.dropEffect === "none") {
+      activeDrag.sourceOnDrop?.();
+      activeDrag = null;
+      lastKnownPoint = null;
       return;
     }
 
@@ -338,6 +402,10 @@ export function dropTargetForElements(args: DropTargetArgs): () => void {
     }
 
     const input = readDragInputFromEvent(event);
+    const rect = element.getBoundingClientRect();
+    if (isPointInsideRect(input.clientX, input.clientY, rect)) {
+      return;
+    }
     updateLocationForMonitors(makeEmptyLocation(input));
   };
 
@@ -375,10 +443,7 @@ export function monitorForElements(args: MonitorArgs): () => void {
   };
 }
 
-export function attachClosestEdge<T extends object>(
-  data: T,
-  options: { input: DragInput; element: HTMLElement; allowedEdges: Edge[] },
-): T & { [EDGE_KEY]?: Edge } {
+export function attachClosestEdge<T extends object>(data: T, options: AttachOpts): EdgeWith<T> {
   if (options.allowedEdges.length === 0) {
     return data;
   }
@@ -465,93 +530,99 @@ function parseLocationId(locationIdRaw: string | undefined): number | null {
   return Number.isNaN(locationId) ? null : locationId;
 }
 
-function toDestinationDataFromElement(element: HTMLElement): DestinationData | null {
-  const locationId = parseLocationId(element.dataset.locationId);
-  if (locationId === null) {
-    return null;
-  }
-
-  if (element.dataset.documentPath) {
-    return { locationId, relPath: element.dataset.documentPath, targetType: "document" };
-  }
-
-  if (element.dataset.folderPath) {
-    return { locationId, folderPath: element.dataset.folderPath, targetType: "folder" };
-  }
-
-  return { locationId, targetType: "location" };
-}
-
-export function resolveDestinationFromPointer(
+function resolveDestinationAtPoint(
   x: number,
   y: number,
 ): { destination: DestinationData; element: HTMLElement } | null {
-  const hitElement = document.elementFromPoint(x, y);
-  const locationElement = hitElement instanceof HTMLElement
-    ? hitElement.closest<HTMLElement>("[data-location-id]")
-    : null;
-  if (locationElement) {
-    const destination = toDestinationDataFromElement(locationElement);
-    if (destination) {
-      return { destination, element: locationElement };
-    }
-  }
-
-  const allTargets = document.querySelectorAll<HTMLElement>(
-    "[data-drop-folder-row][data-location-id], [data-drop-document-row][data-location-id], [data-drop-location-root][data-location-id]",
-  );
-
-  let best: { destination: DestinationData; element: HTMLElement; priority: number; area: number } | null = null;
-
-  for (const element of allTargets) {
-    const rect = element.getBoundingClientRect();
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+  const hitElements = typeof document.elementsFromPoint === "function" ? document.elementsFromPoint(x, y) : (() => {
+    const hit = document.elementFromPoint(x, y);
+    return hit ? [hit] : [];
+  })();
+  for (const elementCandidate of hitElements) {
+    if (!(elementCandidate instanceof HTMLElement)) {
       continue;
     }
 
-    const destination = toDestinationDataFromElement(element);
-    if (!destination) {
+    const rowElement = elementCandidate.closest<HTMLElement>(DROP_ROW_SELECTOR);
+    if (!rowElement) {
+      if (elementCandidate.closest("[data-drop-folder-zone]")) {
+        continue;
+      }
+
+      const locationElement = elementCandidate.closest<HTMLElement>(LOCATION_SELECTOR);
+      const locationId = parseLocationId(locationElement?.dataset.locationId);
+      if (locationId !== null && locationElement) {
+        return { destination: { locationId, targetType: "location" }, element: locationElement };
+      }
       continue;
     }
 
-    const priority = destination.targetType === "folder" ? 3 : (destination.targetType === "document" ? 2 : 1);
-    const area = Math.max(1, rect.width * rect.height);
-
-    if (!best || priority > best.priority || (priority === best.priority && area < best.area)) {
-      best = { destination, element, priority, area };
+    const locationId = parseLocationId(rowElement.dataset.locationId);
+    if (locationId === null) {
+      continue;
     }
-  }
 
-  if (!best) {
-    let nearestDistance = Infinity;
-    let nearest: { destination: DestinationData; element: HTMLElement } | null = null;
+    const rect = rowElement.getBoundingClientRect();
+    const height = Math.max(1, rect.height);
+    const relativeY = Math.max(0, Math.min(height, y - rect.top));
+    const ratio = relativeY / height;
+    const zone: "top" | "middle" | "bottom" = ratio < 0.25 ? "top" : ratio <= 0.75 ? "middle" : "bottom";
 
-    for (const element of allTargets) {
-      const rect = element.getBoundingClientRect();
-      if (x < rect.left || x > rect.right) {
+    if (rowElement.dataset.dropDocumentRow === "true") {
+      const relPath = rowElement.dataset.documentPath;
+      if (!relPath) {
         continue;
       }
 
-      const destination = toDestinationDataFromElement(element);
-      if (!destination) {
+      const edge: Edge = zone === "top" ? "top" : "bottom";
+      return {
+        destination: { locationId, targetType: "document", relPath, [EDGE_KEY]: edge } as DestinationData,
+        element: rowElement,
+      };
+    }
+
+    if (rowElement.dataset.dropFolderRow === "true") {
+      const folderPath = rowElement.dataset.folderPath;
+      if (!folderPath) {
         continue;
       }
 
-      const distance = y < rect.top ? rect.top - y : (y > rect.bottom ? y - rect.bottom : 0);
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearest = { destination, element };
+      if (zone === "middle") {
+        return { destination: { locationId, targetType: "folder", folderPath }, element: rowElement };
       }
+
+      const edge: Edge = zone === "top" ? "top" : "bottom";
+      return {
+        destination: { locationId, targetType: "folder", folderPath, [EDGE_KEY]: edge } as DestinationData,
+        element: rowElement,
+      };
     }
 
-    if (nearest && nearestDistance < 64) {
-      return nearest;
+    if (rowElement.dataset.dropLocationRoot === "true") {
+      return { destination: { locationId, targetType: "location" }, element: rowElement };
     }
-
-    return null;
   }
 
-  return { destination: best.destination, element: best.element };
+  return null;
+}
+
+/**
+ * On Tauri/macOS with Retina displays, DragEvent.clientX/Y can report physical
+ * pixels while elementsFromPoint expects CSS pixels. Fall back to DPR-scaled
+ * coordinates when the direct lookup finds nothing.
+ */
+export function resolveDestinationFromPointer(x: number, y: number): ResolvedDestination | null {
+  const result = resolveDestinationAtPoint(x, y);
+  if (result) {
+    return result;
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  if (dpr > 1) {
+    return resolveDestinationAtPoint(x / dpr, y / dpr);
+  }
+
+  return null;
 }
 
 export function normalizePointerCoordinates(x: number, y: number): { x: number; y: number } {

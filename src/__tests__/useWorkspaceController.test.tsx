@@ -270,4 +270,38 @@ describe("useWorkspaceController", () => {
       expect.any(Function),
     );
   });
+
+  it("updates open tabs with target location for cross-location directory moves", async () => {
+    useTabsStore.setState({
+      tabs: [{
+        id: "tab-1",
+        docRef: { location_id: 1, rel_path: "Samples/some-file.md" },
+        title: "Some File",
+        isModified: false,
+      }],
+      activeTabId: "tab-1",
+      isSessionHydrated: true,
+    });
+    vi.mocked(dirMove).mockImplementation((_locationId, _relPath, _newRelPath, onOk, _onErr, targetLocationId) => {
+      expect(targetLocationId).toBe(2);
+      onOk("Imported/Samples");
+      return { type: "None" };
+    });
+
+    const { result } = renderHook(() => useWorkspaceController());
+
+    const moved = await act(async () => {
+      return await result.current.handleMoveDirectory(1, "Samples", "Imported/Samples", 2);
+    });
+
+    expect(moved).toBeTruthy();
+    expect(sessionUpdateTabDoc).toHaveBeenCalledWith(
+      1,
+      "Samples/some-file.md",
+      { location_id: 2, rel_path: "Imported/Samples/some-file.md" },
+      "Some File",
+      expect.any(Function),
+      expect.any(Function),
+    );
+  });
 });

@@ -706,19 +706,30 @@ pub fn dir_rename(
 #[tauri::command]
 pub fn dir_move(
     state: State<'_, AppState>, location_id: i64, rel_path: String, new_rel_path: String,
+    target_location_id: Option<i64>,
 ) -> CommandResponse<String> {
     let location_id = LocationId(location_id);
+    let target_location_id = target_location_id.map(LocationId).unwrap_or(location_id);
     let rel_path = PathBuf::from(&rel_path);
     let new_rel_path = PathBuf::from(&new_rel_path);
 
     log::debug!(
-        "Moving directory: location={:?}, path={:?}, new_path={:?}",
+        "Moving directory: source_location={:?}, path={:?}, new_path={:?}, target_location={:?}",
         location_id,
         rel_path,
-        new_rel_path
+        new_rel_path,
+        target_location_id
     );
 
-    match state.store.dir_move(location_id, &rel_path, &new_rel_path) {
+    let result = if target_location_id == location_id {
+        state.store.dir_move(location_id, &rel_path, &new_rel_path)
+    } else {
+        state
+            .store
+            .dir_move_to_location(location_id, &rel_path, target_location_id, &new_rel_path)
+    };
+
+    match result {
         Ok(next_path) => Ok(CommandResult::ok(next_path.to_string_lossy().to_string())),
         Err(e) => {
             log::error!("Failed to move directory: {}", e);

@@ -4,6 +4,7 @@ import type { DocMeta } from "$types";
 
 export type FolderDragData = { type: "folder"; locationId: number; relPath: string; title: string };
 export type SidebarDragData = DocumentDragData | FolderDragData;
+export type DropValidity = "valid" | "noop" | "invalid";
 
 type DestinationDropTarget = { data?: unknown };
 type PointerInfo = { x?: number; y?: number; altKey?: boolean };
@@ -37,7 +38,10 @@ function destinationPriority(destination: DestinationData): number {
 
 function canDropIntoLocationTarget(sourceData: SidebarDragData, locationId: number): boolean {
   if (sourceData.type === "folder") {
-    return sourceData.locationId === locationId && getParentDirectoryPath(sourceData.relPath) !== "";
+    if (sourceData.locationId !== locationId) {
+      return true;
+    }
+    return getParentDirectoryPath(sourceData.relPath) !== "";
   }
 
   return sourceData.type === "document";
@@ -82,16 +86,24 @@ export function getParentDirectoryPath(relPath: string): string {
   return parts.length > 1 ? parts.slice(0, -1).join("/") : "";
 }
 
-export function canDropDocumentIntoFolder(sourceData: unknown, locationId: number, folderPath: string): boolean {
+export function checkDropDocumentIntoFolder(sourceData: unknown, locationId: number, folderPath: string): DropValidity {
   if (!isDocumentDragData(sourceData)) {
-    return false;
+    return "invalid";
   }
 
   if (sourceData.locationId !== locationId) {
-    return true;
+    return "valid";
   }
 
-  return getParentDirectoryPath(sourceData.relPath) !== folderPath;
+  if (getParentDirectoryPath(sourceData.relPath) === folderPath) {
+    return "noop";
+  }
+
+  return "valid";
+}
+
+export function canDropDocumentIntoFolder(sourceData: unknown, locationId: number, folderPath: string): boolean {
+  return checkDropDocumentIntoFolder(sourceData, locationId, folderPath) === "valid";
 }
 
 export function canDropFolderIntoFolder(sourceData: unknown, locationId: number, folderPath: string): boolean {
@@ -99,19 +111,19 @@ export function canDropFolderIntoFolder(sourceData: unknown, locationId: number,
     return false;
   }
 
-  if (sourceData.locationId !== locationId) {
-    return false;
+  if (sourceData.locationId === locationId) {
+    if (sourceData.relPath === folderPath) {
+      return false;
+    }
+
+    if (folderPath.startsWith(`${sourceData.relPath}/`)) {
+      return false;
+    }
+
+    return !isFolderDropNoop(sourceData.relPath, folderPath);
   }
 
-  if (sourceData.relPath === folderPath) {
-    return false;
-  }
-
-  if (folderPath.startsWith(`${sourceData.relPath}/`)) {
-    return false;
-  }
-
-  return !isFolderDropNoop(sourceData.relPath, folderPath);
+  return true;
 }
 
 export function resolveDestinationFromDropTargets(dropTargets: unknown): DestinationData | null {
@@ -140,7 +152,7 @@ export function canDropIntoDestination(sourceData: SidebarDragData, destination:
       return canDropFolderIntoFolder(sourceData, destination.locationId, destination.folderPath);
     }
 
-    return canDropDocumentIntoFolder(sourceData, destination.locationId, destination.folderPath);
+    return checkDropDocumentIntoFolder(sourceData, destination.locationId, destination.folderPath) === "valid";
   }
 
   if (destination.targetType === "document") {
@@ -154,7 +166,15 @@ export function walkUpToValidDestination(
   sourceData: SidebarDragData,
   destination: DestinationData,
 ): DestinationData | null {
-  if (canDropIntoDestination(sourceData, destination)) {
+  if (destination.folderPath && sourceData.type === "document") {
+    const validity = checkDropDocumentIntoFolder(sourceData, destination.locationId, destination.folderPath);
+    if (validity === "valid") {
+      return destination;
+    }
+    if (validity === "noop") {
+      return null;
+    }
+  } else if (canDropIntoDestination(sourceData, destination)) {
     return destination;
   }
 
@@ -175,7 +195,15 @@ export function walkUpToValidDestination(
         folderPath: parentPath,
         targetType: "folder",
       };
-      if (canDropIntoDestination(sourceData, parentDestination)) {
+      if (sourceData.type === "document") {
+        const validity = checkDropDocumentIntoFolder(sourceData, parentDestination.locationId, parentPath);
+        if (validity === "valid") {
+          return parentDestination;
+        }
+        if (validity === "noop") {
+          return null;
+        }
+      } else if (canDropIntoDestination(sourceData, parentDestination)) {
         return parentDestination;
       }
     } else {

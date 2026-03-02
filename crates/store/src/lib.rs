@@ -1539,6 +1539,62 @@ impl Store {
         Ok(normalized_new_rel_path)
     }
 
+    pub fn dir_move_to_location(
+        &self, source_location_id: LocationId, rel_path: &Path, target_location_id: LocationId, new_rel_path: &Path,
+    ) -> Result<PathBuf, AppError> {
+        if source_location_id == target_location_id {
+            return self.dir_move(source_location_id, rel_path, new_rel_path);
+        }
+
+        let source_location = self
+            .location_get(source_location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", source_location_id)))?;
+        let target_location = self
+            .location_get(target_location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", target_location_id)))?;
+
+        let normalized_rel_path = normalize_relative_path(rel_path)?;
+        let normalized_new_rel_path = normalize_relative_path(new_rel_path)?;
+
+        let source_full_path = source_location.root_path.join(&normalized_rel_path);
+        let target_full_path = target_location.root_path.join(&normalized_new_rel_path);
+
+        if !source_full_path.exists() {
+            return Err(AppError::not_found("Directory not found"));
+        }
+        if !source_full_path.is_dir() {
+            return Err(AppError::invalid_path("Path is not a directory"));
+        }
+        if target_full_path.exists() {
+            return Err(AppError::new(
+                ErrorCode::Conflict,
+                "A file or directory already exists at the destination",
+            ));
+        }
+
+        if let Some(parent) = target_full_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| AppError::io(format!("Failed to create destination directory: {}", e)))?;
+        }
+
+        Self::move_directory_on_disk(&source_full_path, &target_full_path)?;
+        self.update_directory_paths_in_index_across_locations(
+            source_location_id,
+            target_location_id,
+            &normalized_rel_path,
+            &normalized_new_rel_path,
+        )?;
+
+        log::info!(
+            "Moved directory across locations: source_location={:?}, target_location={:?}, from={:?}, to={:?}",
+            source_location_id,
+            target_location_id,
+            normalized_rel_path,
+            normalized_new_rel_path
+        );
+        Ok(normalized_new_rel_path)
+    }
+
     pub fn dir_delete(&self, location_id: LocationId, rel_path: &Path) -> Result<bool, AppError> {
         let location = self
             .location_get(location_id)?
@@ -1595,6 +1651,113 @@ impl Store {
             params![old_prefix, new_prefix, location_id.0, old_like],
         )
         .map_err(|e| AppError::new(ErrorCode::Index, format!("Failed to update directory FTS rows: {}", e)))?;
+
+        Ok(())
+    }
+
+    fn update_directory_paths_in_index_across_locations(
+        &self, source_location_id: LocationId, target_location_id: LocationId, old_rel_path: &Path, new_rel_path: &Path,
+    ) -> Result<(), AppError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let old_prefix = old_rel_path.to_string_lossy().to_string();
+        let new_prefix = new_rel_path.to_string_lossy().to_string();
+        let escaped_old_prefix = old_prefix.replace('\\', r"\\").replace('%', r"\%").replace('_', r"\_");
+        let old_like = format!("{}/%", escaped_old_prefix);
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "UPDATE documents
+             SET location_id = ?2,
+                 rel_path = ?4 || substr(rel_path, length(?3) + 1),
+                 updated_at = ?5
+             WHERE location_id = ?1 AND (rel_path = ?3 OR rel_path LIKE ?6 ESCAPE '\\')",
+            params![
+                source_location_id.0,
+                target_location_id.0,
+                old_prefix,
+                new_prefix,
+                updated_at,
+                old_like
+            ],
+        )
+        .map_err(|e| {
+            AppError::new(
+                ErrorCode::Index,
+                format!("Failed to update cross-location directory document rows: {}", e),
+            )
+        })?;
+
+        conn.execute(
+            "UPDATE docs_fts
+             SET location_id = ?2,
+                 rel_path = ?4 || substr(rel_path, length(?3) + 1)
+             WHERE location_id = ?1 AND (rel_path = ?3 OR rel_path LIKE ?5 ESCAPE '\\')",
+            params![
+                source_location_id.0,
+                target_location_id.0,
+                old_prefix,
+                new_prefix,
+                old_like
+            ],
+        )
+        .map_err(|e| {
+            AppError::new(
+                ErrorCode::Index,
+                format!("Failed to update cross-location directory FTS rows: {}", e),
+            )
+        })?;
+
+        Ok(())
+    }
+
+    fn move_directory_on_disk(source_path: &Path, destination_path: &Path) -> Result<(), AppError> {
+        match std::fs::rename(source_path, destination_path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::CrossesDevices => {
+                Self::copy_directory_recursive(source_path, destination_path)?;
+                std::fs::remove_dir_all(source_path)
+                    .map_err(|e| AppError::io(format!("Failed to remove source directory after copy: {}", e)))?;
+                Ok(())
+            }
+            Err(error) => Err(AppError::io(format!("Failed to move directory: {}", error))),
+        }
+    }
+
+    fn copy_directory_recursive(source_path: &Path, destination_path: &Path) -> Result<(), AppError> {
+        std::fs::create_dir_all(destination_path)
+            .map_err(|e| AppError::io(format!("Failed to create directory while moving: {}", e)))?;
+
+        let entries = std::fs::read_dir(source_path)
+            .map_err(|e| AppError::io(format!("Failed to read source directory while moving: {}", e)))?;
+
+        for entry_result in entries {
+            let entry = entry_result.map_err(|e| AppError::io(format!("Failed to read directory entry: {}", e)))?;
+            let source_child = entry.path();
+            let destination_child = destination_path.join(entry.file_name());
+            let file_type = entry
+                .file_type()
+                .map_err(|e| AppError::io(format!("Failed to read directory entry type: {}", e)))?;
+
+            if file_type.is_dir() {
+                Self::copy_directory_recursive(&source_child, &destination_child)?;
+                continue;
+            }
+
+            if file_type.is_file() {
+                std::fs::copy(&source_child, &destination_child)
+                    .map_err(|e| AppError::io(format!("Failed to copy file while moving directory: {}", e)))?;
+                continue;
+            }
+
+            return Err(AppError::io(format!(
+                "Unsupported filesystem entry while moving directory: {:?}",
+                source_child
+            )));
+        }
 
         Ok(())
     }
@@ -2358,6 +2521,48 @@ mod tests {
 
         let deep_hits = store.search("deeptoken", None, 10).unwrap();
         assert_eq!(deep_hits.len(), 1);
+        assert_eq!(deep_hits[0].rel_path, "new/archive/deep/b.md");
+    }
+
+    #[test]
+    fn test_directory_move_to_different_location_updates_catalog_paths() {
+        let (store, _temp) = create_test_store();
+        let source_dir = TempDir::new().unwrap();
+        let target_dir = TempDir::new().unwrap();
+        let source_location = store
+            .location_add("Directory Move Source".to_string(), source_dir.path().to_path_buf())
+            .unwrap();
+        let target_location = store
+            .location_add("Directory Move Target".to_string(), target_dir.path().to_path_buf())
+            .unwrap();
+
+        let doc_a = DocId::new(source_location.id, PathBuf::from("old/sub/a.md")).unwrap();
+        let doc_b = DocId::new(source_location.id, PathBuf::from("old/sub/deep/b.md")).unwrap();
+        store.doc_save(&doc_a, "# A\n\nalphatoken", None).unwrap();
+        store.doc_save(&doc_b, "# B\n\ndeeptoken", None).unwrap();
+
+        let moved = store
+            .dir_move_to_location(
+                source_location.id,
+                Path::new("old/sub"),
+                target_location.id,
+                Path::new("new/archive"),
+            )
+            .unwrap();
+
+        assert_eq!(moved, PathBuf::from("new/archive"));
+        assert!(!source_dir.path().join("old/sub").exists());
+        assert!(target_dir.path().join("new/archive/a.md").exists());
+        assert!(target_dir.path().join("new/archive/deep/b.md").exists());
+
+        let alpha_hits = store.search("alphatoken", None, 10).unwrap();
+        assert_eq!(alpha_hits.len(), 1);
+        assert_eq!(alpha_hits[0].location_id, target_location.id);
+        assert_eq!(alpha_hits[0].rel_path, "new/archive/a.md");
+
+        let deep_hits = store.search("deeptoken", None, 10).unwrap();
+        assert_eq!(deep_hits.len(), 1);
+        assert_eq!(deep_hits[0].location_id, target_location.id);
         assert_eq!(deep_hits[0].rel_path, "new/archive/deep/b.md");
     }
 

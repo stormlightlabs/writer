@@ -108,6 +108,20 @@ export type WorkspaceLocationsState = {
 };
 
 export type SidebarRefreshReason = "manual" | "external";
+export type SidebarDropSource = "internal" | "external";
+export type SidebarDropIntent = "into" | "between";
+export type SidebarDropTargetType = "location" | "folder" | "document";
+export type SidebarDropEdge = "top" | "bottom";
+
+export type SidebarActiveDropTarget = {
+  source: SidebarDropSource;
+  locationId: number;
+  targetType: SidebarDropTargetType;
+  folderPath?: string;
+  relPath?: string;
+  edge?: SidebarDropEdge;
+  intent: SidebarDropIntent;
+};
 
 type MoveDialogState = { locationId: number; relPath: string };
 
@@ -119,6 +133,9 @@ export type WorkspaceDocumentsState = {
   refreshingLocationId?: number;
   sidebarRefreshReason: SidebarRefreshReason | null;
   externalDropTargetId?: number;
+  externalDropFolderPath?: string;
+  activeDropTarget: SidebarActiveDropTarget | null;
+  folderSortOrderByLocation: Record<number, string[]>;
   moveDialog: MoveDialogState | null;
 };
 
@@ -135,7 +152,14 @@ export type WorkspaceDocumentsActions = {
   setDirectories: (directories: string[]) => void;
   setLoadingDocuments: (value: boolean) => void;
   setSidebarRefreshState: (locationId?: number, reason?: SidebarRefreshReason | null) => void;
-  setExternalDropTarget: (locationId?: number) => void;
+  setExternalDropTarget: (locationId?: number, folderPath?: string) => void;
+  setActiveDropTarget: (target: SidebarActiveDropTarget | null) => void;
+  reorderFolderSortOrder: (
+    locationId: number,
+    sourcePath: string,
+    destinationPath: string,
+    edge: SidebarDropEdge,
+  ) => void;
   openMoveDialog: (locationId: number, relPath: string) => void;
   closeMoveDialog: () => void;
 };

@@ -19,25 +19,47 @@ function ensureDirectoryNode(parent: DirectoryTreeNode, name: string, path: stri
   return directoryNode;
 }
 
-function sortTreeNodes(children: TreeNode[]): TreeNode[] {
+function sortTreeNodes(children: TreeNode[], directoryOrderIndex: Map<string, number>): TreeNode[] {
   return children.toSorted((left, right) => {
     if (left.type !== right.type) {
       return left.type === "directory" ? -1 : 1;
+    }
+
+    if (left.type === "directory" && right.type === "directory") {
+      const leftOrder = directoryOrderIndex.get(left.path);
+      const rightOrder = directoryOrderIndex.get(right.path);
+      if (leftOrder !== undefined && rightOrder !== undefined && leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+      if (leftOrder !== undefined && rightOrder === undefined) {
+        return -1;
+      }
+      if (leftOrder === undefined && rightOrder !== undefined) {
+        return 1;
+      }
     }
 
     return left.name.localeCompare(right.name, void 0, { sensitivity: "base" });
   });
 }
 
-function normalizeTree(node: DirectoryTreeNode): DirectoryTreeNode {
-  const normalizedChildren = sortTreeNodes(node.children).map((child) =>
-    child.type === "directory" ? normalizeTree(child) : child
+function normalizeTree(node: DirectoryTreeNode, directoryOrderIndex: Map<string, number>): DirectoryTreeNode {
+  const normalizedChildren = sortTreeNodes(node.children, directoryOrderIndex).map((child) =>
+    child.type === "directory" ? normalizeTree(child, directoryOrderIndex) : child
   );
   return { ...node, children: normalizedChildren };
 }
 
-export function buildDocumentTree(documents: DocMeta[], directories: string[]): DirectoryTreeNode {
+export function buildDocumentTree(
+  documents: DocMeta[],
+  directories: string[],
+  directoryOrder: string[] = [],
+): DirectoryTreeNode {
   const root: DirectoryTreeNode = { type: "directory", name: "", path: "", children: [] };
+  const directoryOrderIndex = new Map<string, number>();
+  for (let index = 0; index < directoryOrder.length; index += 1) {
+    directoryOrderIndex.set(directoryOrder[index], index);
+  }
 
   for (const directoryPath of directories) {
     const segments = splitPathSegments(directoryPath);
@@ -73,7 +95,7 @@ export function buildDocumentTree(documents: DocMeta[], directories: string[]): 
     currentParent.children.push({ type: "file", name: fileName, path: doc.rel_path, doc });
   }
 
-  return normalizeTree(root);
+  return normalizeTree(root, directoryOrderIndex);
 }
 
 export function parentDirectoryPaths(relPath: string): string[] {

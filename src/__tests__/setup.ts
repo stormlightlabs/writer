@@ -1,4 +1,3 @@
-// oxlint-disable max-classes-per-file
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
@@ -35,16 +34,15 @@ vi.mock(
 );
 
 vi.mock("@tauri-apps/api/event", () => ({
-  // oxlint-disable-next-line require-await
   listen: vi.fn(async (eventName: string, handler: EventHandler) => {
     if (!mockListeners.has(eventName)) {
       mockListeners.set(eventName, new Set());
     }
     mockListeners.get(eventName)!.add(handler);
 
-    return () => {
+    return await Promise.resolve(() => {
       mockListeners.get(eventName)?.delete(handler);
-    };
+    });
   }),
 }));
 

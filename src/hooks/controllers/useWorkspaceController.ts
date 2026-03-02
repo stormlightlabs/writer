@@ -369,8 +369,9 @@ export function useWorkspaceController() {
   }, [applySession]);
 
   const handleMoveDirectory = useCallback(
-    (locationId: number, relPath: string, newRelPath: string): Promise<boolean> => {
+    (locationId: number, relPath: string, newRelPath: string, targetLocationId?: number): Promise<boolean> => {
       return new Promise((resolve) => {
+        const resolvedTargetLocationId = targetLocationId ?? locationId;
         runCmd(dirMove(locationId, relPath, newRelPath, (resolvedPath) => {
           for (const tab of tabs) {
             if (tab.docRef.location_id !== locationId) {
@@ -386,7 +387,7 @@ export function useWorkspaceController() {
               sessionUpdateTabDoc(
                 locationId,
                 tab.docRef.rel_path,
-                { location_id: locationId, rel_path: remappedRelPath },
+                { location_id: resolvedTargetLocationId, rel_path: remappedRelPath },
                 tab.title,
                 applySession,
                 () => {},
@@ -394,12 +395,27 @@ export function useWorkspaceController() {
             );
           }
 
-          logger.info(f("Directory moved", { locationId, relPath, newRelPath: resolvedPath }));
+          logger.info(
+            f("Directory moved", {
+              sourceLocationId: locationId,
+              targetLocationId: resolvedTargetLocationId,
+              relPath,
+              newRelPath: resolvedPath,
+            }),
+          );
           resolve(true);
         }, (error: AppError) => {
-          logger.error(f("Failed to move directory", { locationId, relPath, newRelPath, error }));
+          logger.error(
+            f("Failed to move directory", {
+              sourceLocationId: locationId,
+              targetLocationId: resolvedTargetLocationId,
+              relPath,
+              newRelPath,
+              error,
+            }),
+          );
           resolve(false);
-        }));
+        }, resolvedTargetLocationId));
       });
     },
     [applySession, tabs],

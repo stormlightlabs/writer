@@ -1,14 +1,20 @@
 import { normalizePointerCoordinates, resolveDestinationFromPointer } from "$dnd";
+import { extractClosestEdge } from "$dnd";
 import { showSuccessToast, showWarnToast } from "$state/stores/toasts";
+import type { SidebarActiveDropTarget } from "$state/types";
 import type { DocMeta } from "$types";
 import { f } from "$utils/serialize";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { DragDropEvent } from "@tauri-apps/api/window";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import * as logger from "@tauri-apps/plugin-log";
-import { useEffect, useRef } from "react";
+import type { RefObject } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
-type DropTargetInfo = { locationId: number; folderPath?: string };
+type DropTargetInfo = { locationId: number; folderPath?: string; activeDropTarget: SidebarActiveDropTarget };
+
+const EDGE_SCROLL_THRESHOLD_PX = 40;
+const EDGE_SCROLL_STEP_PX = 14;
 
 function getParentDirectoryPath(relPath: string): string | undefined {
   const parts = relPath.split("/").filter(Boolean);
@@ -19,34 +25,128 @@ function getParentDirectoryPath(relPath: string): string | undefined {
   return parts.slice(0, -1).join("/");
 }
 
-function resolveDropTarget(x: number, y: number): DropTargetInfo | null {
-  const point = normalizePointerCoordinates(x, y);
-  const target = resolveDestinationFromPointer(point.x, point.y);
+function resolveDropTarget(viewportX: number, viewportY: number): DropTargetInfo | null {
+  const target = resolveDestinationFromPointer(viewportX, viewportY);
   if (!target) {
     return null;
   }
 
-  if (target.destination.folderPath) {
-    return { locationId: target.destination.locationId, folderPath: target.destination.folderPath };
+  const destination = target.destination;
+  const edge = extractClosestEdge(destination);
+
+  if (destination.folderPath) {
+    const folderPath = destination.folderPath;
+    return {
+      locationId: destination.locationId,
+      folderPath,
+      activeDropTarget: {
+        source: "external",
+        locationId: destination.locationId,
+        targetType: "folder",
+        folderPath,
+        intent: "into",
+      },
+    };
   }
 
-  if (target.destination.targetType === "document" && target.destination.relPath) {
-    const parentFolderPath = getParentDirectoryPath(target.destination.relPath);
-    return { locationId: target.destination.locationId, ...(parentFolderPath ? { folderPath: parentFolderPath } : {}) };
+  if (destination.targetType === "document" && destination.relPath) {
+    const parentFolderPath = getParentDirectoryPath(destination.relPath);
+    return {
+      locationId: destination.locationId,
+      ...(parentFolderPath ? { folderPath: parentFolderPath } : {}),
+      activeDropTarget: {
+        source: "external",
+        locationId: destination.locationId,
+        targetType: "document",
+        relPath: destination.relPath,
+        ...(parentFolderPath ? { folderPath: parentFolderPath } : {}),
+        ...(edge ? { edge } : {}),
+        intent: "between",
+      },
+    };
   }
 
-  return { locationId: target.destination.locationId };
+  return {
+    locationId: destination.locationId,
+    activeDropTarget: {
+      source: "external",
+      locationId: destination.locationId,
+      targetType: "location",
+      intent: "into",
+    },
+  };
 }
 
 export function useExternalDropHandler(
   selectedLocationId: number | undefined,
   documents: DocMeta[],
-  setExternalDropTarget: (locationId?: number) => void,
+  setActiveDropTarget: (target: SidebarActiveDropTarget | null) => void,
   refreshSidebar: (locationId?: number) => void,
   handleImportExternalFile: (locationId: number, relPath: string, content: string) => Promise<boolean>,
+  dropZoneRef?: RefObject<HTMLDivElement | null>,
 ) {
   const dropTargetRef = useRef<DropTargetInfo | null>(null);
   const hasExternalFileDragRef = useRef(false);
+  const edgeScrollRafRef = useRef<number | null>(null);
+  const edgeScrollDirectionRef = useRef<1 | -1 | 0>(0);
+
+  const stopEdgeScroll = useCallback(() => {
+    if (edgeScrollRafRef.current !== null) {
+      cancelAnimationFrame(edgeScrollRafRef.current);
+      edgeScrollRafRef.current = null;
+    }
+    edgeScrollDirectionRef.current = 0;
+  }, []);
+
+  const applyEdgeScrollForY = useCallback((clientY: number | null) => {
+    const scrollContainer = dropZoneRef?.current;
+    if (!scrollContainer || clientY === null) {
+      stopEdgeScroll();
+      return;
+    }
+
+    const rect = scrollContainer.getBoundingClientRect();
+    let nextDirection: 1 | -1 | 0 = 0;
+    if (clientY <= rect.top + EDGE_SCROLL_THRESHOLD_PX) {
+      nextDirection = -1;
+    } else if (clientY >= rect.bottom - EDGE_SCROLL_THRESHOLD_PX) {
+      nextDirection = 1;
+    }
+
+    if (nextDirection === 0) {
+      stopEdgeScroll();
+      return;
+    }
+
+    edgeScrollDirectionRef.current = nextDirection;
+    if (edgeScrollRafRef.current !== null) {
+      return;
+    }
+
+    const tick = () => {
+      const container = dropZoneRef?.current;
+      const direction = edgeScrollDirectionRef.current;
+      if (!container || direction === 0) {
+        edgeScrollRafRef.current = null;
+        return;
+      }
+
+      const previousTop = container.scrollTop;
+      container.scrollTop = Math.max(
+        0,
+        Math.min(container.scrollHeight - container.clientHeight, previousTop + direction * EDGE_SCROLL_STEP_PX),
+      );
+
+      if (container.scrollTop === previousTop) {
+        edgeScrollRafRef.current = null;
+        return;
+      }
+
+      edgeScrollRafRef.current = requestAnimationFrame(tick);
+    };
+
+    edgeScrollRafRef.current = requestAnimationFrame(tick);
+  }, [dropZoneRef, stopEdgeScroll]);
 
   useEffect(() => {
     const window = getCurrentWindow();
@@ -59,7 +159,8 @@ export function useExternalDropHandler(
           hasExternalFileDragRef.current = dragEvent.paths.length > 0;
           if (!hasExternalFileDragRef.current) {
             dropTargetRef.current = null;
-            setExternalDropTarget(undefined);
+            stopEdgeScroll();
+            setActiveDropTarget(null);
           }
           break;
         }
@@ -68,16 +169,43 @@ export function useExternalDropHandler(
             return;
           }
 
-          const target = resolveDropTarget(dragEvent.position.x, dragEvent.position.y);
+          const point = normalizePointerCoordinates(dragEvent.position.x, dragEvent.position.y);
+          applyEdgeScrollForY(point.y);
+          const target = resolveDropTarget(point.x, point.y);
           const targetId = target?.locationId ?? selectedLocationId ?? null;
-          const targetKey = target ? `${target.locationId}:${target.folderPath ?? ""}` : null;
+          const targetKey = target
+            ? `${target.activeDropTarget.targetType}:${target.locationId}:${target.folderPath ?? ""}:${
+              target.activeDropTarget.relPath ?? ""
+            }:${target.activeDropTarget.edge ?? ""}:${target.activeDropTarget.intent}`
+            : null;
           const currentKey = dropTargetRef.current
-            ? `${dropTargetRef.current.locationId}:${dropTargetRef.current.folderPath ?? ""}`
+            ? `${dropTargetRef.current.activeDropTarget.targetType}:${dropTargetRef.current.locationId}:${
+              dropTargetRef.current.folderPath ?? ""
+            }:${dropTargetRef.current.activeDropTarget.relPath ?? ""}:${
+              dropTargetRef.current.activeDropTarget.edge ?? ""
+            }:${dropTargetRef.current.activeDropTarget.intent}`
             : null;
 
           if (targetKey !== currentKey) {
-            dropTargetRef.current = target ?? (targetId ? { locationId: targetId } : null);
-            setExternalDropTarget(targetId ?? undefined);
+            dropTargetRef.current = target
+              ?? (targetId
+                ? {
+                  locationId: targetId,
+                  activeDropTarget: {
+                    source: "external",
+                    locationId: targetId,
+                    targetType: "location",
+                    intent: "into",
+                  },
+                }
+                : null);
+            if (target?.activeDropTarget) {
+              setActiveDropTarget(target.activeDropTarget);
+            } else if (targetId) {
+              setActiveDropTarget({ source: "external", locationId: targetId, targetType: "location", intent: "into" });
+            } else {
+              setActiveDropTarget(null);
+            }
           }
           break;
         }
@@ -89,7 +217,8 @@ export function useExternalDropHandler(
 
           hasExternalFileDragRef.current = false;
           dropTargetRef.current = null;
-          setExternalDropTarget(undefined);
+          stopEdgeScroll();
+          setActiveDropTarget(null);
 
           if (!isExternalFileDrop || droppedPaths.length === 0) {
             return;
@@ -159,15 +288,26 @@ export function useExternalDropHandler(
         default: {
           hasExternalFileDragRef.current = false;
           dropTargetRef.current = null;
-          setExternalDropTarget(undefined);
+          stopEdgeScroll();
+          setActiveDropTarget(null);
         }
       }
     });
 
     return () => {
+      stopEdgeScroll();
       unlisten.then((fn) => fn()).catch((error) => {
         logger.error(f("Failed to unlisten from drag-drop events", { error }));
       });
     };
-  }, [selectedLocationId, documents, setExternalDropTarget, refreshSidebar, handleImportExternalFile]);
+  }, [
+    selectedLocationId,
+    documents,
+    setActiveDropTarget,
+    refreshSidebar,
+    handleImportExternalFile,
+    dropZoneRef,
+    applyEdgeScrollForY,
+    stopEdgeScroll,
+  ]);
 }

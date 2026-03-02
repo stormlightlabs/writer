@@ -197,8 +197,15 @@ export function dirRename(...[locationId, relPath, newName, onOk, onErr]: DirRen
   return invokeCmd<string>("dir_rename", { locationId, relPath, newName }, onOk, onErr);
 }
 
-export function dirMove(...[locationId, relPath, newRelPath, onOk, onErr]: DirMoveParams<string>): Cmd {
-  return invokeCmd<string>("dir_move", { locationId, relPath, newRelPath }, onOk, onErr);
+export function dirMove(
+  ...[locationId, relPath, newRelPath, onOk, onErr, targetLocationId]: DirMoveParams<string>
+): Cmd {
+  return invokeCmd<string>(
+    "dir_move",
+    { locationId, relPath, newRelPath, ...(targetLocationId === undefined ? {} : { targetLocationId }) },
+    onOk,
+    onErr,
+  );
 }
 
 export function dirDelete(...[locationId, relPath, onOk, onErr]: DirDeleteParams<boolean>): Cmd {

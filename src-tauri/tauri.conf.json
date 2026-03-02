@@ -11,7 +11,15 @@
   },
   "app": {
     "windows": [
-      { "label": "main", "title": "Writer", "width": 1200, "height": 800, "minWidth": 600, "minHeight": 400 }
+      {
+        "label": "main",
+        "title": "Writer",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 600,
+        "minHeight": 400,
+        "dragDropEnabled": false
+      }
     ],
     "trayIcon": {
       "id": "global_capture_tray",

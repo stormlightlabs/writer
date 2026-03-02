@@ -2,6 +2,7 @@ import {
   appVersionGet,
   backendEvents,
   batch,
+  dirMove,
   docList,
   docMove,
   docOpen,
@@ -729,6 +730,31 @@ describe("document Commands", () => {
         locationId: 11,
         relPath: "notes/today.md",
         newRelPath: "today.md",
+        targetLocationId: 22,
+      });
+    });
+  });
+
+  describe(dirMove, () => {
+    it("should create command payload without target location by default", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = dirMove(11, "notes", "archive/notes", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("dir_move");
+      expect(cmd.payload).toStrictEqual({ locationId: 11, relPath: "notes", newRelPath: "archive/notes" });
+    });
+
+    it("should include target location for cross-location directory moves", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = dirMove(11, "notes", "notes", onOk, onErr, 22) as InvokeCmd;
+
+      expect(cmd.payload).toStrictEqual({
+        locationId: 11,
+        relPath: "notes",
+        newRelPath: "notes",
         targetLocationId: 22,
       });
     });
