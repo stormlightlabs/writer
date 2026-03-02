@@ -48,6 +48,8 @@ export const useUiStore = create<UiStore>()((set, get) => ({
         margins: { ...state.pdfExportOptions.margins, [side]: Number.isNaN(value) ? 0 : value },
       },
     })),
+  setPdfIncludeTitle: (value) =>
+    set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, includeTitle: value } })),
   setPdfIncludeHeader: (value) =>
     set((state) => ({ pdfExportOptions: { ...state.pdfExportOptions, includeHeader: value } })),
   setPdfIncludeFooter: (value) =>

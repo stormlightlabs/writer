@@ -232,6 +232,7 @@ export type UiActions = {
   setPdfOrientation: (value: Orientation) => void;
   setPdfFontSize: (value: number) => void;
   setPdfMargin: (side: MarginSide, value: number) => void;
+  setPdfIncludeTitle: (value: boolean) => void;
   setPdfIncludeHeader: (value: boolean) => void;
   setPdfIncludeFooter: (value: boolean) => void;
   setGlobalCaptureSettings: (value: GlobalCaptureSettings) => void;

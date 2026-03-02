@@ -127,7 +127,11 @@ function PdfExportDialogMargins() {
 }
 
 function PdfExportDialogHeaderFooter() {
-  const { setIncludeHeader, setIncludeFooter, options } = usePdfDialogUiState();
+  const { setIncludeTitle, setIncludeHeader, setIncludeFooter, options } = usePdfDialogUiState();
+
+  const onTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setIncludeTitle(event.target.checked);
+  }, [setIncludeTitle]);
 
   const onHeaderChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setIncludeHeader(event.target.checked);
@@ -139,7 +143,11 @@ function PdfExportDialogHeaderFooter() {
 
   return (
     <OptionSection title="Header & Footer" description="Toggle document chrome around main content.">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2">
+        <label className="flex items-center justify-between gap-3 rounded-md border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary">
+          Include Title (hidden when H1 exists)
+          <input type="checkbox" checked={Boolean(options.includeTitle)} onChange={onTitleChange} />
+        </label>
         <label className="flex items-center justify-between gap-3 rounded-md border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary">
           Include Header
           <input type="checkbox" checked={Boolean(options.includeHeader)} onChange={onHeaderChange} />

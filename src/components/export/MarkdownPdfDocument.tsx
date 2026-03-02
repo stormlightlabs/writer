@@ -127,19 +127,28 @@ type MarkdownPdfDocumentProps = {
 };
 
 const DocumentTitle = (
-  { title, styles, options }: { title?: string; styles: TStyleSheet; options: PdfExportOptions },
-) => !options.includeHeader && title ? <Text style={styles.title}>{title}</Text> : null;
+  { title, styles, options, hasHeadingOne }: {
+    title?: string;
+    styles: TStyleSheet;
+    options: PdfExportOptions;
+    hasHeadingOne: boolean;
+  },
+) =>
+  (options.includeTitle && !options.includeHeader && title && !hasHeadingOne)
+    ? <Text style={styles.title}>{title}</Text>
+    : null;
 
 const DocumentBody = (
-  { nodes, title, styles, options }: {
+  { nodes, title, styles, options, hasHeadingOne }: {
     nodes: MarkdownNode[];
     title?: string;
     styles: ReturnType<typeof createStyles>;
     options: PdfExportOptions;
+    hasHeadingOne: boolean;
   },
 ) => (
   <View style={styles.content}>
-    <DocumentTitle title={title} styles={styles} options={options} />
+    <DocumentTitle title={title} styles={styles} options={options} hasHeadingOne={hasHeadingOne} />
     {nodes.map((node, index) => {
       const k = `${index}`;
       return <DocumentNode key={k} node={node} styles={styles} />;
@@ -170,12 +179,13 @@ export const MarkdownPdfDocument = (
     [],
   );
   const showHeader = useMemo(() => options.includeHeader && title, [options.includeHeader, title]);
+  const hasHeadingOne = useMemo(() => nodes.some((node) => node.type === "heading" && node.level === 1), [nodes]);
 
   return (
     <Document>
       <Page size={toPdfPageSize(options.pageSize)} orientation={options.orientation} style={styles.page}>
         {showHeader && <DocumentHeader title={title!} styles={styles} />}
-        <DocumentBody nodes={nodes} title={title} styles={styles} options={options} />
+        <DocumentBody nodes={nodes} title={title} styles={styles} options={options} hasHeadingOne={hasHeadingOne} />
         {options.includeFooter && <DocumentFooter styles={styles} renderer={renderPageNumber} />}
       </Page>
     </Document>

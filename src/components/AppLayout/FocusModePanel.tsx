@@ -10,8 +10,9 @@ import { FocusIcon } from "$icons";
 import { useFocusModePanelState, useHelpSheetState } from "$state/selectors";
 import type { SaveStatus } from "$types";
 import { formatShortcut } from "$utils/shortcuts";
+import * as logger from "@tauri-apps/plugin-log";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 type FocusModePanelProps = {
   editor: Pick<EditorProps, "initialText" | "onChange" | "onSave" | "onCursorMove" | "onSelectionChange">;
@@ -68,7 +69,18 @@ export function FocusModePanel({ editor, statusBar, saveStatus, hasActiveDocumen
   const handleOpenHelp = useCallback(() => {
     setHelpSheetOpen(true);
   }, [setHelpSheetOpen]);
-  const container = useMemo(() => ({ className: "flex-1 max-w-3xl mx-auto w-full pt-3", style: {} }), []);
+  const container = useMemo(
+    () => ({ className: "flex min-h-0 flex-1 max-w-3xl mx-auto w-full overflow-hidden pt-3", style: {} }),
+    [],
+  );
+
+  useEffect(() => {
+    void logger.debug(
+      `Focus mode layout ready: hasActiveDocument=${String(hasActiveDocument)}, statusBarCollapsed=${
+        String(statusBarCollapsed)
+      }`,
+    );
+  }, [hasActiveDocument, statusBarCollapsed]);
 
   return (
     <AnimatePresence>
@@ -77,7 +89,7 @@ export function FocusModePanel({ editor, statusBar, saveStatus, hasActiveDocumen
         animate={FOCUS.ANIMATE}
         exit={FOCUS.EXIT}
         transition={transition}
-        className="fixed inset-0 z-50 flex flex-col bg-surface-primary">
+        className="fixed inset-0 z-50 flex min-h-0 flex-col bg-surface-primary">
         <FocusHeader
           onExit={handleExit}
           onOpenHelp={handleOpenHelp}

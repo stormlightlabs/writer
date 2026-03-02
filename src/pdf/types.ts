@@ -16,6 +16,7 @@ export type PdfExportOptions = {
   margins: Margins;
   fontSize?: number;
   lineHeight?: number;
+  includeTitle?: boolean;
   includeHeader?: boolean;
   includeFooter?: boolean;
 };

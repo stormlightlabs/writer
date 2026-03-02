@@ -238,6 +238,7 @@ function MultiPageCanvas(
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
   const renderTasksRef = useRef<Map<number, pdfjsLib.RenderTask>>(new Map());
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const sizeLogRef = useRef({ zeroLogged: false, readyLogged: false });
 
   const pageNumbers = useMemo(() => Array.from({ length: pageCount }, (_, index) => index + 1), [pageCount]);
   const pageContainerRefSetters = useMemo(() =>
@@ -259,8 +260,37 @@ function MultiPageCanvas(
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || typeof ResizeObserver !== "function") {
+    if (!container) {
       return;
+    }
+
+    const updateContainerSize = () => {
+      const width = Math.max(1, Math.floor(container.clientWidth));
+      const height = Math.max(1, Math.floor(container.clientHeight));
+      setContainerSize((previous) =>
+        previous.width === width && previous.height === height ? previous : { width, height }
+      );
+
+      if ((width <= 1 || height <= 1) && !sizeLogRef.current.zeroLogged) {
+        sizeLogRef.current.zeroLogged = true;
+        void logger.debug(f("PDF preview container measured with minimal size", { width, height, pageCount }));
+      }
+
+      if (width > 1 && height > 1 && !sizeLogRef.current.readyLogged) {
+        sizeLogRef.current.readyLogged = true;
+        void logger.debug(f("PDF preview container ready for rendering", { width, height, pageCount }));
+      }
+    };
+
+    updateContainerSize();
+
+    if (typeof ResizeObserver !== "function") {
+      const handleResize = () => updateContainerSize();
+      globalThis.addEventListener("resize", handleResize);
+
+      return () => {
+        globalThis.removeEventListener("resize", handleResize);
+      };
     }
 
     const observer = new ResizeObserver((entries) => {
@@ -280,9 +310,13 @@ function MultiPageCanvas(
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [pageCount]);
 
   useEffect(() => {
+    if (containerSize.width <= 1 || containerSize.height <= 1) {
+      return;
+    }
+
     let cancelled = false;
     const tasks = renderTasksRef.current;
 
@@ -353,14 +387,16 @@ function MultiPageCanvas(
   }, [containerSize.height, containerSize.width, fitMode, pageNumbers, pdfDoc, zoomLevel]);
 
   useEffect(() => {
+    const container = containerRef.current;
     const target = pageContainerRefs.current[scrollToPage - 1];
-    if (!target) {
+    if (!target || !container) {
       return;
     }
 
-    if (typeof target.scrollIntoView === "function") {
-      target.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const top = Math.max(0, container.scrollTop + (targetRect.top - containerRect.top) - 8);
+    container.scrollTo({ top, behavior: "smooth" });
   }, [scrollToPage]);
 
   useEffect(() => {

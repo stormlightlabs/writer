@@ -18,6 +18,7 @@ export const DEFAULT_OPTIONS: PdfExportOptions = {
   orientation: "portrait",
   margins: { top: 50, right: 50, bottom: 50, left: 50 },
   fontSize: 11,
+  includeTitle: false,
   includeHeader: false,
   includeFooter: false,
 };

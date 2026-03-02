@@ -1,5 +1,7 @@
+import { Button } from "$components/Button";
 import type { TextExportResult } from "$ports";
 import { renderMarkdownForText, runCmd } from "$ports";
+import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type TextPreviewState = { status: "idle" } | { status: "loading" } | { status: "error"; message: string } | {
@@ -89,17 +91,44 @@ const PreviewError = ({ message }: { message: string }) => (
   </div>
 );
 
-const PreviewSuccess = ({ result }: { result: TextExportResult }) => (
-  <div className="flex flex-col h-full bg-layer-02 rounded-lg overflow-hidden">
-    <div className="flex items-center justify-between px-3 py-2 bg-layer-01 border-b border-stroke-subtle">
-      <span className="text-xs text-text-secondary">Preview</span>
-      <span className="text-xs text-text-tertiary">{result.word_count} words</span>
+const PreviewSuccess = ({ result }: { result: TextExportResult }) => {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(result.text);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 1200);
+    } catch (error) {
+      setCopyState("error");
+      void logger.warn(`Failed to copy text export preview: ${error instanceof Error ? error.message : String(error)}`);
+      setTimeout(() => setCopyState("idle"), 1600);
+    }
+  }, [result.text]);
+
+  return (
+    <div className="flex flex-col h-full bg-layer-02 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-layer-01 border-b border-stroke-subtle">
+        <span className="text-xs text-text-secondary">Preview</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-text-secondary">{result.word_count} words</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="h-6 px-2 text-[0.6875rem]"
+            title={copyState === "copied" ? "Copied" : "Copy text preview"}>
+            {copyState === "copied" ? "Copied" : copyState === "error" ? "Retry" : "Copy"}
+          </Button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto p-4">
+        <pre className="text-sm text-text-primary whitespace-pre-wrap font-mono leading-relaxed">{result.text}</pre>
+      </div>
     </div>
-    <div className="flex-1 overflow-auto p-4">
-      <pre className="text-sm text-text-primary whitespace-pre-wrap font-mono leading-relaxed">{result.text}</pre>
-    </div>
-  </div>
-);
+  );
+};
 
 export function TextPreviewPanel({ locationId, relPath, text }: TextPreviewPanelProps) {
   const previewState = useTextPreview({ locationId, relPath, text });

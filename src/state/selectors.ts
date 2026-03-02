@@ -269,6 +269,7 @@ export const usePdfDialogUiState = () =>
       setOrientation: state.setPdfOrientation,
       setFontSize: state.setPdfFontSize,
       setMargin: state.setPdfMargin,
+      setIncludeTitle: state.setPdfIncludeTitle,
       setIncludeHeader: state.setPdfIncludeHeader,
       setIncludeFooter: state.setPdfIncludeFooter,
     })),

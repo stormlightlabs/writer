@@ -105,13 +105,13 @@ type PreviewPaneProps = {
 };
 
 const PreviewPane = ({ previewResult, options, editorFontFamily }: PreviewPaneProps) => (
-  <section className="min-h-0 h-full overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
+  <section className="flex min-h-0 h-full flex-col overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
     <PdfPreviewPanel result={previewResult} options={options} editorFontFamily={editorFontFamily} />
   </section>
 );
 
 const OptionsPane = ({ isFullWidth }: { isFullWidth: boolean }) => (
-  <section className={`min-h-0 overflow-hidden ${isFullWidth ? "flex-1" : "w-[min(32vw,320px)]"}`}>
+  <section className={`flex min-h-0 flex-col overflow-hidden ${isFullWidth ? "flex-1" : "w-[min(32vw,320px)]"}`}>
     <PdfExportDialogOptions />
   </section>
 );
@@ -138,7 +138,7 @@ function PdfExportContent(
       <ExportError error={error} />
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
-          showPreview ? "grid grid-cols-[minmax(0,1fr),minmax(280px,320px)] gap-3" : "flex"
+          showPreview ? "grid grid-cols-[minmax(0,_1fr)_minmax(280px,_320px)] gap-3" : "flex"
         }`}>
         {showPreview
           ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
@@ -164,7 +164,7 @@ const TextExportInfo = ({ handleClick }: { handleClick: () => Promise<void> }) =
   const { isExportingText } = useTextExportState();
 
   return (
-    <section className="min-h-0 overflow-auto rounded-lg border border-dashed border-stroke-subtle bg-layer-02/30 p-4">
+    <section className="flex min-h-0 flex-1 flex-col overflow-auto rounded-lg border border-dashed border-stroke-subtle bg-layer-02/30 p-4">
       <h3 className="m-0 text-sm font-medium text-text-primary">Export Plain Text</h3>
       <p className="m-0 mt-1 text-xs text-text-secondary">
         Strips Markdown syntax while keeping readable paragraph and list structure.
@@ -199,11 +199,11 @@ function TextExportContent(
       <ExportError error={error} />
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
-          showPreview ? "grid grid-cols-[minmax(0,1fr),minmax(280px,320px)] gap-3" : "flex"
+          showPreview ? "grid grid-cols-[minmax(0,_1fr)_minmax(280px,_320px)] gap-3" : "flex"
         }`}>
         {showPreview
           ? (
-            <section className="min-h-0 overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
+            <section className="flex min-h-0 h-full flex-col overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
               <TextPreviewPanel locationId={locationId} relPath={relPath} text={text} />
             </section>
           )
