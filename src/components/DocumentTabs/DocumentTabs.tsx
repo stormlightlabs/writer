@@ -98,7 +98,7 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
 
   if (tabs.length === 0) {
     return (
-      <div className="h-tab bg-bg-primary border-b border-border-subtle flex items-center justify-between pl-4 pr-3 text-text-placeholder text-[0.8125rem]">
+      <div className="h-tab bg-surface-primary border-b border-stroke-subtle flex items-center justify-between pl-4 pr-3 text-text-placeholder text-[0.8125rem]">
         <span>No documents open</span>
         <NewButton onNewDocument={handleNewDocument} hasTabs={false} transition={transition} />
       </div>
@@ -108,7 +108,7 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
   return (
     <div
       ref={tabsRef}
-      className="h-tab bg-bg-primary border-b border-border-subtle flex overflow-x-auto overflow-y-hidden"
+      className="h-tab bg-surface-primary border-b border-stroke-subtle flex overflow-x-auto overflow-y-hidden"
       data-compact-tabs={compactTabs}>
       {tabs.map((tab) => (
         <DocumentTab

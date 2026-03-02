@@ -6,10 +6,10 @@ import { type ReactNode, useCallback } from "react";
 type OptionSectionProps = { title: string; description: string; children: ReactNode };
 
 const FIELD_CLASS_NAME =
-  "w-full rounded-md border border-border-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary transition-colors focus:border-accent-cyan focus:outline-none";
+  "w-full rounded-md border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary transition-colors focus:border-accent-cyan focus:outline-none";
 
 const OptionSection = ({ title, description, children }: OptionSectionProps) => (
-  <section className="rounded-lg border border-border-subtle bg-layer-02/35 p-3.5">
+  <section className="rounded-lg border border-stroke-subtle bg-layer-02/35 p-3.5">
     <header className="mb-3">
       <h3 className="m-0 text-sm font-medium text-text-primary">{title}</h3>
       <p className="m-0 mt-0.5 text-xs text-text-secondary">{description}</p>
@@ -140,11 +140,11 @@ function PdfExportDialogHeaderFooter() {
   return (
     <OptionSection title="Header & Footer" description="Toggle document chrome around main content.">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <label className="flex items-center justify-between gap-3 rounded-md border border-border-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary">
+        <label className="flex items-center justify-between gap-3 rounded-md border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary">
           Include Header
           <input type="checkbox" checked={Boolean(options.includeHeader)} onChange={onHeaderChange} />
         </label>
-        <label className="flex items-center justify-between gap-3 rounded-md border border-border-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary">
+        <label className="flex items-center justify-between gap-3 rounded-md border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary">
           Include Footer
           <input type="checkbox" checked={Boolean(options.includeFooter)} onChange={onFooterChange} />
         </label>

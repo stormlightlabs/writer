@@ -92,7 +92,7 @@ function HighlightedSnippet({ text, matches }: { text: string; matches: Array<{ 
       parts.push(<span key={matchKey}>{text.slice(lastEnd, match.start)}</span>);
     }
     parts.push(
-      <mark key={markKey} className="bg-accent-yellow text-bg-primary rounded px-0.5">
+      <mark key={markKey} className="bg-accent-yellow text-surface-primary rounded px-0.5">
         {text.slice(match.start, match.end)}
       </mark>,
     );
@@ -122,7 +122,7 @@ function SearchResult({ hit, onSelectResult }: SearchResultProps) {
   return (
     <Button
       onClick={handleClick}
-      className="w-full px-4 py-3 bg-layer-01 border border-border-subtle rounded-md text-left cursor-pointer transition-[border-color,background-color,box-shadow] duration-150 hover:bg-layer-hover-01 hover:border-border-strong">
+      className="w-full px-4 py-3 bg-layer-01 border border-stroke-subtle rounded-md text-left cursor-pointer transition-[border-color,background-color,box-shadow] duration-150 hover:bg-layer-hover-01 hover:border-stroke-strong">
       <HighlightLabel hit={hit} />
       <HighlightedSnippet text={hit.snippet} matches={hit.matches} />
     </Button>
@@ -192,7 +192,7 @@ function SearchInput({ query, handleQueryChange, clearQuery, compact = false }: 
         onChange={handleQueryChange}
         placeholder="Search across all documents..."
         autoFocus
-        className={`w-full pl-10 pr-3 text-base bg-field-01 border border-border-subtle rounded-md text-text-primary outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-border-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
+        className={`w-full pl-10 pr-3 text-base bg-field-01 border border-stroke-subtle rounded-md text-text-primary outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-stroke-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
           compact ? "py-2" : "py-2.5"
         }`} />
       {query && (
@@ -225,7 +225,7 @@ function VisibleFilters(
       {showFilters && (
         <motion.div
           {...getAnimationProps(skipAnimation)}
-          className="p-4 bg-layer-01 rounded-md border border-border-subtle flex flex-col gap-4">
+          className="p-4 bg-layer-01 rounded-md border border-stroke-subtle flex flex-col gap-4">
           <LocationList locations={locations} filters={filters} toggler={handleToggleLocation} />
           {activeFilterCount > 0 && <ClearAllFiltersButton handleClearFilters={handleClearFilters} />}
         </motion.div>
@@ -254,7 +254,7 @@ function SearchResultsHeader(
   }: SearchResultsHeaderProps,
 ) {
   return (
-    <div className={`border-b border-border-subtle flex flex-col gap-3 ${compact ? "px-3 py-3" : "px-6 py-4"}`}>
+    <div className={`border-b border-stroke-subtle flex flex-col gap-3 ${compact ? "px-3 py-3" : "px-6 py-4"}`}>
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput query={query} handleQueryChange={handleQueryChange} clearQuery={clearQuery} compact={compact} />
         <ToggleButton
@@ -342,7 +342,7 @@ export function SearchPanel(
   const panelClassName = useMemo(
     () =>
       cn(
-        "flex h-full flex-col overflow-hidden bg-bg-primary border border-border-subtle",
+        "flex h-full flex-col overflow-hidden bg-surface-primary border border-stroke-subtle",
         isCompact ? "w-full rounded-none" : "mx-auto w-full max-w-5xl rounded-lg shadow-2xl",
       ),
     [isCompact],

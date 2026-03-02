@@ -114,7 +114,7 @@ export function Preview({ renderResult, theme, editorLine, onScrollToLine, class
       ref={containerRef}
       onScroll={handleScroll}
       data-theme={theme}
-      className={`flex-1 overflow-auto p-6 bg-bg-primary text-text-primary ${className}`}>
+      className={`flex-1 overflow-auto p-6 bg-surface-primary text-text-primary ${className}`}>
       <div className="preview-content" dangerouslySetInnerHTML={previewContent} />
     </div>
   );

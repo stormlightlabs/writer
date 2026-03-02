@@ -21,7 +21,7 @@ export function ToggleButton({ toggleFilters, showFilters, activeFilterCount, co
   const classes = useMemo(() => {
     const base = [
       compact ? "px-3 py-2" : "px-4 py-2.5",
-      "border border-border-subtle rounded-md",
+      "border border-stroke-subtle rounded-md",
       "text-sm cursor-pointer flex items-center gap-1.5 transition-colors duration-150",
     ];
 
@@ -78,7 +78,7 @@ export function FilterLocationButton({ location, filters, handleToggleLocation }
   const classes = useMemo(() => {
     const base = [
       "px-3 py-1.5",
-      "border border-border-subtle rounded",
+      "border border-stroke-subtle rounded",
       "text-[0.8125rem] cursor-pointer transition-colors duration-150",
     ];
 

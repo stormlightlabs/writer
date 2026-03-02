@@ -28,13 +28,13 @@ const RemovePatternButton = (
 export const CustomPattern = (
   { settings, onRemovePattern }: { settings: StyleCheckSettings; onRemovePattern: (index: number) => void },
 ) => (
-  <div className="max-h-24 overflow-y-auto border border-border-subtle rounded">
+  <div className="max-h-24 overflow-y-auto border border-stroke-subtle rounded">
     {settings.customPatterns.map((pattern, index) => {
       const key = `${pattern.category}-${pattern.text}`;
       return (
         <div
           key={key}
-          className="flex items-center justify-between px-2 py-1.5 text-xs border-b border-border-subtle last:border-b-0">
+          className="flex items-center justify-between px-2 py-1.5 text-xs border-b border-stroke-subtle last:border-b-0">
           <PatternLabel pattern={pattern} />
           <RemovePatternButton index={index} onRemovePattern={onRemovePattern} />
         </div>

@@ -62,7 +62,7 @@ function TreeItemComponent(
     }
 
     if (isDropTarget) {
-      base.push("ring-2 ring-border-interactive !bg-layer-hover-01 text-text-primary sidebar-drop-pulse");
+      base.push("ring-2 ring-stroke-interactive !bg-layer-hover-01 text-text-primary sidebar-drop-pulse");
     }
 
     if (isSelected) {

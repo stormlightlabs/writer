@@ -93,7 +93,7 @@ function SearchRow(
     <div className="flex items-center gap-2">
       <Button
         onClick={onOpenSearch}
-        className={`flex items-center gap-1.5 px-3 py-1.5 bg-field-01 border border-border-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 bg-field-01 border border-stroke-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer ${
           iconOnly ? "w-8 h-8 px-0 justify-center" : ""
         }`}
         title={`Search (${searchShortcut})`}>
@@ -212,7 +212,7 @@ export function AppHeaderBar() {
   }, [closeStyleDiagnostics, openStyleDiagnostics, styleDiagnosticsOpen]);
 
   return (
-    <header className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
+    <header className="h-[48px] bg-layer-01 border-b border-stroke-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
       <AppTitle hideTitle={isCompact} version={version} />
       <SearchRow
         onOpenSearch={handleOpenSearch}

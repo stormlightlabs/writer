@@ -21,13 +21,13 @@ const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, ClassValue> = {
   iconGhost:
     "inline-flex items-center justify-center rounded bg-transparent border-none text-icon-secondary cursor-pointer",
   iconSubtle:
-    "inline-flex items-center justify-center rounded border border-border-subtle bg-transparent text-icon-secondary hover:text-icon-primary cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-icon-secondary hover:text-icon-primary cursor-pointer",
   outline:
-    "inline-flex items-center justify-center rounded border border-border-subtle bg-transparent text-text-secondary hover:text-text-primary cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-text-secondary hover:text-text-primary cursor-pointer",
   surface:
-    "inline-flex items-center justify-center rounded border border-border-subtle bg-layer-01 text-text-secondary hover:text-text-primary cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-01 text-text-secondary hover:text-text-primary cursor-pointer",
   secondary:
-    "inline-flex items-center justify-center rounded border border-border-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer",
   primary:
     "inline-flex items-center justify-center rounded border border-accent-cyan bg-accent-cyan text-white hover:opacity-90 cursor-pointer",
   primaryBlue:

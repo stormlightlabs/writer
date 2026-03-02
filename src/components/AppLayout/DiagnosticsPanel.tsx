@@ -35,7 +35,7 @@ function MatchItem({ match, onClick }: { match: StyleMatch; onClick: (match: Sty
     <Button
       type="button"
       onClick={clickHandler}
-      className="w-full text-left px-3 py-2 hover:bg-layer-hover border-b border-border-subtle last:border-b-0 cursor-pointer bg-transparent border-l-0 border-r-0 border-t-0">
+      className="w-full text-left px-3 py-2 hover:bg-layer-hover border-b border-stroke-subtle last:border-b-0 cursor-pointer bg-transparent border-l-0 border-r-0 border-t-0">
       <div className="flex items-center gap-2">
         <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={matchStyle}>{match.text}</span>
         <span className="text-xs text-text-secondary ml-auto">L{match.line}</span>
@@ -61,7 +61,7 @@ function CategorySection(
 
   return (
     <div className="mb-4">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle">
         <span className="w-2 h-2 rounded-full" style={labelStyle} />
         <h3 className="m-0 text-xs font-medium text-text-primary">{CATEGORY_LABELS[category]}</h3>
         <span className="text-xs text-text-secondary ml-auto">{matches.length}</span>
@@ -92,7 +92,7 @@ const DiagnosticsPanelHeader = (
   }, [styleCheckEnabled, totalCount]);
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+    <div className="flex items-center justify-between px-4 py-3 border-b border-stroke-subtle">
       <div>
         <h2 className="m-0 text-sm font-medium text-text-primary">Style Check</h2>
         <p className="m-0 text-xs text-text-secondary">{subtitle}</p>

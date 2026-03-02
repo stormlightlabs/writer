@@ -105,7 +105,7 @@ export function HelpSheet({ isOpen, onClose }: HelpSheetProps) {
       ariaLabelledBy={titleId}
       className="min-h-[50vh]">
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-stroke-subtle">
           <h2 id={titleId} className="text-lg font-semibold text-text-primary">Help</h2>
           <CloseButton onClose={onClose} />
         </div>
@@ -114,7 +114,7 @@ export function HelpSheet({ isOpen, onClose }: HelpSheetProps) {
           role="tablist"
           aria-label="Help sections"
           onKeyDown={handleTabListKeyDown}
-          className="flex border-b border-border-subtle">
+          className="flex border-b border-stroke-subtle">
           {TABS.map((tab) => <TabButton key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />)}
         </div>
 

@@ -77,7 +77,7 @@ export function FocusModePanel({ editor, statusBar, saveStatus, hasActiveDocumen
         animate={FOCUS.ANIMATE}
         exit={FOCUS.EXIT}
         transition={transition}
-        className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
+        className="fixed inset-0 z-50 flex flex-col bg-surface-primary">
         <FocusHeader
           onExit={handleExit}
           onOpenHelp={handleOpenHelp}

@@ -14,7 +14,7 @@ function Shortcut({ shortcut }: { shortcut: KeyboardShortcut }) {
   });
 
   return (
-    <div className="flex items-start justify-between gap-3 py-2 px-3 bg-layer-02 rounded-md border border-border-subtle">
+    <div className="flex items-start justify-between gap-3 py-2 px-3 bg-layer-02 rounded-md border border-stroke-subtle">
       <div className="flex min-w-0 flex-col">
         <span className="text-sm text-text-primary">{shortcut.label}</span>
         {shortcut.description && <span className="text-xs text-text-secondary">{shortcut.description}</span>}
@@ -22,7 +22,7 @@ function Shortcut({ shortcut }: { shortcut: KeyboardShortcut }) {
       <div className="flex shrink-0 items-center gap-1">
         {keyChips.map((chip, index) => (
           <span key={chip.chipId}>
-            <kbd className="px-2 py-1 text-xs font-mono bg-layer-03 border border-border-subtle rounded text-text-primary shadow-sm">
+            <kbd className="px-2 py-1 text-xs font-mono bg-layer-03 border border-stroke-subtle rounded text-text-primary shadow-sm">
               {formatKey(chip.key)}
             </kbd>
             {index < keyChips.length - 1 && <span className="text-text-secondary mx-0.5">+</span>}

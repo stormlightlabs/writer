@@ -109,10 +109,10 @@ function MainPanel(
           aria-orientation="vertical"
           onPointerDown={onSplitResizeStart}
           className={`relative z-10 w-1 shrink-0 cursor-col-resize transition-colors ${
-            isSplitResizing ? "bg-border-interactive" : "bg-border-subtle hover:bg-border-strong"
+            isSplitResizing ? "bg-stroke-interactive" : "bg-stroke-subtle hover:bg-stroke-strong"
           }`} />
 
-        <Preview className="min-h-0 min-w-0 flex-1 bg-bg-primary" {...preview} />
+        <Preview className="min-h-0 min-w-0 flex-1 bg-surface-primary" {...preview} />
       </div>
     );
   }
@@ -120,7 +120,7 @@ function MainPanel(
   return (
     <div className="flex-1 min-h-0 flex overflow-hidden">
       {panelMode === "editor" && <EditorWithContainer {...editor} container={container} />}
-      {panelMode === "preview" && <Preview className="min-h-0 min-w-0 flex-1 w-full bg-bg-primary" {...preview} />}
+      {panelMode === "preview" && <Preview className="min-h-0 min-w-0 flex-1 w-full bg-surface-primary" {...preview} />}
     </div>
   );
 }
@@ -278,7 +278,7 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostic
           aria-orientation="vertical"
           onPointerDown={handleSidebarResizeStart}
           className={`absolute inset-y-0 right-0 w-1 cursor-col-resize transition-colors ${
-            isResizing ? "bg-border-interactive" : "hover:bg-border-subtle"
+            isResizing ? "bg-stroke-interactive" : "hover:bg-stroke-subtle"
           }`} />
       </Section>
 

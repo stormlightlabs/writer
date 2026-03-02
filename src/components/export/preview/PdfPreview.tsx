@@ -425,7 +425,7 @@ function MultiPageCanvas(
             key={pageNumber}
             ref={pageContainerRefSetters[index]}
             data-page-number={pageNumber}
-            className="flex justify-center rounded border border-border-subtle bg-layer-01 px-2 py-2">
+            className="flex justify-center rounded border border-stroke-subtle bg-layer-01 px-2 py-2">
             <canvas ref={canvasRefSetters[index]} className="block max-w-full bg-white shadow-lg" />
           </div>
         ))}
@@ -453,14 +453,14 @@ function PreviewToolbar(
   const zoomPercent = Math.round(zoomLevel * 100);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-layer-01/80 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stroke-subtle bg-layer-01/80 px-3 py-2">
       <div className="flex items-center gap-2">
         <label htmlFor="pdf-fit-mode" className="text-xs text-text-secondary">Fit</label>
         <select
           id="pdf-fit-mode"
           value={fitMode}
           onChange={onFitModeChange}
-          className="px-2 py-1 text-xs bg-layer-02 border border-border-subtle rounded text-text-primary focus:outline-none focus:border-accent-cyan">
+          className="px-2 py-1 text-xs bg-layer-02 border border-stroke-subtle rounded text-text-primary focus:outline-none focus:border-accent-cyan">
           {FIT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
 
@@ -469,7 +469,7 @@ function PreviewToolbar(
           data-zoom-direction="out"
           onClick={onZoomClick}
           disabled={zoomLevel <= MIN_ZOOM}
-          className="px-2 py-1 text-xs rounded border border-border-subtle text-text-primary hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-2 py-1 text-xs rounded border border-stroke-subtle text-text-primary hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="Zoom out">
           -
         </button>
@@ -481,7 +481,7 @@ function PreviewToolbar(
           data-zoom-direction="in"
           onClick={onZoomClick}
           disabled={zoomLevel >= MAX_ZOOM}
-          className="px-2 py-1 text-xs rounded border border-border-subtle text-text-primary hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-2 py-1 text-xs rounded border border-stroke-subtle text-text-primary hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="Zoom in">
           +
         </button>
@@ -494,7 +494,7 @@ function PreviewToolbar(
               type="button"
               onClick={onPrev}
               disabled={currentPage <= 1}
-              className="px-2 py-1 rounded border border-border-subtle hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2 py-1 rounded border border-stroke-subtle hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Previous page">
               Prev
             </button>
@@ -506,13 +506,13 @@ function PreviewToolbar(
               max={pageCount}
               value={currentPage}
               onChange={onPageInputChange}
-              className="w-14 px-2 py-1 bg-layer-02 border border-border-subtle rounded text-text-primary" />
+              className="w-14 px-2 py-1 bg-layer-02 border border-stroke-subtle rounded text-text-primary" />
             <span>{currentPage} / {pageCount}</span>
             <button
               type="button"
               onClick={onNext}
               disabled={currentPage >= pageCount}
-              className="px-2 py-1 rounded border border-border-subtle hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2 py-1 rounded border border-stroke-subtle hover:bg-layer-03 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Next page">
               Next
             </button>
@@ -582,7 +582,7 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
   }, [currentPage, goToPage]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border-subtle bg-layer-02/30">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/30">
       <PreviewToolbar
         fitMode={fitMode}
         zoomLevel={zoomLevel}
@@ -595,7 +595,7 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
         onNext={handleNext} />
       {usedBuiltinFonts
         ? (
-          <div className="border-b border-border-subtle bg-layer-01/60 px-3 py-1 text-[0.6875rem] text-text-secondary">
+          <div className="border-b border-stroke-subtle bg-layer-01/60 px-3 py-1 text-[0.6875rem] text-text-secondary">
             Preview is using built-in fonts due to custom font loading issues.
           </div>
         )

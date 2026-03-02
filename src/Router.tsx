@@ -4,7 +4,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import App from "./App";
 
 const NotFoundRoute = () => (
-  <main className="flex h-dvh items-center justify-center bg-bg-primary text-text-primary">
+  <main className="flex h-dvh items-center justify-center bg-surface-primary text-text-primary">
     <p className="text-sm text-text-secondary">Route not found.</p>
   </main>
 );

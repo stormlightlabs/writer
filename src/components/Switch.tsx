@@ -38,7 +38,7 @@ export const Switch = ({ checked, onCheckedChange, ariaLabel, id, disabled = fal
       <span
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 rounded-full border border-border-subtle bg-layer-02 transition-colors duration-150",
+          "absolute inset-0 rounded-full border border-stroke-subtle bg-layer-02 transition-colors duration-150",
           "peer-checked:border-accent-cyan peer-checked:bg-accent-cyan",
           "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2",
           "peer-focus-visible:outline-accent-cyan peer-disabled:opacity-50",

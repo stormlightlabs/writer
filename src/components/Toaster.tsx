@@ -55,8 +55,8 @@ function ToastItem({ id, type, message, onDismiss }: ToastItemProps) {
         {
           "bg-support-success text-white": type === "success",
           "bg-support-error text-white": type === "error",
-          "bg-accent-cyan text-text-primary border border-border-subtle": type === "info",
-          "bg-accent-yellow text-text-primary border border-border-subtle": type === "warn",
+          "bg-accent-cyan text-text-primary border border-stroke-subtle": type === "info",
+          "bg-accent-yellow text-text-primary border border-stroke-subtle": type === "warn",
         },
       )}
       role="alert"

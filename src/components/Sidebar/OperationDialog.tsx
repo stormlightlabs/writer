@@ -30,7 +30,7 @@ type OperationHeaderProps = { title: string; description?: ReactNode; onClose: (
 
 function OperationDialogHeader({ title, description, onClose, isPending }: OperationHeaderProps) {
   return (
-    <header className="flex items-start justify-between gap-2 border-b border-border-subtle px-4 py-3">
+    <header className="flex items-start justify-between gap-2 border-b border-stroke-subtle px-4 py-3">
       <div className="min-w-0">
         <h3 className="m-0 text-sm font-semibold text-text-primary">{title}</h3>
         {description ? <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">{description}</p> : null}
@@ -100,7 +100,7 @@ export function OperationDialog(
       closeOnBackdrop={false}
       containerClassName="z-1100 pointer-events-none"
       panelClassName={cn(
-        "pointer-events-auto absolute rounded-xl border border-border-subtle bg-layer-01 shadow-2xl ring-1 ring-black/5",
+        "pointer-events-auto absolute rounded-xl border border-stroke-subtle bg-layer-01 shadow-2xl ring-1 ring-black/5",
         widthClassName,
         !isPositioned && "opacity-0",
       )}
@@ -112,7 +112,7 @@ export function OperationDialog(
           onClose={handleRequestClose}
           isPending={isPending} />
         <div className="px-4 py-3">{children}</div>
-        <footer className="flex items-center justify-end gap-2 border-t border-border-subtle bg-layer-01/80 px-4 py-3">
+        <footer className="flex items-center justify-end gap-2 border-t border-stroke-subtle bg-layer-01/80 px-4 py-3">
           <Button type="button" variant="outline" size="sm" onClick={handleRequestClose} disabled={isPending}>
             {cancelLabel}
           </Button>

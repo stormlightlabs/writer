@@ -23,7 +23,7 @@ export const FontFamilyRow = ({ value, setter }: FontFamilyRowProps) => (
       id="editor-font-family"
       value={value}
       onChange={setter}
-      className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
+      className="w-full h-9 px-2.5 rounded border border-stroke-subtle bg-field-01 text-text-primary text-sm">
       {EDITOR_FONT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
   </div>

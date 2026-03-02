@@ -44,7 +44,7 @@ export function DnDMoveDialog(
           type="text"
           value={path}
           onChange={onPathChange}
-          className="w-full rounded-md border border-border-subtle bg-layer-02 px-3 py-2 font-mono text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
+          className="w-full rounded-md border border-stroke-subtle bg-layer-02 px-3 py-2 font-mono text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
           autoFocus
           disabled={isPending} />
       </form>

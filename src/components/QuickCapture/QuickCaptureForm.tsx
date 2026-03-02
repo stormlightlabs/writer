@@ -106,7 +106,7 @@ const ModeButton = (
       {mode === currentMode && (
         <motion.span
           layoutId="quick-capture-active-mode"
-          className="absolute inset-0 rounded border border-border-strong bg-layer-02 shadow-sm"
+          className="absolute inset-0 rounded border border-stroke-strong bg-layer-02 shadow-sm"
           transition={transition} />
       )}
       <span className="relative z-10">{getModeLabel(mode)}</span>
@@ -115,7 +115,7 @@ const ModeButton = (
 };
 
 const ModeButtons = ({ currentMode, setMode, isSubmitting, transition }: ModeButtonsProps) => (
-  <div className="inline-flex w-full flex-wrap gap-1 rounded border border-border-subtle bg-field-02 p-1">
+  <div className="inline-flex w-full flex-wrap gap-1 rounded border border-stroke-subtle bg-field-02 p-1">
     {MODE_OPTIONS.map((modeOption) => (
       <ModeButton
         key={modeOption}
@@ -130,7 +130,7 @@ const ModeButtons = ({ currentMode, setMode, isSubmitting, transition }: ModeBut
 
 const CaptureTitle = ({ mode, transition }: { mode: CaptureMode; transition: FormTransition }) => (
   <div className="flex min-w-0 items-start gap-2.5">
-    <span className="mt-0.5 inline-flex size-6 items-center justify-center rounded border border-border-strong bg-layer-02 text-text-primary">
+    <span className="mt-0.5 inline-flex size-6 items-center justify-center rounded border border-stroke-strong bg-layer-02 text-text-primary">
       <PenIcon size="sm" />
     </span>
     <div className="min-w-0">
@@ -143,7 +143,7 @@ const CaptureTitle = ({ mode, transition }: { mode: CaptureMode; transition: For
 const QuickCaptureFormHeader = (
   { onClose, currentMode, setMode, isSubmitting, transition }: ModeButtonsProps & { onClose: () => void },
 ) => (
-  <header className="border-b border-border-subtle bg-layer-01 px-3 py-3 sm:px-4">
+  <header className="border-b border-stroke-subtle bg-layer-01 px-3 py-3 sm:px-4">
     <div className="mb-3 flex items-start justify-between gap-3">
       <CaptureTitle mode={currentMode} transition={transition} />
       <Button
@@ -177,7 +177,7 @@ const CaptureTextarea = (
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   },
 ) => (
-  <div className="mt-2 flex min-h-0 flex-1 overflow-hidden rounded border border-border-subtle bg-field-02 transition-colors focus-within:border-border-interactive">
+  <div className="mt-2 flex min-h-0 flex-1 overflow-hidden rounded border border-stroke-subtle bg-field-02 transition-colors focus-within:border-stroke-interactive">
     <textarea
       ref={textareaRef}
       className="h-full min-h-0 w-full resize-none overflow-y-auto rounded bg-transparent px-3 py-2.5 font-mono text-base leading-relaxed text-text-primary outline-none placeholder:text-text-placeholder disabled:opacity-60"
@@ -205,7 +205,7 @@ const ComposePane = (
   <motion.section
     layout
     transition={transition}
-    className="flex min-h-0 flex-1 flex-col rounded border border-border-subtle bg-field-01 p-2.5 sm:p-3">
+    className="flex min-h-0 flex-1 flex-col rounded border border-stroke-subtle bg-field-01 p-2.5 sm:p-3">
     <CaptureMetaRow mode={mode} noteStats={noteStats} />
     <CaptureTextarea
       textareaRef={textareaRef}
@@ -428,7 +428,7 @@ export function QuickCaptureForm(
       initial={QUICK_CAPTURE.FORM.INITIAL}
       animate={QUICK_CAPTURE.FORM.ANIMATE}
       transition={transition}
-      className="relative flex h-full min-h-0 flex-col overflow-hidden bg-bg-primary text-text-primary font-sans">
+      className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface-primary text-text-primary font-sans">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_100%_0%,var(--color-layer-02)_0%,transparent_60%)] opacity-70" />
       <QuickCaptureFormHeader
         onClose={onClose}
@@ -447,7 +447,7 @@ export function QuickCaptureForm(
           onTextareaKeyDown={handleTextareaKeyDown}
           transition={transition} />
       </main>
-      <footer className="relative z-10 border-t border-border-subtle bg-layer-01 px-3 py-3 sm:px-4">
+      <footer className="relative z-10 border-t border-stroke-subtle bg-layer-01 px-3 py-3 sm:px-4">
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <FooterStatus
             error={error}

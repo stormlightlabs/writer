@@ -115,24 +115,24 @@ export function QuickCaptureApp() {
       }
 
       const defaultInboxDir = normalizeRelPath(settings?.inboxRelativeDir ?? "inbox");
-      const loadedTargets = await Promise.all(
-        locations.map(async (location) => {
-          const directories = await listLocationDirectories(location.id);
-          const normalizedDirectories = directories
-            .map((directory) => normalizeRelPath(directory))
-            .filter((directory) => directory.length > 0);
-          const allDirectories = Array.from(new Set([defaultInboxDir, ...normalizedDirectories]))
-            .filter((directory) => directory.length > 0)
-            .toSorted((a, b) => a.localeCompare(b));
+      const loadedTargets = await Promise.all(locations.map(async (location) => {
+        const directories = await listLocationDirectories(location.id);
+        const normalizedDirectories = directories.map((directory) => normalizeRelPath(directory)).filter((directory) =>
+          directory.length > 0
+        );
+        const allDirectories = Array.from(new Set([defaultInboxDir, ...normalizedDirectories])).filter((directory) =>
+          directory.length > 0
+        ).toSorted((a, b) => a.localeCompare(b));
 
-          return allDirectories.map((directory) => ({
-            id: `${location.id}:${directory}`,
-            locationId: location.id,
-            relPath: directory,
-            label: `${location.name} / ${directory}`,
-          } satisfies QuickCaptureSaveTarget));
-        }),
-      );
+        return allDirectories.map((
+          directory,
+        ) => ({
+          id: `${location.id}:${directory}`,
+          locationId: location.id,
+          relPath: directory,
+          label: `${location.name} / ${directory}`,
+        } satisfies QuickCaptureSaveTarget));
+      }));
 
       if (isCancelled) {
         return;
@@ -147,43 +147,46 @@ export function QuickCaptureApp() {
     };
   }, [listLocationDirectories, locations, normalizeRelPath, settings?.inboxRelativeDir]);
 
-  const handleSubmitToDestination = useCallback(async (
-    text: string,
-    mode: CaptureMode,
-    destination?: { locationId: number; relPath: string },
-  ) => {
-    if (!settings || isSubmitting) return;
+  const handleSubmitToDestination = useCallback(
+    async (text: string, mode: CaptureMode, destination?: { locationId: number; relPath: string }) => {
+      if (!settings || isSubmitting) return;
 
-    setIsSubmitting(true);
-    setError(null);
-    const destinationPayload = mode === "Append" ? void 0 : destination;
+      setIsSubmitting(true);
+      setError(null);
+      const destinationPayload = mode === "Append" ? void 0 : destination;
 
-    await runCmd(
-      globalCaptureSubmit(
-        { mode, text, destination: destinationPayload, openMainAfterSave: false },
-        (result: CaptureSubmitResult) => {
-        setIsSubmitting(false);
+      await runCmd(
+        globalCaptureSubmit(
+          { mode, text, destination: destinationPayload, openMainAfterSave: false },
+          (result: CaptureSubmitResult) => {
+            setIsSubmitting(false);
 
-        if (result.success) {
-          logger.info(f("Capture submitted successfully", { savedTo: result.savedTo, locationId: result.locationId }));
+            if (result.success) {
+              logger.info(
+                f("Capture submitted successfully", { savedTo: result.savedTo, locationId: result.locationId }),
+              );
 
-          if (result.shouldClose) {
-            windowRef.current.close().catch((err) => {
-              logger.error(f("Failed to close window", { message: err instanceof Error ? err.message : String(err) }));
-            });
-          }
-        } else {
-          setError("Failed to save capture");
-        }
-        },
-        (err: AppError) => {
-        setIsSubmitting(false);
-        logger.error(f("Capture submission failed", { err }));
-        setError(err.message || "Failed to save capture");
-        },
-      ),
-    );
-  }, [settings, isSubmitting]);
+              if (result.shouldClose) {
+                windowRef.current.close().catch((err) => {
+                  logger.error(
+                    f("Failed to close window", { message: err instanceof Error ? err.message : String(err) }),
+                  );
+                });
+              }
+            } else {
+              setError("Failed to save capture");
+            }
+          },
+          (err: AppError) => {
+            setIsSubmitting(false);
+            logger.error(f("Capture submission failed", { err }));
+            setError(err.message || "Failed to save capture");
+          },
+        ),
+      );
+    },
+    [settings, isSubmitting],
+  );
 
   const handleClose = useCallback(() => {
     windowRef.current.close().catch((err) => {
@@ -193,14 +196,14 @@ export function QuickCaptureApp() {
 
   if (isLoading) {
     return (
-      <div data-theme={theme} className="flex h-dvh items-center justify-center bg-bg-primary">
-        <div className="w-8 h-8 border-3 border-border-subtle border-t-accent-blue rounded-full animate-spin" />
+      <div data-theme={theme} className="flex h-dvh items-center justify-center bg-surface-primary">
+        <div className="w-8 h-8 border-3 border-stroke-subtle border-t-accent-blue rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div data-theme={theme} className="h-dvh bg-bg-primary">
+    <div data-theme={theme} className="h-dvh bg-surface-primary">
       <QuickCaptureForm
         defaultMode={settings?.defaultMode}
         onSubmit={handleSubmitToDestination}

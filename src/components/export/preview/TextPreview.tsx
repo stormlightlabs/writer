@@ -91,7 +91,7 @@ const PreviewError = ({ message }: { message: string }) => (
 
 const PreviewSuccess = ({ result }: { result: TextExportResult }) => (
   <div className="flex flex-col h-full bg-layer-02 rounded-lg overflow-hidden">
-    <div className="flex items-center justify-between px-3 py-2 bg-layer-01 border-b border-border-subtle">
+    <div className="flex items-center justify-between px-3 py-2 bg-layer-01 border-b border-stroke-subtle">
       <span className="text-xs text-text-secondary">Preview</span>
       <span className="text-xs text-text-tertiary">{result.word_count} words</span>
     </div>

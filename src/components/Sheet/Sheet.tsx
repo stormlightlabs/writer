@@ -121,7 +121,7 @@ function DragHandle(
         "flex justify-center px-3 py-2 cursor-grab active:cursor-grabbing touch-none",
         vertical && "justify-start",
       )}>
-      <DragIcon size="lg" className={cn("text-border-subtle", vertical && "rotate-90")} />
+      <DragIcon size="lg" className={cn("text-stroke-subtle", vertical && "rotate-90")} />
     </div>
   );
 }
@@ -317,7 +317,7 @@ export function Sheet(
             aria-modal={showBackdrop}
             tabIndex={-1}
             className={cn(
-              "pointer-events-auto bg-layer-01 border-border-subtle shadow-2xl min-h-0 overflow-hidden flex flex-col",
+              "pointer-events-auto bg-layer-01 border-stroke-subtle shadow-2xl min-h-0 overflow-hidden flex flex-col",
               positionClassName,
               sizeClassName,
               className,

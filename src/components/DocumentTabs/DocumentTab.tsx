@@ -73,7 +73,7 @@ export const DocumentTab = (
 
   const classes = useMemo(() => {
     const base = [
-      "group flex items-center gap-1.5 px-2.5 shrink-0 cursor-pointer border-r border-border-subtle select-none transition-colors duration-150",
+      "group flex items-center gap-1.5 px-2.5 shrink-0 cursor-pointer border-r border-stroke-subtle select-none transition-colors duration-150",
     ];
 
     if (compact) {

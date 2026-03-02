@@ -104,14 +104,14 @@ function ContextMenuContent(
       transition={transition}
       role="menu"
       aria-label="Context menu"
-      className={`fixed bg-layer-02 border border-border-subtle rounded shadow-lg z-1000 py-1 ${
+      className={`fixed bg-layer-02 border border-stroke-subtle rounded shadow-lg z-1000 py-1 ${
         isNarrow ? "min-w-[140px]" : "min-w-[160px]"
       }`}
       style={style}>
       {items.map((item, index) => {
         if (isDivider(item)) {
           const k = `divider-${index}`;
-          return <div key={k} className="h-px bg-border-subtle my-1 mx-2" />;
+          return <div key={k} className="h-px bg-stroke-subtle my-1 mx-2" />;
         }
 
         return <ContextMenuItem_ key={item.label} item={item} onClose={onClose} />;

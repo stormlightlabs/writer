@@ -16,7 +16,7 @@ type NewButtonProps = { onNewDocument?: () => void; hasTabs: boolean; transition
 export function NewButton({ onNewDocument, hasTabs, transition }: NewButtonProps) {
   if (onNewDocument && hasTabs) {
     return (
-      <div className="sticky right-0 z-10 flex items-center px-2 border-l border-border-subtle bg-bg-primary">
+      <div className="sticky right-0 z-10 flex items-center px-2 border-l border-stroke-subtle bg-surface-primary">
         <Button
           variant="iconGhost"
           size="iconMd"

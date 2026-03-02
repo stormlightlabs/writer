@@ -47,7 +47,7 @@ export function ToolbarButton(
         onMouseLeave={handleMouseLeave}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[0.8125rem] relative transition-colors duration-150 ease rounded ${
           isActive
-            ? "bg-layer-accent-01 border border-border-strong text-text-primary"
+            ? "bg-layer-accent-01 border border-stroke-strong text-text-primary"
             : "bg-transparent border border-transparent text-text-secondary"
         } ${iconOnly ? "w-8 h-8 px-0 justify-center" : ""} ${
           disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"

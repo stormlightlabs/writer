@@ -154,7 +154,7 @@ export function DocumentItem(
               { "transition-[top,bottom] duration-150": !skipAnimation },
             )}
             style={edgeStyle}>
-            <div className="sidebar-drop-insertion-dot absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border-interactive bg-layer-02" />
+            <div className="sidebar-drop-insertion-dot absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-stroke-interactive bg-layer-02" />
           </div>
         )}
       </div>

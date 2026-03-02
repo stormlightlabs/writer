@@ -21,13 +21,13 @@ export type StatusBarProps = {
 type StatusItemProps = { label?: string; value: string | number; title?: string; valueClassName?: string };
 
 const StatusItem = ({ label, value, title, valueClassName = "" }: StatusItemProps) => (
-  <div title={title} className="flex min-w-0 items-center gap-1 px-1.5 text-[0.6875rem] text-text-secondary">
+  <div title={title} className="flex min-w-0 items-center gap-1 px-1.5 text-xs text-text-secondary">
     {label && <span className="shrink-0 text-text-placeholder">{label}</span>}
     <span className={`truncate ${valueClassName}`}>{value}</span>
   </div>
 );
 
-const StatusDivider = () => <div className="h-3 w-px bg-border-subtle" />;
+const StatusDivider = () => <div className="h-4 w-px bg-stroke-subtle" />;
 
 const UpdatedAtItem = ({ updatedAt }: { updatedAt: string }) => (
   <>
@@ -79,7 +79,7 @@ const LeftItems = (
 ) => {
   const selectionCount = useMemo(() => stats.selectionCount ?? 0, [stats.selectionCount]);
   if (!docMeta) {
-    return <span className="truncate text-[0.6875rem] text-text-placeholder">No document open</span>;
+    return <span className="truncate text-xs text-text-placeholder">No document open</span>;
   }
 
   return (
@@ -118,7 +118,7 @@ export function StatusBar({ docMeta, stats, encoding = "utf8", lineEnding = "LF"
   const showSelection = useMemo(() => !isCompact, [isCompact]);
 
   return (
-    <footer className="h-7 bg-layer-01 border-t border-border-subtle flex items-center justify-between px-2 sm:px-3 font-mono gap-2">
+    <footer className="h-8 bg-layer-01 border-t border-stroke-subtle flex items-center justify-between px-2.5 sm:px-3.5 font-mono gap-2.5">
       <LeftItems docMeta={docMeta} stats={stats} showUpdatedAt={showUpdatedAt} showSelection={showSelection} />
 
       <RightItems

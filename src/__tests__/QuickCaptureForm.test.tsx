@@ -2,10 +2,12 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { QuickCaptureForm } from "../components/QuickCapture/QuickCaptureForm";
 
-const SAVE_TARGETS = [
-  { id: "1:inbox", locationId: 1, relPath: "inbox", label: "Workspace A / inbox" },
-  { id: "1:inbox/projects", locationId: 1, relPath: "inbox/projects", label: "Workspace A / inbox/projects" },
-];
+const SAVE_TARGETS = [{ id: "1:inbox", locationId: 1, relPath: "inbox", label: "Workspace A / inbox" }, {
+  id: "1:inbox/projects",
+  locationId: 1,
+  relPath: "inbox/projects",
+  label: "Workspace A / inbox/projects",
+}];
 
 describe("QuickCaptureForm", () => {
   it("submits on Enter in quick note mode", () => {

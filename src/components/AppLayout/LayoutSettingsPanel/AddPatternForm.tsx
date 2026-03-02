@@ -42,11 +42,11 @@ export const AddPatternForm = ({ onAddPattern }: { onAddPattern: AddPatternFn })
         value={patternValue}
         onChange={handlePatternChange}
         placeholder="Pattern to flag"
-        className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary" />
+        className="w-full h-7 px-2 text-xs rounded border border-stroke-subtle bg-field-01 text-text-primary" />
       <select
         value={categoryValue}
         onChange={handleCategoryChange}
-        className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary">
+        className="w-full h-7 px-2 text-xs rounded border border-stroke-subtle bg-field-01 text-text-primary">
         <option value="filler">Filler</option>
         <option value="redundancy">Redundancy</option>
         <option value="cliche">Cliché</option>
@@ -56,7 +56,7 @@ export const AddPatternForm = ({ onAddPattern }: { onAddPattern: AddPatternFn })
         value={replacementValue}
         onChange={handleReplacementChange}
         placeholder="Replacement (optional)"
-        className="w-full h-7 px-2 text-xs rounded border border-border-subtle bg-field-01 text-text-primary" />
+        className="w-full h-7 px-2 text-xs rounded border border-stroke-subtle bg-field-01 text-text-primary" />
       <Button
         type="button"
         onClick={handleAddPattern}

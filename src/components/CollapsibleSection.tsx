@@ -67,7 +67,7 @@ export const CollapsibleSection = (
   }, [isControlled, isOpen, onOpenChange]);
 
   return (
-    <section className={cn("border-t border-border-subtle first:border-t-0", className)}>
+    <section className={cn("border-t border-stroke-subtle first:border-t-0", className)}>
       <Button
         id={buttonId}
         type="button"

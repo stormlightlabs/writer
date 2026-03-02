@@ -277,7 +277,7 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
         data-folder-depth={level}
         className={cn(
           "pb-0.5",
-          isDropIntoTarget ? "rounded border-2 border-border-interactive bg-layer-hover-01" : "",
+          isDropIntoTarget ? "rounded border-2 border-stroke-interactive bg-layer-hover-01" : "",
           isSpringPending ? "sidebar-folder-spring-pending rounded" : "",
           skipAnimation ? "" : "transition-[box-shadow,background-color] duration-150",
         )}>
@@ -299,7 +299,7 @@ function NestedDirectoryItem({ node, level, expandedDirectories, onToggleDirecto
                 { "transition-[top,bottom] duration-150": !skipAnimation },
               )}
               style={edgeStyle}>
-              <div className="sidebar-drop-insertion-dot absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border-interactive bg-layer-02" />
+              <div className="sidebar-drop-insertion-dot absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-stroke-interactive bg-layer-02" />
             </div>
           )
           : null}
@@ -562,7 +562,7 @@ function SidebarLocationItemComponent(
   return (
     <div
       data-location-id={location.id}
-      className={`${showHighlight ? "ring-2 ring-border-interactive rounded" : ""} ${
+      className={`${showHighlight ? "ring-2 ring-stroke-interactive rounded" : ""} ${
         skipAnimation ? "" : "transition-[box-shadow,background-color] duration-150"
       }`}>
       <FolderItem
@@ -585,7 +585,7 @@ function SidebarLocationItemComponent(
             className={cn(
               "mx-3 rounded border",
               showRootDropIndicator
-                ? "mb-1 mt-0.5 h-1.5 border-border-interactive bg-layer-hover-01 sidebar-drop-edge-pulse"
+                ? "mb-1 mt-0.5 h-1.5 border-stroke-interactive bg-layer-hover-01 sidebar-drop-edge-pulse"
                 : "mb-0 mt-0 h-0 border-transparent bg-transparent",
               skipAnimation ? "" : "transition-colors duration-150",
             )} />

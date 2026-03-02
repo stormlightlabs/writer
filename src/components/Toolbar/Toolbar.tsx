@@ -86,7 +86,7 @@ export function Toolbar(
   const isEditorOnly = useMemo(() => !isSplitView && !isPreviewVisible, [isSplitView, isPreviewVisible]);
 
   return (
-    <div className="h-[48px] bg-layer-01 border-b border-border-subtle flex items-center justify-between px-2 sm:px-4 gap-2 overflow-x-auto">
+    <div className="h-[48px] bg-layer-01 border-b border-stroke-subtle flex items-center justify-between px-2 sm:px-4 gap-2 overflow-x-auto">
       <div className="flex items-center gap-1.5 shrink-0">
         <ToolbarButton
           icon={icons.save}

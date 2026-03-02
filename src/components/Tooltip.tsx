@@ -72,7 +72,7 @@ export function Tooltip(
           animate={TOOLTIP.ANIMATE}
           exit={TOOLTIP.EXIT}
           transition={transition}
-          className={`fixed ${placementClasses} px-2 py-1 bg-layer-02 border border-border-subtle rounded text-xs text-text-secondary whitespace-nowrap z-1100 shadow-lg pointer-events-none ${className}`}
+          className={`fixed ${placementClasses} px-2 py-1 bg-layer-02 border border-stroke-subtle rounded text-xs text-text-secondary whitespace-nowrap z-1100 shadow-lg pointer-events-none ${className}`}
           style={style}>
           {children}
         </motion.div>

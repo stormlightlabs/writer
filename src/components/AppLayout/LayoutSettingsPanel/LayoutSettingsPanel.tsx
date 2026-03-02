@@ -23,7 +23,7 @@ const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
       title="Accessibility"
       description="Configure motion and display preferences."
       className={cn(
-        scope === "full" && "rounded-lg border border-border-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm",
+        scope === "full" && "rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm",
       )}
       contentClassName={cn(scope === "full" && "pb-3")}>
       <AccessibilitySection />
@@ -33,7 +33,7 @@ const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
       description="Control visibility of core app UI regions."
       defaultOpen
       className={cn(
-        scope === "full" && "rounded-lg border border-border-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm",
+        scope === "full" && "rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm",
       )}
       contentClassName={cn(scope === "full" && "pb-3")}>
       <ChromeSettingsSection />
@@ -43,7 +43,7 @@ const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
       description="Tune text presentation, wrapping, and typography."
       defaultOpen
       className={cn(
-        scope === "full" && "rounded-lg border border-border-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm",
+        scope === "full" && "rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm",
       )}
       contentClassName={cn(scope === "full" && "pb-3")}>
       <EditorSettingsSection />
@@ -53,21 +53,21 @@ const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
         <CollapsibleSection
           title="Focus Mode"
           description="Configure centered writing and dimming behavior."
-          className="rounded-lg border border-border-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
+          className="rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
           contentClassName="pb-3">
           <FocusModeSection />
         </CollapsibleSection>
         <CollapsibleSection
           title="Writer's Tools"
           description="Adjust writing analysis and guidance features."
-          className="rounded-lg border border-border-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
+          className="rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
           contentClassName="pb-3">
           <WriterToolsSection />
         </CollapsibleSection>
         <CollapsibleSection
           title="Quick Capture"
           description="Toggle global quick-note capture behavior."
-          className="rounded-lg border border-border-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
+          className="rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
           contentClassName="pb-3">
           <QuickCaptureSection />
         </CollapsibleSection>

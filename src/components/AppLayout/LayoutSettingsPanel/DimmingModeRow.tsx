@@ -19,7 +19,7 @@ export const DimmingModeRow = ({ value, setter }: DimmingModeRowProps) => {
       <select
         value={value}
         onChange={handleDimmingModeChange}
-        className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
+        className="w-full h-9 px-2.5 rounded border border-stroke-subtle bg-field-01 text-text-primary text-sm">
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
       <p className="m-0 text-xs text-text-secondary mt-1">Dim all text except the active region.</p>

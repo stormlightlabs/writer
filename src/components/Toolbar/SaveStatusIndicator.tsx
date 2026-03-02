@@ -9,7 +9,7 @@ function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
   switch (status) {
     case "Saving": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-accent-cyan px-2 py-1 bg-layer-01 rounded border border-border-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-accent-cyan px-2 py-1 bg-layer-01 rounded border border-stroke-subtle">
           <SaveIcon size="sm" />
           {compact ? null : <span>Saving...</span>}
         </div>
@@ -17,7 +17,7 @@ function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
     }
     case "Saved": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-accent-green px-2 py-1 bg-layer-01 rounded border border-border-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-accent-green px-2 py-1 bg-layer-01 rounded border border-stroke-subtle">
           <CheckIcon size="sm" />
           {compact ? null : <span>Saved</span>}
         </div>
@@ -25,21 +25,21 @@ function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
     }
     case "Dirty": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-accent-yellow px-2 py-1 bg-layer-01 rounded border border-border-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-accent-yellow px-2 py-1 bg-layer-01 rounded border border-stroke-subtle">
           {compact ? null : <span>Unsaved</span>}
         </div>
       );
     }
     case "Error": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-support-error px-2 py-1 bg-layer-01 rounded border border-border-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-support-error px-2 py-1 bg-layer-01 rounded border border-stroke-subtle">
           {compact ? null : <span>Error</span>}
         </div>
       );
     }
     default: {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-text-placeholder px-2 py-1 bg-layer-01 rounded border border-border-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-text-placeholder px-2 py-1 bg-layer-01 rounded border border-stroke-subtle">
           {compact ? null : <span>Ready</span>}
         </div>
       );

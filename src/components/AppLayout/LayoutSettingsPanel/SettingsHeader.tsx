@@ -18,7 +18,7 @@ export function SettingsHeader({ title, scope, onClose, closeAriaLabel, onViewMo
     <div
       className={cn(
         "flex items-center justify-between gap-3",
-        isFull ? "mb-4 border-b border-border-subtle pb-3" : "mb-2",
+        isFull ? "mb-4 border-b border-stroke-subtle pb-3" : "mb-2",
       )}>
       <div>
         <h2 className={cn("m-0 text-text-primary", isFull ? "text-base font-semibold" : "text-sm font-medium")}>

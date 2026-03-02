@@ -26,7 +26,7 @@ const ConflictsAlert = ({ count, transition }: { count: number; transition: Aler
     animate={ALERT.ANIMATE}
     exit={ALERT.EXIT}
     transition={transition}
-    className="bg-accent-yellow text-bg-primary px-4 py-3 rounded-md shadow-xl">
+    className="bg-accent-yellow text-surface-primary px-4 py-3 rounded-md shadow-xl">
     <strong>Conflicts Detected</strong>
     <p className="mt-1 text-[0.8125rem]">{count} file(s) have conflicts that need attention.</p>
   </motion.div>

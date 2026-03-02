@@ -22,7 +22,7 @@ const StyleMarkerRow = ({ value, onChange }: StyleMarkerRowProps) => (
       id="style-marker-style"
       value={value}
       onChange={onChange}
-      className="w-full h-9 px-2.5 rounded border border-border-subtle bg-field-01 text-text-primary text-sm">
+      className="w-full h-9 px-2.5 rounded border border-stroke-subtle bg-field-01 text-text-primary text-sm">
       {STYLE_MARKER_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
   </div>
@@ -30,13 +30,13 @@ const StyleMarkerRow = ({ value, onChange }: StyleMarkerRowProps) => (
 
 const PosHighlightLegendRow = ({ label, swatchClassName }: { label: string; swatchClassName: string }) => (
   <li className="flex items-center gap-2 text-xs text-text-primary">
-    <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full border border-border-subtle ${swatchClassName}`} />
+    <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full border border-stroke-subtle ${swatchClassName}`} />
     <span>{label}</span>
   </li>
 );
 
 const PosHighlightLegend = () => (
-  <div className="mt-2 rounded border border-border-subtle bg-layer-02/40 px-3 py-2.5">
+  <div className="mt-2 rounded border border-stroke-subtle bg-layer-02/40 px-3 py-2.5">
     <p className="m-0 mb-2 text-xs text-text-secondary">Part of Speech Colors</p>
     <ul className="m-0 grid list-none grid-cols-1 gap-1.5 p-0 sm:grid-cols-2">
       {POS_HIGHLIGHT_LEGEND.map((item) => (
@@ -80,7 +80,7 @@ function StyleCheckSection() {
         onToggle={handleStyleCheckEnabled} />
 
       {styleCheckSettings.enabled && (
-        <div className="mt-2 pl-3 border-l-2 border-border-subtle">
+        <div className="mt-2 pl-3 border-l-2 border-stroke-subtle">
           <p className="m-0 text-xs text-text-secondary mb-2">Categories</p>
           <ToggleRow
             label="Fillers & Weak Language"

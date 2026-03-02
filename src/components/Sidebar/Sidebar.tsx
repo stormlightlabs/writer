@@ -32,6 +32,8 @@ type SidebarActionsProps = {
   refreshDisabled: boolean;
 };
 
+type CountPillProps = { count: number; label: string; singularLabel: string };
+
 const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
   <Button
     type="button"
@@ -55,6 +57,12 @@ const SidebarActions = (
     <AddButton onClick={onRefresh} icon={RefreshIcon} title="Refresh Sidebar" disabled={refreshDisabled} />
     <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
+);
+
+const CountPill = ({ count, label, singularLabel }: CountPillProps) => (
+  <span className="inline-flex h-6 items-center rounded-md border border-stroke-subtle bg-layer-02 px-2.5 text-[0.6875rem] leading-none tabular-nums text-text-placeholder">
+    {count.toLocaleString()} {count === 1 ? singularLabel : label}
+  </span>
 );
 
 export function Sidebar({ onNewDocument }: SidebarProps) {
@@ -247,8 +255,8 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
   ]);
 
   return (
-    <aside className="w-full bg-layer-01 border-r border-border-subtle flex h-full flex-col shrink-0 overflow-hidden">
-      <div className="p-4 border-b border-border-subtle flex items-center justify-between">
+    <aside className="w-full bg-layer-01 border-r border-stroke-subtle flex h-full flex-col shrink-0 overflow-hidden">
+      <div className="p-4 border-b border-stroke-subtle flex items-center justify-between">
         <Title isLoading={isLoading} />
         <SidebarActions
           onAddLocation={handleAddLocation}
@@ -282,11 +290,12 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
           )}
       </div>
 
-      <div className="px-4 py-2 border-t border-border-subtle text-xs text-text-placeholder flex items-center justify-between">
-        <span>{locations.length} location{locations.length === 1 ? "" : "s"}</span>
-        <span>
-          {selectedLocationId ? `${locationDocuments.length} document${locationDocuments.length === 1 ? "" : "s"}` : ""}
-        </span>
+      <div className="flex min-h-10 items-center justify-between gap-2 border-t border-stroke-subtle px-4 py-2">
+        <CountPill count={locations.length} singularLabel="location" label="locations" />
+        <CountPill
+          count={selectedLocationId ? locationDocuments.length : 0}
+          singularLabel="document"
+          label="documents" />
       </div>
 
       <DocumentOperationDialog

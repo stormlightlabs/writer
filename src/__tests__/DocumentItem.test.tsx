@@ -57,7 +57,7 @@ describe("DocumentItem", () => {
       render(<DocumentItem {...props} />);
 
       const item = screen.getByText("Test Document").closest(".sidebar-item");
-      expect(item).not.toHaveClass("ring-border-interactive");
+      expect(item).not.toHaveClass("ring-stroke-interactive");
       expect(document.querySelector(".sidebar-drop-edge-pulse")).toBeTruthy();
     });
   });

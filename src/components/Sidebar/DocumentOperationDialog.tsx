@@ -163,7 +163,7 @@ export function DocumentOperationDialog(
             type="text"
             value={renameName}
             onChange={handleRenameNameChange}
-            className="w-full rounded-md border border-border-subtle bg-layer-02 px-3 py-2 text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
+            className="w-full rounded-md border border-stroke-subtle bg-layer-02 px-3 py-2 text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
             autoFocus
             disabled={isPending} />
         </form>
@@ -197,7 +197,7 @@ export function DocumentOperationDialog(
             type="text"
             value={movePath}
             onChange={handleMovePathChange}
-            className="w-full rounded-md border border-border-subtle bg-layer-02 px-3 py-2 font-mono text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
+            className="w-full rounded-md border border-stroke-subtle bg-layer-02 px-3 py-2 font-mono text-sm text-text-primary focus:border-accent-cyan focus:outline-none"
             autoFocus
             disabled={isPending} />
           <p className="text-xs text-text-secondary mt-2">Enter the new relative path for the document.</p>

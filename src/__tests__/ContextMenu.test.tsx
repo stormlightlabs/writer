@@ -61,7 +61,7 @@ describe("ContextMenu", () => {
 
     it("renders divider between items", () => {
       const { container } = render(<ContextMenuHarness items={defaultItems} isOpen />);
-      const divider = container.querySelector(".bg-border-subtle.h-px");
+      const divider = container.querySelector(".bg-stroke-subtle.h-px");
       expect(divider).toBeInTheDocument();
     });
 

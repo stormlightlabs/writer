@@ -47,7 +47,7 @@ type ExportFormatTabsProps = {
 };
 
 const ExportFormatTabs = ({ activeTabId, onTabClick }: ExportFormatTabsProps) => (
-  <div className="mb-4 rounded-lg border border-border-subtle bg-layer-02/35 p-1">
+  <div className="mb-4 rounded-lg border border-stroke-subtle bg-layer-02/35 p-1">
     <div className="grid grid-cols-3 gap-1">
       {EXPORT_FORMAT_TABS.map((tab) => (
         <ExportFormatTabButton key={tab.id} tab={tab} isActive={tab.id === activeTabId} onTabClick={onTabClick} />
@@ -71,7 +71,7 @@ const ExportFormatTabButton = ({ tab, isActive, onTabClick }: ExportFormatTabBut
     onClick={onTabClick}
     className={`rounded-md border px-2 py-2 text-xs transition-colors sm:px-3 sm:text-sm ${
       isActive
-        ? "border-border-subtle bg-layer-01 text-text-primary shadow-sm"
+        ? "border-stroke-subtle bg-layer-01 text-text-primary shadow-sm"
         : "border-transparent bg-transparent text-text-secondary hover:bg-layer-01/70 hover:text-text-primary"
     } disabled:cursor-not-allowed disabled:opacity-40`}
     aria-label={`${tab.label} export tab`}>
@@ -92,7 +92,7 @@ function ExportError({ error }: { error: string | null }) {
 }
 
 const FormatSummary = ({ title, description }: { title: string; description: string }) => (
-  <div className="mb-3 shrink-0 rounded-lg border border-border-subtle bg-layer-02/35 px-3 py-2.5">
+  <div className="mb-3 shrink-0 rounded-lg border border-stroke-subtle bg-layer-02/35 px-3 py-2.5">
     <p className="m-0 text-sm font-medium text-text-primary">{title}</p>
     <p className="m-0 mt-1 text-xs text-text-secondary">{description}</p>
   </div>
@@ -105,7 +105,7 @@ type PreviewPaneProps = {
 };
 
 const PreviewPane = ({ previewResult, options, editorFontFamily }: PreviewPaneProps) => (
-  <section className="min-h-0 h-full overflow-hidden rounded-lg border border-border-subtle bg-layer-02/35 p-2">
+  <section className="min-h-0 h-full overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
     <PdfPreviewPanel result={previewResult} options={options} editorFontFamily={editorFontFamily} />
   </section>
 );
@@ -164,12 +164,12 @@ const TextExportInfo = ({ handleClick }: { handleClick: () => Promise<void> }) =
   const { isExportingText } = useTextExportState();
 
   return (
-    <section className="min-h-0 overflow-auto rounded-lg border border-dashed border-border-subtle bg-layer-02/30 p-4">
+    <section className="min-h-0 overflow-auto rounded-lg border border-dashed border-stroke-subtle bg-layer-02/30 p-4">
       <h3 className="m-0 text-sm font-medium text-text-primary">Export Plain Text</h3>
       <p className="m-0 mt-1 text-xs text-text-secondary">
         Strips Markdown syntax while keeping readable paragraph and list structure.
       </p>
-      <div className="mt-4 rounded-md border border-border-subtle bg-layer-01 px-3 py-3">
+      <div className="mt-4 rounded-md border border-stroke-subtle bg-layer-01 px-3 py-3">
         <p className="m-0 text-xs text-text-secondary">Need the source markdown instead?</p>
         <Button
           type="button"
@@ -203,7 +203,7 @@ function TextExportContent(
         }`}>
         {showPreview
           ? (
-            <section className="min-h-0 overflow-hidden rounded-lg border border-border-subtle bg-layer-02/35 p-2">
+            <section className="min-h-0 overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
               <TextPreviewPanel locationId={locationId} relPath={relPath} text={text} />
             </section>
           )
@@ -230,7 +230,7 @@ function DocxExportContent({ onCancel, handleDocxExport }: DocxExportContentProp
         title="DOCX Export"
         description="Create a Word-compatible document preserving key Markdown formatting." />
       <ExportError error={error} />
-      <section className="min-h-0 flex-1 overflow-auto rounded-lg border border-border-subtle bg-layer-02/30 p-4">
+      <section className="min-h-0 flex-1 overflow-auto rounded-lg border border-stroke-subtle bg-layer-02/30 p-4">
         <h3 className="m-0 text-sm font-medium text-text-primary">Included formatting</h3>
         <p className="m-0 mt-1 text-xs text-text-secondary">
           Headings, emphasis, code, lists, and blockquotes are retained.
@@ -251,7 +251,7 @@ function DocxExportContent({ onCancel, handleDocxExport }: DocxExportContentProp
 }
 
 const EmptyExportState = () => (
-  <section className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-border-subtle bg-layer-02/30 p-4">
+  <section className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-stroke-subtle bg-layer-02/30 p-4">
     <p className="m-0 text-sm text-text-secondary">Open a document to export.</p>
   </section>
 );
@@ -335,12 +335,12 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
 
   const panelClasses = useMemo(() => {
     if (compactPanel) {
-      return "pointer-events-auto flex h-[min(90vh,760px)] w-full max-w-[980px] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl";
+      return "pointer-events-auto flex h-[min(90vh,760px)] w-full max-w-[980px] flex-col rounded-xl border border-stroke-subtle bg-layer-01 shadow-2xl";
     }
 
     return showPreview
-      ? "pointer-events-auto flex h-[min(86vh,820px)] w-[min(84vw,1020px)] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl"
-      : "pointer-events-auto flex h-[min(82vh,720px)] w-[min(84vw,760px)] flex-col rounded-xl border border-border-subtle bg-layer-01 shadow-2xl";
+      ? "pointer-events-auto flex h-[min(86vh,820px)] w-[min(84vw,1020px)] flex-col rounded-xl border border-stroke-subtle bg-layer-01 shadow-2xl"
+      : "pointer-events-auto flex h-[min(82vh,720px)] w-[min(84vw,760px)] flex-col rounded-xl border border-stroke-subtle bg-layer-01 shadow-2xl";
   }, [compactPanel, showPreview]);
 
   const handleExportFormatTabClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {

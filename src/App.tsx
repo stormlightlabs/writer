@@ -51,7 +51,7 @@ function App() {
   return (
     <div
       data-theme={theme}
-      className="relative h-screen overflow-hidden flex flex-col bg-bg-primary text-text-primary font-sans">
+      className="relative h-screen overflow-hidden flex flex-col bg-surface-primary text-text-primary font-sans">
       {isFocusMode ? null : <AppHeaderBar />}
       <AppContent isFocusMode={isFocusMode} />
       <RoutedSettingsSheet />
