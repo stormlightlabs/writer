@@ -339,11 +339,14 @@ body,
 .preview-content {
     max-width: var(--spacing-preview-content-max-width);
     margin: 0 auto;
+}
+
+.preview-content--github {
     line-height: var(--line-height-preview-body);
     font-size: var(--font-size-preview-body);
 }
 
-.preview-content :is(h1, h2, h3, h4, h5, h6) {
+.preview-content--github :is(h1, h2, h3, h4, h5, h6) {
     color: var(--color-text-primary);
     margin-top: var(--spacing-preview-heading-top);
     margin-bottom: var(--spacing-preview-heading-bottom);
@@ -351,36 +354,36 @@ body,
     line-height: var(--line-height-preview-heading);
 }
 
-.preview-content h1 {
+.preview-content--github h1 {
     font-size: var(--font-size-preview-h1);
     border-bottom: var(--border-width-preview-heading) solid var(--color-stroke-subtle);
     padding-bottom: 0.3em;
 }
 
-.preview-content h2 {
+.preview-content--github h2 {
     font-size: var(--font-size-preview-h2);
     border-bottom: var(--border-width-preview-heading) solid var(--color-stroke-subtle);
     padding-bottom: 0.3em;
 }
 
-.preview-content h3 {
+.preview-content--github h3 {
     font-size: var(--font-size-preview-h3);
 }
 
-.preview-content p {
+.preview-content--github p {
     margin: 0 0 var(--spacing-preview-block-gap) 0;
 }
 
-.preview-content a {
+.preview-content--github a {
     color: var(--color-link-primary);
     text-decoration: none;
 }
 
-.preview-content a:hover {
+.preview-content--github a:hover {
     text-decoration: underline;
 }
 
-.preview-content code {
+.preview-content--github code {
     background: var(--color-layer-01);
     padding: var(--spacing-preview-inline-code-y) var(--spacing-preview-inline-code-x);
     border-radius: var(--radius-md);
@@ -388,7 +391,7 @@ body,
     font-size: var(--font-size-preview-inline-code);
 }
 
-.preview-content pre {
+.preview-content--github pre {
     background: var(--color-layer-01);
     padding: var(--spacing-preview-code-block);
     border-radius: var(--radius-lg);
@@ -396,59 +399,191 @@ body,
     margin: 0 0 var(--spacing-preview-block-gap) 0;
 }
 
-.preview-content pre code {
+.preview-content--github pre code {
     background: transparent;
     padding: 0;
 }
 
-.preview-content blockquote {
+.preview-content--github blockquote {
     border-left: var(--border-width-preview-blockquote) solid var(--color-stroke-subtle);
     margin: 0 0 var(--spacing-preview-block-gap) 0;
     padding: 0 1em;
     color: var(--color-text-secondary);
 }
 
-.preview-content :is(ul, ol) {
+.preview-content--github :is(ul, ol) {
     margin: 0 0 var(--spacing-preview-block-gap) 0;
     padding-left: var(--spacing-preview-list-indent);
 }
 
-.preview-content li {
+.preview-content--github li {
     margin: var(--spacing-preview-list-item-gap) 0;
 }
 
-.preview-content table {
+.preview-content--github table {
     width: 100%;
     border-collapse: collapse;
     margin: 0 0 var(--spacing-preview-block-gap) 0;
 }
 
-.preview-content :is(th, td) {
+.preview-content--github :is(th, td) {
     border: 1px solid var(--color-stroke-subtle);
     padding: var(--spacing-preview-table-cell);
     text-align: left;
 }
 
-.preview-content th {
+.preview-content--github th {
     background: var(--color-layer-01);
     font-weight: var(--weight-preview-table-heading);
 }
 
-.preview-content hr {
+.preview-content--github hr {
     border: none;
     border-top: 1px solid var(--color-stroke-subtle);
     margin: var(--spacing-preview-hr-gap) 0;
 }
 
-.preview-content img {
+.preview-content--github img {
     max-width: 100%;
     height: auto;
 }
 
-.preview-content del {
+.preview-content--github del {
     text-decoration: line-through;
 }
 
-.preview-content input[type="checkbox"] {
+.preview-content--github input[type="checkbox"] {
     margin-right: var(--spacing-preview-checkbox-gap);
+}
+
+.preview-content--pdf {
+    --preview-pdf-text: #161616;
+    --preview-pdf-muted-text: #525252;
+    --preview-pdf-stroke: #d8d8d8;
+    --preview-pdf-link: #0f62fe;
+    max-width: min(8.27in, 100%);
+    margin: 0 auto 2rem auto;
+    padding: 72px;
+    background: #ffffff;
+    color: var(--preview-pdf-text);
+    border: 1px solid var(--preview-pdf-stroke);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    font-family: var(--preview-pdf-font-family, var(--font-sans));
+    font-size: 14.67px;
+    line-height: 1.5;
+}
+
+.preview-content--pdf :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--preview-pdf-text);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.preview-content--pdf h1 {
+    font-size: 26.67px;
+    margin-top: 26.67px;
+    margin-bottom: 13.33px;
+}
+
+.preview-content--pdf h2 {
+    font-size: 21.33px;
+    margin-top: 20px;
+    margin-bottom: 10.67px;
+}
+
+.preview-content--pdf h3 {
+    font-size: 18.67px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.preview-content--pdf p {
+    margin: 0 0 13.33px 0;
+}
+
+.preview-content--pdf a {
+    color: var(--preview-pdf-link);
+    text-decoration: underline;
+}
+
+.preview-content--pdf code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: #f4f4f4;
+    color: var(--preview-pdf-text);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+.preview-content--pdf pre {
+    margin: 0 0 13.33px 0;
+    background: #f4f4f4;
+    color: var(--preview-pdf-text);
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.preview-content--pdf pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.preview-content--pdf blockquote {
+    margin: 0 0 13.33px 20px;
+    padding-left: 10px;
+    border-left: 2px solid #dddddd;
+    color: var(--preview-pdf-muted-text);
+    font-style: italic;
+}
+
+.preview-content--pdf :is(ul, ol) {
+    margin: 0 0 13.33px 20px;
+    padding-left: 20px;
+}
+
+.preview-content--pdf li {
+    margin-bottom: 5.33px;
+}
+
+.preview-content--pdf table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 13.33px 0;
+}
+
+.preview-content--pdf :is(th, td) {
+    border: 1px solid var(--preview-pdf-stroke);
+    padding: 6.67px;
+    text-align: left;
+}
+
+.preview-content--pdf th {
+    background: #f4f4f4;
+    font-weight: 700;
+}
+
+.preview-content--pdf hr {
+    border: none;
+    border-top: 1px solid #dddddd;
+    margin: 26.67px 0;
+}
+
+.preview-content--pdf img {
+    max-width: 100%;
+    height: auto;
+}
+
+.preview-content--pdf del {
+    text-decoration: line-through;
+}
+
+.preview-content--pdf input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+@media (max-width: 960px) {
+    .preview-content--pdf {
+        padding: 36px 24px;
+    }
 }

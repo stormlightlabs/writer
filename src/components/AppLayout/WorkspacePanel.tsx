@@ -31,7 +31,7 @@ type K =
   | "styleSelection";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
-type PK = "renderResult" | "theme" | "editorLine" | "onScrollToLine";
+type PK = "renderResult" | "theme" | "editorLine" | "previewStyle" | "editorFontFamily" | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
 export type WorkspaceDiagnosticsProps = {

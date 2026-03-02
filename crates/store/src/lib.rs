@@ -17,7 +17,7 @@ mod file_utils;
 mod settings;
 mod text_utils;
 
-pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, SessionState, SessionTab};
+pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, MarkdownPreviewStyle, SessionState, SessionTab};
 pub use settings::{GlobalCaptureSettings, StyleCheckSettings, UiLayoutSettings};
 
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
@@ -2699,6 +2699,7 @@ mod tests {
             focus_auto_enter_focus_mode: false,
             filename_visibility: false,
             create_readme_in_new_locations: false,
+            markdown_preview_style: MarkdownPreviewStyle::Pdf,
         };
 
         store.ui_layout_set(&settings).unwrap();
@@ -2736,6 +2737,7 @@ mod tests {
         assert!(loaded.focus_auto_enter_focus_mode);
         assert!(loaded.focus_typewriter_scrolling_enabled);
         assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);
+        assert_eq!(loaded.markdown_preview_style, MarkdownPreviewStyle::Github);
     }
 
     #[test]

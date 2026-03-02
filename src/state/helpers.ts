@@ -21,6 +21,7 @@ export const stateToLayoutSettings = (
   focus_auto_enter_focus_mode: focusModeSettings.autoEnterFocusMode,
   filename_visibility: layoutChrome.showFilenames,
   create_readme_in_new_locations: layoutChrome.createReadmeInNewLocations,
+  markdown_preview_style: presentation.markdownPreviewStyle,
 });
 
 export const uiSettingsToFocusMode: (uiSettings: UiLayoutSettings) => FocusModeSettings = (uiSettings) => ({

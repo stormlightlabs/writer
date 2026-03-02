@@ -80,6 +80,7 @@ export type SearchHit = {
 export type AppError = { code: ErrorCode; message: string; context?: string };
 
 export type FocusDimmingMode = "off" | "sentence" | "paragraph";
+export type MarkdownPreviewStyle = "github" | "pdf";
 
 export type FocusModeSettings = {
   typewriterScrollingEnabled: boolean;

@@ -7,6 +7,7 @@ import type {
   FocusModeSettings,
   GlobalCaptureSettings,
   LocationDescriptor,
+  MarkdownPreviewStyle,
   PatternCategory,
   SearchHit,
   SessionState,
@@ -33,6 +34,7 @@ export type EditorPresentationState = {
   syntaxHighlightingEnabled: boolean;
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
+  markdownPreviewStyle: MarkdownPreviewStyle;
   theme: AppTheme;
 };
 
@@ -69,6 +71,7 @@ export type EditorPresentationActions = {
   toggleSyntaxHighlightingEnabled: () => void;
   setEditorFontSize: (value: number) => void;
   setEditorFontFamily: (value: EditorFontFamily) => void;
+  setMarkdownPreviewStyle: (value: MarkdownPreviewStyle) => void;
 };
 
 export type ViewModeActions = {
@@ -268,6 +271,7 @@ export type EditorPresentation = {
   syntaxHighlightingEnabled: boolean;
   fontSize: number;
   fontFamily: EditorFontFamily;
+  markdownPreviewStyle: MarkdownPreviewStyle;
   typewriterScrollingEnabled: boolean;
   focusDimmingMode: FocusDimmingMode;
   posHighlightingEnabled: boolean;

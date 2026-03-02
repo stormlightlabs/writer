@@ -37,6 +37,10 @@ fn default_create_readme_in_new_locations() -> bool {
     true
 }
 
+fn default_markdown_preview_style() -> MarkdownPreviewStyle {
+    MarkdownPreviewStyle::default()
+}
+
 fn default_style_marker_style() -> StyleMarkerStyle {
     StyleMarkerStyle::default()
 }
@@ -48,6 +52,14 @@ pub enum FocusDimmingMode {
     #[default]
     Sentence,
     Paragraph,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MarkdownPreviewStyle {
+    #[default]
+    Github,
+    Pdf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -111,6 +123,8 @@ pub struct UiLayoutSettings {
     pub filename_visibility: bool,
     #[serde(default = "default_create_readme_in_new_locations")]
     pub create_readme_in_new_locations: bool,
+    #[serde(default = "default_markdown_preview_style")]
+    pub markdown_preview_style: MarkdownPreviewStyle,
 }
 
 impl Default for UiLayoutSettings {
@@ -130,6 +144,7 @@ impl Default for UiLayoutSettings {
             focus_auto_enter_focus_mode: default_focus_auto_enter_focus_mode(),
             filename_visibility: false,
             create_readme_in_new_locations: default_create_readme_in_new_locations(),
+            markdown_preview_style: default_markdown_preview_style(),
         }
     }
 }

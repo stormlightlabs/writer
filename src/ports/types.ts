@@ -11,6 +11,7 @@ import type {
   FocusDimmingMode,
   GlobalCaptureSettings,
   LocationId,
+  MarkdownPreviewStyle,
   MarkdownProfile,
   RenderResult,
   SaveStatus,
@@ -47,6 +48,7 @@ export type UiLayoutSettings = {
   focus_auto_enter_focus_mode: boolean;
   filename_visibility: boolean;
   create_readme_in_new_locations: boolean;
+  markdown_preview_style: MarkdownPreviewStyle;
 };
 
 export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };

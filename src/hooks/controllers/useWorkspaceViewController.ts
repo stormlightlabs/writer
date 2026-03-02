@@ -241,9 +241,18 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       renderResult: previewModel.renderResult,
       theme: editorPresentation.theme,
       editorLine: editorModel.cursorLine,
+      previewStyle: editorPresentation.markdownPreviewStyle,
+      editorFontFamily: editorPresentation.fontFamily,
       onScrollToLine: syncPreviewLine,
     }),
-    [previewModel.renderResult, editorPresentation.theme, editorModel.cursorLine, syncPreviewLine],
+    [
+      previewModel.renderResult,
+      editorPresentation.theme,
+      editorPresentation.markdownPreviewStyle,
+      editorPresentation.fontFamily,
+      editorModel.cursorLine,
+      syncPreviewLine,
+    ],
   );
 
   const focusModePanelProps = useMemo(

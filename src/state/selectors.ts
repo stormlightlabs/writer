@@ -54,6 +54,7 @@ export const useEditorPresentationStateRaw = () =>
       syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
       editorFontSize: state.editorFontSize,
       editorFontFamily: state.editorFontFamily,
+      markdownPreviewStyle: state.markdownPreviewStyle,
       theme: state.theme,
     })),
   );
@@ -69,6 +70,7 @@ export const useEditorPresentationActions = () =>
       toggleSyntaxHighlightingEnabled: state.toggleSyntaxHighlightingEnabled,
       setEditorFontSize: state.setEditorFontSize,
       setEditorFontFamily: state.setEditorFontFamily,
+      setMarkdownPreviewStyle: state.setMarkdownPreviewStyle,
     })),
   );
 
@@ -304,11 +306,13 @@ export const useLayoutSettingsEditorState = () =>
       syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
       editorFontSize: state.editorFontSize,
       editorFontFamily: state.editorFontFamily,
+      markdownPreviewStyle: state.markdownPreviewStyle,
       toggleLineNumbersVisible: state.toggleLineNumbersVisible,
       toggleTextWrappingEnabled: state.toggleTextWrappingEnabled,
       toggleSyntaxHighlightingEnabled: state.toggleSyntaxHighlightingEnabled,
       setEditorFontSize: state.setEditorFontSize,
       setEditorFontFamily: state.setEditorFontFamily,
+      setMarkdownPreviewStyle: state.setMarkdownPreviewStyle,
     })),
   );
 
@@ -447,6 +451,7 @@ export const useEditorPresentationState = () =>
       syntaxHighlightingEnabled: state.syntaxHighlightingEnabled,
       fontSize: state.editorFontSize,
       fontFamily: state.editorFontFamily,
+      markdownPreviewStyle: state.markdownPreviewStyle,
       typewriterScrollingEnabled: state.isFocusMode ? state.focusModeSettings.typewriterScrollingEnabled : false,
       focusDimmingMode: state.isFocusMode ? state.focusModeSettings.dimmingMode : "off",
       posHighlightingEnabled: state.posHighlightingEnabled,

@@ -886,6 +886,7 @@ describe("ui layout Commands", () => {
           focus_auto_enter_focus_mode: true,
           filename_visibility: false,
           create_readme_in_new_locations: true,
+          markdown_preview_style: "github",
         },
         onOk,
         onErr,
@@ -909,6 +910,7 @@ describe("ui layout Commands", () => {
           focus_auto_enter_focus_mode: true,
           filename_visibility: false,
           create_readme_in_new_locations: true,
+          markdown_preview_style: "github",
         },
       });
     });

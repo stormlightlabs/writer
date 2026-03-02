@@ -1,15 +1,32 @@
-import type { AppTheme, RenderResult } from "$types";
+import type { AppTheme, EditorFontFamily, MarkdownPreviewStyle, RenderResult } from "$types";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { CSSProperties } from "react";
 
 export type PreviewProps = {
   renderResult: RenderResult | null;
   theme: AppTheme;
   editorLine: number;
+  previewStyle: MarkdownPreviewStyle;
+  editorFontFamily: EditorFontFamily;
   onScrollToLine?: (line: number) => void;
   className?: string;
 };
 
-export function Preview({ renderResult, theme, editorLine, onScrollToLine, className = "" }: PreviewProps) {
+const PDF_PREVIEW_FONT_MAP: Record<EditorFontFamily, string> = {
+  "IBM Plex Mono": "\"Writer IBM Plex Mono\", \"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
+  "IBM Plex Sans Variable":
+    "\"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+  "IBM Plex Serif": "\"Writer IBM Plex Serif\", \"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
+  "Monaspace Argon": "\"Writer Monaspace Argon\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Krypton": "\"Writer Monaspace Krypton\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Neon": "\"Writer Monaspace Neon\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Radon": "\"Writer Monaspace Radon\", \"Writer IBM Plex Mono\", monospace",
+  "Monaspace Xenon": "\"Writer Monaspace Xenon\", \"Writer IBM Plex Mono\", monospace",
+};
+
+export function Preview(
+  { renderResult, theme, editorLine, previewStyle, editorFontFamily, onScrollToLine, className = "" }: PreviewProps,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,13 +126,22 @@ export function Preview({ renderResult, theme, editorLine, onScrollToLine, class
     };
   }, []);
 
+  const previewContentClassName = useMemo(() => `preview-content preview-content--${previewStyle}`, [previewStyle]);
+  const previewContentStyle = useMemo<CSSProperties | undefined>(
+    () =>
+      previewStyle === "pdf"
+        ? { ["--preview-pdf-font-family" as string]: PDF_PREVIEW_FONT_MAP[editorFontFamily] }
+        : undefined,
+    [previewStyle, editorFontFamily],
+  );
+
   return (
     <div
       ref={containerRef}
       onScroll={handleScroll}
       data-theme={theme}
       className={`flex-1 overflow-auto p-6 bg-surface-primary text-text-primary ${className}`}>
-      <div className="preview-content" dangerouslySetInnerHTML={previewContent} />
+      <div className={previewContentClassName} style={previewContentStyle} dangerouslySetInnerHTML={previewContent} />
     </div>
   );
 }

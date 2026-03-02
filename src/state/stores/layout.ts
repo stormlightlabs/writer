@@ -45,6 +45,7 @@ export const getInitialEditorPresentationState = (): EditorPresentationState => 
   syntaxHighlightingEnabled: true,
   editorFontSize: 16,
   editorFontFamily: "IBM Plex Mono",
+  markdownPreviewStyle: "github",
   theme: getInitialTheme(),
 });
 
@@ -104,6 +105,7 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
 
   setEditorFontSize: (value) => set({ editorFontSize: Math.max(12, Math.min(24, Math.round(value))) }),
   setEditorFontFamily: (value) => set({ editorFontFamily: value }),
+  setMarkdownPreviewStyle: (value) => set({ markdownPreviewStyle: value === "pdf" ? "pdf" : "github" }),
 
   setSplitView: (value) =>
     set((state) => ({ isSplitView: value, isPreviewVisible: value ? true : state.isPreviewVisible })),
