@@ -7,13 +7,16 @@
     "build": "node build.js",
     "dev": "node dev.js",
     "serve": "live-server dist --port=3000 --open=/index.html",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "pages:deploy": "pnpm build && wrangler pages deploy dist",
+    "pages:deploy:preview": "pnpm build && wrangler pages deploy dist --branch preview"
   },
   "dependencies": { "chalk": "^5.6.2", "marked": "^15.0.4", "nunjucks": "^3.2.4" },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "chokidar": "^3.6.0",
     "live-server": "^1.2.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "wrangler": "^4.71.0"
   }
 }

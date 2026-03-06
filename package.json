@@ -17,7 +17,9 @@
     "format": "dprint fmt .",
     "www:dev": "pnpm --filter @writer/www dev",
     "www:build": "pnpm --filter @writer/www build",
-    "www:serve": "pnpm --filter @writer/www serve"
+    "www:serve": "pnpm --filter @writer/www serve",
+    "www:pages:deploy": "pnpm --filter @writer/www pages:deploy",
+    "www:pages:deploy:preview": "pnpm --filter @writer/www pages:deploy:preview"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
