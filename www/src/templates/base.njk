@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="/static/images/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -20,9 +20,10 @@
         Writer
       </a>
       <nav class="nav">
-        <a href="/index.html" {% if currentPath == "index.html" %}class="active" aria-current="page"{% endif %}>Home</a>
-        <a href="/features.html" {% if currentPath == "features.html" %}class="active" aria-current="page"{% endif %}>Features</a>
-        <a href="/docs.html" {% if currentPath == "docs.html" %}class="active" aria-current="page"{% endif %}>Docs</a>
+        <a href="/index.html" class="nav-link {% if currentPath == 'index.html' %}active{% endif %}" {% if currentPath == "index.html" %}aria-current="page"{% endif %}>Home</a>
+        <a href="/docs.html" class="nav-link {% if currentPath == 'docs.html' %}active{% endif %}" {% if currentPath == "docs.html" %}aria-current="page"{% endif %}>Docs</a>
+        <a href="https://github.com/stormlightlabs/writer" class="nav-link" target="_blank" rel="noreferrer">Code</a>
+        <a href="https://github.com/stormlightlabs/writer/releases" class="nav-link" target="_blank" rel="noreferrer">Download</a>
       </nav>
     </div>
   </header>
@@ -34,6 +35,10 @@
   <footer class="footer">
     <div class="container">
       <p class="footer-text">Built with Rust and React. Open source, local-first.</p>
+      <p class="footer-links">
+        <a href="https://github.com/stormlightlabs/writer" target="_blank" rel="noreferrer">Repository</a>
+        <a href="https://github.com/stormlightlabs/writer/releases" target="_blank" rel="noreferrer">Releases</a>
+      </p>
     </div>
   </footer>
 </body>
