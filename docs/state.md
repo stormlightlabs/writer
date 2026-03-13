@@ -1,27 +1,42 @@
 ---
 title: "State Management"
-last_updated: 2026-02-26
+last_updated: 2026-03-13
 ---
 
 ## Frontend State Model
 
-Writer currently uses a single Zustand store (`src/state/stores/app.ts`).
-
-No Jotai atoms are used in the current codebase.
+Writer uses multiple Zustand stores organized by domain under `src/state/stores/`.
 
 ## Store Slices
 
-The store is composed from slice creators for:
+Current runtime stores:
 
-- layout chrome state/actions
-- editor presentation state/actions
-- view mode state/actions
-- writer tools state/actions
-- workspace locations state/actions
-- workspace documents state/actions
-- tabs state/actions
-- PDF export state/actions
-- UI state/actions (layout settings dialog, PDF dialog, global capture settings)
+- `layout.ts`
+  - layout chrome
+  - editor presentation
+  - view mode
+  - writer tools
+- `workspace.ts`
+  - locations
+  - documents
+  - directories
+  - sidebar drag/drop state
+- `tabs.ts`
+  - open tabs
+  - active tab
+  - session hydration status
+- `pdf-export.ts`
+- `text-export.ts`
+- `docx-export.ts`
+- `search.ts`
+- `ui.ts`
+  - layout settings sheet
+  - export dialog options
+  - global capture settings
+- `shortcuts.ts`
+- `toasts.ts`
+
+`src/state/stores/app.ts` now exposes a merged `useAppStore()` facade by combining the domain stores above. It is useful when a single aggregate app shape is needed, but it is not the primary authoring model.
 
 ## Selector Layer
 
@@ -29,17 +44,20 @@ The store is composed from slice creators for:
 
 Examples:
 
-- `useToolbarState`
-- `useSidebarState`
+- `useLayoutChromeState`
 - `useEditorPresentationState`
-- `useLayoutSettingsUiState`
 - `useWorkspaceLocationsState`
 - `useWorkspaceDocumentsState`
+- `useTabsState`
+- `useLayoutSettingsUiState`
+- `usePdfDialogUiState`
+- `useGlobalCaptureSettingsState`
 
 ## State Boundaries
 
-- Structural app/workspace/editor state lives in Zustand.
+- Structural UI, workspace, tab, export, and settings state lives in Zustand.
 - Backend side effects are triggered through ports/controller hooks, not from low-level presentational components.
+- Persistent settings are hydrated from Rust/Tauri commands and written back through controller/effect hooks.
 
 ## Backend State
 

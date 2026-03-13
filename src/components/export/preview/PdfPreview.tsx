@@ -566,19 +566,35 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
   const [fitMode, setFitMode] = useState<FitMode>("width");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [scrollToPage, setScrollToPage] = useState(1);
+  const pendingNavigationPageRef = useRef<number | null>(null);
 
   useEffect(() => {
     setCurrentPage(1);
     setScrollToPage(1);
     setFitMode("width");
     setZoomLevel(1);
+    pendingNavigationPageRef.current = null;
   }, [pdfDoc]);
 
   const goToPage = useCallback((page: number) => {
     const nextPage = clamp(page, 1, pageCount);
+    pendingNavigationPageRef.current = nextPage;
     setCurrentPage(nextPage);
     setScrollToPage(nextPage);
   }, [pageCount]);
+
+  const handleVisiblePageChange = useCallback((page: number) => {
+    const pendingPage = pendingNavigationPageRef.current;
+    if (pendingPage !== null) {
+      if (page !== pendingPage) {
+        return;
+      }
+
+      pendingNavigationPageRef.current = null;
+    }
+
+    setCurrentPage(page);
+  }, []);
 
   const handleFitModeChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     setFitMode(event.target.value as FitMode);
@@ -629,20 +645,18 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
         onPageInputChange={handlePageInputChange}
         onPrev={handlePrev}
         onNext={handleNext} />
-      {usedBuiltinFonts
-        ? (
-          <div className="border-b border-stroke-subtle bg-layer-01/60 px-3 py-1 text-[0.6875rem] text-text-secondary">
-            Preview is using built-in fonts due to custom font loading issues.
-          </div>
-        )
-        : null}
+      {usedBuiltinFonts && (
+        <div className="border-b border-stroke-subtle bg-layer-01/60 px-3 py-1 text-[0.6875rem] text-text-secondary">
+          Preview is using built-in fonts due to custom font loading issues.
+        </div>
+      )}
       <MultiPageCanvas
         pdfDoc={pdfDoc}
         pageCount={pageCount}
         fitMode={fitMode}
         zoomLevel={zoomLevel}
         scrollToPage={scrollToPage}
-        onVisiblePageChange={setCurrentPage} />
+        onVisiblePageChange={handleVisiblePageChange} />
     </div>
   );
 }
@@ -650,26 +664,23 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
 export function PdfPreviewPanel({ result, options, editorFontFamily }: PdfPreviewPanelProps) {
   const previewState = usePdfPreview({ result, options, editorFontFamily });
 
-  if (previewState.status === "idle") {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center rounded-lg bg-layer-02">
-        <p className="text-sm text-text-secondary">Select a document to preview</p>
-      </div>
-    );
+  switch (previewState.status) {
+    case "idle":
+      return (
+        <div className="flex h-full min-h-0 items-center justify-center rounded-lg bg-layer-02">
+          <p className="text-sm text-text-secondary">Select a document to preview</p>
+        </div>
+      );
+    case "loading":
+      return <PreviewSkeleton />;
+    case "error":
+      return <PreviewError message={previewState.message} />;
+    case "success":
+      return (
+        <PreviewSuccess
+          pdfDoc={previewState.pdfDoc}
+          pageCount={previewState.pageCount}
+          usedBuiltinFonts={previewState.usedBuiltinFonts} />
+      );
   }
-
-  if (previewState.status === "loading") {
-    return <PreviewSkeleton />;
-  }
-
-  if (previewState.status === "error") {
-    return <PreviewError message={previewState.message} />;
-  }
-
-  return (
-    <PreviewSuccess
-      pdfDoc={previewState.pdfDoc}
-      pageCount={previewState.pageCount}
-      usedBuiltinFonts={previewState.usedBuiltinFonts} />
-  );
 }

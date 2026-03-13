@@ -1,7 +1,9 @@
 ---
 title: "PDF Exporting"
-last_updated: 2026-02-28
+last_updated: 2026-03-13
 ---
+
+For the full multi-format export flow, see [Exporting](./export.md).
 
 ## Pipeline
 

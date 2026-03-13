@@ -1,6 +1,6 @@
 ---
 title: "Architecture"
-last_updated: 2026-02-26
+last_updated: 2026-03-13
 ---
 
 ## System Overview
@@ -16,23 +16,45 @@ User-selected folders (locations) are the source of truth for document files. SQ
 
 ### Composition
 
-- Root route is selected in `src/main.tsx` and `src/routes/AppRouter.tsx`.
-- Main app UI is composed in `src/App.tsx`.
-- Controller orchestration is centered in `src/hooks/controllers/useAppController.ts`.
+- Bootstrap happens in `src/main.tsx`.
+- Routing lives in `src/Router.tsx`.
+- The main window shell is `src/App.tsx`.
+- The quick capture window is `src/components/QuickCapture/QuickCaptureApp.tsx`.
+
+### Controller Layer
+
+Frontend orchestration is split across focused hooks rather than a single app controller:
+
+- `src/hooks/controllers/useAppChromeController.ts`
+  - window chrome state such as theme and sidebar visibility
+- `src/hooks/controllers/useWorkspaceViewController.ts`
+  - workspace sync
+  - session restore
+  - editor state
+  - preview state
+  - export dialog wiring
+  - diagnostics/help sheet routing
+- `src/hooks/controllers/useWorkspaceController.ts`
+  - locations, documents, tabs, sidebar refresh, file operations
+- `src/hooks/app/useSettingsSync.ts`
+  - backend settings hydration and persistence
 
 ### State
 
-- Single Zustand store in `src/state/stores/app.ts`.
-- Selector hooks in `src/state/selectors.ts` expose focused read/write APIs.
-- Store slices include:
-  - layout chrome
-  - editor presentation
-  - view mode (split/focus/preview)
-  - writer tools
-  - workspace (locations/documents)
-  - tabs
-  - PDF export
-  - UI state (layout settings dialog, PDF dialog, global capture settings)
+- Runtime state is split across multiple Zustand stores under `src/state/stores/`.
+- `src/state/selectors.ts` exposes focused hooks so presentational components do not bind directly to raw store modules.
+- Current store modules are:
+  - `layout`
+  - `workspace`
+  - `tabs`
+  - `pdf-export`
+  - `text-export`
+  - `docx-export`
+  - `search`
+  - `ui`
+  - `shortcuts`
+  - `toasts`
+- `src/state/stores/app.ts` is now a merged convenience facade used where a combined app shape is helpful, especially in tests and compatibility code.
 
 ### Command Boundary
 
@@ -60,7 +82,14 @@ User-selected folders (locations) are the source of truth for document files. SQ
 
 - Preview: frontend requests `markdown_render`, then renders returned HTML + metadata.
 - PDF: frontend requests `markdown_render_for_pdf`, converts AST to PDF via `@react-pdf/renderer`, and writes bytes using Tauri plugins.
+- DOCX: frontend requests `markdown_render_for_docx`, then writes returned bytes via Tauri plugins.
+- Plaintext: frontend requests `markdown_render_for_text`, then writes plain text bytes via Tauri plugins.
 
 ## Runtime Events
 
-Backend events (`backend-event`) are consumed by `useBackendEvents` and surfaced via UI alerts for missing locations, conflicts, and reconciliation progress.
+Backend events (`backend-event`) are consumed by `useBackendEvents`.
+
+Primary consumers:
+
+- `useWorkspaceSync` for location refresh and filesystem change reactions
+- `BackendAlerts` for surfaced UI warnings such as missing locations and conflicts
