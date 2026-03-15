@@ -1,11 +1,14 @@
 import { Button } from "$components/Button";
+import { Dialog } from "$components/Dialog";
+import { Support } from "$components/Support";
 import { Version } from "$components/Version";
 import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { CheckIcon, ChevronDownIcon, PenIcon, QuestionIcon, SearchIcon } from "$icons";
+import { CheckIcon, ChevronDownIcon, HeartIcon, PenIcon, QuestionIcon, SearchIcon, XIcon } from "$icons";
 import { appVersionGet, runCmd } from "$ports";
 import { useAppHeaderBarState, useHelpSheetState } from "$state/selectors";
 import { formatShortcut } from "$utils/shortcuts";
+import { cn } from "$utils/tw";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const AppTitle = ({ hideTitle, version }: { hideTitle: boolean; version: string }) => (
@@ -25,6 +28,7 @@ const AppTitle = ({ hideTitle, version }: { hideTitle: boolean; version: string 
 type SearchRowProps = {
   onOpenSearch: () => void;
   onOpenHelp: () => void;
+  onOpenSupport: () => void;
   onToggleSidebar: () => void;
   onToggleTabBar: () => void;
   onToggleStatusBar: () => void;
@@ -43,6 +47,7 @@ function SearchRow(
   {
     onOpenSearch,
     onOpenHelp,
+    onOpenSupport,
     onToggleSidebar,
     onToggleTabBar,
     onToggleStatusBar,
@@ -90,12 +95,13 @@ function SearchRow(
   }, [sidebarCollapsed, toggleSidebarShortcut]);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-1 justify-end">
       <Button
         onClick={onOpenSearch}
-        className={`flex items-center gap-1.5 px-3 py-1.5 bg-field-01 border border-stroke-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer ${
-          iconOnly ? "w-8 h-8 px-0 justify-center" : ""
-        }`}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 bg-field-01 border border-stroke-subtle rounded text-text-secondary text-[0.8125rem] cursor-pointer",
+          { "w-8 h-8 px-0 justify-center": iconOnly },
+        )}
         title={`Search (${searchShortcut})`}>
         <SearchIcon size="sm" />
         {iconOnly ? null : <span>Search</span>}
@@ -107,7 +113,7 @@ function SearchRow(
         onClick={onOpenHelp}
         variant="outline"
         size="sm"
-        className={`flex items-center gap-1.5 ${iconOnly ? "w-8 h-8 p-0 justify-center" : ""}`}
+        className={cn("flex items-center gap-1.5", { "w-8 h-8 p-0 justify-center": iconOnly })}
         title={`Open help sheet (${helpShortcut})`}
         aria-label={iconOnly ? "Open help sheet" : undefined}>
         <QuestionIcon size="sm" />
@@ -116,11 +122,23 @@ function SearchRow(
           <kbd className="px-1.5 py-0.5 bg-layer-02 rounded text-xs font-mono">{helpShortcut}</kbd>
         )}
       </Button>
+
+      <Button
+        onClick={onOpenSupport}
+        variant="outline"
+        size="sm"
+        className={cn("flex items-center gap-1.5", { "w-8 h-8 p-0 justify-center": iconOnly })}
+        title="Support Writer"
+        aria-label="Support Writer">
+        <HeartIcon size="sm" />
+        {iconOnly ? null : <span className="hidden sm:inline">Support</span>}
+      </Button>
+
       <Button
         onClick={onToggleStyleDiagnostics}
         variant={styleDiagnosticsOpen ? "surface" : "outline"}
         size="sm"
-        className={`flex items-center gap-1.5 ${iconOnly ? "w-8 h-8 p-0 justify-center" : ""}`}
+        className={cn("flex items-center gap-1.5", { "w-8 h-8 p-0 justify-center": iconOnly })}
         title={styleDiagnosticsOpen ? "Hide style diagnostics" : "Show style diagnostics"}
         aria-label="Toggle style diagnostics">
         <CheckIcon size="sm" />
@@ -160,8 +178,35 @@ function SearchRow(
   );
 }
 
+function SupportModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Support Writer"
+      containerClassName="flex items-center justify-center"
+      panelClassName="w-full max-w-md bg-layer-01 rounded-xl shadow-xl border border-stroke-subtle overflow-hidden"
+      motionPreset="scale">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-stroke-subtle">
+        <div className="flex items-center gap-2">
+          <HeartIcon size="sm" className="text-accent-primary" />
+          <span className="text-base font-semibold text-text-primary">Support Writer</span>
+        </div>
+        <Button
+          type="button"
+          onClick={onClose}
+          className="ml-2 text-text-secondary hover:text-support-error cursor-pointer bg-transparent border-none p-0">
+          <XIcon size="xs" />
+        </Button>
+      </div>
+      <Support />
+    </Dialog>
+  );
+}
+
 export function AppHeaderBar() {
   const [version, setVersion] = useState("");
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const { setOpen: setHelpSheetOpen } = useHelpSheetState();
   const { isOpen: styleDiagnosticsOpen, open: openStyleDiagnostics, close: closeStyleDiagnostics } = useRoutedSheet(
     "/diagnostics",
@@ -199,9 +244,11 @@ export function AppHeaderBar() {
   const handleOpenSearch = useCallback(() => {
     setShowSearch(true);
   }, [setShowSearch]);
+
   const handleOpenHelp = useCallback(() => {
     setHelpSheetOpen(true);
   }, [setHelpSheetOpen]);
+
   const handleToggleStyleDiagnostics = useCallback(() => {
     if (styleDiagnosticsOpen) {
       closeStyleDiagnostics();
@@ -211,24 +258,36 @@ export function AppHeaderBar() {
     openStyleDiagnostics();
   }, [closeStyleDiagnostics, openStyleDiagnostics, styleDiagnosticsOpen]);
 
+  const handleOpenSupport = useCallback(() => {
+    setIsSupportModalOpen(true);
+  }, []);
+
+  const handleCloseSupport = useCallback(() => {
+    setIsSupportModalOpen(false);
+  }, []);
+
   return (
-    <header className="h-[48px] bg-layer-01 border-b border-stroke-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
-      <AppTitle hideTitle={isCompact} version={version} />
-      <SearchRow
-        onOpenSearch={handleOpenSearch}
-        onOpenHelp={handleOpenHelp}
-        onToggleSidebar={toggleSidebarCollapsed}
-        onToggleTabBar={toggleTabBarCollapsed}
-        onToggleStatusBar={toggleStatusBarCollapsed}
-        onToggleStyleDiagnostics={handleToggleStyleDiagnostics}
-        sidebarCollapsed={sidebarCollapsed}
-        tabBarCollapsed={tabBarCollapsed}
-        statusBarCollapsed={statusBarCollapsed}
-        styleDiagnosticsOpen={styleDiagnosticsOpen}
-        iconOnly={iconOnly}
-        showSearchShortcut={showSearchShortcut}
-        showHelpShortcut={showHelpShortcut}
-        compactTabLabel={isNarrow} />
-    </header>
+    <>
+      <header className="h-[48px] bg-layer-01 border-b border-stroke-subtle flex items-center justify-between px-2.5 sm:px-4 shrink-0 gap-2">
+        <AppTitle hideTitle={isCompact} version={version} />
+        <SearchRow
+          onOpenSearch={handleOpenSearch}
+          onOpenHelp={handleOpenHelp}
+          onOpenSupport={handleOpenSupport}
+          onToggleSidebar={toggleSidebarCollapsed}
+          onToggleTabBar={toggleTabBarCollapsed}
+          onToggleStatusBar={toggleStatusBarCollapsed}
+          onToggleStyleDiagnostics={handleToggleStyleDiagnostics}
+          sidebarCollapsed={sidebarCollapsed}
+          tabBarCollapsed={tabBarCollapsed}
+          statusBarCollapsed={statusBarCollapsed}
+          styleDiagnosticsOpen={styleDiagnosticsOpen}
+          iconOnly={iconOnly}
+          showSearchShortcut={showSearchShortcut}
+          showHelpShortcut={showHelpShortcut}
+          compactTabLabel={isNarrow} />
+      </header>
+      <SupportModal isOpen={isSupportModalOpen} onClose={handleCloseSupport} />
+    </>
   );
 }

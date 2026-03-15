@@ -1,19 +1,22 @@
 import { BottomSheet } from "$components/HelpSheet/BottomSheet";
 import { MarkdownHelpContent } from "$components/HelpSheet/MarkdownHelpContent";
 import { ShortcutsTabContent } from "$components/HelpSheet/ShortcutsTabContent";
+import { Support } from "$components/Support";
 import { XIcon } from "$icons";
 import { cn } from "$utils/tw";
 import { useCallback, useEffect, useId, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
-type TabId = "shortcuts" | "markdown";
+type TabId = "shortcuts" | "markdown" | "support";
 
 type Tab = { id: TabId; label: string };
 
-const TABS: Tab[] = [{ id: "shortcuts", label: "Keyboard Shortcuts" }, { id: "markdown", label: "Markdown Help" }];
-const TAB_ORDER: TabId[] = ["shortcuts", "markdown"];
+const TABS: Tab[] = [{ id: "shortcuts", label: "Keyboard Shortcuts" }, { id: "markdown", label: "Markdown Help" }, {
+  id: "support",
+  label: "Support",
+}];
 
-type HelpSheetProps = { isOpen: boolean; onClose: () => void };
+const TAB_ORDER: TabId[] = ["shortcuts", "markdown", "support"];
 
 function getTabDomId(tabId: TabId): string {
   return `help-sheet-tab-${tabId}`;
@@ -23,9 +26,9 @@ function getTabPanelDomId(tabId: TabId): string {
   return `help-sheet-panel-${tabId}`;
 }
 
-function TabButton(
-  { tab, activeTab, setActiveTab }: { tab: Tab; activeTab: TabId; setActiveTab: (tabId: TabId) => void },
-) {
+type TabButtonProps = { tab: Tab; activeTab: TabId; setActiveTab: (tabId: TabId) => void };
+
+function TabButton({ tab, activeTab, setActiveTab }: TabButtonProps) {
   const handleClick = useCallback(() => setActiveTab(tab.id), [tab.id, setActiveTab]);
   const isActive = activeTab === tab.id;
   return (
@@ -60,6 +63,19 @@ function CloseButton({ onClose }: { onClose: () => void }) {
     </button>
   );
 }
+
+function TabContent({ activeTab }: { activeTab: TabId }) {
+  switch (activeTab) {
+    case "shortcuts":
+      return <ShortcutsTabContent />;
+    case "markdown":
+      return <MarkdownHelpContent />;
+    case "support":
+      return <Support />;
+  }
+}
+
+type HelpSheetProps = { isOpen: boolean; onClose: () => void };
 
 export function HelpSheet({ isOpen, onClose }: HelpSheetProps) {
   const [activeTab, setActiveTab] = useState<TabId>("shortcuts");
@@ -123,8 +139,7 @@ export function HelpSheet({ isOpen, onClose }: HelpSheetProps) {
           id={getTabPanelDomId(activeTab)}
           aria-labelledby={getTabDomId(activeTab)}
           className="flex-1 min-h-0 overflow-y-auto">
-          {activeTab === "shortcuts" && <ShortcutsTabContent />}
-          {activeTab === "markdown" && <MarkdownHelpContent />}
+          <TabContent activeTab={activeTab} />
         </div>
       </div>
     </BottomSheet>

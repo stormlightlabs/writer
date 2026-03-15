@@ -210,3 +210,9 @@ export const WarningIcon = ({ size = "md", className = "", style }: IconProps) =
     <i className="i-ri-error-warning-fill" />
   </span>
 );
+
+export const HeartIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-heart-fill" />
+  </span>
+);
