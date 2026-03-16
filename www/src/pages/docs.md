@@ -1,10 +1,10 @@
 ---
-title: Documentation — Writer
+title: Manual — Writer
 description: Getting started with Writer.
 template: page
 ---
 
-# Documentation
+# Manual
 
 ## Getting Started
 
@@ -12,7 +12,7 @@ Writer is a local-first markdown editor. On first launch you'll see an empty wor
 
 ### Adding a Workspace
 
-Click the folder icon in the sidebar and select any directory. Writer indexes the markdown files inside it and watches for changes.
+Click the folder icon in the sidebar and select any folder. Writer picks up the markdown files inside it and keeps them in sync.
 
 ```text
 Your Folder/
@@ -26,7 +26,7 @@ New locations automatically include a Markdown Tutorial document to help you get
 
 ### Creating Documents
 
-Right-click in the sidebar or use the toolbar. Documents save directly to your filesystem — no intermediate database, no proprietary format.
+Right-click in the sidebar or use the toolbar. Documents save as plain files on your computer — no special format, no lock-in.
 
 ---
 

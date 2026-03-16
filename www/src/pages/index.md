@@ -1,6 +1,6 @@
 ---
 title: Writer - Local-First Markdown Editor
-description: A distraction-free, local-first markdown editor built with Tauri and Rust.
+description: A distraction-free, local-first markdown editor.
 template: home
 ---
 
@@ -8,7 +8,7 @@ template: home
 
 ## Markdown Editor
 
-Built on CodeMirror 6. Fast, accessible, keyboard-driven.
+Fast, accessible, keyboard-driven.
 
 - **Live Preview** - Rendered output alongside raw markdown
 - **Split Panes** - Editor-only, preview-only, or side-by-side
@@ -39,7 +39,7 @@ Real-time feedback without getting in the way.
 
 ## File Management
 
-The sidebar is a full file browser backed by atomic Rust operations.
+The sidebar is a full file browser. Every operation is instant and reliable.
 
 - **Drag and Drop** - Reorder documents, move between locations, import `.md` files from your OS
 - **Context Menu** - Right-click to move, rename, or delete
@@ -67,7 +67,7 @@ Turn your markdown into something you can hand to someone else.
 - **DOCX** - Word-compatible output for collaborators who need it.
 - **Plaintext** - Strip formatting and export raw text.
 
-Markdown processing runs in Rust. Filename sanitization is handled automatically.
+Filenames are cleaned up automatically so you don't have to worry about special characters.
 
 ![pdf export](/static/images/pdf-export.png)
 
@@ -77,4 +77,4 @@ Close Writer, reopen it, and everything is where you left it. Open tabs, pane si
 
 ## Open Source
 
-Writer is built on Tauri 2, React 19, CodeMirror 6, and Rust. The source is open to inspect, fork, and contribute to.
+Writer is free and open source. The code is available to inspect, fork, and contribute to.
