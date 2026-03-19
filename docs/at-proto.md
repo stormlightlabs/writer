@@ -1,0 +1,264 @@
+---
+title: AT Protocol Integration Spec
+updated: 2026-03-19
+---
+
+## Goals
+
+- Use [jacquard](https://docs.rs/crate/jacquard/latest) (`^0.9`) to handle AT Protocol interactions.
+- AT Protocol OAuth with loopback redirect for desktop auth flow.
+- Tangled string integration (publish and import documents as strings).
+- Standard.Site post integration (future).
+
+---
+
+## Tangled Strings
+
+Strings are Tangled's equivalent of GitHub Gists — lightweight text/code snippets stored as AT Protocol records on the user's PDS under the `sh.tangled.string` collection. The Tangled AppView indexes them via Jetstream ingestion, but all CRUD goes through standard `com.atproto.repo.*` XRPC endpoints on the PDS directly — no Tangled-specific server API is needed for read/write.
+
+### Constraints
+
+- **Record size limit:** PDS records are capped at **2 MiB**. Large documents must be rejected with a clear error before attempting upload.
+- **Filename:** 1–140 graphemes. Default to the document's current filename.
+- **Description:** 0–280 graphemes. User-provided summary.
+- **Contents:** min 1 grapheme. The document body (markdown or plaintext).
+- **Key format:** TID (timestamp-based, base32-sortkey encoded, e.g. `3jzfcijpj2z2a`).
+- **AT URI format:** `at://<did>/sh.tangled.string/<tid>`
+
+### XRPC Endpoints
+
+All endpoints target `/xrpc/{NSID}` on the user's PDS. Collection is always `"sh.tangled.string"`.
+
+| Operation | Endpoint                        | Method | Auth     |
+| --------- | ------------------------------- | ------ | -------- |
+| Create    | `com.atproto.repo.createRecord` | POST   | Required |
+| Read      | `com.atproto.repo.getRecord`    | GET    | No       |
+| List      | `com.atproto.repo.listRecords`  | GET    | No       |
+| Update    | `com.atproto.repo.putRecord`    | POST   | Required |
+| Delete    | `com.atproto.repo.deleteRecord` | POST   | Required |
+| Batch     | `com.atproto.repo.applyWrites`  | POST   | Required |
+
+`listRecords` supports cursor-based pagination (`cursor`, `limit`, `reverse`, `rkeyStart`/`rkeyEnd`). Reading records does not require authentication — any user's public strings can be listed and fetched without a session.
+
+### Data Flow
+
+```text
+┌──────────────┐    Tauri commands     ┌───────────────────┐
+│   Frontend   │ ───────────────────── │  src-tauri/       │
+│  (React/TS)  │                       │  commands.rs      │
+│              │  ◄── CommandResponse  │  + atproto.rs     │
+└──────────────┘                       └────────┬─────────┘
+                                                │
+                                       jacquard Agent<OAuthSession>
+                                                │
+                                       ┌────────▼─────────┐
+                                       │   User's PDS     │
+                                       │  (XRPC endpoints)│
+                                       └──────────────────┘
+                                                │
+                                       Jetstream ingestion
+                                                │
+                                       ┌────────▼────────────┐
+                                       │  Tangled AppView    │
+                                       │  (tangled.sh)       │
+                                       └─────────────────────┘
+```
+
+### Jacquard Usage
+
+Jacquard (`^0.9`, ~99k downloads/month, MPL-2.0) provides generated types for the `sh.tangled.string` lexicon in `jacquard_api::sh_tangled::string`:
+
+- `TangledString` / `TangledStringBuilder` — record type and builder.
+- `TangledStringRecord` — full record with URI and CID.
+
+Sub-crates:
+
+| Crate               | Purpose                                                         |
+| ------------------- | --------------------------------------------------------------- |
+| `jacquard-common`   | Core types: DIDs, handles, AT URIs, NSIDs, TIDs, CIDs           |
+| `jacquard-api`      | 646+ generated lexicon bindings (includes `sh_tangled::string`) |
+| `jacquard-oauth`    | OAuth/DPoP with loopback server support                         |
+| `jacquard-identity` | Handle/DID resolution, OAuth metadata discovery                 |
+
+XRPC calls use the builder + `.send()` pattern:
+
+```rust
+use jacquard::api::com_atproto::repo::create_record::CreateRecordRequest;
+use jacquard::api::sh_tangled::string::TangledString;
+
+let record = TangledString::builder()
+    .filename("notes.md")
+    .description("My notes")
+    .contents(body)
+    .created_at(chrono::Utc::now())
+    .build();
+
+let response = CreateRecordRequest::builder()
+    .repo(&session.did)
+    .collection("sh.tangled.string")
+    .record(record)
+    .build()
+    .send(&agent)
+    .await?;
+```
+
+For reads (no auth needed), use a stateless `reqwest::Client` with the `XrpcExt` trait or an unauthenticated agent. For writes, the `Agent<OAuthSession>` handles DPoP headers and token refresh automatically.
+
+Jacquard types use zero-copy deserialization via `CowStr<'_>`. Use `.parse()` for borrowed data or `.into_output()` for owned `'static` data when the response outlives the buffer.
+
+### Backend Module Structure
+
+```sh
+src-tauri/src/
+├── atproto/
+│   ├── mod.rs          # re-exports, shared types (StringRecord, AtProtoState)
+│   ├── auth.rs         # OAuth loopback flow, session management, token refresh
+│   ├── strings.rs      # string CRUD commands (create, get, list, update, delete)
+│   └── resolve.rs      # handle → DID → PDS resolution
+```
+
+`AtProtoState` holds the `jacquard::Agent<OAuthSession>` (or `None` when logged out) and lives inside `AppState`. Auth-required commands check for an active session and return `ErrorCode::PermissionDenied` when unauthenticated.
+
+**Tauri commands:**
+
+| Command                  | Args                                   | Returns                                | Auth      |
+| ------------------------ | -------------------------------------- | -------------------------------------- | --------- |
+| `atproto_login`          | `handle: String`                       | `CommandResponse<SessionInfo>`         | Initiates |
+| `atproto_logout`         | —                                      | `CommandResponse<()>`                  | Required  |
+| `atproto_session_status` | —                                      | `CommandResponse<Option<SessionInfo>>` | No        |
+| `string_create`          | `filename, description, contents`      | `CommandResponse<StringRecord>`        | Required  |
+| `string_update`          | `tid, filename, description, contents` | `CommandResponse<StringRecord>`        | Required  |
+| `string_delete`          | `tid`                                  | `CommandResponse<()>`                  | Required  |
+| `string_list`            | `did_or_handle`                        | `CommandResponse<Vec<StringRecord>>`   | No        |
+| `string_get`             | `did_or_handle, tid`                   | `CommandResponse<StringRecord>`        | No        |
+
+`StringRecord` contains: `uri` (AT URI), `tid`, `filename`, `description`, `contents`, `created_at`.
+
+### Frontend Structure
+
+```sh
+src/
+├── state/stores/atproto.ts    # auth state, current user DID/handle, published strings
+├── state/selectors.ts         # useAtProtoSession, useIsAuthenticated, etc.
+├── ports/commands.ts          # atproto_login, string_create, string_list, etc.
+├── hooks/controllers/
+│   └── useAtProtoController.ts
+├── components/
+│   ├── AtProto/
+│   │   ├── LoginSheet.tsx
+│   │   ├── PublishStringSheet.tsx
+│   │   └── ImportStringSheet.tsx
+```
+
+### Sync & Origin Tracking
+
+When a document is published as a string or imported from one, store the association in SQLite:
+
+- `string_origin` table: `doc_id`, `at_uri`, `tid`, `source_did`, `last_synced_at`
+- On publish: insert/update origin row, store TID for future `putRecord` updates.
+- On import: insert origin row linking the new document to the source string.
+- Re-publish: detect local modifications to a previously published document; surface "Update String" action.
+- Re-pull: compare `createdAt` or content hash to detect remote changes; prompt with diff.
+
+Non-markdown/non-plaintext content (detected by file extension on the string's `filename`) should be wrapped in a fenced code block with the appropriate language tag on import.
+
+---
+
+## Standard.Site Integration (Future)
+
+- Phased: [Leaflet](https://tangled.org/leaflet.pub/leaflet/tree/main/lexicons/pub/leaflet) → pckt → GreenGale
+- [ ] Pull posts from AT Protocol `standard.site` websites.
+- [ ] Push posts to AT Protocol `standard.site` websites.
+- See [standard.site](https://standard.site)
+
+---
+
+## Lexicon Reference (`sh.tangled.string`)
+
+```json
+{
+  "lexicon": 1,
+  "id": "sh.tangled.string",
+  "needsCbor": true,
+  "needsType": true,
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["filename", "description", "createdAt", "contents"],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxGraphemes": 140,
+            "minGraphemes": 1
+          },
+          "description": {
+            "type": "string",
+            "maxGraphemes": 280
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          },
+          "contents": {
+            "type": "string",
+            "minGraphemes": 1
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## AT Protocol OAuth
+
+### Desktop Loopback Flow
+
+1. User enters handle (e.g. `alice.bsky.social`).
+2. Resolve handle → DID → PDS URL → authorization server metadata.
+3. Generate ES256 DPoP keypair (one per session).
+4. Pushed Authorization Request (PAR) with PKCE challenge (S256) to auth server.
+5. Open system browser to `authorize?client_id=...&request_uri=...`.
+6. User approves; browser redirects to `http://127.0.0.1:<ephemeral-port>/callback?code=...`.
+7. Exchange code for DPoP-bound access + refresh tokens.
+8. Verify `sub` DID claim matches the resolved DID.
+9. Use `Agent<OAuthSession>` for all subsequent XRPC calls.
+
+Jacquard's `jacquard-oauth` crate provides `OAuthClient`, `OAuthSession`, `FileAuthStore`, and `LoopbackConfig` to handle this flow. The `loopback` feature flag (enabled by default) includes the local HTTP server.
+
+### Token Lifecycle (Public/Native Client)
+
+- **Access token:** ~5 min expiry, refresh silently via refresh token.
+- **Refresh token:** 2-week max lifetime.
+- **Session:** 2-week max, then full re-auth required.
+- **DPoP nonce:** 5-min server-side lifetime, rotated via `DPoP-Nonce` response header. Jacquard handles nonce rotation internally.
+
+### Session Persistence
+
+Use `FileAuthStore` (or equivalent) in the app data directory alongside the SQLite DB. This persists the DPoP keypair and refresh token across app restarts so users don't need to re-authenticate on every launch. On token expiry, attempt silent refresh; on failure, clear session and prompt re-login.
+
+### Client Metadata
+
+For development, `client_id` can be `http://localhost`. For production, publish client metadata at an HTTPS URL containing:
+
+- `application_type: "native"`
+- `dpop_bound_access_tokens: true`
+- `grant_types: ["authorization_code", "refresh_token"]`
+- `scope: "atproto"`
+- `redirect_uris: ["http://127.0.0.1/callback"]`
+
+## References
+
+- [Jacquard docs (v0.9.3)](https://docs.rs/jacquard/0.9.3/jacquard/)
+- [Jacquard API: sh_tangled::string](https://docs.rs/jacquard-api/0.9.3/jacquard_api/sh_tangled/string/index.html)
+- [Jacquard API: com_atproto::repo](https://docs.rs/jacquard-api/0.9.3/jacquard_api/com_atproto/repo/index.html)
+- [AT Protocol: Repository spec](https://atproto.com/specs/repository)
+- [AT Protocol: OAuth spec](https://atproto.com/specs/oauth)
+- [AT Protocol: XRPC spec](https://atproto.com/specs/xrpc)
+- [AT Protocol: Record keys](https://atproto.com/specs/record-key)
+- [Tangled core repo](https://tangled.org/tangled.org/core)
+- [Tangled string lexicon source](https://tangled.org/tangled.org/core/blob/master/lexicons/string/string.json)
+- [Tangled blog: 6 months](https://blog.tangled.org/6-months)

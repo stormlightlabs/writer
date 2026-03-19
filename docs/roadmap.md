@@ -1,7 +1,34 @@
 ---
 title: "Roadmap"
-last_updated: 2026-02-28
+last_updated: 2026-03-19
 ---
+
+## Tangled string integration
+
+Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) and import strings as documents. Spec in [at-proto.md](./at-proto.md).
+
+### Part 1 — Auth
+
+1. **`jacquard` dependency** - add to `src-tauri/Cargo.toml` with `oauth` + `loopback` features
+2. **OAuth loopback flow** - `src-tauri/src/atproto/auth.rs`
+3. **Session persistence** - token + DPoP key storage in app data dir
+4. **Tauri commands** - `atproto_login`, `atproto_logout`, `atproto_session_status`
+5. **Frontend auth UI** - login sheet, session indicator, logout
+
+### Part 2 — Push
+
+1. **Tauri commands** - `string_create`, `string_update`, `string_delete`
+2. **Publish UI** - "Publish as String" action in export menu with filename, description, preview
+
+### Part 3 — Pull
+
+1. **Tauri commands** - `string_list`, `string_get`
+2. **Import UI** - "Import from Tangled" sheet with handle input, string browser, preview, import to location
+
+### Part 4 — Sync & metadata
+
+1. **Origin tracking** - AT URI, TID, source DID in SQLite
+2. **Change detection** - local re-publish offers, remote drift on re-pull
 
 ## Drag-and-drop
 
