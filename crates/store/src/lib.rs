@@ -9,8 +9,8 @@ use std::sync::{Arc, Mutex};
 use writer_core::{
     AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
     LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
-    is_conflicted_filename, normalize_relative_path,
 };
+use writer_core::{is_conflicted_filename, normalize_relative_path};
 use writer_md::{MarkdownEngine, MarkdownProfile};
 
 mod file_utils;
@@ -902,7 +902,7 @@ impl Store {
 
         let root_path = &location.root_path;
         let mut directories = Vec::new();
-        self.collect_dirs_recursive(root_path, root_path, &mut directories)?;
+        Self::collect_dirs_recursive(root_path, root_path, &mut directories)?;
         directories.sort();
 
         log::debug!("Listed {} directories in location {:?}", directories.len(), location_id);
@@ -995,9 +995,7 @@ impl Store {
         Ok(())
     }
 
-    fn collect_dirs_recursive(
-        &self, root: &Path, current: &Path, directories: &mut Vec<PathBuf>,
-    ) -> Result<(), AppError> {
+    fn collect_dirs_recursive(root: &Path, current: &Path, directories: &mut Vec<PathBuf>) -> Result<(), AppError> {
         let entries =
             std::fs::read_dir(current).map_err(|e| AppError::io(format!("Failed to read directory: {}", e)))?;
 
@@ -1020,7 +1018,7 @@ impl Store {
                 directories.push(rel_path);
             }
 
-            self.collect_dirs_recursive(root, &path, directories)?;
+            Self::collect_dirs_recursive(root, &path, directories)?;
         }
 
         Ok(())
