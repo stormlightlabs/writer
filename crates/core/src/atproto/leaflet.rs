@@ -4,7 +4,6 @@ use comrak::{
     nodes::{AstNode, NodeCodeBlock, NodeHeading, NodeMath, NodeValue},
     parse_document,
 };
-use jacquard::IntoStatic;
 use jacquard::api::pub_leaflet::{
     blocks::{
         blockquote::Blockquote,
@@ -30,6 +29,7 @@ use jacquard::common::types::{
     string::Uri,
 };
 use jacquard::types::did::Did;
+use jacquard::{IntoStatic, api::pub_leaflet::pages::linear_document::BlockAlignment};
 use std::cmp::Reverse;
 
 const CANVAS_PAGE_OMITTED: &str = "<!-- canvas page omitted -->";
@@ -118,9 +118,15 @@ fn render_block(block: &Block<'_>) -> Result<String, AppError> {
         _ => comment_marker("unsupported: unknown block"),
     };
 
-    Ok(match block.alignment.as_deref() {
-        Some(alignment) if !alignment.is_empty() => format!("<!-- alignment: {} -->\n{}", alignment, body),
-        _ => body,
+    Ok(match &block.alignment {
+        // Some(alignment) if !alignment.is_empty() => format!("<!-- alignment: {} -->\n{}", alignment, body),
+        Some(alignment) => match alignment {
+            BlockAlignment::TextAlignCenter => format!("<!-- alignment: center; -->\n{}", body),
+            BlockAlignment::TextAlignLeft => format!("<!-- alignment: left; -->\n{}", body),
+            BlockAlignment::TextAlignRight => format!("<!-- alignment: right; -->\n{}", body),
+            _ => body,
+        },
+        None => body,
     })
 }
 
@@ -327,7 +333,7 @@ fn paragraph_to_block<'a>(node: &'a AstNode<'a>) -> Result<Option<Block<'static>
     Ok(Some(wrap_block(BlockBlock::Text(Box::new(Text {
         facets: option_facets(inline.facets),
         plaintext: inline.plaintext.into(),
-        extra_data: Default::default(),
+        ..Default::default()
     })))))
 }
 
@@ -430,7 +436,7 @@ fn convert_list_items<'a>(list_node: &'a AstNode<'a>) -> Result<Vec<ListItem<'st
                                 child.data().value.xml_node_name()
                             )
                             .into(),
-                            extra_data: Default::default(),
+                            ..Default::default()
                         })));
                     }
                 }
@@ -441,7 +447,7 @@ fn convert_list_items<'a>(list_node: &'a AstNode<'a>) -> Result<Vec<ListItem<'st
             ListItemContent::Text(Box::new(Text {
                 facets: None,
                 plaintext: String::new().into(),
-                extra_data: Default::default(),
+                ..Default::default()
             }))
         });
 
@@ -466,7 +472,7 @@ fn list_item_content_from_paragraph<'a>(node: &'a AstNode<'a>) -> Result<ListIte
         Ok(ListItemContent::Text(Box::new(Text {
             facets: option_facets(inline.facets),
             plaintext: inline.plaintext.into(),
-            extra_data: Default::default(),
+            ..Default::default()
         })))
     }
 }
@@ -678,7 +684,7 @@ fn text_comment_block(message: String) -> Block<'static> {
     wrap_block(BlockBlock::Text(Box::new(Text {
         facets: None,
         plaintext: format!("<!-- {} -->", message).into(),
-        extra_data: Default::default(),
+        ..Default::default()
     })))
 }
 
@@ -739,7 +745,7 @@ mod tests {
                                     single_feature_facet(5, 9, feature_link("https://example.com").unwrap()),
                                 ]),
                                 plaintext: "Lead link".into(),
-                                extra_data: Default::default(),
+                                ..Default::default()
                             }))),
                             wrap_block(BlockBlock::Blockquote(Box::new(Blockquote {
                                 facets: None,
@@ -876,7 +882,7 @@ mod tests {
             .content(ListItemContent::Text(Box::new(Text {
                 facets: None,
                 plaintext: text.to_string().into(),
-                extra_data: Default::default(),
+                ..Default::default()
             })))
             .children(children)
             .build()

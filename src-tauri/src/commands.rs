@@ -17,10 +17,12 @@ use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
 
 mod atproto;
 mod md;
+mod standard_site;
 mod strings;
 
 pub use atproto::*;
 pub use md::*;
+pub use standard_site::*;
 pub use strings::*;
 
 type CommandResponse<T> = std::result::Result<CommandResult<T>, AppError>;
