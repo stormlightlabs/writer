@@ -272,3 +272,23 @@ export type StringListParams = Parameters<
 export type StringGetParams = Parameters<
   (didOrHandle: string, tid: string, onOk: SuccessCallback<TangledStringRecord>, onErr: ErrorCallback) => void
 >;
+export type StringCreateParams = Parameters<
+  (
+    filename: string,
+    description: string,
+    contents: string,
+    onOk: SuccessCallback<TangledStringRecord>,
+    onErr: ErrorCallback,
+  ) => void
+>;
+export type StringUpdateParams = Parameters<
+  (
+    tid: string,
+    filename: string,
+    description: string,
+    contents: string,
+    onOk: SuccessCallback<TangledStringRecord>,
+    onErr: ErrorCallback,
+  ) => void
+>;
+export type StringDeleteParams = Parameters<(tid: string, onOk: SuccessCallback<void>, onErr: ErrorCallback) => void>;

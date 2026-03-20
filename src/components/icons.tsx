@@ -232,6 +232,12 @@ export const FileTypeIcon = ({ size = "md", className = "", style, filename }: I
   </span>
 );
 
+export const GithubIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-github-fill" />
+  </span>
+);
+
 /**
  * @see assets/dolly.svg
  */

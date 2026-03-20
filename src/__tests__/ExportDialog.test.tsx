@@ -1,7 +1,7 @@
 import { ExportDialog } from "$components/export/ExportDialog/ExportDialog";
 import { DEFAULT_OPTIONS } from "$pdf/constants";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
-import { useAppStore } from "$state/stores/app";
+import { resetAppStore, useAppStore } from "$state/stores/app";
 import { resetDocxExportStore, useDocxExportStore } from "$state/stores/docx-export";
 import { resetPdfExportStore, usePdfExportStore } from "$state/stores/pdf-export";
 import { resetTextExportStore, useTextExportStore } from "$state/stores/text-export";
@@ -42,13 +42,24 @@ type RenderDialogArgs = {
   previewResult?: PdfRenderResult | null;
   editorFontFamily?: EditorFontFamily;
   onExport?: (options: PdfExportOptions) => Promise<void>;
+  documentText?: string;
 };
 
 function renderExportDialog(
-  { previewResult = mockRenderResult, editorFontFamily = "IBM Plex Sans Variable", onExport = mockOnExport }:
-    RenderDialogArgs = {},
+  {
+    previewResult = mockRenderResult,
+    editorFontFamily = "IBM Plex Sans Variable",
+    onExport = mockOnExport,
+    documentText = "",
+  }: RenderDialogArgs = {},
 ) {
-  return render(<ExportDialog onExport={onExport} previewResult={previewResult} editorFontFamily={editorFontFamily} />);
+  return render(
+    <ExportDialog
+      onExport={onExport}
+      previewResult={previewResult}
+      editorFontFamily={editorFontFamily}
+      documentText={documentText} />,
+  );
 }
 
 function seedActiveDocument() {
@@ -68,6 +79,7 @@ function seedActiveDocument() {
 describe("PdfExportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetAppStore();
     resetUiStore();
     resetPdfExportStore();
     resetTextExportStore();
@@ -301,6 +313,94 @@ describe("PdfExportDialog", () => {
       renderExportDialog();
 
       expect(screen.getByText("My Document")).toBeInTheDocument();
+    });
+  });
+
+  describe("String tab", () => {
+    it("renders String tab button", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      renderExportDialog();
+
+      expect(screen.getByRole("button", { name: "String export tab" })).toBeInTheDocument();
+    });
+
+    it("shows connect prompt when no AT Proto session is active", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      seedActiveDocument();
+      renderExportDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "String export tab" }));
+
+      expect(screen.getByText("Connect Tangled to publish")).toBeInTheDocument();
+    });
+
+    it("shows publish form when a session is active", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      useUiStore.getState().setAtProtoSession({
+        did: "did:plc:alice",
+        handle: "alice.bsky.social",
+        sessionId: "sess-1",
+        endpoint: "https://pds.example.com",
+      });
+      seedActiveDocument();
+      renderExportDialog({ documentText: "# Hello world" });
+
+      fireEvent.click(screen.getByRole("button", { name: "String export tab" }));
+
+      expect(screen.getByLabelText("Filename")).toBeInTheDocument();
+      expect(screen.getByLabelText("Description")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Publish to Tangled" })).toBeInTheDocument();
+    });
+
+    it("pre-fills filename from the active document's filename", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      useUiStore.getState().setAtProtoSession({
+        did: "did:plc:alice",
+        handle: "alice.bsky.social",
+        sessionId: "sess-1",
+        endpoint: "https://pds.example.com",
+      });
+      seedActiveDocument();
+      renderExportDialog({ documentText: "# Hello" });
+
+      fireEvent.click(screen.getByRole("button", { name: "String export tab" }));
+
+      const filenameInput = screen.getByLabelText("Filename") as HTMLInputElement;
+      expect(filenameInput.value).toBe("test.md");
+    });
+
+    it("shows empty export state when no document is open", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      useUiStore.getState().setAtProtoSession({
+        did: "did:plc:alice",
+        handle: "alice.bsky.social",
+        sessionId: "sess-1",
+        endpoint: "https://pds.example.com",
+      });
+      renderExportDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "String export tab" }));
+
+      expect(screen.getByText("Open a document to export.")).toBeInTheDocument();
+    });
+
+    it("disables publish button when filename is empty", () => {
+      useUiStore.getState().setPdfExportDialogOpen(true);
+      useUiStore.getState().setAtProtoSession({
+        did: "did:plc:alice",
+        handle: "alice.bsky.social",
+        sessionId: "sess-1",
+        endpoint: "https://pds.example.com",
+      });
+      seedActiveDocument();
+      renderExportDialog({ documentText: "# Hello" });
+
+      fireEvent.click(screen.getByRole("button", { name: "String export tab" }));
+
+      const filenameInput = screen.getByLabelText("Filename");
+      fireEvent.change(filenameInput, { target: { value: "" } });
+
+      expect(screen.getByRole("button", { name: "Publish to Tangled" })).toBeDisabled();
     });
   });
 });

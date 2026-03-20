@@ -1,6 +1,15 @@
 import { Button } from "$components/Button";
 import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
-import { CollapseIcon, FileAddIcon, FileTextIcon, FolderAddIcon, FolderIcon, RefreshIcon, Tangled } from "$icons";
+import {
+  CollapseIcon,
+  FileAddIcon,
+  FileTextIcon,
+  FolderAddIcon,
+  FolderIcon,
+  GithubIcon,
+  RefreshIcon,
+  Tangled,
+} from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
 import { formatShortcut } from "$utils/shortcuts";
@@ -77,9 +86,9 @@ const CountPill = ({ count, kind }: CountPillProps) => (
   </span>
 );
 
-const ImportButton = ({ onOpenImportSheet }: { onOpenImportSheet: () => void }) => (
+const ImportButton = ({ onOpenImportSheet, gh = false }: { onOpenImportSheet: () => void; gh?: boolean }) => (
   <Button type="button" variant="outline" size="sm" onClick={onOpenImportSheet} className="flex items-center gap-1.5">
-    <Tangled className="h-4 w-4 shrink-0" />
+    {gh ? <GithubIcon size="sm" /> : <Tangled className="h-4 w-4 shrink-0" />}
     <span className="sr-only">Import</span>
   </Button>
 );

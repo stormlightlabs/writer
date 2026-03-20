@@ -80,6 +80,7 @@ export const useUiStore = create<UiStore>()((set, get) => ({
   openAtProtoLoginSheet: () => set({ atProtoSheetMode: "login" }),
   openAtProtoSessionSheet: () => set({ atProtoSheetMode: "session" }),
   openAtProtoImportSheet: () => set({ atProtoSheetMode: "import" }),
+  openAtProtoPublishSheet: () => set({ atProtoSheetMode: "publish" }),
   closeAtProtoSheet: () => set({ atProtoSheetMode: "closed" }),
   setAtProtoSession: (value) => set({ atProtoSession: value }),
   setAtProtoHydrated: (value) => set({ atProtoHydrated: value }),

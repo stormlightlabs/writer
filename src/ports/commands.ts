@@ -57,8 +57,11 @@ import type {
   SessionReorderTabsParams,
   SessionTabIdParams,
   SessionUpdateTabDocParams,
+  StringCreateParams,
+  StringDeleteParams,
   StringGetParams,
   StringListParams,
+  StringUpdateParams,
   StyleCheckScanParams,
   StyleCheckSetParams,
   UiLayoutSetParams,
@@ -157,6 +160,18 @@ export function stringList(...[didOrHandle, onOk, onErr]: StringListParams): Cmd
 
 export function stringGet(...[didOrHandle, tid, onOk, onErr]: StringGetParams): Cmd {
   return invokeCmd<TangledStringRecord>("string_get", { didOrHandle, tid }, onOk, onErr);
+}
+
+export function stringCreate(...[filename, description, contents, onOk, onErr]: StringCreateParams): Cmd {
+  return invokeCmd<TangledStringRecord>("string_create", { filename, description, contents }, onOk, onErr);
+}
+
+export function stringUpdate(...[tid, filename, description, contents, onOk, onErr]: StringUpdateParams): Cmd {
+  return invokeCmd<TangledStringRecord>("string_update", { tid, filename, description, contents }, onOk, onErr);
+}
+
+export function stringDelete(...[tid, onOk, onErr]: StringDeleteParams): Cmd {
+  return invokeCmd<void>("string_delete", { tid }, onOk, onErr);
 }
 
 export function locationAddViaDialog(...[onOk, onErr]: LocParams<LocationDescriptor>): Cmd {

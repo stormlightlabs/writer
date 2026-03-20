@@ -5,6 +5,7 @@ import {
   docExists,
   docSave,
   runCmd,
+  stringCreate,
   stringGet,
   stringList,
 } from "$ports";
@@ -100,6 +101,7 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     openLoginSheet,
     openSessionSheet,
     openImportSheet: openImportSheetState,
+    openPublishSheet: openPublishSheetState,
     closeSheet,
     setSession,
     setHydrated,
@@ -117,6 +119,12 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
   const [isSaving, setIsSaving] = useState(false);
   const listRequestIdRef = useRef(0);
   const getRequestIdRef = useRef(0);
+
+  const [publishFilename, setPublishFilename] = useState("");
+  const [publishDescription, setPublishDescription] = useState("");
+  const [publishContents, setPublishContents] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishedRecord, setPublishedRecord] = useState<TangledStringRecord | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -338,6 +346,43 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     showSuccessToast(`Imported ${selectedRecord.filename} into ${relPath}`);
   }, [closeSheet, destinationLocationId, destinationRelPath, isSaving, refreshSidebar, selectedRecord]);
 
+  const openPublishSheet = useCallback((filename: string, contents: string) => {
+    setPublishFilename(filename);
+    setPublishContents(contents);
+    setPublishDescription("");
+    setPublishedRecord(null);
+    openPublishSheetState();
+  }, [openPublishSheetState]);
+
+  const handlePublish = useCallback(() => {
+    const trimFilename = publishFilename.trim();
+    const trimContents = publishContents.trim();
+    if (isPublishing || !session) {
+      return;
+    }
+
+    if (!trimFilename) {
+      showErrorToast("Filename is required.");
+      return;
+    }
+
+    if (!trimContents) {
+      showErrorToast("Document has no content to publish.");
+      return;
+    }
+
+    setIsPublishing(true);
+    void runCmd(stringCreate(trimFilename, publishDescription.trim(), publishContents, (record) => {
+      setIsPublishing(false);
+      setPublishedRecord(record);
+      showSuccessToast(`Published "${trimFilename}" to Tangled`);
+    }, (error) => {
+      setIsPublishing(false);
+      logger.error(f("Failed to publish Tangled string", { filename: trimFilename, error }));
+      showErrorToast(error.message);
+    }));
+  }, [isPublishing, publishContents, publishDescription, publishFilename, session]);
+
   const importState = useMemo<ImportState>(
     () => ({
       handle: importHandle,
@@ -366,6 +411,17 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     ],
   );
 
+  const publishState = useMemo(
+    () => ({
+      filename: publishFilename,
+      description: publishDescription,
+      contents: publishContents,
+      isPublishing,
+      publishedRecord,
+    }),
+    [isPublishing, publishContents, publishDescription, publishFilename, publishedRecord],
+  );
+
   return {
     sheetMode,
     session,
@@ -373,19 +429,24 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     isPending,
     locations,
     importState,
+    publishState,
     openAuthSheet,
     openLoginSheet,
     openSessionSheet,
     openImportSheet,
+    openPublishSheet,
     closeSheet,
     handleLogin,
     handleLogout,
     handleBrowseStrings,
     handleSelectString,
     handleImport,
+    handlePublish,
     setImportHandle,
     setDestinationLocationId,
     setDestinationRelPath,
+    setPublishFilename,
+    setPublishDescription,
     hasLocations: locations.length > 0,
   };
 }

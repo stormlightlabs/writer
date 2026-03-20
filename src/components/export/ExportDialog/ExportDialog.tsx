@@ -6,8 +6,11 @@ import { FileTextIcon } from "$components/icons";
 import { useDocxExportUI } from "$hooks/useDocxExport";
 import { useTextExportUI } from "$hooks/useTextExport";
 import { useViewportTier } from "$hooks/useViewportTier";
+import { Tangled } from "$icons";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { runCmd, stringCreate } from "$ports";
 import {
+  useAtProtoUiState,
   useDocxExportActions,
   useDocxExportState,
   usePdfDialogUiState,
@@ -18,10 +21,12 @@ import {
   useTextExportState,
   useWorkspaceDocumentsState,
 } from "$state/selectors";
+import { showErrorToast, showSuccessToast } from "$state/stores/toasts";
+import type { TangledStringRecord } from "$types";
 import type { EditorFontFamily, ExportFormat } from "$types";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
-import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type ChangeEventHandler, type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ExportDialogFooter, PdfExportDialogFooter } from "./ExportFooter";
 import { ExportDialogHeader } from "./ExportHeader";
 import { PdfExportDialogOptions } from "./ExportOptions";
@@ -33,22 +38,24 @@ export type ExportDialogProps = {
   documentText?: string;
 };
 
-type ExportFormatTab = { id: ExportFormat; label: string; disabled: boolean; description: string };
+type ExportFormatTabId = ExportFormat | "string";
+type ExportFormatTab = { id: ExportFormatTabId; label: string; disabled: boolean; description: string };
 
 const EXPORT_FORMAT_TABS: ExportFormatTab[] = [
   { id: "pdf", label: "PDF", disabled: false, description: "Print-ready layout and typography controls." },
   { id: "docx", label: "DOCX", disabled: false, description: "Word-compatible document with rich formatting." },
   { id: "txt", label: "Plaintext", disabled: false, description: "Markdown removed while preserving structure." },
+  { id: "string", label: "String", disabled: false, description: "Publish to Tangled as an AT Protocol string." },
 ];
 
 type ExportFormatTabsProps = {
-  activeTabId: ExportFormatTab["id"];
+  activeTabId: ExportFormatTabId;
   onTabClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 const ExportFormatTabs = ({ activeTabId, onTabClick }: ExportFormatTabsProps) => (
   <div className="mb-4 rounded-lg border border-stroke-subtle bg-layer-02/35 p-1">
-    <div className="grid grid-cols-3 gap-1">
+    <div className="grid grid-cols-4 gap-1">
       {EXPORT_FORMAT_TABS.map((tab) => (
         <ExportFormatTabButton key={tab.id} tab={tab} isActive={tab.id === activeTabId} onTabClick={onTabClick} />
       ))}
@@ -61,6 +68,56 @@ type ExportFormatTabButtonProps = {
   isActive: boolean;
   onTabClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
+
+function useStringPublishState(docFilename: string, documentText: string) {
+  const { session } = useAtProtoUiState();
+  const [publishFilename, setPublishFilename] = useState(docFilename);
+  const [publishDescription, setPublishDescription] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishedRecord, setPublishedRecord] = useState<TangledStringRecord | null>(null);
+
+  useEffect(() => {
+    setPublishFilename(docFilename);
+    setPublishedRecord(null);
+  }, [docFilename]);
+
+  const handlePublish = useCallback(() => {
+    const trimFilename = publishFilename.trim();
+    const trimContents = documentText.trim();
+    if (isPublishing || !session || !trimFilename || !trimContents) {
+      return;
+    }
+
+    setIsPublishing(true);
+    void runCmd(stringCreate(trimFilename, publishDescription.trim(), documentText, (record) => {
+      setIsPublishing(false);
+      setPublishedRecord(record);
+      showSuccessToast(`Published "${trimFilename}" to Tangled`);
+    }, (error) => {
+      setIsPublishing(false);
+      logger.error(f("Failed to publish Tangled string", { filename: trimFilename, error }));
+      showErrorToast(error.message);
+    }));
+  }, [documentText, isPublishing, publishDescription, publishFilename, session]);
+
+  const resetPublish = useCallback(() => {
+    setPublishFilename(docFilename);
+    setPublishDescription("");
+    setPublishedRecord(null);
+  }, [docFilename]);
+
+  return {
+    session,
+    publishFilename,
+    publishDescription,
+    isPublishing,
+    publishedRecord,
+    setPublishFilename,
+    setPublishDescription,
+    handlePublish,
+    resetPublish,
+  };
+}
 
 const ExportFormatTabButton = ({ tab, isActive, onTabClick }: ExportFormatTabButtonProps) => (
   <button
@@ -256,6 +313,157 @@ const EmptyExportState = () => (
   </section>
 );
 
+type StringPublishFormProps = {
+  publishFilename: string;
+  publishDescription: string;
+  sessionHandle: string;
+  onFilenameChange: ChangeEventHandler<HTMLInputElement>;
+  onDescriptionChange: ChangeEventHandler<HTMLInputElement>;
+};
+
+function StringPublishForm(
+  { publishFilename, publishDescription, sessionHandle, onFilenameChange, onDescriptionChange }: StringPublishFormProps,
+) {
+  return (
+    <div className="grid gap-3 rounded-lg border border-stroke-subtle bg-layer-02/30 p-3">
+      <div className="grid gap-1.5">
+        <label htmlFor="string-export-filename" className="text-sm font-medium text-text-primary">Filename</label>
+        <input
+          id="string-export-filename"
+          value={publishFilename}
+          onChange={onFilenameChange}
+          placeholder="notes.md"
+          className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
+        <span className="text-xs text-text-secondary">1–140 characters.</span>
+      </div>
+      <div className="grid gap-1.5">
+        <label htmlFor="string-export-description" className="text-sm font-medium text-text-primary">Description</label>
+        <input
+          id="string-export-description"
+          value={publishDescription}
+          onChange={onDescriptionChange}
+          placeholder="Optional summary (up to 280 characters)"
+          maxLength={280}
+          className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
+      </div>
+      <div className="rounded-lg border border-stroke-subtle bg-layer-02/40 px-3 py-2">
+        <p className="m-0 text-xs uppercase tracking-[0.14em] text-text-secondary">Publishing as</p>
+        <p className="m-0 mt-1 text-xs font-medium text-text-primary">{sessionHandle}</p>
+      </div>
+    </div>
+  );
+}
+
+type StringPreviewPaneProps = { documentText: string };
+
+function StringPreviewPane({ documentText }: StringPreviewPaneProps) {
+  return (
+    <section className="min-h-0 overflow-hidden rounded-lg border border-stroke-subtle bg-[#0f1720]">
+      <div className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-[0.14em] text-white/65">
+        Preview
+      </div>
+      <pre className="h-full overflow-auto px-3 py-3 text-xs leading-5 text-white/90">
+        {documentText || "No content to preview."}
+      </pre>
+    </section>
+  );
+}
+
+type StringPublishSuccessBannerProps = { uri: string };
+
+function StringPublishSuccessBanner({ uri }: StringPublishSuccessBannerProps) {
+  return (
+    <div className="mb-3 rounded-lg border border-support-success/35 bg-support-success/10 px-3 py-2.5">
+      <p className="m-0 text-sm font-medium text-support-success">Published successfully</p>
+      <p className="m-0 mt-1 break-all text-xs text-text-secondary">{uri}</p>
+    </div>
+  );
+}
+
+type StringNoSessionProps = Record<string, never>;
+
+function StringNoSession(_: StringNoSessionProps) {
+  return (
+    <section className="min-h-0 flex-1 overflow-auto rounded-lg border border-dashed border-stroke-subtle bg-layer-02/30 p-4">
+      <div className="flex items-center gap-2">
+        <Tangled className="h-5 w-5 shrink-0 text-text-secondary" />
+        <h3 className="m-0 text-sm font-medium text-text-primary">Connect Tangled to publish</h3>
+      </div>
+      <p className="m-0 mt-2 text-xs text-text-secondary">
+        Sign in with your AT Protocol handle using the <span className="font-medium text-text-primary">@</span>{" "}
+        button in the toolbar, then return here to publish.
+      </p>
+    </section>
+  );
+}
+
+type StringExportContentProps = { onCancel: () => void; docFilename: string; documentText: string };
+
+function StringExportContent({ onCancel, docFilename, documentText }: StringExportContentProps) {
+  const {
+    session,
+    publishFilename,
+    publishDescription,
+    isPublishing,
+    publishedRecord,
+    setPublishFilename,
+    setPublishDescription,
+    handlePublish,
+  } = useStringPublishState(docFilename, documentText);
+
+  const handleFilenameChange = useCallback<ChangeEventHandler<HTMLInputElement>>((event) => {
+    setPublishFilename(event.target.value);
+  }, [setPublishFilename]);
+
+  const handleDescriptionChange = useCallback<ChangeEventHandler<HTMLInputElement>>((event) => {
+    setPublishDescription(event.target.value);
+  }, [setPublishDescription]);
+
+  const publishDisabled = useMemo(() => isPublishing || !publishFilename.trim() || !documentText.trim() || !session, [
+    isPublishing,
+    publishFilename,
+    documentText,
+    session,
+  ]);
+
+  if (!session) {
+    return (
+      <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <FormatSummary
+          title="Publish as Tangled String"
+          description="Publish this document as an AT Protocol string on Tangled." />
+        <StringNoSession />
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <FormatSummary
+        title="Publish as Tangled String"
+        description="Publish this document as an AT Protocol string on Tangled." />
+      {publishedRecord && <StringPublishSuccessBanner uri={publishedRecord.uri} />}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-3 overflow-hidden">
+        <section className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <StringPublishForm
+            publishFilename={publishFilename}
+            publishDescription={publishDescription}
+            sessionHandle={session.handle}
+            onFilenameChange={handleFilenameChange}
+            onDescriptionChange={handleDescriptionChange} />
+        </section>
+        <StringPreviewPane documentText={documentText} />
+      </div>
+      <ExportDialogFooter
+        handleExport={handlePublish}
+        onCancel={onCancel}
+        label="Publish to Tangled"
+        isLoading={isPublishing}
+        disable={publishDisabled} />
+    </section>
+  );
+}
+
 export function ExportDialog({ onExport, previewResult, editorFontFamily, documentText = "" }: ExportDialogProps) {
   const { isOpen, setOpen: setIsOpen, options } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
@@ -264,7 +472,7 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
   const { tabs, activeTabId } = useTabsState();
   const { documents } = useWorkspaceDocumentsState();
   const { isCompact, viewportWidth } = useViewportTier();
-  const [activeExportTabId, setActiveExportTabId] = useState<ExportFormatTab["id"]>("pdf");
+  const [activeExportTabId, setActiveExportTabId] = useState<ExportFormatTabId>("pdf");
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? null, [tabs, activeTabId]);
 
   const title = useMemo(
@@ -317,6 +525,15 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
   const isPdfTabActive = useMemo(() => activeExportTabId === "pdf", [activeExportTabId]);
   const isDocxTabActive = useMemo(() => activeExportTabId === "docx", [activeExportTabId]);
   const isTextTabActive = useMemo(() => activeExportTabId === "txt", [activeExportTabId]);
+  const isStringTabActive = useMemo(() => activeExportTabId === "string", [activeExportTabId]);
+
+  const docFilename = useMemo(() => {
+    if (!activeTab) {
+      return "";
+    }
+    const relPath = activeTab.docRef.rel_path;
+    return relPath.split("/").pop() ?? relPath;
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -390,6 +607,10 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
               text={documentText} />
           )}
           {isTextTabActive && !activeTab ? <EmptyExportState /> : null}
+          {isStringTabActive && activeTab && (
+            <StringExportContent onCancel={handleCancel} docFilename={docFilename} documentText={documentText} />
+          )}
+          {isStringTabActive && !activeTab ? <EmptyExportState /> : null}
         </div>
       </div>
     </Dialog>

@@ -157,7 +157,9 @@ function Section({ children, initial, animate, exit, transition, className, styl
   );
 }
 
-export function WorkspacePanel({ toolbar, onOpenImportSheet, editor, preview, statusBar, diagnostics }: WorkspacePanelProps) {
+export function WorkspacePanel(
+  { toolbar, onOpenImportSheet, editor, preview, statusBar, diagnostics }: WorkspacePanelProps,
+) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();

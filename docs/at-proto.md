@@ -8,9 +8,7 @@ updated: 2026-03-19
 - Use [jacquard](https://docs.rs/crate/jacquard/latest) (`^0.9`) to handle AT Protocol interactions.
 - AT Protocol OAuth with loopback redirect for desktop auth flow.
 - Tangled string integration (publish and import documents as strings).
-- Standard.Site post integration (future).
-
----
+- Standard.Site post integration
 
 ## Tangled Strings
 
@@ -175,14 +173,23 @@ Non-markdown/non-plaintext content (detected by file extension on the string's `
 
 ---
 
-## Standard.Site Integration (Future)
+## Standard.Site Integration
 
 - Phased: [Leaflet](https://tangled.org/leaflet.pub/leaflet/tree/main/lexicons/pub/leaflet) → pckt → GreenGale
 - [ ] Pull posts from AT Protocol `standard.site` websites.
 - [ ] Push posts to AT Protocol `standard.site` websites.
-- See [standard.site](https://standard.site)
+- See [standard.site](https://standard.site) & [repo](https://tangled.org/standard.site/lexicons)
+  ([Source](https://tangled.org/standard.site/lexicons/tree/main/src/lexicons))
 
----
+### Pull Publications
+
+- `site.standard.publication` records (we can browser by users)
+
+## Pull Posts
+
+- `site.standard.document` records (posts)
+  - Leaflet content is `pub.leaflet.content`
+    - Pages: `pub.leaflet.pages.linearDocument`
 
 ## Lexicon Reference (`sh.tangled.string`)
 

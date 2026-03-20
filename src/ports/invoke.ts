@@ -349,7 +349,9 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     case "atproto_session_status": {
       return normalizeAtProtoSession(value);
     }
-    case "string_get": {
+    case "string_get":
+    case "string_create":
+    case "string_update": {
       return normalizeTangledStringRecord(value);
     }
     case "string_list": {

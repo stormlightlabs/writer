@@ -5,6 +5,7 @@ import { Tangled } from "$icons";
 import type { AtProtoSheetMode } from "$state/types";
 import { type ChangeEventHandler, type KeyboardEventHandler, useCallback, useMemo } from "react";
 import { ImportSheet } from "./ImportSheet";
+import { PublishSheet } from "./PublishSheet";
 
 type Controller = ReturnType<typeof useAtProtoController>;
 
@@ -47,12 +48,9 @@ function LoginActions({ controller, isDisabled }: { controller: Controller; isDi
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <p className="m-0 text-xs text-text-secondary">
-        Writer opens your browser and completes the OAuth loopback flow locally.
-      </p>
+      <p className="m-0 text-xs text-text-secondary">Writer opens your browser so you can authenticate with BlueSky.</p>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={controller.openImportSheet}>Browse Public Strings</Button>
-        <Button variant="primary" size="sm" disabled={isDisabled} onClick={handleConnect}>
+        <Button variant="primaryBlue" size="sm" disabled={isDisabled} onClick={handleConnect}>
           {controller.isPending ? "Connecting..." : "Connect"}
         </Button>
       </div>
@@ -99,19 +97,22 @@ function LoginView({ controller }: { controller: Controller }) {
 }
 
 function SessionAccountCard({ controller }: { controller: Controller }) {
+  const handle = useMemo(() => controller.session?.handle ?? "Unknown", [controller.session]);
+  const did = useMemo(() => controller.session?.did ?? "Unknown DID", [controller.session]);
   return (
     <div className="rounded-lg border border-stroke-subtle bg-layer-02/40 p-3">
       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-text-secondary">
         <Tangled className="h-4 w-4 shrink-0" />
         <span>Account</span>
       </div>
-      <div className="mt-1 text-sm font-medium text-text-primary">{controller.session?.handle ?? "Unknown"}</div>
-      <div className="mt-1 break-all text-xs text-text-secondary">{controller.session?.did ?? "Unknown DID"}</div>
+      <div className="mt-1 text-sm font-medium text-text-primary">{handle}</div>
+      <div className="mt-1 break-all text-xs text-text-secondary">{did}</div>
     </div>
   );
 }
 
 function SessionView({ controller }: { controller: Controller }) {
+  const endpoint = useMemo(() => controller.session?.endpoint ?? "Unknown endpoint", [controller.session]);
   return (
     <>
       <AuthSheetHeader
@@ -122,9 +123,7 @@ function SessionView({ controller }: { controller: Controller }) {
         <SessionAccountCard controller={controller} />
         <div className="rounded-lg border border-stroke-subtle bg-layer-02/25 p-3">
           <div className="text-xs uppercase tracking-[0.14em] text-text-secondary">PDS endpoint</div>
-          <div className="mt-1 break-all text-xs text-text-primary">
-            {controller.session?.endpoint ?? "Unknown endpoint"}
-          </div>
+          <div className="mt-1 break-all text-xs text-text-primary">{endpoint}</div>
         </div>
         <div className="flex items-center justify-between gap-3">
           <Button variant="primary" size="sm" onClick={controller.openImportSheet}>Import Strings</Button>
@@ -158,6 +157,11 @@ export function AtProtoAuthSheet({ controller }: AtProtoAuthSheetProps) {
         isOpen={controller.sheetMode === "import"}
         onClose={controller.closeSheet}
         onBack={controller.session ? controller.openSessionSheet : undefined} />
+      <PublishSheet
+        controller={controller}
+        isOpen={controller.sheetMode === "publish"}
+        onClose={controller.closeSheet}
+        onBack={controller.openSessionSheet} />
     </>
   );
 }
