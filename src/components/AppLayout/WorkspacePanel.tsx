@@ -58,6 +58,7 @@ export type WorkspacePanelProps = {
     | "isPdfExportDisabled"
     | "onRefresh"
   >;
+  onOpenImportSheet?: () => void;
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
   statusBar: StatusBarProps;
@@ -156,7 +157,7 @@ function Section({ children, initial, animate, exit, transition, className, styl
   );
 }
 
-export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostics }: WorkspacePanelProps) {
+export function WorkspacePanel({ toolbar, onOpenImportSheet, editor, preview, statusBar, diagnostics }: WorkspacePanelProps) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
@@ -273,7 +274,7 @@ export function WorkspacePanel({ toolbar, editor, preview, statusBar, diagnostic
         {...sidebarMotionProps}
         className="relative flex h-full shrink-0"
         style={sidebarStyle}>
-        <Sidebar onNewDocument={newDocumentHandler} />
+        <Sidebar onNewDocument={newDocumentHandler} onOpenImportSheet={onOpenImportSheet} />
         <div
           role="separator"
           aria-label="Resize sidebar"

@@ -1,6 +1,6 @@
 import { Button } from "$components/Button";
 import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
-import { CollapseIcon, FileAddIcon, FolderAddIcon, RefreshIcon } from "$icons";
+import { CollapseIcon, FileAddIcon, FileTextIcon, FolderAddIcon, FolderIcon, RefreshIcon, Tangled } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
 import { formatShortcut } from "$utils/shortcuts";
@@ -21,7 +21,7 @@ import { useSidebarInternalDnD } from "./useSidebarInternalDnD";
 const EMPTY_DOCUMENTS: DocMeta[] = [];
 const EMPTY_DIRECTORIES: string[] = [];
 
-export type SidebarProps = { onNewDocument?: (locationId?: number) => void };
+export type SidebarProps = { onNewDocument?: (locationId?: number) => void; onOpenImportSheet?: () => void };
 
 type SidebarActionsProps = {
   onAddLocation: () => void;
@@ -32,7 +32,7 @@ type SidebarActionsProps = {
   refreshDisabled: boolean;
 };
 
-type CountPillProps = { count: number; label: string; singularLabel: string };
+type CountPillProps = { count: number; kind: "location" | "document" | "directory" };
 
 const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
   <Button
@@ -59,13 +59,32 @@ const SidebarActions = (
   </div>
 );
 
-const CountPill = ({ count, label, singularLabel }: CountPillProps) => (
-  <span className="inline-flex h-6 items-center rounded-md border border-stroke-subtle bg-layer-02 px-2.5 text-[0.6875rem] leading-none tabular-nums text-text-primary">
-    {count.toLocaleString()} {count === 1 ? singularLabel : label}
+const CountPillIcon = ({ kind }: { kind: "location" | "document" | "directory" }) => {
+  switch (kind) {
+    case "location":
+      return <FolderIcon size="sm" />;
+    case "document":
+      return <FileTextIcon size="sm" />;
+    case "directory":
+      return <FolderIcon size="sm" />;
+  }
+};
+
+const CountPill = ({ count, kind }: CountPillProps) => (
+  <span className="inline-flex h-6 items-center rounded-md border border-stroke-subtle bg-layer-02 px-2.5 text-[0.6875rem] leading-none tabular-nums text-text-primary gap-2">
+    <span>{count.toLocaleString()}</span>
+    <CountPillIcon kind={kind} />
   </span>
 );
 
-export function Sidebar({ onNewDocument }: SidebarProps) {
+const ImportButton = ({ onOpenImportSheet }: { onOpenImportSheet: () => void }) => (
+  <Button type="button" variant="outline" size="sm" onClick={onOpenImportSheet} className="flex items-center gap-1.5">
+    <Tangled className="h-4 w-4 shrink-0" />
+    <span className="sr-only">Import</span>
+  </Button>
+);
+
+export function Sidebar({ onNewDocument, onOpenImportSheet }: SidebarProps) {
   const {
     handleAddLocation,
     handleRemoveLocation,
@@ -291,11 +310,11 @@ export function Sidebar({ onNewDocument }: SidebarProps) {
       </div>
 
       <div className="flex min-h-10 items-center justify-between gap-2 border-t border-stroke-subtle px-4 py-2">
-        <CountPill count={locations.length} singularLabel="location" label="locations" />
-        <CountPill
-          count={selectedLocationId ? locationDocuments.length : 0}
-          singularLabel="document"
-          label="documents" />
+        <div className="flex items-center gap-2">
+          <CountPill count={locations.length} kind="location" />
+          <CountPill count={selectedLocationId ? locationDocuments.length : 0} kind="document" />
+        </div>
+        {onOpenImportSheet && <ImportButton onOpenImportSheet={onOpenImportSheet} />}
       </div>
 
       <DocumentOperationDialog

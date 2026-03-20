@@ -5,7 +5,7 @@ last_updated: 2026-03-19
 
 ## Tangled string integration
 
-Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) and import strings as documents. Spec in [at-proto.md](./at-proto.md).
+Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) and import strings as documents.
 
 ### Part 1 — Auth
 
@@ -25,8 +25,6 @@ Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) a
    - Fluent Icons (`i-fluent-document-*-16-filled`)
    - Extensions covered: `py`, `md`, `js`, `ts`, `yaml`, `java`, `sass`, `css`, `csv`, `fs`, `cs`
    - `i-fluent-document-16-filled` for fallback
-
-Implemented on `2026-03-19` in the Tauri backend, AT Proto controller, and unified auth/import sheet.
 
 ### Part 3 — Push
 

@@ -144,7 +144,8 @@ src/
 │   └── useAtProtoController.ts
 ├── components/
 │   ├── AtProto/
-│   │   └── AtProtoAuthSheet.tsx   # login, session, and import browser sheet
+│   │   ├── AtProtoAuthSheet.tsx   # login + session sheet
+│   │   └── ImportSheet.tsx        # Tangled import browser sheet
 │   └── AppLayout/LayoutSettingsPanel/
 │       └── AtProtoSection.tsx
 ```

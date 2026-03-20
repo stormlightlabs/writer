@@ -292,6 +292,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   const workspacePanelProps = useMemo(
     () => ({
       toolbar: toolbarProps,
+      onOpenImportSheet: atProto.openImportSheet,
       editor: editorProps,
       preview: previewProps,
       statusBar: statusBarProps,
@@ -306,6 +307,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     }),
     [
       toolbarProps,
+      atProto.openImportSheet,
       editorProps,
       previewProps,
       statusBarProps,

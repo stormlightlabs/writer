@@ -60,12 +60,12 @@ describe("Toolbar", () => {
     expect(setEditorOnlyMode).toHaveBeenCalledOnce();
   });
 
-  it("opens the Tangled auth entry from the toolbar", () => {
+  it("opens the AT Protocol auth entry from the toolbar", () => {
     const onAtProtoAuth = vi.fn();
 
     render(<Toolbar saveStatus="Idle" onSave={vi.fn()} onAtProtoAuth={onAtProtoAuth} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Tangled" }));
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
     expect(onAtProtoAuth).toHaveBeenCalledOnce();
   });
 });
