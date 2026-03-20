@@ -55,6 +55,8 @@ pub struct AtProtoState {
     auth_store_path: PathBuf,
     session_meta_path: PathBuf,
     session_info: Mutex<Option<SessionInfo>>,
+    /// Live session for authenticated writes; `None` when logged out.
+    pub(crate) session: Mutex<Option<Arc<AtProtoSession>>>,
 }
 
 impl AtProtoState {
@@ -75,6 +77,7 @@ impl AtProtoState {
             auth_store_path,
             session_meta_path,
             session_info: Mutex::new(None),
+            session: Mutex::new(None),
         })
     }
 
@@ -180,7 +183,13 @@ impl AtProtoState {
             session_id: info.session_id.clone(),
         })?;
 
-        let _ = session;
+        let mut session_guard = self
+            .session
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock AT Protocol session state"))?;
+        *session_guard = Some(Arc::new(session));
+        drop(session_guard);
+
         let mut guard = self
             .session_info
             .lock()
@@ -190,6 +199,13 @@ impl AtProtoState {
     }
 
     fn clear_in_memory(&self) -> Result<(), AppError> {
+        let mut session_guard = self
+            .session
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock AT Protocol session state"))?;
+        *session_guard = None;
+        drop(session_guard);
+
         let mut guard = self
             .session_info
             .lock()
@@ -229,6 +245,34 @@ impl AtProtoState {
         let did = entry.oauth.account_did;
 
         Some(PersistedSessionMeta { did: did.clone(), handle: did, session_id: entry.oauth.session_id })
+    }
+
+    /// Returns the live session for authenticated XRPC writes. Errors if the user is not logged in.
+    pub(crate) fn require_session(&self) -> Result<Arc<AtProtoSession>, AppError> {
+        let guard = self
+            .session
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock AT Protocol session state"))?;
+        guard.clone().ok_or_else(|| {
+            AppError::new(
+                ErrorCode::Io,
+                "Not logged in to AT Protocol — please authenticate first",
+            )
+        })
+    }
+
+    /// Returns the DID of the currently authenticated user, or an error if not logged in.
+    pub(crate) fn session_did(&self) -> Result<String, AppError> {
+        let guard = self
+            .session_info
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock AT Protocol session state"))?;
+        guard.as_ref().map(|info| info.did.clone()).ok_or_else(|| {
+            AppError::new(
+                ErrorCode::Io,
+                "Not logged in to AT Protocol — please authenticate first",
+            )
+        })
     }
 
     pub(crate) async fn resolve_repo_and_pds(
@@ -303,6 +347,20 @@ mod tests {
         assert_eq!(meta.did, "did:plc:alice");
         assert_eq!(meta.handle, "did:plc:alice");
         assert_eq!(meta.session_id, "writer-session");
+    }
+
+    #[test]
+    fn require_session_errors_when_not_logged_in() {
+        let dir = tempdir().expect("tempdir");
+        let state = AtProtoState::new(dir.path()).expect("state");
+        assert!(state.require_session().is_err());
+    }
+
+    #[test]
+    fn session_did_errors_when_not_logged_in() {
+        let dir = tempdir().expect("tempdir");
+        let state = AtProtoState::new(dir.path()).expect("state");
+        assert!(state.session_did().is_err());
     }
 
     #[test]
