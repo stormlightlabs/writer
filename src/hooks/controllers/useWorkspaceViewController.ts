@@ -4,6 +4,7 @@ import type { StyleMatch } from "$editor/types";
 import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects";
 import { useEditorPreviewEffects } from "$hooks/app/useEditorPreviewEffects";
 import { useSettingsSync } from "$hooks/app/useSettingsSync";
+import { useAtProtoController } from "$hooks/controllers/useAtProtoController";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import { useDocumentActions } from "$hooks/useDocumentActions";
 import { useEditor } from "$hooks/useEditor";
@@ -34,6 +35,7 @@ export type WorkspaceViewController = {
   previewResult: PdfRenderResult | null;
   editorFontFamily: EditorFontFamily;
   editorText: string;
+  atProto: ReturnType<typeof useAtProtoController>;
 };
 
 export function deriveWordCount(text: string, renderWordCount: number | undefined): number {
@@ -57,6 +59,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const exportPdf = usePdfExport();
+  const atProto = useAtProtoController();
 
   useWorkspaceSync();
   useLayoutHotkeys();
@@ -193,8 +196,10 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   const toolbarProps = useMemo(
     () => ({
       saveStatus: editorModel.saveStatus,
+      atProtoSession: atProto.session,
       hasActiveDocument: hasOpenDocument,
       onSave: handleSave,
+      onAtProtoAuth: atProto.openAuthSheet,
       onNewDocument: handleNewDocument,
       isNewDocumentDisabled: !hasLocations,
       onExportPdf: handleOpenPdfExport,
@@ -203,6 +208,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     }),
     [
       editorModel.saveStatus,
+      atProto.openAuthSheet,
+      atProto.session,
       activeTab,
       handleOpenPdfExport,
       handleNewDocument,
@@ -318,5 +325,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     previewResult,
     editorFontFamily: editorPresentation.fontFamily,
     editorText: editorModel.text,
+    atProto,
   };
 }

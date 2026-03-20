@@ -1,5 +1,6 @@
 import type {
   AppError,
+  AtProtoSession,
   CaptureDocRef,
   CaptureMode,
   CaptureSubmitResult,
@@ -238,6 +239,23 @@ function normalizeCaptureSubmitResult(value: unknown): CaptureSubmitResult {
   };
 }
 
+function normalizeAtProtoSession(value: unknown): AtProtoSession | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (
+    typeof value.did !== "string"
+    || typeof value.handle !== "string"
+    || typeof value.session_id !== "string"
+    || typeof value.endpoint !== "string"
+  ) {
+    return null;
+  }
+
+  return { did: value.did, handle: value.handle, sessionId: value.session_id, endpoint: value.endpoint };
+}
+
 function normalizeSessionState(value: unknown): SessionState {
   if (!isRecord(value) || !Array.isArray(value.tabs)) {
     return { tabs: [], activeTabId: null };
@@ -306,6 +324,10 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     }
     case "global_capture_submit": {
       return normalizeCaptureSubmitResult(value);
+    }
+    case "atproto_login":
+    case "atproto_session_status": {
+      return normalizeAtProtoSession(value);
     }
     case "style_check_scan": {
       if (!Array.isArray(value)) {

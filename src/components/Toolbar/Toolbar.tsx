@@ -1,6 +1,7 @@
 import { useViewportTier } from "$hooks/useViewportTier";
 import type { IconSize } from "$icons";
 import {
+  AtSignIcon,
   DocumentIcon,
   EyeIcon,
   FileTextIcon,
@@ -13,7 +14,7 @@ import {
   SplitViewIcon,
 } from "$icons";
 import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
-import { SaveStatus } from "$types";
+import { AtProtoSession, SaveStatus } from "$types";
 import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useMemo } from "react";
 import { SaveStatusIndicator } from "./SaveStatusIndicator";
@@ -21,8 +22,10 @@ import { ToolbarButton } from "./ToolbarButton";
 
 export type ToolbarProps = {
   saveStatus: SaveStatus;
+  atProtoSession?: AtProtoSession | null;
   hasActiveDocument?: boolean;
   onSave: () => void;
+  onAtProtoAuth?: () => void;
   onNewDocument?: () => void;
   isNewDocumentDisabled?: boolean;
   onExportPdf?: () => void;
@@ -46,8 +49,10 @@ function SettingsToolbarButton(
 export function Toolbar(
   {
     saveStatus,
+    atProtoSession = null,
     hasActiveDocument = false,
     onSave,
+    onAtProtoAuth = () => {},
     onNewDocument,
     isNewDocumentDisabled = false,
     onExportPdf,
@@ -76,6 +81,7 @@ export function Toolbar(
       eye: { Component: EyeIcon, size: "sm" },
       focus: { Component: FocusIcon, size: "sm" },
       export: { Component: DocumentIcon, size: "sm" },
+      atproto: { Component: AtSignIcon, size: "sm" },
       settings: { Component: SettingsIcon, size: "sm" },
     }),
     [],
@@ -144,6 +150,11 @@ export function Toolbar(
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
+        <ToolbarButton
+          icon={icons.atproto}
+          label={atProtoSession ? `Tangled (${atProtoSession.handle})` : "Tangled"}
+          onClick={onAtProtoAuth}
+          iconOnly />
         {onExportPdf && (
           <ToolbarButton
             icon={icons.export}

@@ -79,6 +79,8 @@ export type SearchHit = {
 
 export type AppError = { code: ErrorCode; message: string; context?: string };
 
+export type AtProtoSession = { did: string; handle: string; sessionId: string; endpoint: string };
+
 export type FocusDimmingMode = "off" | "sentence" | "paragraph";
 export type MarkdownPreviewStyle = "github" | "pdf";
 

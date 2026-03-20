@@ -47,8 +47,10 @@ export type WorkspacePanelProps = {
   toolbar: Pick<
     ToolbarProps,
     | "saveStatus"
+    | "atProtoSession"
     | "hasActiveDocument"
     | "onSave"
+    | "onAtProtoAuth"
     | "onNewDocument"
     | "isNewDocumentDisabled"
     | "onExportPdf"

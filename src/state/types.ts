@@ -1,6 +1,7 @@
 import type { MarginSide, Orientation, PageSize, PdfExportOptions } from "$pdf/types";
 import type {
   AppTheme,
+  AtProtoSession,
   DocMeta,
   EditorFontFamily,
   FocusDimmingMode,
@@ -217,6 +218,24 @@ export type SearchActions = {
   resetSearch: () => void;
 };
 
+export type AtProtoSheetMode = "closed" | "login" | "session";
+
+export type AtProtoUiState = {
+  atProtoSheetMode: AtProtoSheetMode;
+  atProtoSession: AtProtoSession | null;
+  atProtoHydrated: boolean;
+  atProtoPending: boolean;
+};
+
+export type AtProtoUiActions = {
+  openAtProtoLoginSheet: () => void;
+  openAtProtoSessionSheet: () => void;
+  closeAtProtoSheet: () => void;
+  setAtProtoSession: (value: AtProtoSession | null) => void;
+  setAtProtoHydrated: (value: boolean) => void;
+  setAtProtoPending: (value: boolean) => void;
+};
+
 export type UiState = {
   layoutSettingsOpen: boolean;
   pdfExportDialogOpen: boolean;
@@ -224,7 +243,7 @@ export type UiState = {
   globalCaptureSettings: GlobalCaptureSettings;
   helpSheetOpen: boolean;
   styleDiagnosticsOpen: boolean;
-};
+} & AtProtoUiState;
 
 export type UiActions = {
   setLayoutSettingsOpen: (value: boolean) => void;
@@ -244,7 +263,7 @@ export type UiActions = {
   toggleHelpSheet: () => void;
   setStyleDiagnosticsOpen: (value: boolean) => void;
   toggleStyleDiagnostics: () => void;
-};
+} & AtProtoUiActions;
 
 export type AppStore =
   & LayoutState

@@ -16,6 +16,8 @@ import type {
 import { info } from "@tauri-apps/plugin-log";
 import { invokeCmd, runCmd } from "./invoke";
 import type {
+  AtProtoLoginParams,
+  AtProtoSessionStatusParams,
   BackendCaptureDocRef,
   BackendCaptureSubmitInput,
   BackendGlobalCaptureSettings,
@@ -132,6 +134,18 @@ function describeValueShape(value: unknown): string {
 
   const constructorName = value?.constructor?.name;
   return constructorName ? `object(${constructorName})` : "object";
+}
+
+export function atprotoLogin(...[handle, onOk, onErr]: AtProtoLoginParams): Cmd {
+  return invokeCmd("atproto_login", { handle }, onOk, onErr);
+}
+
+export function atprotoSessionStatus(...[onOk, onErr]: AtProtoSessionStatusParams): Cmd {
+  return invokeCmd("atproto_session_status", {}, onOk, onErr);
+}
+
+export function atprotoLogout(...[onOk, onErr]: LocParams<void>): Cmd {
+  return invokeCmd("atproto_logout", {}, onOk, onErr);
 }
 
 export function locationAddViaDialog(...[onOk, onErr]: LocParams<LocationDescriptor>): Cmd {

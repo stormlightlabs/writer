@@ -111,13 +111,11 @@ Jacquard types use zero-copy deserialization via `CowStr<'_>`. Use `.parse()` fo
 ```sh
 src-tauri/src/
 ├── atproto/
-│   ├── mod.rs          # re-exports, shared types (StringRecord, AtProtoState)
-│   ├── auth.rs         # OAuth loopback flow, session management, token refresh
-│   ├── strings.rs      # string CRUD commands (create, get, list, update, delete)
-│   └── resolve.rs      # handle → DID → PDS resolution
+│   ├── mod.rs          # re-exports shared auth types/state
+│   └── auth.rs         # OAuth loopback flow, session restore, logout cleanup
 ```
 
-`AtProtoState` holds the `jacquard::Agent<OAuthSession>` (or `None` when logged out) and lives inside `AppState`. Auth-required commands check for an active session and return `ErrorCode::PermissionDenied` when unauthenticated.
+`AtProtoState` lives inside `AppState` and owns the Jacquard OAuth client plus persisted session metadata paths. The current auth slice restores an existing session during app startup, exposes the active `SessionInfo`, and clears persisted auth artifacts when restoration or logout fails.
 
 **Tauri commands:**
 
@@ -138,17 +136,19 @@ src-tauri/src/
 
 ```sh
 src/
-├── state/stores/atproto.ts    # auth state, current user DID/handle, published strings
-├── state/selectors.ts         # useAtProtoSession, useIsAuthenticated, etc.
-├── ports/commands.ts          # atproto_login, string_create, string_list, etc.
+├── state/stores/ui.ts         # auth sheet mode + hydrated/pending/session state
+├── state/selectors.ts         # AT Protocol selector hooks
+├── ports/commands.ts          # atproto_login / logout / session_status
 ├── hooks/controllers/
 │   └── useAtProtoController.ts
 ├── components/
 │   ├── AtProto/
-│   │   ├── LoginSheet.tsx
-│   │   ├── PublishStringSheet.tsx
-│   │   └── ImportStringSheet.tsx
+│   │   └── AtProtoAuthSheet.tsx
+│   └── AppLayout/LayoutSettingsPanel/
+│       └── AtProtoSection.tsx
 ```
+
+Auth UI is launched from the toolbar `@` button. When no session exists it opens the login sheet; when a session exists it opens the session indicator sheet. Logout is available from both the session sheet and the full settings panel.
 
 ### Sync & Origin Tracking
 

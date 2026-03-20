@@ -1,4 +1,4 @@
-import { Version, transformVersion } from "$components/Version";
+import { transformVersion, Version } from "$components/Version";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

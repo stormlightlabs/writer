@@ -100,5 +100,12 @@ export function useLayoutHotkeys(): void {
     return () => {
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
-  }, [toggleFocusMode, togglePreviewVisible, toggleShowSearch, toggleSidebarCollapsed, toggleTabBarCollapsed, toggleSplitView]);
+  }, [
+    toggleFocusMode,
+    togglePreviewVisible,
+    toggleShowSearch,
+    toggleSidebarCollapsed,
+    toggleTabBarCollapsed,
+    toggleSplitView,
+  ]);
 }

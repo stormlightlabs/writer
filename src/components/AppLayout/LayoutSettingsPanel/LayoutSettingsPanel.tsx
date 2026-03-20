@@ -7,6 +7,7 @@ import type { SettingsScope } from "$types";
 import { cn } from "$utils/tw";
 import { useCallback, useEffect, useMemo } from "react";
 import { AccessibilitySection } from "./Accessibility";
+import { AtProtoSection } from "./AtProtoSection";
 import { ChromeSettingsSection } from "./ChromeSettings";
 import { EditorSettingsSection } from "./EditorSettings";
 import { FocusModeSection } from "./FocusModeSettings";
@@ -16,7 +17,17 @@ import { WriterToolsSection } from "./WriterTools";
 
 type SettingsSheetLayout = { position: SheetPosition; size: SheetSize; className: string; backdropClassName: string };
 
-const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
+type SettingsBodyProps = {
+  scope: SettingsScope;
+  onOpenAtProtoAuth: () => void;
+  onLogoutAtProto: () => void;
+  atProtoSession: import("$types").AtProtoSession | null;
+  atProtoPending: boolean;
+};
+
+const SettingsBody = (
+  { scope, onOpenAtProtoAuth, onLogoutAtProto, atProtoSession, atProtoPending }: SettingsBodyProps,
+) => (
   <div
     className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", scope === "full" ? "space-y-3 pr-2" : "pr-1")}>
     <CollapsibleSection
@@ -65,6 +76,17 @@ const SettingsBody = ({ scope }: { scope: SettingsScope }) => (
           <WriterToolsSection />
         </CollapsibleSection>
         <CollapsibleSection
+          title="Tangled"
+          description="Manage your AT Protocol session."
+          className="rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
+          contentClassName="pb-3">
+          <AtProtoSection
+            session={atProtoSession}
+            isPending={atProtoPending}
+            onOpenAuth={onOpenAtProtoAuth}
+            onLogout={onLogoutAtProto} />
+        </CollapsibleSection>
+        <CollapsibleSection
           title="Quick Capture"
           description="Toggle global quick-note capture behavior."
           className="rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
@@ -82,9 +104,25 @@ type SettingsContentProps = {
   onClose: () => void;
   closeAriaLabel: string;
   onViewMore?: () => void;
+  onOpenAtProtoAuth: () => void;
+  onLogoutAtProto: () => void;
+  atProtoSession: import("$types").AtProtoSession | null;
+  atProtoPending: boolean;
 };
 
-const SettingsContent = ({ title, scope, onClose, closeAriaLabel, onViewMore }: SettingsContentProps) => (
+const SettingsContent = (
+  {
+    title,
+    scope,
+    onClose,
+    closeAriaLabel,
+    onViewMore,
+    onOpenAtProtoAuth,
+    onLogoutAtProto,
+    atProtoSession,
+    atProtoPending,
+  }: SettingsContentProps,
+) => (
   <section className={cn("flex min-h-0 h-full flex-col overflow-hidden", scope === "full" ? "p-5 sm:p-6" : "p-4")}>
     <SettingsHeader
       title={title}
@@ -92,7 +130,12 @@ const SettingsContent = ({ title, scope, onClose, closeAriaLabel, onViewMore }: 
       onClose={onClose}
       closeAriaLabel={closeAriaLabel}
       onViewMore={onViewMore} />
-    <SettingsBody scope={scope} />
+    <SettingsBody
+      scope={scope}
+      onOpenAtProtoAuth={onOpenAtProtoAuth}
+      onLogoutAtProto={onLogoutAtProto}
+      atProtoSession={atProtoSession}
+      atProtoPending={atProtoPending} />
   </section>
 );
 
@@ -123,7 +166,17 @@ function useSettingsSheetLayout(scope: SettingsScope): SettingsSheetLayout {
   }, [compactPanel, scope]);
 }
 
-export function LayoutSettingsPanel() {
+type SettingsSheetProps = {
+  atProtoSession?: import("$types").AtProtoSession | null;
+  atProtoPending?: boolean;
+  onOpenAtProtoAuth?: () => void;
+  onLogoutAtProto?: () => void;
+};
+
+export function LayoutSettingsPanel(
+  { atProtoSession = null, atProtoPending = false, onOpenAtProtoAuth = () => {}, onLogoutAtProto = () => {} }:
+    SettingsSheetProps,
+) {
   const { isOpen: isVisible, setOpen } = useLayoutSettingsUiState();
   const { isOpen: isSettingsRouteOpen, open: openSettingsRoute } = useRoutedSheet("/settings");
   const layout = useSettingsSheetLayout("basic");
@@ -157,12 +210,19 @@ export function LayoutSettingsPanel() {
         scope="basic"
         onClose={handleClose}
         closeAriaLabel="Close layout settings"
-        onViewMore={handleViewMore} />
+        onViewMore={handleViewMore}
+        onOpenAtProtoAuth={onOpenAtProtoAuth}
+        onLogoutAtProto={onLogoutAtProto}
+        atProtoSession={atProtoSession}
+        atProtoPending={atProtoPending} />
     </Sheet>
   );
 }
 
-export function RoutedSettingsSheet() {
+export function RoutedSettingsSheet(
+  { atProtoSession = null, atProtoPending = false, onOpenAtProtoAuth = () => {}, onLogoutAtProto = () => {} }:
+    SettingsSheetProps,
+) {
   const { isOpen, close } = useRoutedSheet("/settings");
   const layout = useSettingsSheetLayout("full");
 
@@ -175,7 +235,15 @@ export function RoutedSettingsSheet() {
       ariaLabel="Settings"
       backdropClassName={layout.backdropClassName}
       className={layout.className}>
-      <SettingsContent title="Settings" scope="full" onClose={close} closeAriaLabel="Close settings panel" />
+      <SettingsContent
+        title="Settings"
+        scope="full"
+        onClose={close}
+        closeAriaLabel="Close settings panel"
+        onOpenAtProtoAuth={onOpenAtProtoAuth}
+        onLogoutAtProto={onLogoutAtProto}
+        atProtoSession={atProtoSession}
+        atProtoPending={atProtoPending} />
     </Sheet>
   );
 }

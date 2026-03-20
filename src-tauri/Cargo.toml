@@ -30,7 +30,13 @@ serde_json = "1"
 notify = "8"
 chrono = "0.4"
 log = "0.4"
+async-trait = "0.1"
+thiserror = "2"
+jacquard = { version = "0.9.5", features = ["default"] }
 
 writer-core = { path = "../crates/core" }
 writer-md = { path = "../crates/markdown" }
 writer-store = { path = "../crates/store" }
+
+[dev-dependencies]
+tempfile = "3.27"

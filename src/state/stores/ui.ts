@@ -28,6 +28,10 @@ export const getInitialUiState = (): UiState => ({
   globalCaptureSettings: DEFAULT_GLOBAL_CAPTURE_SETTINGS,
   helpSheetOpen: false,
   styleDiagnosticsOpen: false,
+  atProtoSheetMode: "closed",
+  atProtoSession: null,
+  atProtoHydrated: false,
+  atProtoPending: false,
 });
 
 export const useUiStore = create<UiStore>()((set, get) => ({
@@ -73,6 +77,12 @@ export const useUiStore = create<UiStore>()((set, get) => ({
   toggleHelpSheet: () => set((state) => ({ helpSheetOpen: !state.helpSheetOpen })),
   setStyleDiagnosticsOpen: (value) => set({ styleDiagnosticsOpen: value }),
   toggleStyleDiagnostics: () => set((state) => ({ styleDiagnosticsOpen: !state.styleDiagnosticsOpen })),
+  openAtProtoLoginSheet: () => set({ atProtoSheetMode: "login" }),
+  openAtProtoSessionSheet: () => set({ atProtoSheetMode: "session" }),
+  closeAtProtoSheet: () => set({ atProtoSheetMode: "closed" }),
+  setAtProtoSession: (value) => set({ atProtoSession: value }),
+  setAtProtoHydrated: (value) => set({ atProtoHydrated: value }),
+  setAtProtoPending: (value) => set({ atProtoPending: value }),
 }));
 
 export function resetUiStore(): void {

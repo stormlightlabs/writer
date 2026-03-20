@@ -1,3 +1,4 @@
+use super::atproto::{AtProtoState, SessionInfo};
 use super::capture;
 use super::locations::*;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
@@ -21,12 +22,46 @@ type CommandResponse<T> = std::result::Result<CommandResult<T>, AppError>;
 pub struct AppState {
     pub store: Arc<Store>,
     pub watchers: Mutex<HashMap<i64, RecommendedWatcher>>,
+    pub atproto: Arc<AtProtoState>,
 }
 
 impl AppState {
     pub fn new(store: Store) -> Self {
-        Self { store: Arc::new(store), watchers: Mutex::new(HashMap::new()) }
+        let app_dir = Store::default_app_dir().expect("store app dir should resolve");
+        let atproto = AtProtoState::new(&app_dir).expect("AT Protocol state should initialize");
+        Self { store: Arc::new(store), watchers: Mutex::new(HashMap::new()), atproto: Arc::new(atproto) }
     }
+}
+
+#[tauri::command]
+pub async fn atproto_login(state: State<'_, AppState>, handle: String) -> CommandResponse<SessionInfo> {
+    log::info!("Starting AT Protocol login flow");
+
+    match state.atproto.login(&handle).await {
+        Ok(session) => Ok(CommandResult::ok(session)),
+        Err(error) => {
+            log::error!("AT Protocol login failed: {}", error);
+            Ok(CommandResult::err(error))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn atproto_logout(state: State<'_, AppState>) -> CommandResponse<()> {
+    log::info!("Logging out of AT Protocol");
+
+    match state.atproto.logout().await {
+        Ok(()) => Ok(CommandResult::ok(())),
+        Err(error) => {
+            log::error!("AT Protocol logout failed: {}", error);
+            Ok(CommandResult::err(error))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn atproto_session_status(state: State<'_, AppState>) -> CommandResponse<Option<SessionInfo>> {
+    Ok(CommandResult::ok(state.atproto.session_status().await))
 }
 
 #[tauri::command]

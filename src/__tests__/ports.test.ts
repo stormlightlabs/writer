@@ -1,5 +1,8 @@
 import {
   appVersionGet,
+  atprotoLogin,
+  atprotoLogout,
+  atprotoSessionStatus,
   backendEvents,
   batch,
   dirMove,
@@ -184,6 +187,30 @@ describe("command Builders", () => {
       const error: AppError = { code: "NOT_FOUND", message: "" };
       cmd.onErr(error);
       expect(onErr).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe("AT Protocol commands", () => {
+    it("should create an AT Protocol login command", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = atprotoLogin("alice.bsky.social", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.command).toBe("atproto_login");
+      expect(cmd.payload).toStrictEqual({ handle: "alice.bsky.social" });
+    });
+
+    it("should create AT Protocol session status and logout commands", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      expect(atprotoSessionStatus(onOk, onErr)).toMatchObject({
+        type: "Invoke",
+        command: "atproto_session_status",
+        payload: {},
+      });
+
+      expect(atprotoLogout(onOk, onErr)).toMatchObject({ type: "Invoke", command: "atproto_logout", payload: {} });
     });
   });
 

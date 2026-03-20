@@ -5,16 +5,27 @@ import { FocusModePanel } from "./components/AppLayout/FocusModePanel";
 import { LayoutSettingsPanel, RoutedSettingsSheet } from "./components/AppLayout/LayoutSettingsPanel";
 import { SearchOverlay } from "./components/AppLayout/SearchOverlay";
 import { WorkspacePanel } from "./components/AppLayout/WorkspacePanel";
+import { AtProtoAuthSheet } from "./components/AtProto/AtProtoAuthSheet";
 import { ExportDialog } from "./components/export/ExportDialog/ExportDialog";
 import { HelpSheet } from "./components/HelpSheet";
 import { Toaster } from "./components/Toaster";
 import { useAppChromeController } from "./hooks/controllers/useAppChromeController";
-import { useWorkspaceViewController } from "./hooks/controllers/useWorkspaceViewController";
+import {
+  useWorkspaceViewController,
+  type WorkspaceViewController,
+} from "./hooks/controllers/useWorkspaceViewController";
 import { useHelpSheetState } from "./state/selectors";
 
-const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
-  const { workspacePanelProps, focusModePanelProps, handleExportPdf, previewResult, editorFontFamily, editorText } =
-    useWorkspaceViewController();
+const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: WorkspaceViewController }) => {
+  const {
+    workspacePanelProps,
+    focusModePanelProps,
+    handleExportPdf,
+    previewResult,
+    editorFontFamily,
+    editorText,
+    atProto,
+  } = view;
   const { isOpen: isHelpSheetOpen, setOpen: setHelpSheetOpen } = useHelpSheetState();
   const closeHelpSheet = useCallback(() => setHelpSheetOpen(false), [setHelpSheetOpen]);
 
@@ -22,6 +33,13 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
     return (
       <>
         <FocusModePanel {...focusModePanelProps} />
+        <AtProtoAuthSheet
+          mode={atProto.sheetMode}
+          session={atProto.session}
+          isPending={atProto.isPending}
+          onClose={atProto.closeSheet}
+          onLogin={atProto.handleLogin}
+          onLogout={atProto.handleLogout} />
         <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
         <Toaster />
       </>
@@ -31,7 +49,18 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
   return (
     <>
       <WorkspacePanel {...workspacePanelProps} />
-      <LayoutSettingsPanel />
+      <LayoutSettingsPanel
+        atProtoSession={atProto.session}
+        atProtoPending={atProto.isPending}
+        onOpenAtProtoAuth={atProto.openAuthSheet}
+        onLogoutAtProto={atProto.handleLogout} />
+      <AtProtoAuthSheet
+        mode={atProto.sheetMode}
+        session={atProto.session}
+        isPending={atProto.isPending}
+        onClose={atProto.closeSheet}
+        onLogin={atProto.handleLogin}
+        onLogout={atProto.handleLogout} />
       <ExportDialog
         onExport={handleExportPdf}
         previewResult={previewResult}
@@ -47,14 +76,20 @@ const AppContent = ({ isFocusMode }: { isFocusMode: boolean }) => {
 
 function App() {
   const { theme, isFocusMode } = useAppChromeController();
+  const view = useWorkspaceViewController();
+  const { atProto } = view;
 
   return (
     <div
       data-theme={theme}
       className="relative h-screen overflow-hidden flex flex-col bg-surface-primary text-text-primary font-sans">
       {isFocusMode ? null : <AppHeaderBar />}
-      <AppContent isFocusMode={isFocusMode} />
-      <RoutedSettingsSheet />
+      <AppContent isFocusMode={isFocusMode} view={view} />
+      <RoutedSettingsSheet
+        atProtoSession={atProto.session}
+        atProtoPending={atProto.isPending}
+        onOpenAtProtoAuth={atProto.openAuthSheet}
+        onLogoutAtProto={atProto.handleLogout} />
     </div>
   );
 }

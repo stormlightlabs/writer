@@ -59,4 +59,13 @@ describe("Toolbar", () => {
     fireEvent.click(screen.getByText("Editor"));
     expect(setEditorOnlyMode).toHaveBeenCalledOnce();
   });
+
+  it("opens the Tangled auth entry from the toolbar", () => {
+    const onAtProtoAuth = vi.fn();
+
+    render(<Toolbar saveStatus="Idle" onSave={vi.fn()} onAtProtoAuth={onAtProtoAuth} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tangled" }));
+    expect(onAtProtoAuth).toHaveBeenCalledOnce();
+  });
 });

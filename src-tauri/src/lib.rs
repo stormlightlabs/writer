@@ -1,6 +1,7 @@
 use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
+mod atproto;
 mod capture;
 mod commands;
 mod locations;
@@ -61,6 +62,9 @@ pub fn run() {
             };
 
             let app_state = AppState::new(store);
+            if let Err(error) = tauri::async_runtime::block_on(app_state.atproto.restore_session()) {
+                log::warn!("Failed to restore AT Protocol session: {}", error);
+            }
             app.manage(app_state);
 
             if let Err(e) = locations::reconcile(app.handle()) {
@@ -83,6 +87,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            cmd::atproto_login,
+            cmd::atproto_logout,
+            cmd::atproto_session_status,
             cmd::app_version_get,
             cmd::location_add_via_dialog,
             cmd::location_list,

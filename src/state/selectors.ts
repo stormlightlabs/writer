@@ -497,6 +497,22 @@ export const useStyleDiagnosticsUiState = () =>
     })),
   );
 
+export const useAtProtoUiState = () =>
+  useUiStore(
+    useShallow((state) => ({
+      sheetMode: state.atProtoSheetMode,
+      session: state.atProtoSession,
+      isHydrated: state.atProtoHydrated,
+      isPending: state.atProtoPending,
+      openLoginSheet: state.openAtProtoLoginSheet,
+      openSessionSheet: state.openAtProtoSessionSheet,
+      closeSheet: state.closeAtProtoSheet,
+      setSession: state.setAtProtoSession,
+      setHydrated: state.setAtProtoHydrated,
+      setPending: state.setAtProtoPending,
+    })),
+  );
+
 export type SidebarStateReturn = ReturnType<typeof useSidebarState>;
 export type ToolbarStateReturn = ReturnType<typeof useToolbarState>;
 export type EditorPresentationStateReturn = ReturnType<typeof useEditorPresentationState>;
@@ -504,3 +520,4 @@ export type WorkspacePanelSidebarStateReturn = ReturnType<typeof useWorkspacePan
 export type WorkspacePanelModeStateReturn = ReturnType<typeof useWorkspacePanelModeState>;
 export type TopBarsCollapsedReturn = ReturnType<typeof useWorkspacePanelTopBarsCollapsed>;
 export type StatusBarCollapsedReturn = ReturnType<typeof useWorkspacePanelStatusBarCollapsed>;
+export type AtProtoUiStateReturn = ReturnType<typeof useAtProtoUiState>;

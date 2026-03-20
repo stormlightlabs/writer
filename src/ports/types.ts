@@ -2,6 +2,7 @@ import { StyleCategory } from "$editor/types";
 import type { PdfRenderResult } from "$pdf/types";
 import type {
   AppError,
+  AtProtoSession,
   CaptureMode,
   CaptureSubmitInput,
   CaptureSubmitResult,
@@ -257,4 +258,10 @@ export type GlobalCapturePauseParams = Parameters<
 >;
 export type GlobalCaptureValidateShortcutParams = Parameters<
   (shortcut: string, onOk: SuccessCallback<boolean>, onErr: ErrorCallback) => void
+>;
+
+export type AtProtoSessionParams = LocParams<AtProtoSession>;
+export type AtProtoSessionStatusParams = LocParams<AtProtoSession | null>;
+export type AtProtoLoginParams = Parameters<
+  (handle: string, onOk: SuccessCallback<AtProtoSession>, onErr: ErrorCallback) => void
 >;
