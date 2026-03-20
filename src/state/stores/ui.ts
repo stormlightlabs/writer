@@ -79,6 +79,7 @@ export const useUiStore = create<UiStore>()((set, get) => ({
   toggleStyleDiagnostics: () => set((state) => ({ styleDiagnosticsOpen: !state.styleDiagnosticsOpen })),
   openAtProtoLoginSheet: () => set({ atProtoSheetMode: "login" }),
   openAtProtoSessionSheet: () => set({ atProtoSheetMode: "session" }),
+  openAtProtoImportSheet: () => set({ atProtoSheetMode: "import" }),
   closeAtProtoSheet: () => set({ atProtoSheetMode: "closed" }),
   setAtProtoSession: (value) => set({ atProtoSession: value }),
   setAtProtoHydrated: (value) => set({ atProtoHydrated: value }),

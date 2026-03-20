@@ -59,7 +59,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   const { model: editorModel, dispatch: editorDispatch, openDoc } = useEditor();
   const { model: previewModel, render: renderPreview, syncLine: syncPreviewLine, setDoc: setPreviewDoc } = usePreview();
   const exportPdf = usePdfExport();
-  const atProto = useAtProtoController();
 
   useWorkspaceSync();
   useLayoutHotkeys();
@@ -84,6 +83,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     handleCreateNewDocument,
     handleRefreshSidebar,
   } = useWorkspaceController();
+  const atProto = useAtProtoController({ locations, selectedLocationId, refreshSidebar: handleRefreshSidebar });
 
   const { handleSave, handleNewDocument } = useDocumentActions({
     editorDocRef: editorModel.docRef,

@@ -506,6 +506,7 @@ export const useAtProtoUiState = () =>
       isPending: state.atProtoPending,
       openLoginSheet: state.openAtProtoLoginSheet,
       openSessionSheet: state.openAtProtoSessionSheet,
+      openImportSheet: state.openAtProtoImportSheet,
       closeSheet: state.closeAtProtoSheet,
       setSession: state.setAtProtoSession,
       setHydrated: state.setAtProtoHydrated,

@@ -12,6 +12,7 @@ import type {
   RenderResult,
   SearchHit,
   SessionState,
+  TangledStringRecord,
 } from "$types";
 import { info } from "@tauri-apps/plugin-log";
 import { invokeCmd, runCmd } from "./invoke";
@@ -56,6 +57,8 @@ import type {
   SessionReorderTabsParams,
   SessionTabIdParams,
   SessionUpdateTabDocParams,
+  StringGetParams,
+  StringListParams,
   StyleCheckScanParams,
   StyleCheckSetParams,
   UiLayoutSetParams,
@@ -146,6 +149,14 @@ export function atprotoSessionStatus(...[onOk, onErr]: AtProtoSessionStatusParam
 
 export function atprotoLogout(...[onOk, onErr]: LocParams<void>): Cmd {
   return invokeCmd("atproto_logout", {}, onOk, onErr);
+}
+
+export function stringList(...[didOrHandle, onOk, onErr]: StringListParams): Cmd {
+  return invokeCmd<TangledStringRecord[]>("string_list", { didOrHandle }, onOk, onErr);
+}
+
+export function stringGet(...[didOrHandle, tid, onOk, onErr]: StringGetParams): Cmd {
+  return invokeCmd<TangledStringRecord>("string_get", { didOrHandle, tid }, onOk, onErr);
 }
 
 export function locationAddViaDialog(...[onOk, onErr]: LocParams<LocationDescriptor>): Cmd {

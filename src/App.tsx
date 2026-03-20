@@ -33,13 +33,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
     return (
       <>
         <FocusModePanel {...focusModePanelProps} />
-        <AtProtoAuthSheet
-          mode={atProto.sheetMode}
-          session={atProto.session}
-          isPending={atProto.isPending}
-          onClose={atProto.closeSheet}
-          onLogin={atProto.handleLogin}
-          onLogout={atProto.handleLogout} />
+        <AtProtoAuthSheet controller={atProto} />
         <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
         <Toaster />
       </>
@@ -54,13 +48,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
         atProtoPending={atProto.isPending}
         onOpenAtProtoAuth={atProto.openAuthSheet}
         onLogoutAtProto={atProto.handleLogout} />
-      <AtProtoAuthSheet
-        mode={atProto.sheetMode}
-        session={atProto.session}
-        isPending={atProto.isPending}
-        onClose={atProto.closeSheet}
-        onLogin={atProto.handleLogin}
-        onLogout={atProto.handleLogout} />
+      <AtProtoAuthSheet controller={atProto} />
       <ExportDialog
         onExport={handleExportPdf}
         previewResult={previewResult}

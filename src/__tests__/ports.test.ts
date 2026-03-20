@@ -43,6 +43,8 @@ import {
   sessionUpdateTabDoc,
   startWatch,
   stopWatch,
+  stringGet,
+  stringList,
   SubscriptionManager,
   uiLayoutGet,
   uiLayoutSet,
@@ -211,6 +213,23 @@ describe("command Builders", () => {
       });
 
       expect(atprotoLogout(onOk, onErr)).toMatchObject({ type: "Invoke", command: "atproto_logout", payload: {} });
+    });
+
+    it("should create Tangled string list and get commands", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      expect(stringList("alice.bsky.social", onOk, onErr)).toMatchObject({
+        type: "Invoke",
+        command: "string_list",
+        payload: { didOrHandle: "alice.bsky.social" },
+      });
+
+      expect(stringGet("alice.bsky.social", "3lxyz", onOk, onErr)).toMatchObject({
+        type: "Invoke",
+        command: "string_get",
+        payload: { didOrHandle: "alice.bsky.social", tid: "3lxyz" },
+      });
     });
   });
 
@@ -501,6 +520,35 @@ describe(runCmd, () => {
         shouldClose: true,
         lastCaptureTarget: "3/inbox/2026/2026-02-23_12-00-00.md",
       });
+      expect(onErr).not.toHaveBeenCalled();
+    });
+
+    it("normalizes Tangled string records", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        type: "ok",
+        value: [{
+          uri: "at://did:plc:alice/sh.tangled.string/3lxyz",
+          tid: "3lxyz",
+          filename: "notes.py",
+          description: "Snippet",
+          contents: "print('hi')",
+          created_at: "2026-03-19T10:00:00Z",
+        }],
+      });
+
+      await runCmd(stringList("alice.bsky.social", onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith([{
+        uri: "at://did:plc:alice/sh.tangled.string/3lxyz",
+        tid: "3lxyz",
+        filename: "notes.py",
+        description: "Snippet",
+        contents: "print('hi')",
+        createdAt: "2026-03-19T10:00:00Z",
+      }]);
       expect(onErr).not.toHaveBeenCalled();
     });
   });

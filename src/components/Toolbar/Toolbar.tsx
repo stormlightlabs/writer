@@ -152,9 +152,8 @@ export function Toolbar(
       <div className="flex items-center gap-1 shrink-0">
         <ToolbarButton
           icon={icons.atproto}
-          label={atProtoSession ? `Tangled (${atProtoSession.handle})` : "Tangled"}
-          onClick={onAtProtoAuth}
-          iconOnly />
+          label={atProtoSession ? `${atProtoSession.handle}` : "Login"}
+          onClick={onAtProtoAuth} />
         {onExportPdf && (
           <ToolbarButton
             icon={icons.export}

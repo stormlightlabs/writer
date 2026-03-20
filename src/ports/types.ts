@@ -20,6 +20,7 @@ import type {
   SessionState,
   StyleCheckPattern,
   StyleMarkerStyle,
+  TangledStringRecord,
 } from "$types";
 
 export type EditorState = {
@@ -264,4 +265,10 @@ export type AtProtoSessionParams = LocParams<AtProtoSession>;
 export type AtProtoSessionStatusParams = LocParams<AtProtoSession | null>;
 export type AtProtoLoginParams = Parameters<
   (handle: string, onOk: SuccessCallback<AtProtoSession>, onErr: ErrorCallback) => void
+>;
+export type StringListParams = Parameters<
+  (didOrHandle: string, onOk: SuccessCallback<TangledStringRecord[]>, onErr: ErrorCallback) => void
+>;
+export type StringGetParams = Parameters<
+  (didOrHandle: string, tid: string, onOk: SuccessCallback<TangledStringRecord>, onErr: ErrorCallback) => void
 >;

@@ -10,6 +10,7 @@ import type {
   GlobalCaptureSettings,
   SearchHit,
   SessionState,
+  TangledStringRecord,
 } from "$types";
 import { f } from "$utils/serialize";
 import type { InvokeArgs } from "@tauri-apps/api/core";
@@ -256,6 +257,25 @@ function normalizeAtProtoSession(value: unknown): AtProtoSession | null {
   return { did: value.did, handle: value.handle, sessionId: value.session_id, endpoint: value.endpoint };
 }
 
+function normalizeTangledStringRecord(value: unknown): TangledStringRecord {
+  if (!isRecord(value)) {
+    return { uri: "", tid: "", filename: "", description: "", contents: "", createdAt: "" };
+  }
+
+  return {
+    uri: typeof value.uri === "string" ? value.uri : "",
+    tid: typeof value.tid === "string" ? value.tid : "",
+    filename: typeof value.filename === "string" ? value.filename : "",
+    description: typeof value.description === "string" ? value.description : "",
+    contents: typeof value.contents === "string" ? value.contents : "",
+    createdAt: typeof value.createdAt === "string"
+      ? value.createdAt
+      : typeof value.created_at === "string"
+      ? value.created_at
+      : "",
+  };
+}
+
 function normalizeSessionState(value: unknown): SessionState {
   if (!isRecord(value) || !Array.isArray(value.tabs)) {
     return { tabs: [], activeTabId: null };
@@ -328,6 +348,16 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     case "atproto_login":
     case "atproto_session_status": {
       return normalizeAtProtoSession(value);
+    }
+    case "string_get": {
+      return normalizeTangledStringRecord(value);
+    }
+    case "string_list": {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+
+      return value.map((record) => normalizeTangledStringRecord(record));
     }
     case "style_check_scan": {
       if (!Array.isArray(value)) {

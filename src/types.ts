@@ -80,6 +80,14 @@ export type SearchHit = {
 export type AppError = { code: ErrorCode; message: string; context?: string };
 
 export type AtProtoSession = { did: string; handle: string; sessionId: string; endpoint: string };
+export type TangledStringRecord = {
+  uri: string;
+  tid: string;
+  filename: string;
+  description: string;
+  contents: string;
+  createdAt: string;
+};
 
 export type FocusDimmingMode = "off" | "sentence" | "paragraph";
 export type MarkdownPreviewStyle = "github" | "pdf";

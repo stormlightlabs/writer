@@ -1,3 +1,6 @@
+import { FileTypeIcon as KFileTypeIcon } from "./file-icon";
+export { getRecordIconClass } from "./file-icon";
+
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 
 const sizeClass = (size: IconSize) => {
@@ -220,6 +223,12 @@ export const HeartIcon = ({ size = "md", className = "", style }: IconProps) => 
 export const AtSignIcon = ({ size = "md", className = "", style }: IconProps) => (
   <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
     <i className="i-ri-at-line" />
+  </span>
+);
+
+export const FileTypeIcon = ({ size = "md", className = "", style, filename }: IconProps & { filename: string }) => (
+  <span className={`${sizeClass(size)} ${className}`} style={style}>
+    <KFileTypeIcon filename={filename} />
   </span>
 );
 

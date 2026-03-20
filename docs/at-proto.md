@@ -112,7 +112,8 @@ Jacquard types use zero-copy deserialization via `CowStr<'_>`. Use `.parse()` fo
 src-tauri/src/
 ├── atproto/
 │   ├── mod.rs          # re-exports shared auth types/state
-│   └── auth.rs         # OAuth loopback flow, session restore, logout cleanup
+│   ├── auth.rs         # OAuth loopback flow, session restore, logout cleanup
+│   └── strings.rs      # Tangled string listing + fetch helpers
 ```
 
 `AtProtoState` lives inside `AppState` and owns the Jacquard OAuth client plus persisted session metadata paths. The current auth slice restores an existing session during app startup, exposes the active `SessionInfo`, and clears persisted auth artifacts when restoration or logout fails.
@@ -136,19 +137,28 @@ src-tauri/src/
 
 ```sh
 src/
-├── state/stores/ui.ts         # auth sheet mode + hydrated/pending/session state
+├── state/stores/ui.ts         # auth/import sheet mode + hydrated/pending/session state
 ├── state/selectors.ts         # AT Protocol selector hooks
-├── ports/commands.ts          # atproto_login / logout / session_status
+├── ports/commands.ts          # atproto_login / logout / session_status / string_list / string_get
 ├── hooks/controllers/
 │   └── useAtProtoController.ts
 ├── components/
 │   ├── AtProto/
-│   │   └── AtProtoAuthSheet.tsx
+│   │   └── AtProtoAuthSheet.tsx   # login, session, and import browser sheet
 │   └── AppLayout/LayoutSettingsPanel/
 │       └── AtProtoSection.tsx
 ```
 
-Auth UI is launched from the toolbar `@` button. When no session exists it opens the login sheet; when a session exists it opens the session indicator sheet. Logout is available from both the session sheet and the full settings panel.
+Auth UI is launched from the toolbar `@` button. When no session exists it opens the login sheet; when a session exists it opens the session indicator sheet. The login sheet also exposes a public "Browse Public Strings" path, and the session sheet exposes an "Import Strings" action that opens the pull browser. Logout is available from both the session sheet and the full settings panel.
+
+The pull browser flow is:
+
+1. Enter a handle or DID and call `string_list`.
+2. Select a string and hydrate the preview with `string_get`.
+3. Choose a Writer location + relative path.
+4. Import with `doc_exists` guard + `doc_save`.
+
+Imported non-Markdown/non-plaintext strings are wrapped in fenced code blocks using the source filename extension as the language tag when possible.
 
 ### Sync & Origin Tracking
 

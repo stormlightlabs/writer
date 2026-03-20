@@ -90,6 +90,8 @@ pub fn run() {
             cmd::atproto_login,
             cmd::atproto_logout,
             cmd::atproto_session_status,
+            cmd::string_list,
+            cmd::string_get,
             cmd::app_version_get,
             cmd::location_add_via_dialog,
             cmd::location_list,

@@ -218,7 +218,7 @@ export type SearchActions = {
   resetSearch: () => void;
 };
 
-export type AtProtoSheetMode = "closed" | "login" | "session";
+export type AtProtoSheetMode = "closed" | "login" | "session" | "import";
 
 export type AtProtoUiState = {
   atProtoSheetMode: AtProtoSheetMode;
@@ -230,6 +230,7 @@ export type AtProtoUiState = {
 export type AtProtoUiActions = {
   openAtProtoLoginSheet: () => void;
   openAtProtoSessionSheet: () => void;
+  openAtProtoImportSheet: () => void;
   closeAtProtoSheet: () => void;
   setAtProtoSession: (value: AtProtoSession | null) => void;
   setAtProtoHydrated: (value: boolean) => void;

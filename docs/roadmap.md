@@ -26,6 +26,8 @@ Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) a
    - Extensions covered: `py`, `md`, `js`, `ts`, `yaml`, `java`, `sass`, `css`, `csv`, `fs`, `cs`
    - `i-fluent-document-16-filled` for fallback
 
+Implemented on `2026-03-19` in the Tauri backend, AT Proto controller, and unified auth/import sheet.
+
 ### Part 3 — Push
 
 1. **Tauri commands** - `string_create`, `string_update`, `string_delete`

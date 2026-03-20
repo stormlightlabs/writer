@@ -1,10 +1,15 @@
 use jacquard::client::FileAuthStore;
+use jacquard::identity::resolver::IdentityResolver;
 use jacquard::oauth::client::{OAuthClient, OAuthSession};
 use jacquard::oauth::loopback::{LoopbackConfig, LoopbackPort};
 use jacquard::types::did::Did;
+use jacquard::types::ident::AtIdentifier;
+use jacquard::IntoStatic;
+use reqwest::Client as HttpClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -45,6 +50,8 @@ struct StoredOAuthEntry {
 
 pub struct AtProtoState {
     oauth: Arc<OAuthClient<OAuthResolver, FileAuthStore>>,
+    resolver: Arc<OAuthResolver>,
+    pub(crate) http: HttpClient,
     auth_store_path: PathBuf,
     session_meta_path: PathBuf,
     session_info: Mutex<Option<SessionInfo>>,
@@ -57,9 +64,18 @@ impl AtProtoState {
 
         let auth_store_path = app_dir.join(AUTH_STORE_FILENAME);
         let session_meta_path = app_dir.join(SESSION_META_FILENAME);
+        let http = HttpClient::new();
+        let resolver = OAuthResolver::new(http.clone(), Default::default());
         let oauth = OAuthClient::with_default_config(FileAuthStore::new(&auth_store_path));
 
-        Ok(Self { oauth: Arc::new(oauth), auth_store_path, session_meta_path, session_info: Mutex::new(None) })
+        Ok(Self {
+            oauth: Arc::new(oauth),
+            resolver: Arc::new(resolver),
+            http,
+            auth_store_path,
+            session_meta_path,
+            session_info: Mutex::new(None),
+        })
     }
 
     pub async fn restore_session(&self) -> Result<Option<SessionInfo>, AppError> {
@@ -110,7 +126,7 @@ impl AtProtoState {
                 Default::default(),
                 LoopbackConfig {
                     host: "127.0.0.1".into(),
-                    port: LoopbackPort::Ephemeral,
+                    port: LoopbackPort::Fixed(reserve_loopback_port()?),
                     open_browser: true,
                     timeout_ms: 5 * 60 * 1000,
                 },
@@ -214,6 +230,50 @@ impl AtProtoState {
 
         Some(PersistedSessionMeta { did: did.clone(), handle: did, session_id: entry.oauth.session_id })
     }
+
+    pub(crate) async fn resolve_repo_and_pds(
+        &self, did_or_handle: &str,
+    ) -> Result<(Did<'static>, reqwest::Url), AppError> {
+        let trimmed = did_or_handle.trim();
+        if trimmed.is_empty() {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "Handle or DID is required to browse Tangled strings",
+            ));
+        }
+
+        let identifier = AtIdentifier::new(trimmed).map_err(|error| {
+            AppError::new(
+                ErrorCode::Parse,
+                format!("Invalid AT Protocol handle or DID: {}", error),
+            )
+        })?;
+
+        match identifier {
+            AtIdentifier::Did(did) => {
+                let pds = self
+                    .resolver
+                    .pds_for_did(&did)
+                    .await
+                    .map_err(|error| AppError::io(format!("Failed to resolve PDS for DID: {}", error)))?;
+                Ok((did.into_static(), pds))
+            }
+            AtIdentifier::Handle(handle) => self
+                .resolver
+                .pds_for_handle(&handle)
+                .await
+                .map_err(|error| AppError::io(format!("Failed to resolve handle: {}", error))),
+        }
+    }
+}
+
+fn reserve_loopback_port() -> Result<u16, AppError> {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .map_err(|error| AppError::io(format!("Failed to reserve AT Protocol callback port: {}", error)))?;
+    listener
+        .local_addr()
+        .map(|addr| addr.port())
+        .map_err(|error| AppError::io(format!("Failed to inspect AT Protocol callback port: {}", error)))
 }
 
 #[cfg(test)]
