@@ -1,6 +1,8 @@
 # CHANGELOG
 
-## v0.2.0-pre — 2026-03-02
+## Unreleased
+
+## v0.2.0 — 2026-03-20
 
 ### Features
 
