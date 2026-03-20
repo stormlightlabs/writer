@@ -1,9 +1,8 @@
 //! Tangled.org string (snippets/gists) commands
 
 use super::{AppState, CommandResponse};
-use crate::atproto::StringRecord;
 use tauri::State;
-use writer_core::CommandResult;
+use writer_core::{atproto::StringRecord, CommandResult};
 
 #[tauri::command]
 pub async fn string_create(

@@ -1,4 +1,3 @@
-use super::atproto::AtProtoState;
 use super::capture;
 use super::locations::*;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
@@ -8,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
+use writer_core::atproto::AtProtoState;
 use writer_core::scan_style_matches;
 use writer_core::{
     AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,

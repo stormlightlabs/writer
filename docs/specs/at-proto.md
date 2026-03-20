@@ -107,16 +107,22 @@ Jacquard types use zero-copy deserialization via `CowStr<'_>`. Use `.parse()` fo
 ### Backend Module Structure
 
 ```sh
-src-tauri/src/
+crates/core/src/
 ├── atproto/
-│   ├── mod.rs          # re-exports shared auth types/state
+│   ├── mod.rs          # shared AT Protocol exports
 │   ├── auth.rs         # OAuth loopback flow, session restore, logout cleanup
 │   └── strings.rs      # Tangled string listing + fetch helpers
+src-tauri/src/
+├── commands/
+│   ├── atproto.rs      # Tauri command wrappers for auth/session
+│   └── strings.rs      # Tauri command wrappers for string CRUD
 ```
 
-`AtProtoState` lives inside `AppState` and owns the Jacquard OAuth client plus persisted session metadata paths. The current auth slice restores an existing session during app startup, exposes the active `SessionInfo`, and clears persisted auth artifacts when restoration or logout fails.
+`writer_core::atproto::AtProtoState` owns the Jacquard OAuth client plus persisted session metadata paths. Tauri keeps an `Arc<AtProtoState>` inside `AppState`, restores the existing session during app startup, and exposes the shared `SessionInfo` / `StringRecord` types from `writer_core::atproto`.
 
-**Tauri commands:**
+**Tauri command boundary:**
+
+The commands remain in `src-tauri`, but they are thin wrappers around `writer_core::atproto` methods and types:
 
 | Command                  | Args                                   | Returns                                | Auth      |
 | ------------------------ | -------------------------------------- | -------------------------------------- | --------- |
@@ -334,15 +340,21 @@ For reads (no auth), use a stateless `reqwest::Client` with `XrpcExt` or an unau
 ### Backend Module Structure
 
 ```sh
-src-tauri/src/atproto/
-├── mod.rs            # re-exports (existing)
-├── auth.rs           # OAuth (existing)
-├── strings.rs        # Tangled strings (existing)
-├── standard_site.rs  # publication + document listing/fetch via Jacquard site_standard types
-└── leaflet.rs        # Leaflet block ↔ Markdown conversion using Jacquard pub_leaflet types
+crates/core/src/
+├── atproto/
+│   ├── mod.rs        # shared AT Protocol exports
+│   ├── auth.rs       # OAuth/session state
+│   ├── strings.rs    # Tangled string helpers
+│   ├── leaflet.rs    # Leaflet block ↔ Markdown conversion
+│   └── standard_site.rs  # publication + document listing/fetch helpers
+src-tauri/src/
+├── commands/
+│   ├── atproto.rs    # auth/session command wrappers
+│   ├── strings.rs    # Tangled string command wrappers
+│   └── standard_site.rs  # publication/post command wrappers
 ```
 
-Requires adding `pub_leaflet` and `site_standard` feature flags to the `jacquard-api` dependency in `src-tauri/Cargo.toml`.
+In the current codebase, the conversion logic belongs in `writer_core::atproto`, with `src-tauri` only responsible for exposing it through Tauri commands. Part 1 is implemented as [leaflet.rs](/Users/owais/Desktop/writer/crates/core/src/atproto/leaflet.rs); `standard_site.rs` remains the intended shared-core location for the record fetch/list helpers from later parts.
 
 ### Tauri Commands
 
@@ -360,7 +372,7 @@ Requires adding `pub_leaflet` and `site_standard` feature flags to the `jacquard
 `PublicationRecord`: `uri`, `tid`, `name`, `description`, `url`.
 `PostRecord`: `uri`, `tid`, `title`, `description`, `text_content`, `published_at`, `updated_at`, `tags`, `publication_uri`.
 
-`post_get_markdown` performs Leaflet→Markdown conversion server-side so the frontend receives ready-to-use content.
+`post_get_markdown` should perform Leaflet→Markdown conversion in `writer_core::atproto::leaflet`, with the Tauri command acting as a transport wrapper so the frontend receives ready-to-use content.
 
 ### Frontend Structure
 

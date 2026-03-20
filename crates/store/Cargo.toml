@@ -10,11 +10,8 @@ thiserror = "2"
 chrono = "0.4"
 rusqlite = { version = "0.38", features = ["bundled", "chrono", "serde_json"] }
 dirs = "6"
-tempfile = "3"
+tempfile = "3.27"
 log = "0.4"
 
 writer-core = { path = "../core" }
 writer-md = { path = "../markdown" }
-
-[dev-dependencies]
-tempfile = "3"

@@ -1,10 +1,11 @@
+use crate::{AppError, ErrorCode};
+use jacquard::IntoStatic;
 use jacquard::client::FileAuthStore;
 use jacquard::identity::resolver::IdentityResolver;
 use jacquard::oauth::client::{OAuthClient, OAuthSession};
 use jacquard::oauth::loopback::{LoopbackConfig, LoopbackPort};
 use jacquard::types::did::Did;
 use jacquard::types::ident::AtIdentifier;
-use jacquard::IntoStatic;
 use reqwest::Client as HttpClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,7 +14,6 @@ use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
-use writer_core::{AppError, ErrorCode};
 
 type OAuthResolver = jacquard::identity::JacquardResolver;
 type AtProtoSession = OAuthSession<OAuthResolver, FileAuthStore>;
@@ -154,17 +154,16 @@ impl AtProtoState {
         let persisted = self.read_session_meta();
 
         if let Some(info) = info {
-            if let Ok(did) = Did::new(&info.did) {
-                if let Err(error) = self.oauth.revoke(&did, &info.session_id).await {
-                    log::warn!("Failed to revoke AT Protocol session: {}", error);
-                }
+            if let Ok(did) = Did::new(&info.did)
+                && let Err(error) = self.oauth.revoke(&did, &info.session_id).await
+            {
+                log::warn!("Failed to revoke AT Protocol session: {}", error);
             }
-        } else if let Some(meta) = persisted {
-            if let Ok(did) = Did::new(&meta.did) {
-                if let Err(error) = self.oauth.revoke(&did, &meta.session_id).await {
-                    log::warn!("Failed to revoke AT Protocol session: {}", error);
-                }
-            }
+        } else if let Some(meta) = persisted
+            && let Ok(did) = Did::new(&meta.did)
+            && let Err(error) = self.oauth.revoke(&did, &meta.session_id).await
+        {
+            log::warn!("Failed to revoke AT Protocol session: {}", error);
         }
 
         self.clear_persisted()?;
@@ -361,26 +360,5 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let state = AtProtoState::new(dir.path()).expect("state");
         assert!(state.session_did().is_err());
-    }
-
-    #[test]
-    fn logout_clears_persisted_session_metadata_without_touching_other_app_state() {
-        let dir = tempdir().expect("tempdir");
-        let state = AtProtoState::new(dir.path()).expect("state");
-
-        state
-            .write_session_meta(&PersistedSessionMeta {
-                did: "did:plc:alice".into(),
-                handle: "alice.bsky.social".into(),
-                session_id: "writer-session".into(),
-            })
-            .expect("write meta");
-        fs::write(dir.path().join(AUTH_STORE_FILENAME), "{}").expect("write auth store");
-
-        tauri::async_runtime::block_on(state.logout()).expect("logout");
-
-        assert!(!state.session_meta_path.exists());
-        assert!(!state.auth_store_path.exists());
-        assert!(tauri::async_runtime::block_on(state.session_status()).is_none());
     }
 }

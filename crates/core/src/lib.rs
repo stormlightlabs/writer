@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+pub mod atproto;
 mod nlp;
 pub use nlp::{
     PatternCategory, PatternMatcher, StyleCategorySettings, StyleMatch, StylePattern, StylePatternInput,

@@ -1,7 +1,6 @@
 use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
-mod atproto;
 mod capture;
 mod commands;
 mod locations;

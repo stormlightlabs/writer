@@ -1,6 +1,6 @@
 use super::{AppState, CommandResponse};
-use crate::atproto::SessionInfo;
 use tauri::State;
+use writer_core::atproto::SessionInfo;
 use writer_core::CommandResult;
 
 #[tauri::command]

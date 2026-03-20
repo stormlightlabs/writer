@@ -32,7 +32,7 @@ chrono = "0.4"
 log = "0.4"
 async-trait = "0.1"
 thiserror = "2"
-jacquard = { version = "0.9.5", features = ["default"] }
+comrak = "0.50"
 reqwest = "0.12"
 unicode-segmentation = "1"
 

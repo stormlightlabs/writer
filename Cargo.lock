@@ -8532,7 +8532,7 @@ version = "0.2.0"
 dependencies = [
  "async-trait",
  "chrono",
- "jacquard",
+ "comrak",
  "log",
  "notify",
  "reqwest 0.12.28",
@@ -8561,9 +8561,15 @@ version = "0.2.0"
 dependencies = [
  "aho-corasick",
  "chrono",
+ "comrak",
+ "jacquard",
+ "log",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
+ "unicode-segmentation",
 ]
 
 [[package]]

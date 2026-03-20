@@ -7,7 +7,7 @@ Pull and push long-form posts from/to AT Protocol publishing platforms using Sta
 
 ## Part 1 — Leaflet Block ↔ Markdown Conversion
 
-1. **Leaflet → Markdown converter** — `src-tauri/src/atproto/leaflet.rs`
+1. **Leaflet → Markdown converter** — `crates/core/src/atproto/leaflet.rs`
    - Deserialize `pub_leaflet::document::Document`, match on `DocumentPagesItem` variants
    - Map Jacquard block types (`blocks::text::Text`, `blocks::header::Header`, etc.) to Markdown equivalents
    - Convert `pub_leaflet::richtext::facet::Facet` annotations (matching on `FacetFeaturesItem` variants: `Bold`, `Italic`, `Link`, `Code`, `Strikethrough`, etc.) to inline Markdown syntax
@@ -22,10 +22,11 @@ Pull and push long-form posts from/to AT Protocol publishing platforms using Sta
 
 ## Part 2 — Pull (Import Posts)
 
-1. **Backend helpers** — `src-tauri/src/atproto/standard_site.rs`
+1. **Backend helpers** — `crates/core/src/atproto/standard_site.rs`
    - `listRecords` wrapper for `site_standard::publication::Publication` and `site_standard::document::Document`
    - `getRecord` wrapper deserializing into Jacquard types, extracting Leaflet content from the `content` open union
-2. **Tauri commands** — `publication_list`, `publication_get`, `post_list`, `post_get`, `post_get_markdown`
+2. **Tauri commands** — `src-tauri/src/commands/standard_site.rs`
+   - `publication_list`, `publication_get`, `post_list`, `post_get`, `post_get_markdown`
 3. **Frontend import UI** — `PostImportSheet.tsx`
    - Enter handle/DID → browse publications → browse posts → preview converted Markdown → import to location
    - Reuse existing import patterns from `ImportSheet.tsx`
@@ -34,7 +35,8 @@ Pull and push long-form posts from/to AT Protocol publishing platforms using Sta
 
 ## Part 3 — Push (Publish Posts)
 
-1. **Tauri commands** — `post_create`, `post_update`, `post_delete`
+1. **Tauri commands** — `src-tauri/src/commands/standard_site.rs`
+   - `post_create`, `post_update`, `post_delete`
    - Accept Markdown + metadata, convert to Leaflet blocks via Jacquard builders server-side
    - Upload images as blobs to PDS, construct `pub_leaflet::blocks::image::Image` with returned blob ref
    - Build `site_standard::document::Document` via `DocumentBuilder` with Leaflet content in the `content` union
