@@ -1,4 +1,4 @@
-use super::atproto::{AtProtoState, SessionInfo, StringRecord};
+use super::atproto::AtProtoState;
 use super::capture;
 use super::locations::*;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
@@ -8,13 +8,20 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
+use writer_core::scan_style_matches;
 use writer_core::{
-    scan_style_matches, AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta,
-    LocationDescriptor, LocationId, SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch,
-    StylePatternInput, StyleScanInput,
+    AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
+    SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch, StylePatternInput, StyleScanInput,
 };
-use writer_md::{DocxExportResult, MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult, TextExportResult};
 use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
+
+mod atproto;
+mod md;
+mod strings;
+
+pub use atproto::*;
+pub use md::*;
+pub use strings::*;
 
 type CommandResponse<T> = std::result::Result<CommandResult<T>, AppError>;
 
@@ -30,65 +37,6 @@ impl AppState {
         let app_dir = Store::default_app_dir().expect("store app dir should resolve");
         let atproto = AtProtoState::new(&app_dir).expect("AT Protocol state should initialize");
         Self { store: Arc::new(store), watchers: Mutex::new(HashMap::new()), atproto: Arc::new(atproto) }
-    }
-}
-
-#[tauri::command]
-pub async fn atproto_login(state: State<'_, AppState>, handle: String) -> CommandResponse<SessionInfo> {
-    log::info!("Starting AT Protocol login flow");
-
-    match state.atproto.login(&handle).await {
-        Ok(session) => Ok(CommandResult::ok(session)),
-        Err(error) => {
-            log::error!("AT Protocol login failed: {}", error);
-            Ok(CommandResult::err(error))
-        }
-    }
-}
-
-#[tauri::command]
-pub async fn atproto_logout(state: State<'_, AppState>) -> CommandResponse<()> {
-    log::info!("Logging out of AT Protocol");
-
-    match state.atproto.logout().await {
-        Ok(()) => Ok(CommandResult::ok(())),
-        Err(error) => {
-            log::error!("AT Protocol logout failed: {}", error);
-            Ok(CommandResult::err(error))
-        }
-    }
-}
-
-#[tauri::command]
-pub async fn atproto_session_status(state: State<'_, AppState>) -> CommandResponse<Option<SessionInfo>> {
-    Ok(CommandResult::ok(state.atproto.session_status().await))
-}
-
-#[tauri::command]
-pub async fn string_list(state: State<'_, AppState>, did_or_handle: String) -> CommandResponse<Vec<StringRecord>> {
-    log::info!("Listing Tangled strings");
-
-    match state.atproto.string_list(&did_or_handle).await {
-        Ok(records) => Ok(CommandResult::ok(records)),
-        Err(error) => {
-            log::error!("Failed to list Tangled strings: {}", error);
-            Ok(CommandResult::err(error))
-        }
-    }
-}
-
-#[tauri::command]
-pub async fn string_get(
-    state: State<'_, AppState>, did_or_handle: String, tid: String,
-) -> CommandResponse<StringRecord> {
-    log::info!("Fetching Tangled string");
-
-    match state.atproto.string_get(&did_or_handle, &tid).await {
-        Ok(record) => Ok(CommandResult::ok(record)),
-        Err(error) => {
-            log::error!("Failed to fetch Tangled string: {}", error);
-            Ok(CommandResult::err(error))
-        }
     }
 }
 
@@ -924,171 +872,6 @@ pub fn search(
     }
 }
 
-/// Renders markdown text to HTML with metadata extraction
-///
-/// This command takes document reference, text content, and a rendering profile,
-/// returning HTML with source position attributes for editor-preview sync.
-#[tauri::command]
-pub fn markdown_render(
-    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> CommandResponse<RenderResult> {
-    let location_id = LocationId(location_id);
-    let rel_path = PathBuf::from(&rel_path);
-
-    log::debug!(
-        "Rendering markdown: location={:?}, path={:?}, profile={:?}, text_len={}",
-        location_id,
-        rel_path,
-        profile,
-        text.len()
-    );
-
-    let engine = MarkdownEngine::new();
-    let profile = profile.unwrap_or_default();
-
-    match engine.render(&text, profile) {
-        Ok(result) => {
-            log::debug!(
-                "Markdown rendered successfully: html_len={}, outline_items={}",
-                result.html.len(),
-                result.metadata.outline.len()
-            );
-            Ok(CommandResult::ok(result))
-        }
-        Err(e) => {
-            log::error!("Failed to render markdown: {}", e);
-            Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
-                format!("Failed to render markdown: {}", e),
-            )))
-        }
-    }
-}
-
-/// Renders markdown text to a PDF-compatible AST
-///
-/// This command takes document text and returns a structured AST
-/// suitable for rendering to PDF on the frontend with @react-pdf/renderer.
-#[tauri::command]
-pub fn markdown_render_for_pdf(
-    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> CommandResponse<PdfRenderResult> {
-    let location_id = LocationId(location_id);
-    let rel_path = PathBuf::from(&rel_path);
-
-    log::debug!(
-        "Rendering markdown for PDF: location={:?}, path={:?}, profile={:?}, text_len={}",
-        location_id,
-        rel_path,
-        profile,
-        text.len()
-    );
-
-    let engine = MarkdownEngine::new();
-    let profile = profile.unwrap_or(MarkdownProfile::Extended);
-
-    match engine.render_for_pdf(&text, profile) {
-        Ok(result) => {
-            log::debug!(
-                "Markdown rendered for PDF successfully: nodes={}, word_count={}",
-                result.nodes.len(),
-                result.word_count
-            );
-            Ok(CommandResult::ok(result))
-        }
-        Err(e) => {
-            log::error!("Failed to render markdown for PDF: {}", e);
-            Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
-                format!("Failed to render markdown for PDF: {}", e),
-            )))
-        }
-    }
-}
-
-/// Renders markdown text to plaintext format
-///
-/// This command takes document text and returns plain text with
-/// Markdown formatting stripped but logical structure preserved.
-#[tauri::command]
-pub fn markdown_render_for_text(
-    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> CommandResponse<TextExportResult> {
-    let location_id = LocationId(location_id);
-    let rel_path = PathBuf::from(&rel_path);
-
-    log::debug!(
-        "Rendering markdown for text export: location={:?}, path={:?}, profile={:?}, text_len={}",
-        location_id,
-        rel_path,
-        profile,
-        text.len()
-    );
-
-    let engine = MarkdownEngine::new();
-    let profile = profile.unwrap_or(MarkdownProfile::Extended);
-
-    match engine.render_for_text(&text, profile) {
-        Ok(result) => {
-            log::debug!(
-                "Markdown rendered for text export successfully: text_len={}, word_count={}",
-                result.text.len(),
-                result.word_count
-            );
-            Ok(CommandResult::ok(result))
-        }
-        Err(e) => {
-            log::error!("Failed to render markdown for text export: {}", e);
-            Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
-                format!("Failed to render markdown for text export: {}", e),
-            )))
-        }
-    }
-}
-
-/// Renders markdown text to DOCX format
-///
-/// This command takes document text and returns DOCX bytes
-/// generated via docx-rs with support for headings, bold, italic,
-/// code font, ordered/unordered lists, blockquotes, and code blocks.
-#[tauri::command]
-pub fn markdown_render_for_docx(
-    _: State<'_, AppState>, location_id: i64, rel_path: String, text: String, profile: Option<MarkdownProfile>,
-) -> CommandResponse<DocxExportResult> {
-    let location_id = LocationId(location_id);
-    let rel_path = PathBuf::from(&rel_path);
-
-    log::debug!(
-        "Rendering markdown for DOCX: location={:?}, path={:?}, profile={:?}, text_len={}",
-        location_id,
-        rel_path,
-        profile,
-        text.len()
-    );
-
-    let engine = MarkdownEngine::new();
-    let profile = profile.unwrap_or(MarkdownProfile::Extended);
-
-    match engine.render_for_docx(&text, profile) {
-        Ok(result) => {
-            log::debug!(
-                "Markdown rendered for DOCX successfully: data_len={}, word_count={}",
-                result.data.len(),
-                result.word_count
-            );
-            Ok(CommandResult::ok(result))
-        }
-        Err(e) => {
-            log::error!("Failed to render markdown for DOCX: {}", e);
-            Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
-                format!("Failed to render markdown for DOCX: {}", e),
-            )))
-        }
-    }
-}
-
 #[tauri::command]
 pub fn style_check_get(state: State<'_, AppState>) -> CommandResponse<StyleCheckSettings> {
     log::debug!("Loading persisted style check settings");
@@ -1302,11 +1085,4 @@ pub fn global_capture_validate_shortcut(shortcut: String) -> CommandResponse<boo
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => Ok(CommandResult::err(e)),
     }
-}
-
-/// Returns the markdown help guide content
-#[tauri::command]
-pub fn markdown_help_get() -> CommandResponse<String> {
-    log::debug!("Fetching markdown help content");
-    Ok(CommandResult::ok(writer_store::get_markdown_help().to_string()))
 }

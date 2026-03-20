@@ -7,7 +7,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create draft release
+        id: create
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 'Writer ${{ github.ref_name }}'
+          body: 'See the assets to download and install this version.'
+          draft: true
+          prerelease: false
+
+  build:
+    needs: create-release
     permissions:
       contents: write
     strategy:
@@ -58,9 +78,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'Writer v__VERSION__'
-          releaseBody: 'See the assets to download and install this version.'
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release-id }}
           args: ${{ matrix.args }}
