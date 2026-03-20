@@ -78,7 +78,7 @@ function BrowseHandleForm({ controller }: { controller: Controller }) {
             placeholder={controller.session?.handle ?? "alice.bsky.social"}
             className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
           <Button
-            variant="primary"
+            variant="primaryBlue"
             size="sm"
             disabled={controller.importState.isListing || !controller.importState.handle.trim()}
             onClick={controller.handleBrowseStrings}>
@@ -125,6 +125,30 @@ function RecordsPanel({ controller }: { controller: Controller }) {
   );
 }
 
+type LocationSelectorProps = {
+  handleChange: ChangeEventHandler<HTMLSelectElement>;
+  hasLocations: boolean;
+  locations: { id: number; name: string }[];
+  importState: Controller["importState"];
+};
+
+function LocationSelector({ importState, handleChange, hasLocations, locations }: LocationSelectorProps) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-sm font-medium text-text-primary">Location</span>
+      <select
+        value={importState.destinationLocationId ?? ""}
+        disabled={!hasLocations}
+        onChange={handleChange}
+        className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong">
+        {!hasLocations && <option value="">Add a location first</option>}
+        {hasLocations && <option value="">Choose a location</option>}
+        {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function ImportDestinationForm({ controller }: { controller: Controller }) {
   const handleLocationChange = useCallback<ChangeEventHandler<HTMLSelectElement>>((event) => {
     controller.setDestinationLocationId(Number(event.target.value) || null);
@@ -155,35 +179,32 @@ function ImportDestinationForm({ controller }: { controller: Controller }) {
   );
 
   return (
-    <div className="grid gap-3 rounded-lg border border-stroke-subtle bg-layer-02/20 p-3">
-      <label className="grid gap-1.5">
-        <span className="text-sm font-medium text-text-primary">Location</span>
-        <select
-          value={controller.importState.destinationLocationId ?? ""}
-          disabled={!controller.hasLocations}
-          onChange={handleLocationChange}
-          className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong">
-          {!controller.hasLocations && <option value="">Add a location first</option>}
-          {controller.hasLocations && <option value="">Choose a location</option>}
-          {controller.locations.map((location) => <option key={location.id} value={location.id}>{location.name}
-          </option>)}
-        </select>
-      </label>
-      <label className="grid gap-1.5">
-        <span className="text-sm font-medium text-text-primary">Destination path</span>
-        <input
-          value={controller.importState.destinationRelPath}
-          onChange={handlePathChange}
-          placeholder="notes/imported.md"
-          className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
-      </label>
-      <p className="m-0 text-xs text-text-secondary">
-        Non-Markdown strings are imported as fenced code blocks so the resulting document stays readable in Writer.
-      </p>
-      <div className="flex justify-end">
-        <Button variant="primary" size="sm" disabled={importDisabled} onClick={handleImport}>
-          {controller.importState.isSaving ? "Importing..." : "Import to Location"}
-        </Button>
+    <div className="flex flex-col gap-4 rounded-lg border border-stroke-subtle bg-layer-02/20 p-3">
+      <div className="flex">
+        <LocationSelector
+          handleChange={handleLocationChange}
+          importState={controller.importState}
+          hasLocations={controller.hasLocations}
+          locations={controller.locations} />
+        <label className="grid gap-1.5 col-span-2 flex-1">
+          <span className="text-sm font-medium text-text-primary">Destination path</span>
+          <input
+            value={controller.importState.destinationRelPath}
+            onChange={handlePathChange}
+            placeholder="notes/imported.md"
+            className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
+        </label>
+      </div>
+
+      <div className="flex gap-2">
+        <p className="m-0 text-xs text-text-secondary">
+          Non-Markdown strings are imported as fenced code blocks so the resulting document stays readable in Writer.
+        </p>
+        <div className="flex justify-end">
+          <Button variant="primaryBlue" size="sm" disabled={importDisabled} onClick={handleImport}>
+            {controller.importState.isSaving ? "Importing..." : "Import"}
+          </Button>
+        </div>
       </div>
     </div>
   );

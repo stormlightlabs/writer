@@ -4,7 +4,7 @@ import { useSkipAnimation } from "$hooks/useMotion";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { cn } from "$utils/tw";
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const CONTEXT_MENU_INITIAL = { opacity: 0, scale: 0.96 };
 const CONTEXT_MENU_ANIMATE = { opacity: 1, scale: 1 };
@@ -32,6 +32,7 @@ export type ContextMenuProps = {
   position: { x: number; y: number };
   onClose: () => void;
   items: MenuItem[];
+  anchorRef?: RefObject<HTMLElement | null>;
 };
 
 function ContextMenuItem_({ item, onClose }: { item: ContextMenuItem; onClose: () => void }) {
@@ -120,13 +121,15 @@ function ContextMenuContent(
   );
 }
 
-export function ContextMenu({ isOpen, position, onClose, items }: ContextMenuProps) {
+export function ContextMenu({ isOpen, position, onClose, items, anchorRef }: ContextMenuProps) {
   useEffect(() => {
     if (!isOpen) return;
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target;
+      if (!(target instanceof Node)) return;
       if (target instanceof HTMLElement && target.closest("[role=\"menu\"]")) return;
+      if (anchorRef?.current?.contains(target)) return;
       onClose();
     };
 
@@ -137,7 +140,7 @@ export function ContextMenu({ isOpen, position, onClose, items }: ContextMenuPro
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("contextmenu", handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [anchorRef, isOpen, onClose]);
 
   return (
     <AnimatePresence>

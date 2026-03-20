@@ -5,9 +5,7 @@ export function getRecordIconClass(filename: string): string {
   switch (extension) {
     case "py":
       return "i-fluent-document-py-16-filled";
-    case "md":
-    case "markdown":
-      return "i-fluent-document-text-16-filled";
+
     case "js":
       return "i-fluent-document-javascript-16-filled";
     case "ts":
@@ -27,6 +25,33 @@ export function getRecordIconClass(filename: string): string {
       return "i-fluent-document-fs-16-filled";
     case "cs":
       return "i-fluent-document-cs-16-filled";
+    case "md":
+    case "markdown":
+      return "i-bi-filetype-md";
+    case "rb":
+      return "i-bi-filetype-rb";
+    case "sh":
+      return "i-bi-filetype-sh";
+    case "tsx":
+      return "i-bi-filetype-tsx";
+    case "jsx":
+      return "i-bi-filetype-jsx";
+    case "txt":
+      return "i-bi-filetype-txt";
+    case "php":
+      return "i-bi-filetype-php";
+    case "mdx":
+      return "i-bi-filetype-mdx";
+    case "html":
+      return "i-bi-filetype-html";
+    case "sql":
+      return "i-bi-filetype-sql";
+    case "json":
+      return "i-bi-filetype-json";
+    case "xml":
+      return "i-bi-filetype-xml";
+    case "svg":
+      return "i-bi-filetype-svg";
     default:
       return "i-fluent-document-16-filled";
   }

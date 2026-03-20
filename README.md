@@ -14,6 +14,8 @@ Writer is a Tauri desktop writing app with a React frontend and a Rust backend. 
 - Rule-based writing assistance with style check diagnostics and parts-of-speech highlighting
 - Quick Capture window (`#/quick-capture`) for global shortcut capture flows
 - Export dialog with PDF preview, DOCX export, plaintext export, and source-markdown save
+- Import Tangled strings as documents
+- Publish documents as Tangled strings
 
 ### File Management
 
@@ -36,6 +38,12 @@ Typewriter scrolling and sentence/paragraph dimming for distraction-free writing
 Global hotkey opens a capture window from anywhere on your system.
 
 ![Quick capture window](www/src/static/images/quick-capture.png)
+
+### AT Protocol integration
+
+Import [Tangled](https://tangled.org) strings into your workspace.
+
+![Tangled Import](www/src/static/images/tangled-import.png)
 
 ### Export
 

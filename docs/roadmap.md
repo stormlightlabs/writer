@@ -36,26 +36,6 @@ Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) a
 1. **Origin tracking** - AT URI, TID, source DID in SQLite
 2. **Change detection** - local re-publish offers, remote drift on re-pull
 
-## Drag-and-drop
-
-Sidebar reorder, cross-location move, external file import, and nested folder creation using `@atlaskit/pragmatic-drag-and-drop`. Full design in [spec](../.sandbox/drag-and-drop.md).
-
-### Part 1
-
-1. **Sidebar draggable items** - register `DocumentItem` as `draggable()` + `dropTargetForElements()` with hitbox edge detection
-2. **Drop indicators & feedback** - insertion line, ghost opacity, drop-target highlight ring
-3. **Monitor & dispatch** - `monitorForElements` in `Sidebar.tsx` to orchestrate reorder vs. move on drop
-
-### Part 2
-
-1. **Cross-location drops** - register `SidebarLocationItem` as drop target; move doc via `docMove`
-2. **External file drops** - Tauri `onDragDropEvent` listener; resolve target from pointer position; import `.md` files via `docSave`
-3. **Nested folder creation** - modifier-key drop opens `MoveDialog` pre-filled; backend `create_dir_all` handles new dirs
-
-### Part 3
-
-1. **Accessibility** - screen-reader announcements via `live-region`; reduced-motion support via `useSkipAnimation()`
-
 ## Content blocks (transclusion)
 
 Allow embedding external Markdown files, images, and CSV data into a master document using `/filename` syntax, as well as drag-and-drop of files into the editor.
@@ -117,6 +97,8 @@ Improve file organization
 3. **Recovery**
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
+
+## Standard.Site Pubs & Posts
 
 ## GitHub Gist integration
 

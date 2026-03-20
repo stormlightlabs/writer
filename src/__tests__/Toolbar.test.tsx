@@ -1,7 +1,7 @@
 import { Toolbar } from "$components/Toolbar";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$state/selectors", () => ({ useToolbarState: vi.fn(), useLayoutSettingsUiState: vi.fn() }));
@@ -56,7 +56,8 @@ describe("Toolbar", () => {
 
     render(<Toolbar saveStatus="Idle" onSave={vi.fn()} />);
 
-    fireEvent.click(screen.getByText("Editor"));
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editor" }));
     expect(setEditorOnlyMode).toHaveBeenCalledOnce();
   });
 
@@ -65,7 +66,20 @@ describe("Toolbar", () => {
 
     render(<Toolbar saveStatus="Idle" onSave={vi.fn()} onAtProtoAuth={onAtProtoAuth} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Login" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Login to AT Proto" }));
     expect(onAtProtoAuth).toHaveBeenCalledOnce();
+  });
+
+  it("opens and closes the view dropdown from the toolbar trigger", async () => {
+    render(<Toolbar saveStatus="Idle" onSave={vi.fn()} />);
+
+    const trigger = screen.getByRole("button", { name: "View" });
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 });

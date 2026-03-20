@@ -2,11 +2,12 @@ import { useViewportTier } from "$hooks/useViewportTier";
 import type { IconSize } from "$icons";
 import {
   AtSignIcon,
+  CheckIcon,
   DocumentIcon,
   EyeIcon,
-  FileTextIcon,
   FocusIcon,
   IconProps,
+  PenIcon,
   PlusIcon,
   RefreshIcon,
   SaveIcon,
@@ -19,6 +20,7 @@ import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useMemo } from "react";
 import { SaveStatusIndicator } from "./SaveStatusIndicator";
 import { ToolbarButton } from "./ToolbarButton";
+import { ToolbarDropdown } from "./ToolbarDropdown";
 
 export type ToolbarProps = {
   saveStatus: SaveStatus;
@@ -34,17 +36,7 @@ export type ToolbarProps = {
   onRefresh?: () => void;
 };
 
-function SettingsToolbarButton(
-  { icon, iconOnly }: { icon: { Component: React.ComponentType<IconProps>; size: IconSize }; iconOnly: boolean },
-) {
-  const { setOpen } = useLayoutSettingsUiState();
-
-  const handleOpenSettings = useCallback(() => {
-    setOpen(true);
-  }, [setOpen]);
-
-  return <ToolbarButton icon={icon} label="Settings" onClick={handleOpenSettings} iconOnly={iconOnly} />;
-}
+const CHECK_ICON = <CheckIcon size="sm" />;
 
 export function Toolbar(
   {
@@ -70,13 +62,15 @@ export function Toolbar(
     toggleFocusMode,
     togglePreviewVisible,
   } = useToolbarState();
+  const { setOpen: openSettings } = useLayoutSettingsUiState();
   const { viewportWidth, isCompact, isNarrow } = useViewportTier();
+
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
       save: { Component: SaveIcon, size: "sm" },
       newDoc: { Component: PlusIcon, size: "sm" },
       refresh: { Component: RefreshIcon, size: "sm" },
-      editor: { Component: FileTextIcon, size: "sm" },
+      editor: { Component: PenIcon, size: "sm" },
       splitView: { Component: SplitViewIcon, size: "sm" },
       eye: { Component: EyeIcon, size: "sm" },
       focus: { Component: FocusIcon, size: "sm" },
@@ -90,6 +84,54 @@ export function Toolbar(
   const hideRefresh = useMemo(() => viewportWidth < 1080, [viewportWidth]);
   const compactStatus = useMemo(() => viewportWidth < 960, [viewportWidth]);
   const isEditorOnly = useMemo(() => !isSplitView && !isPreviewVisible, [isSplitView, isPreviewVisible]);
+
+  const currentViewIcon = useMemo(() => {
+    if (isFocusMode) return icons.focus;
+    if (isSplitView) return icons.splitView;
+    if (isPreviewVisible) return icons.eye;
+    return icons.editor;
+  }, [isFocusMode, isSplitView, isPreviewVisible, icons]);
+
+  const handleOpenSettings = useCallback(() => openSettings(true), [openSettings]);
+
+  const viewModeItems = useMemo(
+    () => [
+      { label: "Editor", onClick: setEditorOnlyMode, icon: isEditorOnly && !isFocusMode ? CHECK_ICON : undefined },
+      { label: "Split", onClick: toggleSplitView, icon: isSplitView ? CHECK_ICON : undefined },
+      { label: "Preview", onClick: togglePreviewVisible, icon: isPreviewVisible ? CHECK_ICON : undefined },
+      { divider: true as const },
+      { label: "Focus", onClick: toggleFocusMode, icon: isFocusMode ? CHECK_ICON : undefined },
+    ],
+    [
+      isEditorOnly,
+      isFocusMode,
+      isSplitView,
+      isPreviewVisible,
+      setEditorOnlyMode,
+      toggleSplitView,
+      togglePreviewVisible,
+      toggleFocusMode,
+    ],
+  );
+
+  const toolsItems = useMemo(() => {
+    const items: Parameters<typeof ToolbarDropdown>[0]["items"] = [{
+      label: atProtoSession ? atProtoSession.handle : "Login to AT Proto",
+      onClick: onAtProtoAuth,
+      icon: <AtSignIcon size="sm" />,
+    }];
+    if (onExportPdf) {
+      items.push({
+        label: isExportingPdf ? "Exporting..." : "Export PDF",
+        onClick: onExportPdf ?? (() => {}),
+        disabled: isExportingPdf || isPdfExportDisabled,
+        icon: <DocumentIcon size="sm" />,
+      });
+    }
+    items.push({ divider: true as const });
+    items.push({ label: "Settings", onClick: handleOpenSettings, icon: <SettingsIcon size="sm" /> });
+    return items;
+  }, [atProtoSession, onAtProtoAuth, onExportPdf, isExportingPdf, isPdfExportDisabled, handleOpenSettings]);
 
   return (
     <div className="h-[48px] bg-layer-01 border-b border-stroke-subtle flex items-center justify-between px-2 sm:px-4 gap-2 overflow-x-auto">
@@ -117,52 +159,8 @@ export function Toolbar(
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        <ToolbarButton
-          icon={icons.editor}
-          label="Editor"
-          isActive={isEditorOnly}
-          onClick={setEditorOnlyMode}
-          iconOnly={isNarrow} />
-
-        <ToolbarButton
-          icon={icons.splitView}
-          label="Split"
-          isActive={isSplitView}
-          onClick={toggleSplitView}
-          shortcut={formatShortcut("Cmd+\\")}
-          iconOnly={isNarrow} />
-
-        <ToolbarButton
-          icon={icons.eye}
-          label="Preview"
-          isActive={isPreviewVisible}
-          onClick={togglePreviewVisible}
-          shortcut={formatShortcut("Cmd+P")}
-          iconOnly={isNarrow} />
-
-        <ToolbarButton
-          icon={icons.focus}
-          label="Focus"
-          isActive={isFocusMode}
-          onClick={toggleFocusMode}
-          shortcut={formatShortcut("Cmd+F")}
-          iconOnly={isNarrow} />
-      </div>
-
-      <div className="flex items-center gap-1 shrink-0">
-        <ToolbarButton
-          icon={icons.atproto}
-          label={atProtoSession ? `${atProtoSession.handle}` : "Login"}
-          onClick={onAtProtoAuth} />
-        {onExportPdf && (
-          <ToolbarButton
-            icon={icons.export}
-            label={isExportingPdf ? "Exporting" : "Export PDF"}
-            onClick={onExportPdf}
-            disabled={isExportingPdf || isPdfExportDisabled}
-            iconOnly={isNarrow} />
-        )}
-        <SettingsToolbarButton icon={icons.settings} iconOnly={isNarrow} />
+        <ToolbarDropdown icon={currentViewIcon} label="View" items={viewModeItems} iconOnly={isNarrow} />
+        <ToolbarDropdown icon={icons.settings} label="Tools" items={toolsItems} iconOnly={isNarrow} />
       </div>
     </div>
   );
