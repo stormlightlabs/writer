@@ -5,7 +5,7 @@ updated: 2026-03-20
 
 Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) and import strings as documents.
 
-## Part 1 — Auth
+## ✅ Part 1 — Auth
 
 1. **OAuth loopback flow** - `crates/core/src/atproto/auth.rs`
 2. **Session persistence** - token + DPoP key storage in app data dir
@@ -17,7 +17,7 @@ Publish documents as [Tangled strings](https://tangled.sh) (AT Protocol gists) a
    - If logged in, show session indicator (Dolly from `icons.tsx`)
    - Logout button in session indicator or in the settings menu
 
-## Part 2 — Pull
+## ✅ Part 2 — Pull
 
 1. **Shared backend helpers** - `crates/core/src/atproto/strings.rs`
    - `string_list`, `string_get`

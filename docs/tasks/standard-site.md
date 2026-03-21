@@ -5,7 +5,7 @@ updated: 2026-03-20
 
 Pull and push long-form posts from/to AT Protocol publishing platforms using Standard.Site shared lexicons. Leaflet is the first target platform. All record types and builders come from Jacquard's `pub_leaflet` and `site_standard` feature flags.
 
-## Part 1 — Leaflet Block ↔ Markdown Conversion
+## ✅ Part 1 — Leaflet Block ↔ Markdown Conversion
 
 1. **Leaflet → Markdown converter** — `crates/core/src/atproto/leaflet.rs`
    - Deserialize `pub_leaflet::document::Document`, match on `DocumentPagesItem` variants
@@ -20,7 +20,7 @@ Pull and push long-form posts from/to AT Protocol publishing platforms using Sta
    - Wrap output in a `LinearDocument` page, build full `Document` via `DocumentBuilder`
 3. **Rust tests** — round-trip conversion tests for each block type and facet combination
 
-## Part 2 — Pull (Import Posts)
+## ✅ Part 2 — Pull (Import Posts)
 
 1. **Backend helpers** — `crates/core/src/atproto/standard_site.rs`
    - `listRecords` wrapper for `site_standard::publication::Publication` and `site_standard::document::Document`
