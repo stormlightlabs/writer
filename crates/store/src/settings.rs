@@ -1,5 +1,6 @@
 use super::StyleCheckPattern;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 fn default_true() -> bool {
     true
@@ -147,6 +148,14 @@ impl Default for UiLayoutSettings {
             markdown_preview_style: default_markdown_preview_style(),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct SidebarTreeState {
+    #[serde(default)]
+    pub expanded_location_ids: Vec<i64>,
+    #[serde(default)]
+    pub expanded_directories_by_location: BTreeMap<i64, Vec<String>>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]

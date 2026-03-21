@@ -26,6 +26,10 @@ export const getInitialWorkspaceDocumentsState = (): WorkspaceDocumentsState => 
   selectedDocPath: undefined,
   documents: [],
   directories: [],
+  documentsByLocation: {},
+  directoriesByLocation: {},
+  expandedLocationIds: [],
+  expandedDirectoriesByLocation: {},
   isLoadingDocuments: false,
   refreshingLocationId: undefined,
   sidebarRefreshReason: null,
@@ -51,14 +55,125 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
 
   setSidebarFilter: (value) => set({ sidebarFilter: value }),
   setLocations: (locations) => {
-    set((state) => ({ locations, selectedLocationId: state.selectedLocationId ?? locations[0]?.id }));
+    set((state) => {
+      const validLocationIds = new Set(locations.map((location) => location.id));
+      const selectedLocationId = state.selectedLocationId && validLocationIds.has(state.selectedLocationId)
+        ? state.selectedLocationId
+        : locations[0]?.id;
+
+      const documentsByLocation = Object.fromEntries(
+        Object.entries(state.documentsByLocation).filter(([locationId]) => validLocationIds.has(Number(locationId))),
+      );
+      const directoriesByLocation = Object.fromEntries(
+        Object.entries(state.directoriesByLocation).filter(([locationId]) => validLocationIds.has(Number(locationId))),
+      );
+      const expandedDirectoriesByLocation = Object.fromEntries(
+        Object.entries(state.expandedDirectoriesByLocation).filter(([locationId]) =>
+          validLocationIds.has(Number(locationId))
+        ),
+      );
+
+      return {
+        locations,
+        selectedLocationId,
+        documents: selectedLocationId ? documentsByLocation[selectedLocationId] ?? [] : [],
+        directories: selectedLocationId ? directoriesByLocation[selectedLocationId] ?? [] : [],
+        documentsByLocation,
+        directoriesByLocation,
+        expandedLocationIds: state.expandedLocationIds.filter((locationId) => validLocationIds.has(locationId)),
+        expandedDirectoriesByLocation,
+      };
+    });
   },
   setLoadingLocations: (value) => set({ isLoadingLocations: value }),
-  setSelectedLocation: (locationId) => set({ selectedLocationId: locationId, selectedDocPath: undefined }),
+  setSelectedLocation: (locationId) =>
+    set((state) => ({
+      selectedLocationId: locationId,
+      selectedDocPath: undefined,
+      documents: locationId ? state.documentsByLocation[locationId] ?? [] : [],
+      directories: locationId ? state.directoriesByLocation[locationId] ?? [] : [],
+    })),
 
   setSelectedDocPath: (path) => set({ selectedDocPath: path }),
-  setDocuments: (documents) => set({ documents }),
-  setDirectories: (directories) => set({ directories }),
+  setDocuments: (documents) =>
+    set((state) => {
+      const selectedLocationId = state.selectedLocationId;
+      if (!selectedLocationId) {
+        return { documents };
+      }
+
+      return { documents, documentsByLocation: { ...state.documentsByLocation, [selectedLocationId]: documents } };
+    }),
+  setDirectories: (directories) =>
+    set((state) => {
+      const selectedLocationId = state.selectedLocationId;
+      if (!selectedLocationId) {
+        return { directories };
+      }
+
+      return {
+        directories,
+        directoriesByLocation: { ...state.directoriesByLocation, [selectedLocationId]: directories },
+      };
+    }),
+  setDocumentsForLocation: (locationId, documents) =>
+    set((state) => ({
+      documentsByLocation: { ...state.documentsByLocation, [locationId]: documents },
+      ...(state.selectedLocationId === locationId ? { documents } : {}),
+    })),
+  setDirectoriesForLocation: (locationId, directories) =>
+    set((state) => ({
+      directoriesByLocation: { ...state.directoriesByLocation, [locationId]: directories },
+      ...(state.selectedLocationId === locationId ? { directories } : {}),
+    })),
+  setSidebarTreeState: (sidebarTreeState) =>
+    set({
+      expandedLocationIds: sidebarTreeState.expandedLocationIds,
+      expandedDirectoriesByLocation: sidebarTreeState.expandedDirectoriesByLocation,
+    }),
+  toggleExpandedLocation: (locationId) =>
+    set((state) => ({
+      expandedLocationIds: state.expandedLocationIds.includes(locationId)
+        ? state.expandedLocationIds.filter((currentId) => currentId !== locationId)
+        : [...state.expandedLocationIds, locationId],
+    })),
+  toggleExpandedDirectory: (locationId, path) => set((state) => {
+    const currentPaths = state.expandedDirectoriesByLocation[locationId] ?? [];
+    const nextPaths = currentPaths.includes(path)
+      ? currentPaths.filter((currentPath) => currentPath !== path)
+      : [...currentPaths, path];
+
+    return { expandedDirectoriesByLocation: { ...state.expandedDirectoriesByLocation, [locationId]: nextPaths } };
+  }),
+  expandDirectories: (locationId, paths) =>
+    set((state) => {
+      if (paths.length === 0) {
+        return state;
+      }
+
+      const currentPaths = state.expandedDirectoriesByLocation[locationId] ?? [];
+      const nextPaths = Array.from(new Set([...currentPaths, ...paths]));
+      if (nextPaths.length === currentPaths.length) {
+        return state;
+      }
+
+      return { expandedDirectoriesByLocation: { ...state.expandedDirectoriesByLocation, [locationId]: nextPaths } };
+    }),
+  collapseDirectories: (locationId, paths) =>
+    set((state) => {
+      if (paths.length === 0) {
+        return state;
+      }
+
+      const currentPaths = state.expandedDirectoriesByLocation[locationId] ?? [];
+      const collapsedPaths = new Set(paths);
+      const nextPaths = currentPaths.filter((currentPath) => !collapsedPaths.has(currentPath));
+      if (nextPaths.length === currentPaths.length) {
+        return state;
+      }
+
+      return { expandedDirectoriesByLocation: { ...state.expandedDirectoriesByLocation, [locationId]: nextPaths } };
+    }),
   setLoadingDocuments: (value) => set({ isLoadingDocuments: value }),
   setSidebarRefreshState: (locationId, reason: SidebarRefreshReason | null = null) =>
     set({ refreshingLocationId: locationId, sidebarRefreshReason: locationId === undefined ? null : reason }),

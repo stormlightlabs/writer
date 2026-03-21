@@ -44,7 +44,7 @@ Core flow via `useWorkspaceSync`, `useWorkspaceController`, and `useDocumentSess
 1. Load locations.
 2. Start filesystem watchers for active locations.
 3. Select an initial location if available.
-4. Load documents for the selected location.
+4. Load documents/directories for the selected location and keep per-location sidebar caches warm for expanded trees.
 5. Load Rust-backed session state (`session_get`) and prune tabs for removed locations.
 6. Open the active document or create a draft when startup has no restorable tab.
 7. Track and refresh sidebar contents for saves, manual refreshes, and external filesystem events.
@@ -70,6 +70,7 @@ Core flow via `useWorkspaceSync`, `useWorkspaceController`, and `useDocumentSess
 Persisted backend settings include:
 
 - UI layout settings
+- sidebar tree expansion state
 - style-check settings
 - global capture settings
 

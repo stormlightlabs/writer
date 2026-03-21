@@ -55,6 +55,11 @@ export type UiLayoutSettings = {
   markdown_preview_style: MarkdownPreviewStyle;
 };
 
+export type PersistedSidebarTreeState = {
+  expanded_location_ids: number[];
+  expanded_directories_by_location: Record<number, string[]>;
+};
+
 export type StyleCheckCategorySettings = { filler: boolean; redundancy: boolean; cliche: boolean };
 
 export type PersistedStyleCheckSettings = {
@@ -162,6 +167,11 @@ export type RenderMarkdownForDocxParams<T> = [...LocationPathTextParams, profile
 
 export type UiLayoutSetParams<T> = Parameters<
   (settings: UiLayoutSettings, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+
+export type SidebarTreeGetParams<T> = LocParams<T>;
+export type SidebarTreeSetParams<T> = Parameters<
+  (state: PersistedSidebarTreeState, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
 
 export type SessionOpenTabParams<T> = Parameters<

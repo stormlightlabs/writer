@@ -1,6 +1,6 @@
 ---
 title: "Architecture"
-last_updated: 2026-03-13
+last_updated: 2026-03-21
 ---
 
 ## System Overview
@@ -38,6 +38,7 @@ Frontend orchestration is split across focused hooks rather than a single app co
   - locations, documents, tabs, sidebar refresh, file operations
 - `src/hooks/app/useSettingsSync.ts`
   - backend settings hydration and persistence
+  - sidebar tree hydration/persistence through sqlite-backed kv state
 
 ### State
 

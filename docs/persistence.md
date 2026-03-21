@@ -1,6 +1,6 @@
 ---
 title: "Persistence"
-last_updated: 2026-02-26
+last_updated: 2026-03-21
 ---
 
 ## Source of Truth
@@ -25,6 +25,7 @@ Key persisted domains:
 - indexed document metadata
 - search index data
 - app settings (UI layout, style check, global capture)
+- kv state (sidebar expanded locations and expanded directories)
 - session restore metadata (last opened document)
 
 ## Filesystem Access Scope

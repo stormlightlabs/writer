@@ -25,36 +25,57 @@ vi.mock("$dnd", async () => {
   };
 });
 
-const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState>> = {}) => ({
-  locations: [{ id: 1, name: "Notes", root_path: "/tmp/notes", added_at: "2026-01-01T00:00:00Z" }, {
-    id: 2,
-    name: "Archive",
-    root_path: "/tmp/archive",
-    added_at: "2026-01-01T00:00:00Z",
-  }],
-  selectedLocationId: 1,
-  selectedDocPath: undefined,
-  documents: [],
-  directories: [],
-  isLoading: false,
-  refreshingLocationId: undefined,
-  sidebarRefreshReason: null,
-  externalDropTargetId: undefined,
-  externalDropFolderPath: undefined,
-  activeDropTarget: null,
-  folderSortOrderByLocation: {},
-  filterText: "",
-  setFilterText: vi.fn(),
-  setDocuments: vi.fn(),
-  setDirectories: vi.fn(),
-  selectLocation: vi.fn(),
-  toggleSidebarCollapsed: vi.fn(),
-  filenameVisibility: false,
-  setExternalDropTarget: vi.fn(),
-  setActiveDropTarget: vi.fn(),
-  reorderFolderSortOrder: vi.fn(),
-  ...overrides,
-});
+const createSidebarState = (overrides: Partial<ReturnType<typeof useSidebarState>> = {}) => {
+  const documents = overrides.documents ?? [];
+  const directories = overrides.directories ?? [];
+  const selectedLocationId = overrides.selectedLocationId ?? 1;
+  const documentsByLocation = overrides.documentsByLocation
+    ?? (selectedLocationId ? { [selectedLocationId]: documents } : {});
+  const directoriesByLocation = overrides.directoriesByLocation
+    ?? (selectedLocationId ? { [selectedLocationId]: directories } : {});
+
+  return {
+    locations: [{ id: 1, name: "Notes", root_path: "/tmp/notes", added_at: "2026-01-01T00:00:00Z" }, {
+      id: 2,
+      name: "Archive",
+      root_path: "/tmp/archive",
+      added_at: "2026-01-01T00:00:00Z",
+    }],
+    selectedLocationId,
+    selectedDocPath: undefined,
+    documents,
+    directories,
+    documentsByLocation,
+    directoriesByLocation,
+    expandedLocationIds: overrides.expandedLocationIds ?? [1],
+    expandedDirectoriesByLocation: overrides.expandedDirectoriesByLocation ?? {},
+    isLoading: false,
+    refreshingLocationId: undefined,
+    sidebarRefreshReason: null,
+    externalDropTargetId: undefined,
+    externalDropFolderPath: undefined,
+    activeDropTarget: null,
+    folderSortOrderByLocation: {},
+    filterText: "",
+    setFilterText: vi.fn(),
+    setDocuments: vi.fn(),
+    setDirectories: vi.fn(),
+    setDocumentsForLocation: vi.fn(),
+    setDirectoriesForLocation: vi.fn(),
+    setSidebarTreeState: vi.fn(),
+    selectLocation: vi.fn(),
+    toggleExpandedLocation: vi.fn(),
+    toggleExpandedDirectory: vi.fn(),
+    expandDirectories: vi.fn(),
+    collapseDirectories: vi.fn(),
+    toggleSidebarCollapsed: vi.fn(),
+    filenameVisibility: false,
+    setExternalDropTarget: vi.fn(),
+    setActiveDropTarget: vi.fn(),
+    reorderFolderSortOrder: vi.fn(),
+    ...overrides,
+  };
+};
 
 const createSidebarActionsState = (
   overrides: Partial<ReturnType<typeof useSidebarActions>> = {},
@@ -164,18 +185,40 @@ describe("Sidebar", () => {
           updated_at: "2026-02-27T10:15:00Z",
           word_count: 12,
         }],
+        expandedDirectoriesByLocation: { 1: ["inbox", "inbox/2026"] },
       }),
     );
 
     render(<Sidebar />);
 
     expect(screen.getByText("inbox")).toBeInTheDocument();
-    expect(screen.queryByText("Quick capture note")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("inbox"));
-    fireEvent.click(screen.getByText("2026"));
-
     expect(screen.getByText("Quick capture note")).toBeInTheDocument();
+  });
+
+  it("renders the tree for an expanded non-selected location", () => {
+    vi.mocked(useSidebarState).mockReturnValue(
+      createSidebarState({
+        selectedLocationId: 1,
+        expandedLocationIds: [1, 2],
+        documentsByLocation: {
+          1: [],
+          2: [{
+            location_id: 2,
+            rel_path: "archive/note.md",
+            title: "Archived Note",
+            updated_at: "2026-02-27T10:15:00Z",
+            word_count: 12,
+          }],
+        },
+        directoriesByLocation: { 1: [], 2: ["archive"] },
+        expandedDirectoriesByLocation: { 2: ["archive"] },
+      }),
+    );
+
+    render(<Sidebar />);
+
+    expect(screen.getByText("archive")).toBeInTheDocument();
+    expect(screen.getByText("Archived Note")).toBeInTheDocument();
   });
 
   it("renders empty directories from backend directory listing", () => {

@@ -1,9 +1,10 @@
-import { docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
+import { dirList, docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
 import {
   useWorkspaceDocumentsActions,
   useWorkspaceLocationsActions,
   useWorkspaceLocationsState,
 } from "$state/selectors";
+import { useWorkspaceStore } from "$state/stores/workspace";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useRef } from "react";
@@ -12,7 +13,14 @@ import { useBackendEvents } from "./useBackendEvents";
 export function useWorkspaceSync(): void {
   const { locations, selectedLocationId } = useWorkspaceLocationsState();
   const { setLocations, setLoadingLocations } = useWorkspaceLocationsActions();
-  const { setDocuments, setLoadingDocuments, setSidebarRefreshState } = useWorkspaceDocumentsActions();
+  const {
+    setDocuments,
+    setDirectories,
+    setDocumentsForLocation,
+    setDirectoriesForLocation,
+    setLoadingDocuments,
+    setSidebarRefreshState,
+  } = useWorkspaceDocumentsActions();
 
   const hasLoadedLocationsRef = useRef(false);
   const loadLocations = useCallback((showLoading = true) => {
@@ -42,7 +50,9 @@ export function useWorkspaceSync(): void {
     loadLocations(true);
   }, [loadLocations]);
 
-  const documentRequestRef = useRef(0);
+  const documentRequestRef = useRef<Record<number, number>>({});
+  const directoryRequestRef = useRef<Record<number, number>>({});
+  const pendingLoadCountRef = useRef<Record<number, number>>({});
   const EXTERNAL_REFRESH_RETRY_DELAY_MS = 120;
   const EXTERNAL_REFRESH_MAX_ATTEMPTS = 3;
   const selectedLocationRef = useRef<number | null>(selectedLocationId);
@@ -57,18 +67,60 @@ export function useWorkspaceSync(): void {
     attempt?: number;
   };
 
-  const loadDocuments = useCallback(
-    (locationId: number, source: "manual" | "external" = "manual", hint?: ExternalRefreshHint) => {
-      const requestId = ++documentRequestRef.current;
+  const finishLocationLoad = useCallback((locationId: number, source: "manual" | "external") => {
+    const pendingCount = pendingLoadCountRef.current[locationId];
+    if (!pendingCount) {
+      return;
+    }
 
-      if (source === "manual") {
+    if (pendingCount > 1) {
+      pendingLoadCountRef.current[locationId] = pendingCount - 1;
+      return;
+    }
+
+    delete pendingLoadCountRef.current[locationId];
+
+    if (source === "manual" && selectedLocationRef.current === locationId) {
+      setLoadingDocuments(false);
+    }
+
+    if (useWorkspaceStore.getState().refreshingLocationId === locationId) {
+      setSidebarRefreshState(undefined, null);
+    }
+  }, [setLoadingDocuments, setSidebarRefreshState]);
+
+  const loadLocationTree = useCallback(
+    (locationId: number, source: "manual" | "external" = "manual", hint?: ExternalRefreshHint) => {
+      documentRequestRef.current[locationId] = (documentRequestRef.current[locationId] ?? 0) + 1;
+      directoryRequestRef.current[locationId] = (directoryRequestRef.current[locationId] ?? 0) + 1;
+      const documentRequestId = documentRequestRef.current[locationId];
+      const directoryRequestId = directoryRequestRef.current[locationId];
+      pendingLoadCountRef.current[locationId] = 2;
+
+      if (source === "manual" && selectedLocationRef.current === locationId) {
         setLoadingDocuments(true);
       } else {
         setSidebarRefreshState(locationId, source);
       }
 
+      runCmd(dirList(locationId, (nextDirectories) => {
+        if (directoryRequestRef.current[locationId] !== directoryRequestId) {
+          return;
+        }
+
+        setDirectoriesForLocation(locationId, nextDirectories);
+        finishLocationLoad(locationId, source);
+      }, (error) => {
+        if (directoryRequestRef.current[locationId] !== directoryRequestId) {
+          return;
+        }
+
+        logger.error(f("Failed to load directories", { locationId, error }));
+        finishLocationLoad(locationId, source);
+      }));
+
       runCmd(docList(locationId, (nextDocuments) => {
-        if (documentRequestRef.current !== requestId) {
+        if (documentRequestRef.current[locationId] !== documentRequestId) {
           return;
         }
 
@@ -85,7 +137,7 @@ export function useWorkspaceSync(): void {
 
         if (shouldRetryExternalRefresh) {
           setTimeout(() => {
-            loadDocuments(locationId, "external", {
+            loadLocationTree(locationId, "external", {
               changedRelPath,
               changeKind: hint?.changeKind,
               attempt: externalAttempt + 1,
@@ -93,35 +145,36 @@ export function useWorkspaceSync(): void {
           }, EXTERNAL_REFRESH_RETRY_DELAY_MS);
         }
 
-        setDocuments(nextDocuments);
-        if (source === "manual") {
-          setLoadingDocuments(false);
-        }
-        setSidebarRefreshState(undefined, null);
+        setDocumentsForLocation(locationId, nextDocuments);
+        finishLocationLoad(locationId, source);
       }, (error) => {
-        if (documentRequestRef.current !== requestId) {
+        if (documentRequestRef.current[locationId] !== documentRequestId) {
           return;
         }
 
         logger.error(f("Failed to load documents", { locationId, error }));
-        if (source === "manual") {
-          setLoadingDocuments(false);
-        }
-        setSidebarRefreshState(undefined, null);
+        finishLocationLoad(locationId, source);
       }));
     },
-    [setDocuments, setLoadingDocuments, setSidebarRefreshState],
+    [
+      finishLocationLoad,
+      setDirectoriesForLocation,
+      setDocumentsForLocation,
+      setLoadingDocuments,
+      setSidebarRefreshState,
+    ],
   );
 
   useEffect(() => {
     if (!selectedLocationId) {
       setDocuments([]);
+      setDirectories([]);
       setLoadingDocuments(false);
       return;
     }
 
-    loadDocuments(selectedLocationId, "manual");
-  }, [selectedLocationId, loadDocuments, setDocuments, setLoadingDocuments]);
+    loadLocationTree(selectedLocationId, "manual");
+  }, [loadLocationTree, selectedLocationId, setDirectories, setDocuments, setLoadingDocuments]);
 
   const watchedLocationIdsRef = useRef<Set<number>>(new Set());
 
@@ -164,9 +217,13 @@ export function useWorkspaceSync(): void {
       loadLocations(false);
     },
     onFilesystemChanged: (event) => {
+      const workspaceState = useWorkspaceStore.getState();
       const currentLocationId = selectedLocationRef.current;
-      if (currentLocationId && event.location_id === currentLocationId) {
-        loadDocuments(currentLocationId, "external", {
+      const hasCachedTree = Object.prototype.hasOwnProperty.call(workspaceState.documentsByLocation, event.location_id)
+        || Object.prototype.hasOwnProperty.call(workspaceState.directoriesByLocation, event.location_id);
+
+      if ((currentLocationId && event.location_id === currentLocationId) || hasCachedTree) {
+        loadLocationTree(event.location_id, "external", {
           changedRelPath: event.rel_path,
           changeKind: event.change_kind,
           attempt: 0,

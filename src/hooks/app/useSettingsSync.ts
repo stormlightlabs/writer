@@ -1,9 +1,20 @@
-import { globalCaptureGet, runCmd, styleCheckGet, styleCheckSet, uiLayoutGet, uiLayoutSet } from "$ports";
+import {
+  globalCaptureGet,
+  runCmd,
+  sidebarTreeGet,
+  sidebarTreeSet,
+  styleCheckGet,
+  styleCheckSet,
+  uiLayoutGet,
+  uiLayoutSet,
+} from "$ports";
 import { stateToLayoutSettings, uiSettingsToFocusMode } from "$state/helpers";
 import {
   useEditorPresentationStateRaw,
   useLayoutChromeState,
   useViewModeState,
+  useWorkspaceDocumentsActions,
+  useWorkspaceDocumentsState,
   useWriterToolsState,
 } from "$state/selectors";
 import { useLayoutStore } from "$state/stores/layout";
@@ -16,8 +27,11 @@ export function useSettingsSync(): void {
   const layoutChrome = useLayoutChromeState();
   const editorPresentation = useEditorPresentationStateRaw();
   const { focusModeSettings } = useViewModeState();
+  const { expandedLocationIds, expandedDirectoriesByLocation } = useWorkspaceDocumentsState();
+  const { setSidebarTreeState } = useWorkspaceDocumentsActions();
   const { styleCheckSettings } = useWriterToolsState();
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
+  const [sidebarTreeHydrated, setSidebarTreeHydrated] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -71,10 +85,26 @@ export function useSettingsSync(): void {
       logger.error(f("Failed to load global capture settings", { error }));
     }));
 
+    void runCmd(sidebarTreeGet((state) => {
+      if (isCancelled) {
+        return;
+      }
+
+      setSidebarTreeState({
+        expandedLocationIds: state.expanded_location_ids,
+        expandedDirectoriesByLocation: state.expanded_directories_by_location,
+      });
+      setSidebarTreeHydrated(true);
+    }, () => {
+      if (!isCancelled) {
+        setSidebarTreeHydrated(true);
+      }
+    }));
+
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [setSidebarTreeState]);
 
   useEffect(() => {
     if (!layoutSettingsHydrated) {
@@ -104,4 +134,18 @@ export function useSettingsSync(): void {
       ),
     );
   }, [layoutSettingsHydrated, styleCheckSettings]);
+
+  useEffect(() => {
+    if (!sidebarTreeHydrated) {
+      return;
+    }
+
+    void runCmd(
+      sidebarTreeSet(
+        { expanded_location_ids: expandedLocationIds, expanded_directories_by_location: expandedDirectoriesByLocation },
+        () => {},
+        () => {},
+      ),
+    );
+  }, [expandedDirectoriesByLocation, expandedLocationIds, sidebarTreeHydrated]);
 }

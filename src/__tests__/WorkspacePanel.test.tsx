@@ -75,31 +75,50 @@ type WorkspacePanelPropOverrides = {
   welcome?: Partial<NonNullable<WorkspacePanelProps["welcome"]>>;
 };
 
-const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => ({
-  locations: [],
-  selectedLocationId: undefined,
-  selectedDocPath: undefined,
-  documents: [],
-  directories: [],
-  isLoading: false,
-  refreshingLocationId: undefined,
-  sidebarRefreshReason: null,
-  externalDropTargetId: undefined,
-  externalDropFolderPath: undefined,
-  activeDropTarget: null,
-  folderSortOrderByLocation: {},
-  filterText: "",
-  setFilterText: vi.fn(),
-  setDocuments: vi.fn(),
-  setDirectories: vi.fn(),
-  selectLocation: vi.fn(),
-  toggleSidebarCollapsed: vi.fn(),
-  filenameVisibility: false,
-  setExternalDropTarget: vi.fn(),
-  setActiveDropTarget: vi.fn(),
-  reorderFolderSortOrder: vi.fn(),
-  ...overrides,
-});
+const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => {
+  const selectedLocationId = overrides.selectedLocationId;
+  const documents = overrides.documents ?? [];
+  const directories = overrides.directories ?? [];
+
+  return {
+    locations: [],
+    selectedLocationId,
+    selectedDocPath: undefined,
+    documents,
+    directories,
+    documentsByLocation: overrides.documentsByLocation
+      ?? (selectedLocationId ? { [selectedLocationId]: documents } : {}),
+    directoriesByLocation: overrides.directoriesByLocation
+      ?? (selectedLocationId ? { [selectedLocationId]: directories } : {}),
+    expandedLocationIds: overrides.expandedLocationIds ?? [],
+    expandedDirectoriesByLocation: overrides.expandedDirectoriesByLocation ?? {},
+    isLoading: false,
+    refreshingLocationId: undefined,
+    sidebarRefreshReason: null,
+    externalDropTargetId: undefined,
+    externalDropFolderPath: undefined,
+    activeDropTarget: null,
+    folderSortOrderByLocation: {},
+    filterText: "",
+    setFilterText: vi.fn(),
+    setDocuments: vi.fn(),
+    setDirectories: vi.fn(),
+    setDocumentsForLocation: vi.fn(),
+    setDirectoriesForLocation: vi.fn(),
+    setSidebarTreeState: vi.fn(),
+    selectLocation: vi.fn(),
+    toggleExpandedLocation: vi.fn(),
+    toggleExpandedDirectory: vi.fn(),
+    expandDirectories: vi.fn(),
+    collapseDirectories: vi.fn(),
+    toggleSidebarCollapsed: vi.fn(),
+    filenameVisibility: false,
+    setExternalDropTarget: vi.fn(),
+    setActiveDropTarget: vi.fn(),
+    reorderFolderSortOrder: vi.fn(),
+    ...overrides,
+  };
+};
 
 const createToolbarState = (overrides: Partial<ToolbarStateReturn> = {}): ToolbarStateReturn => ({
   isSplitView: false,
@@ -431,7 +450,7 @@ describe("WorkspacePanel", () => {
     expect(screen.getByTestId("workspace-welcome-screen")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /create new/i }));
     fireEvent.click(screen.getByRole("button", { name: /open existing/i }));
-    fireEvent.click(screen.getByRole("button", { name: /import tangled/i }));
+    fireEvent.click(screen.getByRole("button", { name: /import from tangled/i }));
     fireEvent.click(screen.getByRole("button", { name: /import standard\.site/i }));
     fireEvent.click(screen.getByRole("button", { name: /add another location/i }));
 

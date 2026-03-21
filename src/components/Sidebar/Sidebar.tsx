@@ -12,7 +12,7 @@ import {
 } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
 import {
   DocumentOperationDialog,
@@ -109,6 +109,10 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
     selectedDocPath,
     documents,
     directories,
+    documentsByLocation,
+    directoriesByLocation,
+    expandedLocationIds,
+    expandedDirectoriesByLocation,
     isLoading,
     refreshingLocationId,
     sidebarRefreshReason,
@@ -119,10 +123,13 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
     setActiveDropTarget,
     reorderFolderSortOrder,
     selectLocation,
+    toggleExpandedLocation,
+    toggleExpandedDirectory,
+    expandDirectories,
+    collapseDirectories,
     filenameVisibility,
   } = useSidebarState();
 
-  const [expandedLocations, setExpandedLocations] = useState<Set<number>>(() => new Set(locations.map((l) => l.id)));
   const [documentOperation, setDocumentOperation] = useState<DocumentOperationRequest | null>(null);
 
   const internalDnd = useSidebarInternalDnD({
@@ -140,37 +147,32 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
     () => (selectedLocationId ? documents.filter((doc) => doc.location_id === selectedLocationId) : []),
     [documents, selectedLocationId],
   );
-  const locationDirectories = useMemo(() => (selectedLocationId ? directories : []), [directories, selectedLocationId]);
+  const expandedLocationSet = useMemo(() => new Set(expandedLocationIds), [expandedLocationIds]);
+
+  useEffect(() => {
+    for (const location of locations) {
+      if (!expandedLocationSet.has(location.id) || refreshingLocationId === location.id) {
+        continue;
+      }
+
+      const hasDocuments = Object.prototype.hasOwnProperty.call(documentsByLocation, location.id);
+      const hasDirectories = Object.prototype.hasOwnProperty.call(directoriesByLocation, location.id);
+      if (!hasDocuments || !hasDirectories) {
+        handleRefreshSidebar(location.id);
+      }
+    }
+  }, [
+    directoriesByLocation,
+    documentsByLocation,
+    expandedLocationSet,
+    handleRefreshSidebar,
+    locations,
+    refreshingLocationId,
+  ]);
 
   const toggleLocation = useCallback((locationId: number) => {
-    setExpandedLocations((previous) => {
-      const next = new Set(previous);
-      if (next.has(locationId)) {
-        next.delete(locationId);
-      } else {
-        next.add(locationId);
-      }
-      return next;
-    });
-  }, []);
-
-  const filteredDocuments = useMemo(
-    () =>
-      filterText
-        ? locationDocuments.filter((doc) =>
-          doc.title.toLowerCase().includes(filterText.toLowerCase())
-          || doc.rel_path.toLowerCase().includes(filterText.toLowerCase())
-        )
-        : locationDocuments,
-    [locationDocuments, filterText],
-  );
-  const filteredDirectories = useMemo(
-    () =>
-      filterText
-        ? locationDirectories.filter((directoryPath) => directoryPath.toLowerCase().includes(filterText.toLowerCase()))
-        : locationDirectories,
-    [locationDirectories, filterText],
-  );
+    toggleExpandedLocation(locationId);
+  }, [toggleExpandedLocation]);
 
   const handleAddDocument = useCallback(() => {
     if (!selectedLocationId) {
@@ -215,8 +217,17 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
     locations.map((location) => {
       const isSelectedLocation = selectedLocationId === location.id;
       const isRefreshingLocation = refreshingLocationId === location.id;
-      const locationDocs = isSelectedLocation ? filteredDocuments : EMPTY_DOCUMENTS;
-      const locationDirs = isSelectedLocation ? filteredDirectories : EMPTY_DIRECTORIES;
+      const locationDocs = documentsByLocation[location.id] ?? (isSelectedLocation ? documents : EMPTY_DOCUMENTS);
+      const locationDirs = directoriesByLocation[location.id] ?? (isSelectedLocation ? directories : EMPTY_DIRECTORIES);
+      const filteredLocationDocs = filterText
+        ? locationDocs.filter((doc) =>
+          doc.title.toLowerCase().includes(filterText.toLowerCase())
+          || doc.rel_path.toLowerCase().includes(filterText.toLowerCase())
+        )
+        : locationDocs;
+      const filteredLocationDirs = filterText
+        ? locationDirs.filter((directoryPath) => directoryPath.toLowerCase().includes(filterText.toLowerCase()))
+        : locationDirs;
       const isActiveDropLocation = activeDropTarget?.locationId === location.id;
       const activeDropDocumentPath = isActiveDropLocation && activeDropTarget?.targetType === "document"
         ? activeDropTarget.relPath
@@ -237,10 +248,12 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
       return {
         location,
         isSelected: isSelectedLocation,
+        selectedLocationId,
         selectedDocPath,
-        isExpanded: expandedLocations.has(location.id),
-        documents: locationDocs,
-        directories: locationDirs,
+        isExpanded: expandedLocationSet.has(location.id),
+        documents: filteredLocationDocs,
+        directories: filteredLocationDirs,
+        expandedDirectories: expandedDirectoriesByLocation[location.id] ?? [],
         filterText,
         isRefreshing: isRefreshingLocation,
         refreshReason: sidebarRefreshReason,
@@ -260,14 +273,22 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
         activeDragDocumentPath,
         suppressActiveDragSourceOpacity: internalDnd.suppressActiveDragSourceOpacity,
         folderSortOrder: folderSortOrderByLocation[location.id] ?? [],
+        onToggleDirectory: (path: string) => toggleExpandedDirectory(location.id, path),
+        onExpandDirectories: (paths: string[]) => expandDirectories(location.id, paths),
+        onCollapseDirectories: (paths: string[]) => collapseDirectories(location.id, paths),
       };
     }), [
     activeDropTarget,
-    expandedLocations,
+    collapseDirectories,
     filterText,
     folderSortOrderByLocation,
-    filteredDirectories,
-    filteredDocuments,
+    directories,
+    directoriesByLocation,
+    documents,
+    documentsByLocation,
+    expandedDirectoriesByLocation,
+    expandedLocationSet,
+    expandDirectories,
     internalDnd.isDraggingInternal,
     internalDnd.activeDragDocumentLocationId,
     internalDnd.activeDragDocumentPath,
@@ -277,6 +298,7 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
     selectedDocPath,
     selectedLocationId,
     sidebarRefreshReason,
+    toggleExpandedDirectory,
   ]);
 
   return (

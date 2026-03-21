@@ -125,6 +125,8 @@ pub fn run() {
             cmd::markdown_render_for_docx,
             cmd::ui_layout_get,
             cmd::ui_layout_set,
+            cmd::sidebar_tree_get,
+            cmd::sidebar_tree_set,
             cmd::session_get,
             cmd::session_open_tab,
             cmd::session_select_tab,

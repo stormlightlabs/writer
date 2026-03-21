@@ -1,5 +1,5 @@
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
-import { docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
+import { dirList, docList, locationList, runCmd, startWatch, stopWatch } from "$ports";
 import { resetAppStore, useAppStore } from "$state/stores/app";
 import type { DocMeta } from "$types";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -29,6 +29,10 @@ vi.mock(
         updated_at: "2024-01-01T00:00:00Z",
         word_count: 1,
       }]);
+      return { type: "None" };
+    }),
+    dirList: vi.fn((_locationId: number, onOk: (dirs: string[]) => void) => {
+      onOk([]);
       return { type: "None" };
     }),
     startWatch: vi.fn((locationId: number) => ({ type: "StartWatch", locationId })),
@@ -61,6 +65,7 @@ describe("useWorkspaceSync", () => {
 
     await waitFor(() => {
       expect(docList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
+      expect(dirList).toHaveBeenCalledWith(1, expect.any(Function), expect.any(Function));
     });
 
     act(() => {

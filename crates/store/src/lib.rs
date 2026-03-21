@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter, types::Value};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
@@ -17,10 +18,13 @@ mod file_utils;
 mod settings;
 mod text_utils;
 
-pub use settings::{CaptureDocRef, CaptureMode, FocusDimmingMode, MarkdownPreviewStyle, SessionState, SessionTab};
+pub use settings::{
+    CaptureDocRef, CaptureMode, FocusDimmingMode, MarkdownPreviewStyle, SessionState, SessionTab, SidebarTreeState,
+};
 pub use settings::{GlobalCaptureSettings, StyleCheckSettings, UiLayoutSettings};
 
 const UI_LAYOUT_SETTINGS_KEY: &str = "ui_layout";
+const SIDEBAR_TREE_STATE_KEY: &str = "sidebar_tree";
 const STYLE_CHECK_SETTINGS_KEY: &str = "style_check";
 const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
 const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
@@ -193,8 +197,76 @@ impl Store {
         )
         .map_err(|e| AppError::io(format!("Failed to create app_settings table: {}", e)))?;
 
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS kv (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| AppError::io(format!("Failed to create kv table: {}", e)))?;
+
         log::debug!("Database schema initialized");
         Ok(())
+    }
+
+    fn kv_get_json<T>(&self, key: &str) -> Result<Option<T>, AppError>
+    where
+        T: DeserializeOwned,
+    {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let maybe_value = conn
+            .query_row("SELECT value FROM kv WHERE key = ?1", params![key], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()
+            .map_err(|e| AppError::io(format!("Failed to query kv entry for {}: {}", key, e)))?;
+
+        match maybe_value {
+            Some(value) => serde_json::from_str::<T>(&value)
+                .map(Some)
+                .map_err(|e| AppError::new(ErrorCode::Parse, format!("Failed to parse kv entry {}: {}", key, e))),
+            None => Ok(None),
+        }
+    }
+
+    fn kv_set_json<T>(&self, key: &str, value: &T) -> Result<(), AppError>
+    where
+        T: Serialize,
+    {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| AppError::new(ErrorCode::Io, "Failed to lock database connection"))?;
+
+        let payload = serde_json::to_string(value)
+            .map_err(|e| AppError::new(ErrorCode::Parse, format!("Failed to serialize kv entry {}: {}", key, e)))?;
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO kv (key, value, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET
+             value = excluded.value,
+             updated_at = excluded.updated_at",
+            params![key, payload, updated_at],
+        )
+        .map_err(|e| AppError::io(format!("Failed to persist kv entry {}: {}", key, e)))?;
+
+        Ok(())
+    }
+
+    pub fn sidebar_tree_get(&self) -> Result<SidebarTreeState, AppError> {
+        Ok(self.kv_get_json(SIDEBAR_TREE_STATE_KEY)?.unwrap_or_default())
+    }
+
+    pub fn sidebar_tree_set(&self, state: &SidebarTreeState) -> Result<(), AppError> {
+        self.kv_set_json(SIDEBAR_TREE_STATE_KEY, state)
     }
 
     pub fn ui_layout_get(&self) -> Result<UiLayoutSettings, AppError> {
@@ -2736,6 +2808,55 @@ mod tests {
         assert!(loaded.focus_typewriter_scrolling_enabled);
         assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);
         assert_eq!(loaded.markdown_preview_style, MarkdownPreviewStyle::Github);
+    }
+
+    #[test]
+    fn test_sidebar_tree_state_defaults() {
+        let (store, _temp) = create_test_store();
+        let state = store.sidebar_tree_get().unwrap();
+
+        assert_eq!(state, SidebarTreeState::default());
+    }
+
+    #[test]
+    fn test_sidebar_tree_state_round_trip() {
+        let (store, _temp) = create_test_store();
+        let state = SidebarTreeState {
+            expanded_location_ids: vec![3, 7],
+            expanded_directories_by_location: std::collections::BTreeMap::from([
+                (3, vec!["Drafts".to_string(), "Drafts/2026".to_string()]),
+                (7, vec!["Archive".to_string()]),
+            ]),
+        };
+
+        store.sidebar_tree_set(&state).unwrap();
+        let loaded = store.sidebar_tree_get().unwrap();
+
+        assert_eq!(loaded, state);
+    }
+
+    #[test]
+    fn test_sidebar_tree_state_backfills_directory_defaults() {
+        let (store, _temp) = create_test_store();
+        let conn = store
+            .conn
+            .lock()
+            .expect("expected to lock database connection for test");
+
+        conn.execute(
+            "INSERT INTO kv (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![
+                SIDEBAR_TREE_STATE_KEY,
+                "{\"expanded_location_ids\":[5]}",
+                Utc::now().to_rfc3339(),
+            ],
+        )
+        .unwrap();
+        drop(conn);
+
+        let loaded = store.sidebar_tree_get().unwrap();
+        assert_eq!(loaded.expanded_location_ids, vec![5]);
+        assert!(loaded.expanded_directories_by_location.is_empty());
     }
 
     #[test]

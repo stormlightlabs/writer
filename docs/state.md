@@ -1,6 +1,6 @@
 ---
 title: "State Management"
-last_updated: 2026-03-13
+last_updated: 2026-03-21
 ---
 
 ## Frontend State Model
@@ -18,8 +18,9 @@ Current runtime stores:
   - writer tools
 - `workspace.ts`
   - locations
-  - documents
-  - directories
+  - selected location documents/directories
+  - per-location sidebar document/directory caches
+  - persisted expanded location/directory state
   - sidebar drag/drop state
 - `tabs.ts`
   - open tabs

@@ -13,7 +13,7 @@ use writer_core::{
     AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
     SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch, StylePatternInput, StyleScanInput,
 };
-use writer_store::{Store, StyleCheckSettings, UiLayoutSettings};
+use writer_store::{SidebarTreeState, Store, StyleCheckSettings, UiLayoutSettings};
 
 mod atproto;
 mod md;
@@ -194,6 +194,32 @@ pub fn ui_layout_set(state: State<'_, AppState>, settings: UiLayoutSettings) -> 
         Ok(()) => Ok(CommandResult::ok(true)),
         Err(e) => {
             log::error!("Failed to persist UI layout settings: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn sidebar_tree_get(state: State<'_, AppState>) -> CommandResponse<SidebarTreeState> {
+    log::debug!("Loading persisted sidebar tree state");
+
+    match state.store.sidebar_tree_get() {
+        Ok(sidebar_tree_state) => Ok(CommandResult::ok(sidebar_tree_state)),
+        Err(e) => {
+            log::error!("Failed to load sidebar tree state: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+#[tauri::command]
+pub fn sidebar_tree_set(state: State<'_, AppState>, state_value: SidebarTreeState) -> CommandResponse<bool> {
+    log::debug!("Persisting sidebar tree state");
+
+    match state.store.sidebar_tree_set(&state_value) {
+        Ok(()) => Ok(CommandResult::ok(true)),
+        Err(e) => {
+            log::error!("Failed to persist sidebar tree state: {}", e);
             Ok(CommandResult::err(e))
         }
     }

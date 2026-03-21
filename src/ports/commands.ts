@@ -43,6 +43,7 @@ import type {
   GlobalCaptureSubmitParams,
   GlobalCaptureValidateShortcutParams,
   LocParams,
+  PersistedSidebarTreeState,
   PersistedStyleCheckSettings,
   PostGetMarkdownParams,
   PostListParams,
@@ -62,6 +63,8 @@ import type {
   SessionReorderTabsParams,
   SessionTabIdParams,
   SessionUpdateTabDocParams,
+  SidebarTreeGetParams,
+  SidebarTreeSetParams,
   StringCreateParams,
   StringDeleteParams,
   StringGetParams,
@@ -363,6 +366,14 @@ export function uiLayoutGet(...[onOk, onErr]: LocParams<UiLayoutSettings>): Cmd 
 
 export function uiLayoutSet(...[settings, onOk, onErr]: UiLayoutSetParams<boolean>): Cmd {
   return invokeCmd<boolean>("ui_layout_set", { settings }, onOk, onErr);
+}
+
+export function sidebarTreeGet(...[onOk, onErr]: SidebarTreeGetParams<PersistedSidebarTreeState>): Cmd {
+  return invokeCmd<PersistedSidebarTreeState>("sidebar_tree_get", {}, onOk, onErr);
+}
+
+export function sidebarTreeSet(...[state, onOk, onErr]: SidebarTreeSetParams<boolean>): Cmd {
+  return invokeCmd<boolean>("sidebar_tree_set", { stateValue: state }, onOk, onErr);
 }
 
 export function sessionGet(...[onOk, onErr]: SessionParams): Cmd {

@@ -87,7 +87,7 @@ function mapDirectoryMovedRelPath(sourceDir: string, destinationDir: string, can
 }
 
 export function useSidebarActions() {
-  const { setSidebarRefreshState } = useWorkspaceDocumentsActions();
+  const { setSidebarRefreshState, setDocumentsForLocation, setDirectoriesForLocation } = useWorkspaceDocumentsActions();
   const { setLocations, setSelectedLocation } = useWorkspaceLocationsActions();
   const { tabs } = useTabsState();
   const { applySessionState } = useTabsActions();
@@ -132,7 +132,7 @@ export function useSidebarActions() {
   }, [applySession]);
 
   const handleSelectDocument = useCallback((locationId: number, path: string) => {
-    const docTitle = useWorkspaceStore.getState().documents.find((doc) =>
+    const docTitle = (useWorkspaceStore.getState().documentsByLocation[locationId] ?? []).find((doc) =>
       doc.location_id === locationId && doc.rel_path === path
     )?.title;
 
@@ -151,7 +151,11 @@ export function useSidebarActions() {
       return null;
     }
 
-    const relPath = buildDraftRelPath(targetLocationId, workspaceState.documents, tabs);
+    const relPath = buildDraftRelPath(
+      targetLocationId,
+      workspaceState.documentsByLocation[targetLocationId] ?? [],
+      tabs,
+    );
     const docRef: DocRef = { location_id: targetLocationId, rel_path: relPath };
     openTab(docRef, getDraftTitle(relPath));
     return docRef;
@@ -165,7 +169,7 @@ export function useSidebarActions() {
     const targetLocationId = requestedLocationId ?? workspaceState.selectedLocationId
       ?? workspaceState.locations[0]?.id;
 
-    if (!targetLocationId || workspaceState.selectedLocationId !== targetLocationId) {
+    if (!targetLocationId) {
       return;
     }
 
@@ -173,12 +177,10 @@ export function useSidebarActions() {
 
     runCmd(dirList(targetLocationId, (nextDirectories) => {
       const latestState = useWorkspaceStore.getState();
-      if (latestState.selectedLocationId !== targetLocationId) {
-        return;
-      }
+      const currentDirectories = latestState.directoriesByLocation[targetLocationId] ?? [];
 
-      if (!areDirectoriesEqual(latestState.directories, nextDirectories)) {
-        latestState.setDirectories(nextDirectories);
+      if (!areDirectoriesEqual(currentDirectories, nextDirectories)) {
+        setDirectoriesForLocation(targetLocationId, nextDirectories);
       }
     }, (error) => {
       logger.error(f("Failed to refresh sidebar directories", { locationId: targetLocationId, error }));
@@ -186,22 +188,17 @@ export function useSidebarActions() {
 
     runCmd(docList(targetLocationId, (nextDocuments) => {
       const latestState = useWorkspaceStore.getState();
-      if (latestState.selectedLocationId !== targetLocationId) {
-        if (latestState.refreshingLocationId === targetLocationId) {
-          latestState.setSidebarRefreshState(undefined, null);
-        }
-        return;
-      }
+      const currentDocuments = latestState.documentsByLocation[targetLocationId] ?? [];
 
-      if (nextDocuments.length === 0 && latestState.documents.length > 0 && attempt === 0) {
+      if (nextDocuments.length === 0 && currentDocuments.length > 0 && attempt === 0) {
         setTimeout(() => {
           handleRefreshSidebar(targetLocationId, { source, attempt: attempt + 1 });
         }, TRANSIENT_EMPTY_REFRESH_RETRY_DELAY_MS);
         return;
       }
 
-      if (!areDocumentsEqual(latestState.documents, nextDocuments)) {
-        latestState.setDocuments(nextDocuments);
+      if (!areDocumentsEqual(currentDocuments, nextDocuments)) {
+        setDocumentsForLocation(targetLocationId, nextDocuments);
       }
 
       if (latestState.refreshingLocationId === targetLocationId) {
@@ -221,7 +218,7 @@ export function useSidebarActions() {
         latestState.setSidebarRefreshState(undefined, null);
       }
     }));
-  }, [setSidebarRefreshState]);
+  }, [setDirectoriesForLocation, setDocumentsForLocation, setSidebarRefreshState]);
 
   const handleRenameDocument = useCallback((locationId: number, relPath: string, newName: string): Promise<boolean> => {
     return new Promise((resolve) => {

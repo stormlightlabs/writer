@@ -12,6 +12,7 @@ import type {
   PatternCategory,
   SearchHit,
   SessionState,
+  SidebarTreeState,
   StyleCheckPattern,
   StyleCheckSettings,
   Tab,
@@ -133,6 +134,10 @@ export type WorkspaceDocumentsState = {
   selectedDocPath?: string;
   documents: DocMeta[];
   directories: string[];
+  documentsByLocation: Record<number, DocMeta[]>;
+  directoriesByLocation: Record<number, string[]>;
+  expandedLocationIds: SidebarTreeState["expandedLocationIds"];
+  expandedDirectoriesByLocation: SidebarTreeState["expandedDirectoriesByLocation"];
   isLoadingDocuments: boolean;
   refreshingLocationId?: number;
   sidebarRefreshReason: SidebarRefreshReason | null;
@@ -154,6 +159,13 @@ export type WorkspaceDocumentsActions = {
   setSelectedDocPath: (path?: string) => void;
   setDocuments: (documents: DocMeta[]) => void;
   setDirectories: (directories: string[]) => void;
+  setDocumentsForLocation: (locationId: number, documents: DocMeta[]) => void;
+  setDirectoriesForLocation: (locationId: number, directories: string[]) => void;
+  setSidebarTreeState: (state: SidebarTreeState) => void;
+  toggleExpandedLocation: (locationId: number) => void;
+  toggleExpandedDirectory: (locationId: number, path: string) => void;
+  expandDirectories: (locationId: number, paths: string[]) => void;
+  collapseDirectories: (locationId: number, paths: string[]) => void;
   setLoadingDocuments: (value: boolean) => void;
   setSidebarRefreshState: (locationId?: number, reason?: SidebarRefreshReason | null) => void;
   setExternalDropTarget: (locationId?: number, folderPath?: string) => void;

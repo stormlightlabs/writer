@@ -42,6 +42,8 @@ import {
   sessionReorderTabs,
   sessionSelectTab,
   sessionUpdateTabDoc,
+  sidebarTreeGet,
+  sidebarTreeSet,
   startWatch,
   stopWatch,
   stringGet,
@@ -1020,6 +1022,41 @@ describe("ui layout Commands", () => {
           filename_visibility: false,
           create_readme_in_new_locations: true,
           markdown_preview_style: "github",
+        },
+      });
+    });
+  });
+});
+
+describe("sidebar tree Commands", () => {
+  describe(sidebarTreeGet, () => {
+    it("should create command with empty payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = sidebarTreeGet(onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("sidebar_tree_get");
+      expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe(sidebarTreeSet, () => {
+    it("should create command with sidebar tree payload", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = sidebarTreeSet(
+        { expanded_location_ids: [1, 2], expanded_directories_by_location: { 1: ["Drafts"], 2: ["Archive/2026"] } },
+        onOk,
+        onErr,
+      ) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("sidebar_tree_set");
+      expect(cmd.payload).toStrictEqual({
+        stateValue: {
+          expanded_location_ids: [1, 2],
+          expanded_directories_by_location: { 1: ["Drafts"], 2: ["Archive/2026"] },
         },
       });
     });

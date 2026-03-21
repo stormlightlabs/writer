@@ -65,6 +65,36 @@ describe("appStore", () => {
     expect(useAppStore.getState().selectedDocPath).toBe("notes/new.md");
   });
 
+  it("hydrates selected location tree from the per-location cache", () => {
+    const store = useAppStore.getState();
+
+    store.setLocations([{ id: 1, name: "A", root_path: "/a", added_at: "2024-01-01" }, {
+      id: 2,
+      name: "B",
+      root_path: "/b",
+      added_at: "2024-01-01",
+    }]);
+    store.setDocumentsForLocation(2, [{
+      location_id: 2,
+      rel_path: "archive.md",
+      title: "Archive",
+      updated_at: "2024-01-01T00:00:00Z",
+      word_count: 5,
+    }]);
+    store.setDirectoriesForLocation(2, ["drafts"]);
+
+    store.setSelectedLocation(2);
+
+    expect(useAppStore.getState().documents).toStrictEqual([{
+      location_id: 2,
+      rel_path: "archive.md",
+      title: "Archive",
+      updated_at: "2024-01-01T00:00:00Z",
+      word_count: 5,
+    }]);
+    expect(useAppStore.getState().directories).toStrictEqual(["drafts"]);
+  });
+
   it("focused layout hooks expose and update layout state", () => {
     const { result: chromeState } = renderHook(() => useLayoutChromeState());
     const { result: chromeActions } = renderHook(() => useLayoutChromeActions());

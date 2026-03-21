@@ -31,10 +31,12 @@ export type SidebarDocumentActions = {
 type SidebarLocationItemProps = {
   location: LocationDescriptor;
   isSelected: boolean;
+  selectedLocationId?: number;
   selectedDocPath?: string;
   isExpanded: boolean;
   documents: DocMeta[];
   directories: string[];
+  expandedDirectories: string[];
   filterText: string;
   isRefreshing: boolean;
   refreshReason: SidebarRefreshReason | null;
@@ -50,6 +52,9 @@ type SidebarLocationItemProps = {
   activeDragDocumentPath?: string | null;
   suppressActiveDragSourceOpacity?: boolean;
   folderSortOrder?: string[];
+  onToggleDirectory: (path: string) => void;
+  onExpandDirectories: (paths: string[]) => void;
+  onCollapseDirectories: (paths: string[]) => void;
   onRemoveLocation: (locationId: number) => void;
   onSelectLocation: (locationId: number) => void;
   onRefreshLocation: (locationId: number) => void;
@@ -79,6 +84,7 @@ type FolderItemProps = {
 
 type SidebarTreeContextValue = {
   locationId: number;
+  selectedLocationId?: number;
   selectedDocPath?: string;
   filenameVisibility: boolean;
   documentActions: SidebarDocumentActions;
@@ -206,14 +212,21 @@ const RefreshStatus = ({ reason }: { reason: SidebarRefreshReason | null }) => (
 );
 
 function TreeDocumentNode({ doc, level }: { doc: DocMeta; level: number }) {
-  const { selectedDocPath, filenameVisibility, documentActions, onOpenDocumentOperation, dropIndicators } =
-    useSidebarTreeContext();
+  const {
+    locationId,
+    selectedLocationId,
+    selectedDocPath,
+    filenameVisibility,
+    documentActions,
+    onOpenDocumentOperation,
+    dropIndicators,
+  } = useSidebarTreeContext();
 
   return (
     <DocumentItem
       key={doc.rel_path}
       doc={doc}
-      isSelected={selectedDocPath === doc.rel_path}
+      isSelected={selectedLocationId === locationId && selectedDocPath === doc.rel_path}
       onSelectDocument={documentActions.onSelectDocument}
       onOpenDocumentOperation={onOpenDocumentOperation}
       filenameVisibility={filenameVisibility}
@@ -331,10 +344,12 @@ function SidebarLocationItemComponent(
   {
     location,
     isSelected,
+    selectedLocationId,
     selectedDocPath,
     isExpanded,
     documents,
     directories,
+    expandedDirectories,
     filterText,
     isRefreshing,
     refreshReason,
@@ -350,13 +365,15 @@ function SidebarLocationItemComponent(
     activeDragDocumentPath,
     suppressActiveDragSourceOpacity,
     folderSortOrder = [],
+    onToggleDirectory,
+    onExpandDirectories,
+    onCollapseDirectories,
     onRemoveLocation,
     onSelectLocation,
     onRefreshLocation,
   }: SidebarLocationItemProps,
 ) {
   const { filenameVisibility, documentActions, onToggleLocation, openDocumentOperation } = useSidebarLocationContext();
-  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
   const [pendingSpringFolderPath, setPendingSpringFolderPath] = useState<string | null>(null);
   const hoverExpandRef = useRef<{ path: string; timer: ReturnType<typeof setTimeout> } | null>(null);
   const dragExpandedSnapshotRef = useRef<Set<string> | null>(null);
@@ -364,6 +381,7 @@ function SidebarLocationItemComponent(
   const skipAnimation = useSkipAnimation();
   const showHighlight = Boolean(isExternalDropTarget) || Boolean(isInternalDropTarget);
   const showRootDropIndicator = Boolean(isInternalDropTarget) && !activeDropFolderPath && !activeDropDocumentPath;
+  const expandedDirectorySet = useMemo(() => new Set(expandedDirectories), [expandedDirectories]);
 
   const handleRemoveClick = useCallback(() => {
     onRemoveLocation(location.id);
@@ -388,7 +406,7 @@ function SidebarLocationItemComponent(
   ]);
 
   useEffect(() => {
-    if (!selectedDocPath) {
+    if (!selectedDocPath || selectedLocationId !== location.id) {
       return;
     }
 
@@ -397,30 +415,8 @@ function SidebarLocationItemComponent(
       return;
     }
 
-    setExpandedDirectories((previous) => {
-      const next = new Set(previous);
-      let changed = false;
-      for (const path of parentPaths) {
-        if (!next.has(path)) {
-          next.add(path);
-          changed = true;
-        }
-      }
-      return changed ? next : previous;
-    });
-  }, [selectedDocPath]);
-
-  const handleToggleDirectory = useCallback((path: string) => {
-    setExpandedDirectories((previous) => {
-      const next = new Set(previous);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
+    onExpandDirectories(parentPaths);
+  }, [location.id, onExpandDirectories, selectedDocPath, selectedLocationId]);
 
   const clearHoverExpand = useCallback(() => {
     if (!hoverExpandRef.current) {
@@ -435,7 +431,7 @@ function SidebarLocationItemComponent(
   useEffect(() => {
     if (
       !isDragInProgress || activeDropFolderIntent !== "into" || !activeDropFolderPath
-      || expandedDirectories.has(activeDropFolderPath)
+      || expandedDirectorySet.has(activeDropFolderPath)
     ) {
       clearHoverExpand();
       return;
@@ -451,25 +447,27 @@ function SidebarLocationItemComponent(
     hoverExpandRef.current = {
       path: folderPath,
       timer: globalThis.setTimeout(() => {
-        setExpandedDirectories((previous) => {
-          if (previous.has(folderPath)) {
-            return previous;
-          }
-          if (!dragExpandedSnapshotRef.current?.has(folderPath)) {
-            autoExpandedDuringDragRef.current.add(folderPath);
-          }
-          return new Set([...previous, folderPath]);
-        });
+        if (!dragExpandedSnapshotRef.current?.has(folderPath)) {
+          autoExpandedDuringDragRef.current.add(folderPath);
+        }
+        onExpandDirectories([folderPath]);
         setPendingSpringFolderPath((currentPath) => currentPath === folderPath ? null : currentPath);
         hoverExpandRef.current = null;
       }, 800),
     };
-  }, [activeDropFolderIntent, activeDropFolderPath, clearHoverExpand, expandedDirectories, isDragInProgress]);
+  }, [
+    activeDropFolderIntent,
+    activeDropFolderPath,
+    clearHoverExpand,
+    expandedDirectorySet,
+    isDragInProgress,
+    onExpandDirectories,
+  ]);
 
   useEffect(() => {
     if (isDragInProgress) {
       if (!dragExpandedSnapshotRef.current) {
-        dragExpandedSnapshotRef.current = new Set(expandedDirectories);
+        dragExpandedSnapshotRef.current = new Set(expandedDirectorySet);
         autoExpandedDuringDragRef.current = new Set();
       }
       return;
@@ -483,26 +481,19 @@ function SidebarLocationItemComponent(
 
     const autoExpanded = autoExpandedDuringDragRef.current;
     if (autoExpanded.size > 0) {
-      setExpandedDirectories((previous) => {
-        const next = new Set(previous);
-        for (const path of autoExpanded) {
-          if (!snapshot.has(path)) {
-            next.delete(path);
-          }
-        }
-        return next;
-      });
+      onCollapseDirectories(Array.from(autoExpanded).filter((path) => !snapshot.has(path)));
     }
 
     dragExpandedSnapshotRef.current = null;
     autoExpandedDuringDragRef.current = new Set();
-  }, [clearHoverExpand, expandedDirectories, isDragInProgress]);
+  }, [clearHoverExpand, expandedDirectorySet, isDragInProgress, onCollapseDirectories]);
 
   useEffect(() => () => clearHoverExpand(), [clearHoverExpand]);
 
   const treeContextValue = useMemo<SidebarTreeContextValue>(
     () => ({
       locationId: location.id,
+      selectedLocationId,
       selectedDocPath,
       filenameVisibility,
       documentActions: {
@@ -538,6 +529,7 @@ function SidebarLocationItemComponent(
       location.id,
       openDocumentOperation,
       selectedDocPath,
+      selectedLocationId,
       suppressActiveDragSourceOpacity,
     ],
   );
@@ -551,12 +543,12 @@ function SidebarLocationItemComponent(
               key={node.path}
               node={node}
               level={1}
-              expandedDirectories={expandedDirectories}
-              onToggleDirectory={handleToggleDirectory} />
+              expandedDirectories={expandedDirectorySet}
+              onToggleDirectory={onToggleDirectory} />
           )
           : <TreeDocumentNode key={node.path} doc={node.doc} level={1} />
       ),
-    [documentTree.children, expandedDirectories, handleToggleDirectory],
+    [documentTree.children, expandedDirectorySet, onToggleDirectory],
   );
 
   return (
@@ -577,7 +569,7 @@ function SidebarLocationItemComponent(
         onRefresh={handleRefresh}
         onRemove={handleRemoveClick} />
 
-      {isExpanded && isSelected && (
+      {isExpanded && (
         <div>
           <div
             data-drop-location-root="true"
