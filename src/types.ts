@@ -89,6 +89,32 @@ export type TangledStringRecord = {
   createdAt: string;
 };
 
+/**
+ * A Standard.Site publication — a named blog/site container owned by a DID.
+ * @see https://standard.site
+ * @see https://tangled.org/standard.site/lexicons/tree/main/src/lexicons (`site.standard.publication`)
+ */
+export type PublicationRecord = { uri: string; tid: string; name: string; description: string; url: string };
+export type PublicationListResult = { publications: PublicationRecord[]; skippedInvalidCount: number };
+
+/**
+ * A Standard.Site post (`site.standard.document`) belonging to a publication.
+ * Content is stored in the Leaflet block format inside the open `content` union.
+ * @see https://standard.site
+ * @see https://tangled.org/standard.site/lexicons/tree/main/src/lexicons (`site.standard.document`)
+ */
+export type PostRecord = {
+  uri: string;
+  tid: string;
+  title: string;
+  description: string;
+  textContent: string;
+  publishedAt: string;
+  updatedAt: string;
+  tags: string[];
+  publicationUri: string;
+};
+
 export type FocusDimmingMode = "off" | "sentence" | "paragraph";
 export type MarkdownPreviewStyle = "github" | "pdf";
 

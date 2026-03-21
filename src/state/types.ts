@@ -220,6 +220,8 @@ export type SearchActions = {
 
 export type AtProtoSheetMode = "closed" | "login" | "session" | "import" | "publish";
 
+export type StandardSiteSheetMode = "closed" | "postImport";
+
 export type AtProtoUiState = {
   atProtoSheetMode: AtProtoSheetMode;
   atProtoSession: AtProtoSession | null;
@@ -238,34 +240,44 @@ export type AtProtoUiActions = {
   setAtProtoPending: (value: boolean) => void;
 };
 
-export type UiState = {
-  layoutSettingsOpen: boolean;
-  pdfExportDialogOpen: boolean;
-  pdfExportOptions: PdfExportOptions;
-  globalCaptureSettings: GlobalCaptureSettings;
-  helpSheetOpen: boolean;
-  styleDiagnosticsOpen: boolean;
-} & AtProtoUiState;
+export type StandardSiteUiState = { standardSiteSheetMode: StandardSiteSheetMode };
 
-export type UiActions = {
-  setLayoutSettingsOpen: (value: boolean) => void;
-  setPdfExportDialogOpen: (value: boolean) => void;
-  setPdfExportOptions: (value: PdfExportOptions) => void;
-  resetPdfExportOptions: () => void;
-  setPdfPageSize: (value: PageSize) => void;
-  setPdfOrientation: (value: Orientation) => void;
-  setPdfFontSize: (value: number) => void;
-  setPdfMargin: (side: MarginSide, value: number) => void;
-  setPdfIncludeTitle: (value: boolean) => void;
-  setPdfIncludeHeader: (value: boolean) => void;
-  setPdfIncludeFooter: (value: boolean) => void;
-  setGlobalCaptureSettings: (value: GlobalCaptureSettings) => void;
-  setQuickCaptureEnabled: (enabled: boolean) => Promise<void>;
-  setHelpSheetOpen: (value: boolean) => void;
-  toggleHelpSheet: () => void;
-  setStyleDiagnosticsOpen: (value: boolean) => void;
-  toggleStyleDiagnostics: () => void;
-} & AtProtoUiActions;
+export type StandardSiteUiActions = { openStandardSitePostImportSheet: () => void; closeStandardSiteSheet: () => void };
+
+export type UiState =
+  & {
+    layoutSettingsOpen: boolean;
+    pdfExportDialogOpen: boolean;
+    pdfExportOptions: PdfExportOptions;
+    globalCaptureSettings: GlobalCaptureSettings;
+    helpSheetOpen: boolean;
+    styleDiagnosticsOpen: boolean;
+  }
+  & AtProtoUiState
+  & StandardSiteUiState;
+
+export type UiActions =
+  & {
+    setLayoutSettingsOpen: (value: boolean) => void;
+    setPdfExportDialogOpen: (value: boolean) => void;
+    setPdfExportOptions: (value: PdfExportOptions) => void;
+    resetPdfExportOptions: () => void;
+    setPdfPageSize: (value: PageSize) => void;
+    setPdfOrientation: (value: Orientation) => void;
+    setPdfFontSize: (value: number) => void;
+    setPdfMargin: (side: MarginSide, value: number) => void;
+    setPdfIncludeTitle: (value: boolean) => void;
+    setPdfIncludeHeader: (value: boolean) => void;
+    setPdfIncludeFooter: (value: boolean) => void;
+    setGlobalCaptureSettings: (value: GlobalCaptureSettings) => void;
+    setQuickCaptureEnabled: (enabled: boolean) => Promise<void>;
+    setHelpSheetOpen: (value: boolean) => void;
+    toggleHelpSheet: () => void;
+    setStyleDiagnosticsOpen: (value: boolean) => void;
+    toggleStyleDiagnostics: () => void;
+  }
+  & AtProtoUiActions
+  & StandardSiteUiActions;
 
 export type AppStore =
   & LayoutState

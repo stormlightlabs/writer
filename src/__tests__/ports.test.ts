@@ -28,6 +28,7 @@ import {
   none,
   noSub,
   ok,
+  publicationList,
   renderMarkdown,
   renderMarkdownForPdf,
   runCmd,
@@ -549,6 +550,39 @@ describe(runCmd, () => {
         contents: "print('hi')",
         createdAt: "2026-03-19T10:00:00Z",
       }]);
+      expect(onErr).not.toHaveBeenCalled();
+    });
+
+    it("normalizes Standard.Site publication list results", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        type: "ok",
+        value: {
+          publications: [{
+            uri: "at://did:plc:alice/site.standard.publication/3lxyz",
+            tid: "3lxyz",
+            name: "Example",
+            description: "Site",
+            url: "https://example.com",
+          }],
+          skipped_invalid_count: 1,
+        },
+      });
+
+      await runCmd(publicationList("alice.bsky.social", onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith({
+        publications: [{
+          uri: "at://did:plc:alice/site.standard.publication/3lxyz",
+          tid: "3lxyz",
+          name: "Example",
+          description: "Site",
+          url: "https://example.com",
+        }],
+        skippedInvalidCount: 1,
+      });
       expect(onErr).not.toHaveBeenCalled();
     });
   });

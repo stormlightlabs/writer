@@ -3,14 +3,14 @@
 use super::{AppState, CommandResponse};
 use tauri::State;
 use writer_core::{
-    atproto::{PostRecord, PublicationRecord},
+    atproto::{PostRecord, PublicationListResult, PublicationRecord},
     CommandResult,
 };
 
 #[tauri::command]
 pub async fn publication_list(
     state: State<'_, AppState>, did_or_handle: String,
-) -> CommandResponse<Vec<PublicationRecord>> {
+) -> CommandResponse<PublicationListResult> {
     log::info!("Listing Standard.Site publications");
 
     match state.atproto.publication_list(&did_or_handle).await {

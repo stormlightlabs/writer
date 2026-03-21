@@ -8,6 +8,7 @@ import { WorkspacePanel } from "./components/AppLayout/WorkspacePanel";
 import { AtProtoAuthSheet } from "./components/AtProto/AtProtoAuthSheet";
 import { ExportDialog } from "./components/export/ExportDialog/ExportDialog";
 import { HelpSheet } from "./components/HelpSheet";
+import { PostImportSheet } from "./components/StandardSite/PostImportSheet";
 import { Toaster } from "./components/Toaster";
 import { useAppChromeController } from "./hooks/controllers/useAppChromeController";
 import {
@@ -25,6 +26,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
     editorFontFamily,
     editorText,
     atProto,
+    standardSite,
   } = view;
   const { isOpen: isHelpSheetOpen, setOpen: setHelpSheetOpen } = useHelpSheetState();
   const closeHelpSheet = useCallback(() => setHelpSheetOpen(false), [setHelpSheetOpen]);
@@ -33,7 +35,12 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
     return (
       <>
         <FocusModePanel {...focusModePanelProps} />
-        <AtProtoAuthSheet controller={atProto} />
+        <AtProtoAuthSheet controller={atProto} onOpenStandardSiteImport={standardSite.openImportSheet} />
+        <PostImportSheet
+          controller={standardSite}
+          isOpen={standardSite.sheetMode === "postImport"}
+          onClose={standardSite.closeSheet}
+          onBack={atProto.session ? atProto.openSessionSheet : undefined} />
         <HelpSheet isOpen={isHelpSheetOpen} onClose={closeHelpSheet} />
         <Toaster />
       </>
@@ -47,8 +54,14 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
         atProtoSession={atProto.session}
         atProtoPending={atProto.isPending}
         onOpenAtProtoAuth={atProto.openAuthSheet}
+        onOpenStandardSiteImport={standardSite.openImportSheet}
         onLogoutAtProto={atProto.handleLogout} />
-      <AtProtoAuthSheet controller={atProto} />
+      <AtProtoAuthSheet controller={atProto} onOpenStandardSiteImport={standardSite.openImportSheet} />
+      <PostImportSheet
+        controller={standardSite}
+        isOpen={standardSite.sheetMode === "postImport"}
+        onClose={standardSite.closeSheet}
+        onBack={atProto.session ? atProto.openSessionSheet : undefined} />
       <ExportDialog
         onExport={handleExportPdf}
         previewResult={previewResult}
@@ -77,6 +90,7 @@ function App() {
         atProtoSession={atProto.session}
         atProtoPending={atProto.isPending}
         onOpenAtProtoAuth={atProto.openAuthSheet}
+        onOpenStandardSiteImport={view.standardSite.openImportSheet}
         onLogoutAtProto={atProto.handleLogout} />
     </div>
   );

@@ -1,15 +1,13 @@
 use crate::{AppError, ErrorCode};
 use jacquard::IntoStatic;
 use jacquard::api::com_atproto::repo::{get_record::GetRecord, list_records::ListRecords};
-use jacquard::api::pub_leaflet::{
-    content::{Content as LeafletContent, ContentPagesItem},
-    document::{Document as LeafletDocument, DocumentPagesItem},
-};
+use jacquard::api::pub_leaflet::content::{Content as LeafletContent, ContentPagesItem};
+use jacquard::api::pub_leaflet::document::{Document as LeafletDocument, DocumentPagesItem};
 use jacquard::api::site_standard::{document::Document as StandardSiteDocument, publication::Publication};
 use jacquard::common::CowStr;
 use jacquard::common::types::value::{Data, from_data};
 use jacquard::common::types::{collection::Collection, ident::AtIdentifier, recordkey::RecordKey, string::AtUri};
-use jacquard::types::did::Did;
+use jacquard::types::{did::Did, uri::UriValue};
 use jacquard::xrpc::XrpcExt;
 use serde::Serialize;
 
@@ -23,6 +21,13 @@ pub struct PublicationRecord {
     pub name: String,
     pub description: String,
     pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicationListResult {
+    pub publications: Vec<PublicationRecord>,
+    pub skipped_invalid_count: usize,
 }
 
 impl PublicationRecord {
@@ -73,23 +78,29 @@ impl PostRecord {
 }
 
 impl super::auth::AtProtoState {
-    pub async fn publication_list(&self, did_or_handle: &str) -> Result<Vec<PublicationRecord>, AppError> {
+    pub async fn publication_list(&self, did_or_handle: &str) -> Result<PublicationListResult, AppError> {
         let publications = self
             .list_records(did_or_handle, Publication::nsid(), "Standard.Site publications")
             .await?;
 
-        publications
-            .into_iter()
-            .map(|(uri, data)| {
-                let publication = parse_publication(&data)?;
-                PublicationRecord::from_publication(&uri, publication).ok_or_else(|| {
-                    AppError::new(
-                        ErrorCode::Parse,
-                        "Failed to derive Standard.Site publication record key from URI",
-                    )
-                })
-            })
-            .collect()
+        let mut valid_publications = Vec::with_capacity(publications.len());
+        let mut skipped_invalid_count = 0;
+
+        for (uri, data) in publications {
+            match parse_publication_record(&uri, &data) {
+                Ok(publication) => valid_publications.push(publication),
+                Err(error) => {
+                    skipped_invalid_count += 1;
+                    log::warn!(
+                        "Skipping invalid Standard.Site publication record: uri={} error={}",
+                        uri,
+                        error
+                    );
+                }
+            }
+        }
+
+        Ok(PublicationListResult { publications: valid_publications, skipped_invalid_count })
     }
 
     pub async fn publication_get(&self, did_or_handle: &str, tid: &str) -> Result<PublicationRecord, AppError> {
@@ -256,6 +267,17 @@ impl super::auth::AtProtoState {
     }
 }
 
+fn parse_publication_record(uri: &str, data: &Data<'static>) -> Result<PublicationRecord, AppError> {
+    let publication = parse_publication(data)?;
+
+    PublicationRecord::from_publication(uri, publication).ok_or_else(|| {
+        AppError::new(
+            ErrorCode::Parse,
+            "Failed to derive Standard.Site publication record key from URI",
+        )
+    })
+}
+
 fn parse_publication(data: &Data<'static>) -> Result<Publication<'static>, AppError> {
     from_data::<Publication<'_>>(data)
         .map(|value| value.into_static())
@@ -292,7 +314,7 @@ fn publication_matches_filter(publication_uri: &str, filter: &str) -> bool {
     publication_uri == filter || record_key_from_uri(publication_uri).as_deref() == Some(filter)
 }
 
-fn site_as_at_uri(site: &jacquard::common::types::string::Uri<'_>) -> Result<Option<AtUri<'static>>, AppError> {
+fn site_as_at_uri(site: &UriValue) -> Result<Option<AtUri<'static>>, AppError> {
     if !site.as_str().starts_with("at://") {
         return Ok(None);
     }

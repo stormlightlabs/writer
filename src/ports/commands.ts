@@ -9,6 +9,8 @@ import type {
   LocationDescriptor,
   LocationId,
   MarkdownProfile,
+  PostRecord,
+  PublicationListResult,
   RenderResult,
   SearchHit,
   SessionState,
@@ -42,6 +44,9 @@ import type {
   GlobalCaptureValidateShortcutParams,
   LocParams,
   PersistedStyleCheckSettings,
+  PostGetMarkdownParams,
+  PostListParams,
+  PublicationListParams,
   RenderMarkdownForDocxParams,
   RenderMarkdownForPdfParams,
   RenderMarkdownForTextParams,
@@ -172,6 +177,18 @@ export function stringUpdate(...[tid, filename, description, contents, onOk, onE
 
 export function stringDelete(...[tid, onOk, onErr]: StringDeleteParams): Cmd {
   return invokeCmd<void>("string_delete", { tid }, onOk, onErr);
+}
+
+export function publicationList(...[didOrHandle, onOk, onErr]: PublicationListParams): Cmd {
+  return invokeCmd<PublicationListResult>("publication_list", { didOrHandle }, onOk, onErr);
+}
+
+export function postList(...[didOrHandle, publicationTid, onOk, onErr]: PostListParams): Cmd {
+  return invokeCmd<PostRecord[]>("post_list", { didOrHandle, publicationTid }, onOk, onErr);
+}
+
+export function postGetMarkdown(...[didOrHandle, tid, onOk, onErr]: PostGetMarkdownParams): Cmd {
+  return invokeCmd<string>("post_get_markdown", { didOrHandle, tid }, onOk, onErr);
 }
 
 export function locationAddViaDialog(...[onOk, onErr]: LocParams<LocationDescriptor>): Cmd {

@@ -8,6 +8,7 @@ import {
   FolderIcon,
   GithubIcon,
   RefreshIcon,
+  StandardSiteIcon,
   Tangled,
 } from "$icons";
 import { useSidebarState } from "$state/selectors";
@@ -30,7 +31,11 @@ import { useSidebarInternalDnD } from "./useSidebarInternalDnD";
 const EMPTY_DOCUMENTS: DocMeta[] = [];
 const EMPTY_DIRECTORIES: string[] = [];
 
-export type SidebarProps = { onNewDocument?: (locationId?: number) => void; onOpenImportSheet?: () => void };
+export type SidebarProps = {
+  onNewDocument?: (locationId?: number) => void;
+  onOpenImportSheet?: () => void;
+  onOpenStandardSiteImportSheet?: () => void;
+};
 
 type SidebarActionsProps = {
   onAddLocation: () => void;
@@ -86,14 +91,25 @@ const CountPill = ({ count, kind }: CountPillProps) => (
   </span>
 );
 
-const ImportButton = ({ onOpenImportSheet, gh = false }: { onOpenImportSheet: () => void; gh?: boolean }) => (
-  <Button type="button" variant="outline" size="sm" onClick={onOpenImportSheet} className="flex items-center gap-1.5">
-    {gh ? <GithubIcon size="sm" /> : <Tangled className="h-4 w-4 shrink-0" />}
-    <span className="sr-only">Import</span>
+type ImportButtonProps = { onClick: () => void; label: string; icon: "tangled" | "github" | "standardSite" };
+
+const ImportButton = ({ onClick, label, icon }: ImportButtonProps) => (
+  <Button
+    type="button"
+    variant="outline"
+    size="sm"
+    onClick={onClick}
+    title={label}
+    aria-label={label}
+    className="flex items-center gap-1.5 hover:bg-surface-active">
+    {icon === "github" && <GithubIcon size="sm" />}
+    {icon === "standardSite" && <StandardSiteIcon />}
+    {icon === "tangled" && <Tangled className="h-4 w-4 shrink-0" />}
+    <span className="sr-only">{label}</span>
   </Button>
 );
 
-export function Sidebar({ onNewDocument, onOpenImportSheet }: SidebarProps) {
+export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteImportSheet }: SidebarProps) {
   const {
     handleAddLocation,
     handleRemoveLocation,
@@ -323,7 +339,17 @@ export function Sidebar({ onNewDocument, onOpenImportSheet }: SidebarProps) {
           <CountPill count={locations.length} kind="location" />
           <CountPill count={selectedLocationId ? locationDocuments.length : 0} kind="document" />
         </div>
-        {onOpenImportSheet && <ImportButton onOpenImportSheet={onOpenImportSheet} />}
+        <div className="flex items-center gap-2">
+          {onOpenStandardSiteImportSheet && (
+            <ImportButton
+              onClick={onOpenStandardSiteImportSheet}
+              label="Import Standard.Site posts"
+              icon="standardSite" />
+          )}
+          {onOpenImportSheet && (
+            <ImportButton onClick={onOpenImportSheet} label="Import Tangled strings" icon="tangled" />
+          )}
+        </div>
       </div>
 
       <DocumentOperationDialog

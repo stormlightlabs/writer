@@ -20,6 +20,7 @@ type SettingsSheetLayout = { position: SheetPosition; size: SheetSize; className
 type SettingsBodyProps = {
   scope: SettingsScope;
   onOpenAtProtoAuth: () => void;
+  onOpenStandardSiteImport: () => void;
   onLogoutAtProto: () => void;
   atProtoSession: import("$types").AtProtoSession | null;
   atProtoPending: boolean;
@@ -105,6 +106,7 @@ type SettingsContentProps = {
   closeAriaLabel: string;
   onViewMore?: () => void;
   onOpenAtProtoAuth: () => void;
+  onOpenStandardSiteImport: () => void;
   onLogoutAtProto: () => void;
   atProtoSession: import("$types").AtProtoSession | null;
   atProtoPending: boolean;
@@ -118,6 +120,7 @@ const SettingsContent = (
     closeAriaLabel,
     onViewMore,
     onOpenAtProtoAuth,
+    onOpenStandardSiteImport,
     onLogoutAtProto,
     atProtoSession,
     atProtoPending,
@@ -133,6 +136,7 @@ const SettingsContent = (
     <SettingsBody
       scope={scope}
       onOpenAtProtoAuth={onOpenAtProtoAuth}
+      onOpenStandardSiteImport={onOpenStandardSiteImport}
       onLogoutAtProto={onLogoutAtProto}
       atProtoSession={atProtoSession}
       atProtoPending={atProtoPending} />
@@ -170,12 +174,18 @@ type SettingsSheetProps = {
   atProtoSession?: import("$types").AtProtoSession | null;
   atProtoPending?: boolean;
   onOpenAtProtoAuth?: () => void;
+  onOpenStandardSiteImport?: () => void;
   onLogoutAtProto?: () => void;
 };
 
 export function LayoutSettingsPanel(
-  { atProtoSession = null, atProtoPending = false, onOpenAtProtoAuth = () => {}, onLogoutAtProto = () => {} }:
-    SettingsSheetProps,
+  {
+    atProtoSession = null,
+    atProtoPending = false,
+    onOpenAtProtoAuth = () => {},
+    onOpenStandardSiteImport = () => {},
+    onLogoutAtProto = () => {},
+  }: SettingsSheetProps,
 ) {
   const { isOpen: isVisible, setOpen } = useLayoutSettingsUiState();
   const { isOpen: isSettingsRouteOpen, open: openSettingsRoute } = useRoutedSheet("/settings");
@@ -212,6 +222,7 @@ export function LayoutSettingsPanel(
         closeAriaLabel="Close layout settings"
         onViewMore={handleViewMore}
         onOpenAtProtoAuth={onOpenAtProtoAuth}
+        onOpenStandardSiteImport={onOpenStandardSiteImport}
         onLogoutAtProto={onLogoutAtProto}
         atProtoSession={atProtoSession}
         atProtoPending={atProtoPending} />
@@ -220,8 +231,13 @@ export function LayoutSettingsPanel(
 }
 
 export function RoutedSettingsSheet(
-  { atProtoSession = null, atProtoPending = false, onOpenAtProtoAuth = () => {}, onLogoutAtProto = () => {} }:
-    SettingsSheetProps,
+  {
+    atProtoSession = null,
+    atProtoPending = false,
+    onOpenAtProtoAuth = () => {},
+    onOpenStandardSiteImport = () => {},
+    onLogoutAtProto = () => {},
+  }: SettingsSheetProps,
 ) {
   const { isOpen, close } = useRoutedSheet("/settings");
   const layout = useSettingsSheetLayout("full");
@@ -241,6 +257,7 @@ export function RoutedSettingsSheet(
         onClose={close}
         closeAriaLabel="Close settings panel"
         onOpenAtProtoAuth={onOpenAtProtoAuth}
+        onOpenStandardSiteImport={onOpenStandardSiteImport}
         onLogoutAtProto={onLogoutAtProto}
         atProtoSession={atProtoSession}
         atProtoPending={atProtoPending} />

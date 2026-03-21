@@ -4,32 +4,35 @@ use comrak::{
     nodes::{AstNode, NodeCodeBlock, NodeHeading, NodeMath, NodeValue},
     parse_document,
 };
-use jacquard::api::pub_leaflet::{
-    blocks::{
-        blockquote::Blockquote,
-        code::Code,
-        header::Header,
-        horizontal_rule::HorizontalRule,
-        image::{AspectRatio, Image},
-        math::Math,
-        text::Text,
-        unordered_list::{ListItem, ListItemContent, UnorderedList},
-    },
-    document::{Document, DocumentPagesItem},
-    pages::linear_document::{Block, BlockBlock, LinearDocument},
-    richtext::facet::{
-        AtMention, Bold, ByteSlice, Code as CodeFacet, DidMention, Facet, FacetFeaturesItem, Italic, Link,
-        Strikethrough,
-    },
-};
 use jacquard::common::types::{
     blob::{Blob, BlobRef, MimeType},
     cid::CidLink,
     ident::AtIdentifier,
-    string::Uri,
+    string::AtUri,
 };
 use jacquard::types::did::Did;
 use jacquard::{IntoStatic, api::pub_leaflet::pages::linear_document::BlockAlignment};
+use jacquard::{
+    api::pub_leaflet::{
+        blocks::{
+            blockquote::Blockquote,
+            code::Code,
+            header::Header,
+            horizontal_rule::HorizontalRule,
+            image::{AspectRatio, Image},
+            math::Math,
+            text::Text,
+            unordered_list::{ListItem, ListItemContent, UnorderedList},
+        },
+        document::{Document, DocumentPagesItem},
+        pages::linear_document::{Block, BlockBlock, LinearDocument},
+        richtext::facet::{
+            AtMention, Bold, ByteSlice, Code as CodeFacet, DidMention, Facet, FacetFeaturesItem, Italic, Link,
+            Strikethrough,
+        },
+    },
+    types::uri::UriValue,
+};
 use std::cmp::Reverse;
 
 const CANVAS_PAGE_OMITTED: &str = "<!-- canvas page omitted -->";
@@ -650,10 +653,10 @@ fn feature_link(url: &str) -> Result<FacetFeaturesItem<'static>, AppError> {
     }
 
     if url.starts_with("at://") {
-        let uri = Uri::new_owned(url)
+        let uri = AtUri::new_owned(url)
             .map_err(|error| AppError::new(ErrorCode::Parse, format!("Invalid at:// mention URI: {}", error)))?;
         return Ok(FacetFeaturesItem::AtMention(Box::new(
-            AtMention::new().at_uri(uri).build(),
+            AtMention::new().at_uri(UriValue::At(uri)).build(),
         )));
     }
 
@@ -777,7 +780,10 @@ mod tests {
                             ))),
                             wrap_block(BlockBlock::Iframe(Box::new(
                                 Iframe::new()
-                                    .url(Uri::new("https://example.com/embed").unwrap())
+                                    .url(UriValue::Https(
+                                        jacquard::deps::fluent_uri::Uri::parse("https://example.com/embed".to_string())
+                                            .expect("Invalid URI"),
+                                    ))
                                     .build(),
                             ))),
                         ])

@@ -73,4 +73,18 @@ describe("Layout settings routing", () => {
     expect(screen.getByText("Adverb")).toBeInTheDocument();
     expect(screen.getByText("Conjunction")).toBeInTheDocument();
   });
+
+  it("shows Standard.Site import from settings without requiring a session", () => {
+    globalThis.history.replaceState(null, "", "#/settings");
+
+    render(
+      <Router hook={useHashLocation}>
+        <RoutedSettingsSheet />
+      </Router>,
+    );
+
+    // FIXME: wtf?
+    fireEvent.click(screen.getByRole("button", { name: "TangledManage your AT Protocol session." }));
+    expect(screen.getByText("Not connected")).toBeInTheDocument();
+  });
 });

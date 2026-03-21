@@ -8,6 +8,8 @@ import type {
   DocRef,
   ErrorCode,
   GlobalCaptureSettings,
+  PublicationListResult,
+  PublicationRecord,
   SearchHit,
   SessionState,
   TangledStringRecord,
@@ -276,6 +278,37 @@ function normalizeTangledStringRecord(value: unknown): TangledStringRecord {
   };
 }
 
+function normalizePublicationRecord(value: unknown): PublicationRecord {
+  if (!isRecord(value)) {
+    return { uri: "", tid: "", name: "", description: "", url: "" };
+  }
+
+  return {
+    uri: typeof value.uri === "string" ? value.uri : "",
+    tid: typeof value.tid === "string" ? value.tid : "",
+    name: typeof value.name === "string" ? value.name : "",
+    description: typeof value.description === "string" ? value.description : "",
+    url: typeof value.url === "string" ? value.url : "",
+  };
+}
+
+function normalizePublicationListResult(value: unknown): PublicationListResult {
+  if (!isRecord(value)) {
+    return { publications: [], skippedInvalidCount: 0 };
+  }
+
+  return {
+    publications: Array.isArray(value.publications)
+      ? value.publications.map((publication) => normalizePublicationRecord(publication))
+      : [],
+    skippedInvalidCount: typeof value.skippedInvalidCount === "number"
+      ? value.skippedInvalidCount
+      : typeof value.skipped_invalid_count === "number"
+      ? value.skipped_invalid_count
+      : 0,
+  };
+}
+
 function normalizeSessionState(value: unknown): SessionState {
   if (!isRecord(value) || !Array.isArray(value.tabs)) {
     return { tabs: [], activeTabId: null };
@@ -360,6 +393,9 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
       }
 
       return value.map((record) => normalizeTangledStringRecord(record));
+    }
+    case "publication_list": {
+      return normalizePublicationListResult(value);
     }
     case "style_check_scan": {
       if (!Array.isArray(value)) {

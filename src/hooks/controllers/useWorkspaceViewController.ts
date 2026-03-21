@@ -5,6 +5,7 @@ import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects"
 import { useEditorPreviewEffects } from "$hooks/app/useEditorPreviewEffects";
 import { useSettingsSync } from "$hooks/app/useSettingsSync";
 import { useAtProtoController } from "$hooks/controllers/useAtProtoController";
+import { useStandardSiteController } from "$hooks/controllers/useStandardSiteController";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import { useDocumentActions } from "$hooks/useDocumentActions";
 import { useEditor } from "$hooks/useEditor";
@@ -36,6 +37,7 @@ export type WorkspaceViewController = {
   editorFontFamily: EditorFontFamily;
   editorText: string;
   atProto: ReturnType<typeof useAtProtoController>;
+  standardSite: ReturnType<typeof useStandardSiteController>;
 };
 
 export function deriveWordCount(text: string, renderWordCount: number | undefined): number {
@@ -84,6 +86,11 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     handleRefreshSidebar,
   } = useWorkspaceController();
   const atProto = useAtProtoController({ locations, selectedLocationId, refreshSidebar: handleRefreshSidebar });
+  const standardSite = useStandardSiteController({
+    locations,
+    selectedLocationId,
+    refreshSidebar: handleRefreshSidebar,
+  });
 
   const { handleSave, handleNewDocument } = useDocumentActions({
     editorDocRef: editorModel.docRef,
@@ -293,6 +300,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     () => ({
       toolbar: toolbarProps,
       onOpenImportSheet: atProto.openImportSheet,
+      onOpenStandardSiteImportSheet: standardSite.openImportSheet,
       editor: editorProps,
       preview: previewProps,
       statusBar: statusBarProps,
@@ -308,6 +316,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     [
       toolbarProps,
       atProto.openImportSheet,
+      standardSite.openImportSheet,
       editorProps,
       previewProps,
       statusBarProps,
@@ -328,5 +337,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     editorFontFamily: editorPresentation.fontFamily,
     editorText: editorModel.text,
     atProto,
+    standardSite,
   };
 }

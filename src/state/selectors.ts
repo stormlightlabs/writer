@@ -515,6 +515,15 @@ export const useAtProtoUiState = () =>
     })),
   );
 
+export const useStandardSiteUiState = () =>
+  useUiStore(
+    useShallow((state) => ({
+      sheetMode: state.standardSiteSheetMode,
+      openPostImportSheet: state.openStandardSitePostImportSheet,
+      closeSheet: state.closeStandardSiteSheet,
+    })),
+  );
+
 export type SidebarStateReturn = ReturnType<typeof useSidebarState>;
 export type ToolbarStateReturn = ReturnType<typeof useToolbarState>;
 export type EditorPresentationStateReturn = ReturnType<typeof useEditorPresentationState>;

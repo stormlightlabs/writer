@@ -360,7 +360,7 @@ In the current codebase, the conversion logic belongs in `writer_core::atproto`,
 
 | Command             | Args                                           | Returns                                   | Auth     |
 | ------------------- | ---------------------------------------------- | ----------------------------------------- | -------- |
-| `publication_list`  | `did_or_handle`                                | `CommandResponse<Vec<PublicationRecord>>` | No       |
+| `publication_list`  | `did_or_handle`                                | `CommandResponse<PublicationListResult>`  | No       |
 | `publication_get`   | `did_or_handle, tid`                           | `CommandResponse<PublicationRecord>`      | No       |
 | `post_list`         | `did_or_handle, publication_tid?`              | `CommandResponse<Vec<PostRecord>>`        | No       |
 | `post_get`          | `did_or_handle, tid`                           | `CommandResponse<PostRecord>`             | No       |
@@ -370,6 +370,7 @@ In the current codebase, the conversion logic belongs in `writer_core::atproto`,
 | `post_delete`       | `tid`                                          | `CommandResponse<()>`                     | Required |
 
 `PublicationRecord`: `uri`, `tid`, `name`, `description`, `url`.
+`PublicationListResult`: `publications`, `skipped_invalid_count` (`skippedInvalidCount` in the frontend) so malformed publication records can be skipped without failing the whole browse.
 `PostRecord`: `uri`, `tid`, `title`, `description`, `text_content`, `published_at`, `updated_at`, `tags`, `publication_uri`.
 
 `post_get_markdown` should perform Leaflet→Markdown conversion in `writer_core::atproto::leaflet`, with the Tauri command acting as a transport wrapper so the frontend receives ready-to-use content.
@@ -392,10 +393,11 @@ src/
 ### Import Flow (Pull)
 
 1. User opens import sheet from toolbar or settings panel.
-2. Enter a handle or DID → call `publication_list` to list their publications.
-3. Select a publication → call `post_list` filtered by that publication.
-4. Select a post → call `post_get_markdown` to preview the converted Markdown.
-5. Choose a Writer location + relative path → import with `doc_exists` guard + `doc_save`.
+2. Standard.Site post import should remain available without an authenticated Writer/Tangled session because it only reads public records.
+3. Enter a handle or DID → call `publication_list` to list their publications and report any skipped malformed records.
+4. Select a publication → call `post_list` filtered by that publication.
+5. Select a post → call `post_get_markdown` to preview the converted Markdown.
+6. Choose a Writer location + relative path → import with `doc_exists` guard + `doc_save`.
 
 ### Publish Flow (Push)
 

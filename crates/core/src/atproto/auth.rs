@@ -1,6 +1,7 @@
 use crate::{AppError, ErrorCode};
 use jacquard::IntoStatic;
 use jacquard::client::FileAuthStore;
+use jacquard::deps::fluent_uri::Uri;
 use jacquard::identity::resolver::IdentityResolver;
 use jacquard::oauth::client::{OAuthClient, OAuthSession};
 use jacquard::oauth::loopback::{LoopbackConfig, LoopbackPort};
@@ -276,7 +277,7 @@ impl AtProtoState {
 
     pub(crate) async fn resolve_repo_and_pds(
         &self, did_or_handle: &str,
-    ) -> Result<(Did<'static>, reqwest::Url), AppError> {
+    ) -> Result<(Did<'static>, Uri<String>), AppError> {
         let trimmed = did_or_handle.trim();
         if trimmed.is_empty() {
             return Err(AppError::new(
@@ -293,19 +294,18 @@ impl AtProtoState {
         })?;
 
         match identifier {
-            AtIdentifier::Did(did) => {
-                let pds = self
-                    .resolver
+            AtIdentifier::Did(did) => Ok((
+                did.clone().into_static(),
+                self.resolver
                     .pds_for_did(&did)
                     .await
-                    .map_err(|error| AppError::io(format!("Failed to resolve PDS for DID: {}", error)))?;
-                Ok((did.into_static(), pds))
-            }
+                    .map_err(|error| AppError::io(format!("Failed to resolve PDS for DID: {}", error)))?,
+            )),
             AtIdentifier::Handle(handle) => self
                 .resolver
                 .pds_for_handle(&handle)
                 .await
-                .map_err(|error| AppError::io(format!("Failed to resolve handle: {}", error))),
+                .map_err(|error| AppError::io(format!("Failed to resolve PDS for handle: {}", error))),
         }
     }
 }

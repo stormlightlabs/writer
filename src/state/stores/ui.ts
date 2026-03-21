@@ -32,6 +32,7 @@ export const getInitialUiState = (): UiState => ({
   atProtoSession: null,
   atProtoHydrated: false,
   atProtoPending: false,
+  standardSiteSheetMode: "closed",
 });
 
 export const useUiStore = create<UiStore>()((set, get) => ({
@@ -85,6 +86,8 @@ export const useUiStore = create<UiStore>()((set, get) => ({
   setAtProtoSession: (value) => set({ atProtoSession: value }),
   setAtProtoHydrated: (value) => set({ atProtoHydrated: value }),
   setAtProtoPending: (value) => set({ atProtoPending: value }),
+  openStandardSitePostImportSheet: () => set({ standardSiteSheetMode: "postImport" }),
+  closeStandardSiteSheet: () => set({ standardSiteSheetMode: "closed" }),
 }));
 
 export function resetUiStore(): void {

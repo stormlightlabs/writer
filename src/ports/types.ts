@@ -14,6 +14,8 @@ import type {
   LocationId,
   MarkdownPreviewStyle,
   MarkdownProfile,
+  PostRecord,
+  PublicationListResult,
   RenderResult,
   SaveStatus,
   SearchHit,
@@ -292,3 +294,20 @@ export type StringUpdateParams = Parameters<
   ) => void
 >;
 export type StringDeleteParams = Parameters<(tid: string, onOk: SuccessCallback<void>, onErr: ErrorCallback) => void>;
+
+export type PublicationListParams = Parameters<
+  (didOrHandle: string, onOk: SuccessCallback<PublicationListResult>, onErr: ErrorCallback) => void
+>;
+
+export type PostListParams = Parameters<
+  (
+    didOrHandle: string,
+    publicationTid: string | undefined,
+    onOk: SuccessCallback<PostRecord[]>,
+    onErr: ErrorCallback,
+  ) => void
+>;
+
+export type PostGetMarkdownParams = Parameters<
+  (didOrHandle: string, tid: string, onOk: SuccessCallback<string>, onErr: ErrorCallback) => void
+>;

@@ -127,6 +127,22 @@ describe("Sidebar", () => {
     expect(handleRefreshSidebar).toHaveBeenCalledWith(1);
   });
 
+  it("shows import actions for Tangled strings and Standard.Site posts", () => {
+    vi.mocked(useSidebarState).mockReturnValue(createSidebarState());
+    const onOpenImportSheet = vi.fn();
+    const onOpenStandardSiteImportSheet = vi.fn();
+
+    render(
+      <Sidebar onOpenImportSheet={onOpenImportSheet} onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />,
+    );
+
+    fireEvent.click(screen.getByTitle("Import Tangled strings"));
+    fireEvent.click(screen.getByTitle("Import Standard.Site posts"));
+
+    expect(onOpenImportSheet).toHaveBeenCalledOnce();
+    expect(onOpenStandardSiteImportSheet).toHaveBeenCalledOnce();
+  });
+
   it("shows refresh feedback for the selected location and disables refresh action", () => {
     vi.mocked(useSidebarState).mockReturnValue(
       createSidebarState({ refreshingLocationId: 1, sidebarRefreshReason: "external" }),

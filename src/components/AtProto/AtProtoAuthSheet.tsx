@@ -9,7 +9,7 @@ import { PublishSheet } from "./PublishSheet";
 
 type Controller = ReturnType<typeof useAtProtoController>;
 
-type AtProtoAuthSheetProps = { controller: Controller };
+type AtProtoAuthSheetProps = { controller: Controller; onOpenStandardSiteImport?: () => void };
 
 function AuthSheetHeader(
   { title, description, mode, onBack }: {
@@ -111,7 +111,27 @@ function SessionAccountCard({ controller }: { controller: Controller }) {
   );
 }
 
-function SessionView({ controller }: { controller: Controller }) {
+function SessionActions(
+  { controller, onOpenStandardSiteImport }: { controller: Controller; onOpenStandardSiteImport?: () => void },
+) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <Button variant="primary" size="sm" onClick={controller.openImportSheet}>Import Strings</Button>
+        {onOpenStandardSiteImport && (
+          <Button variant="primary" size="sm" onClick={onOpenStandardSiteImport}>Import Posts</Button>
+        )}
+      </div>
+      <Button variant="dangerGhost" size="sm" disabled={controller.isPending} onClick={controller.handleLogout}>
+        {controller.isPending ? "Disconnecting..." : "Log Out"}
+      </Button>
+    </div>
+  );
+}
+
+function SessionView(
+  { controller, onOpenStandardSiteImport }: { controller: Controller; onOpenStandardSiteImport?: () => void },
+) {
   const endpoint = useMemo(() => controller.session?.endpoint ?? "Unknown endpoint", [controller.session]);
   return (
     <>
@@ -125,18 +145,13 @@ function SessionView({ controller }: { controller: Controller }) {
           <div className="text-xs uppercase tracking-[0.14em] text-text-secondary">PDS endpoint</div>
           <div className="mt-1 break-all text-xs text-text-primary">{endpoint}</div>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="primary" size="sm" onClick={controller.openImportSheet}>Import Strings</Button>
-          <Button variant="dangerGhost" size="sm" disabled={controller.isPending} onClick={controller.handleLogout}>
-            {controller.isPending ? "Disconnecting..." : "Log Out"}
-          </Button>
-        </div>
+        <SessionActions controller={controller} onOpenStandardSiteImport={onOpenStandardSiteImport} />
       </div>
     </>
   );
 }
 
-export function AtProtoAuthSheet({ controller }: AtProtoAuthSheetProps) {
+export function AtProtoAuthSheet({ controller, onOpenStandardSiteImport }: AtProtoAuthSheetProps) {
   return (
     <>
       <Sheet
@@ -148,7 +163,9 @@ export function AtProtoAuthSheet({ controller }: AtProtoAuthSheetProps) {
         className="right-4 top-14 bottom-4 rounded-xl border shadow-xl"
         backdropClassName="bg-black/30">
         <section className="flex h-full min-h-0 flex-col overflow-hidden bg-layer-01">
-          {controller.sheetMode === "session" && <SessionView controller={controller} />}
+          {controller.sheetMode === "session" && (
+            <SessionView controller={controller} onOpenStandardSiteImport={onOpenStandardSiteImport} />
+          )}
           {controller.sheetMode === "login" && <LoginView controller={controller} />}
         </section>
       </Sheet>
