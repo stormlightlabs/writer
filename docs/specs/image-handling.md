@@ -3,7 +3,7 @@ title: Image Handling Spec
 updated: 2026-03-21
 ---
 
-> Goal: Support local image embedding in markdown documents with storage, preview, and lifecycle management.
+> Goal: Support local image embedding in markdown documents with storage, preview, lifecycle management, AT Protocol blob sync, and PDF export.
 
 ## Problem
 
@@ -101,6 +101,121 @@ The document index (`documents` table in SQLite) does **not** track images. Imag
 
 Orphaned images (not referenced by any document) accumulate over time. A future `image_cleanup` command can scan all documents in a location and remove unreferenced assets. This is **out of scope** for the initial implementation.
 
+### AT Protocol Blob Sync
+
+Bridges local `.writer-assets/` images and AT Protocol blob references (`at://blob/CID`) so images survive publish and import round-trips.
+
+#### Publish direction (local → remote)
+
+When a document containing `.writer-assets/` image references is published to Leaflet/Standard.Site:
+
+1. **Scan** the markdown for `.writer-assets/` image paths.
+2. **Read** each referenced file from the location's `.writer-assets/` directory.
+3. **Upload** each file via `com.atproto.repo.uploadBlob` on the user's PDS. The PDS returns a `BlobRef` with a populated CID, MIME type, and size.
+4. **Rewrite** the markdown image references from `.writer-assets/<hash>.<ext>` to `at://blob/<CID>` before building the Leaflet document.
+5. **Populate** the `Image` block's blob metadata correctly (MIME type from extension, actual file size, aspect ratio if cheaply available) instead of the current hardcoded values (`application/octet-stream`, size 0).
+
+The rewrite is transient — it happens in-memory during the publish pipeline. The local document retains its `.writer-assets/` references.
+
+#### Import direction (remote → local)
+
+When a Leaflet/Standard.Site post containing blob images is imported:
+
+1. **Detect** `at://blob/<CID>` image references in the converted markdown.
+2. **Download** each blob from the author's PDS via `com.atproto.sync.getBlob` (params: DID + CID).
+3. **Import** the downloaded bytes through the existing `image_import` flow (hash, dedup, store in `.writer-assets/`).
+4. **Rewrite** the markdown image references from `at://blob/<CID>` to `.writer-assets/<hash>.<ext>`.
+
+This means imported posts get fully local images that render in preview without network access.
+
+#### Tauri Commands
+
+##### `blob_upload`
+
+```rust
+#[tauri::command]
+pub async fn blob_upload(
+    location_id: LocationId,
+    asset_path: String,
+    auth: AuthSession,
+) -> Result<BlobRef, Error>
+```
+
+- Reads the file from `.writer-assets/`, determines MIME type from extension.
+- Calls `com.atproto.repo.uploadBlob` with the file bytes.
+- Returns the `BlobRef` (CID, MIME type, size) for use in Leaflet document construction.
+
+##### `blob_download`
+
+```rust
+#[tauri::command]
+pub async fn blob_download(
+    location_id: LocationId,
+    did: String,
+    cid: String,
+) -> Result<String, Error>
+```
+
+- Calls `com.atproto.sync.getBlob` with the DID and CID.
+- Writes the response bytes through `image_import` (hash, dedup, store).
+- Returns the local `.writer-assets/<hash>.<ext>` path.
+
+#### Metadata Accuracy
+
+The current `image_from_url` in `leaflet.rs` hardcodes blob metadata:
+
+```rust
+mime_type: MimeType::new_static("application/octet-stream"),
+size: 0,
+```
+
+With blob sync, `blob_upload` returns real metadata from the PDS. The publish pipeline must thread this metadata into the `Image` block construction so Leaflet clients render images correctly.
+
+### PDF Export with Embedded Images
+
+The PDF pipeline (`crates/markdown` → `@react-pdf/renderer`) currently has no image support. Extending it requires changes at both layers.
+
+#### Rust: PdfNode Image Variant
+
+Add an `Image` variant to `PdfNode`:
+
+```rust
+pub enum PdfNode {
+    // ... existing variants ...
+    Image { src: String, alt: String },
+}
+```
+
+- `src`: the `.writer-assets/<hash>.<ext>` path as written in markdown.
+- `alt`: the alt text from `![alt](src)`.
+
+Update `MarkdownTransformer::transform_to_pdf_nodes()` to emit `PdfNode::Image` when it encounters a Comrak image node, instead of silently dropping it.
+
+#### Frontend: Path Resolution
+
+The `@react-pdf/renderer` `<Image>` component accepts a `src` that can be a URL, a file path, or a base64 data URL. Since Tauri asset protocol URLs may not work inside the PDF renderer's internal fetch:
+
+- Resolve `.writer-assets/` paths to **base64 data URLs** before passing to the renderer.
+- Use `convertFileSrc()` to get the Tauri asset URL, fetch the bytes via the webview, then encode to `data:<mime>;base64,...`.
+- This is similar to the font preloading strategy already in `src/pdf/fonts.ts`.
+
+#### Frontend: MarkdownPdfDocument Rendering
+
+Add an `Image` case to the node renderer in `MarkdownPdfDocument.tsx`:
+
+```tsx
+case "Image":
+  return <Image src={resolvedSrc} style={{ maxWidth: "100%" }} />;
+```
+
+- Respect page margins — images should not overflow the content area.
+- Preserve aspect ratio.
+
+#### Limitations
+
+- SVG images may not be supported by `@react-pdf/renderer`. Fall back to a placeholder or skip with a warning.
+- Very large images should be resized to reasonable print dimensions to avoid bloating PDF file size. This can be deferred — initial implementation embeds at original resolution.
+
 ---
 
 ## Scope Boundaries
@@ -112,6 +227,8 @@ Orphaned images (not referenced by any document) accumulate over time. A future 
 - Markdown reference insertion
 - Preview rendering via Tauri asset protocol
 - Single image delete command
+- AT Protocol blob sync (upload on publish, download on import)
+- PDF export with embedded images
 
 **Out of scope (future):**
 
@@ -119,5 +236,3 @@ Orphaned images (not referenced by any document) accumulate over time. A future 
 - Orphan cleanup
 - Image editing / cropping
 - Gallery / asset manager UI
-- AT Protocol image sync (Leaflet blob ↔ local asset)
-- PDF export with embedded images (depends on PDF pipeline)

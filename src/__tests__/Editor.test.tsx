@@ -53,6 +53,7 @@ describe(Editor, () => {
     it("should disable text wrapping when disabled via prop", () => {
       const { container } = render(<Editor presentation={{ textWrappingEnabled: false }} />);
       expect(container.querySelector(".cm-lineWrapping")).not.toBeInTheDocument();
+      expect(screen.getByTestId("editor-container")).toHaveClass("editor-container--scroll");
     });
 
     it("should apply custom font family and size variables", () => {
@@ -208,6 +209,7 @@ describe(Editor, () => {
       expect(secondEditorRoot).toBeInTheDocument();
       expect(secondEditorRoot).toBe(firstEditorRoot);
       expect(container.querySelector(".cm-lineWrapping")).not.toBeInTheDocument();
+      expect(screen.getByTestId("editor-container")).toHaveClass("editor-container--scroll");
       expect(container.querySelector(".cm-content")).toHaveTextContent("Persistent");
     });
 

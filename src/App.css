@@ -348,6 +348,17 @@ body,
     padding-right: 2rem;
 }
 
+.editor-container.editor-container--scroll .cm-content {
+    max-width: none;
+    margin: 0;
+    padding-left: 0.35rem;
+}
+
+.editor-container.editor-container--scroll .cm-line {
+    padding-left: 0;
+    padding-right: 0;
+}
+
 /* Markdown Preview Styles */
 .preview-content {
     max-width: var(--spacing-preview-content-max-width);

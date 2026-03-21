@@ -18,22 +18,20 @@ const createArgs = (overrides: Partial<UseDocumentSessionEffectsArgs> = {}): Use
   activeDocRef: null,
   openDoc: vi.fn(),
   handleSelectDocument: vi.fn(),
-  handleNewDocument: vi.fn(),
   ...overrides,
 });
 
 describe("useDocumentSessionEffects", () => {
-  it("waits for session hydration before creating a startup draft", () => {
-    const handleNewDocument = vi.fn();
-    renderHook(() => useDocumentSessionEffects(createArgs({ isSessionHydrated: false, handleNewDocument })));
-    expect(handleNewDocument).not.toHaveBeenCalled();
+  it("waits for session hydration before showing the empty workspace state", () => {
+    const handleSelectDocument = vi.fn();
+    renderHook(() => useDocumentSessionEffects(createArgs({ isSessionHydrated: false, handleSelectDocument })));
+    expect(handleSelectDocument).not.toHaveBeenCalled();
   });
 
-  it("creates a new draft on startup when no tabs are restored", () => {
-    const handleNewDocument = vi.fn();
-    renderHook(() => useDocumentSessionEffects(createArgs({ handleNewDocument })));
-    expect(handleNewDocument).toHaveBeenCalled();
-    expect(handleNewDocument).toHaveBeenCalledWith(LOCATION.id);
+  it("does not create a startup draft when no tabs are restored", () => {
+    const handleSelectDocument = vi.fn();
+    renderHook(() => useDocumentSessionEffects(createArgs({ handleSelectDocument })));
+    expect(handleSelectDocument).not.toHaveBeenCalled();
   });
 
   it("opens the active document when one is selected", () => {
@@ -87,5 +85,23 @@ describe("useDocumentSessionEffects", () => {
     );
 
     expect(openDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it("reselects an existing tab for an empty selected location instead of creating a draft", () => {
+    const handleSelectDocument = vi.fn();
+    const otherDocRef: DocRef = { location_id: LOCATION.id, rel_path: "notes/archive.md" };
+
+    renderHook(() =>
+      useDocumentSessionEffects(
+        createArgs({
+          documentsCount: 0,
+          activeTab: null,
+          tabs: [{ id: "tab-1", docRef: otherDocRef, title: "Archive", isModified: false }],
+          handleSelectDocument,
+        }),
+      )
+    );
+
+    expect(handleSelectDocument).toHaveBeenCalledWith(LOCATION.id, "notes/archive.md");
   });
 });

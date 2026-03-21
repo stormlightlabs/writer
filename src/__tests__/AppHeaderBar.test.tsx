@@ -6,11 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
   "$state/selectors",
-  () => ({
-    useAppHeaderBarState: vi.fn(),
-    useHelpSheetState: vi.fn(),
-    useLayoutSettingsUiState: vi.fn(),
-  }),
+  () => ({ useAppHeaderBarState: vi.fn(), useHelpSheetState: vi.fn(), useLayoutSettingsUiState: vi.fn() }),
 );
 
 describe("AppHeaderBar", () => {

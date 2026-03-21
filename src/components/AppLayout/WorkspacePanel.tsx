@@ -1,3 +1,4 @@
+import { WelcomeScreen } from "$components/AppLayout/WelcomeScreen";
 import { DocumentTabs } from "$components/DocumentTabs";
 import { type EditorProps, EditorWithContainer } from "$components/Editor";
 import { Preview, type PreviewProps } from "$components/Preview";
@@ -12,6 +13,7 @@ import { useViewportTier } from "$hooks/useViewportTier";
 import { EyeIcon } from "$icons";
 import {
   useEditorPresentationActions,
+  useLayoutChromeActions,
   useWorkspacePanelModeState,
   useWorkspacePanelSidebarState,
   useWorkspacePanelStatusBarCollapsed,
@@ -46,6 +48,14 @@ export type WorkspaceDiagnosticsProps = {
   onOpenSettings: () => void;
 };
 
+export type WorkspaceWelcomeProps = {
+  isVisible: boolean;
+  hasLocations: boolean;
+  locationCount: number;
+  documentCount: number;
+  onAddLocation: () => void;
+};
+
 export type WorkspacePanelProps = {
   toolbar: Pick<
     ToolbarProps,
@@ -67,6 +77,7 @@ export type WorkspacePanelProps = {
   preview: WorkspacePreviewProps;
   statusBar: StatusBarProps;
   diagnostics: WorkspaceDiagnosticsProps;
+  welcome?: WorkspaceWelcomeProps;
 };
 
 const SPLIT_PANEL_MIN_WIDTH = 280;
@@ -103,7 +114,10 @@ function PreviewModeButton(
 }
 
 function PreviewHeader(
-  { previewStyle, onSelectMode }: { previewStyle: WorkspacePreviewProps["previewStyle"]; onSelectMode: (mode: PreviewMode) => void },
+  { previewStyle, onSelectMode }: {
+    previewStyle: WorkspacePreviewProps["previewStyle"];
+    onSelectMode: (mode: PreviewMode) => void;
+  },
 ) {
   const activeMode = useMemo(() => previewStyleToMode(previewStyle), [previewStyle]);
 
@@ -125,6 +139,11 @@ type MainPanelProps = {
   panelMode: PanelMode;
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
+  welcome?: WorkspaceWelcomeProps;
+  onCreateNewDocument?: () => void;
+  onOpenExistingDocument: () => void;
+  onOpenImportSheet?: () => void;
+  onOpenStandardSiteImportSheet?: () => void;
   onSelectPreviewMode: (mode: PreviewMode) => void;
   splitEditorWidth: number;
   isSplitResizing: boolean;
@@ -144,7 +163,20 @@ function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMod
 }
 
 function MainPanel(
-  { panelMode, editor, preview, onSelectPreviewMode, splitEditorWidth, isSplitResizing, onSplitResizeStart }: MainPanelProps,
+  {
+    panelMode,
+    editor,
+    preview,
+    welcome,
+    onCreateNewDocument,
+    onOpenExistingDocument,
+    onOpenImportSheet,
+    onOpenStandardSiteImportSheet,
+    onSelectPreviewMode,
+    splitEditorWidth,
+    isSplitResizing,
+    onSplitResizeStart,
+  }: MainPanelProps,
 ) {
   const container = useMemo(() => {
     if (panelMode === "split") {
@@ -155,6 +187,20 @@ function MainPanel(
     }
     return { className: "flex min-h-0 min-w-0 flex-col w-full" };
   }, [panelMode, splitEditorWidth]);
+
+  if (welcome?.isVisible) {
+    return (
+      <WelcomeScreen
+        hasLocations={welcome.hasLocations}
+        locationCount={welcome.locationCount}
+        documentCount={welcome.documentCount}
+        onAddLocation={welcome.onAddLocation}
+        onCreateNewDocument={onCreateNewDocument}
+        onOpenExisting={onOpenExistingDocument}
+        onOpenImportSheet={onOpenImportSheet}
+        onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />
+    );
+  }
 
   if (panelMode === "split") {
     return (
@@ -219,12 +265,13 @@ function Section({ children, initial, animate, exit, transition, className, styl
 }
 
 export function WorkspacePanel(
-  { toolbar, onOpenImportSheet, onOpenStandardSiteImportSheet, editor, preview, statusBar, diagnostics }:
+  { toolbar, onOpenImportSheet, onOpenStandardSiteImportSheet, editor, preview, statusBar, diagnostics, welcome }:
     WorkspacePanelProps,
 ) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
   const { setMarkdownPreviewStyle } = useEditorPresentationActions();
+  const { setShowSearch } = useLayoutChromeActions();
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
   const { isSplitView, isPreviewVisible } = useWorkspacePanelModeState();
   const topBarsCollapsed = useWorkspacePanelTopBarsCollapsed();
@@ -294,6 +341,10 @@ export function WorkspacePanel(
   const handleSelectPreviewMode = useCallback((mode: PreviewMode) => {
     setMarkdownPreviewStyle(previewModeToStyle(mode));
   }, [setMarkdownPreviewStyle]);
+
+  const handleOpenExistingDocument = useCallback(() => {
+    setShowSearch(true);
+  }, [setShowSearch]);
 
   const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
 
@@ -366,6 +417,11 @@ export function WorkspacePanel(
           panelMode={effectivePanelMode}
           editor={editor}
           preview={preview}
+          welcome={welcome}
+          onCreateNewDocument={newDocumentHandler}
+          onOpenExistingDocument={handleOpenExistingDocument}
+          onOpenImportSheet={onOpenImportSheet}
+          onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet}
           onSelectPreviewMode={handleSelectPreviewMode}
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}

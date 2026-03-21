@@ -1,12 +1,22 @@
 import { Toolbar } from "$components/Toolbar";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { useLayoutChromeActions, useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
+import {
+  useLayoutChromeActions,
+  useLayoutChromeState,
+  useLayoutSettingsUiState,
+  useToolbarState,
+} from "$state/selectors";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
   "$state/selectors",
-  () => ({ useToolbarState: vi.fn(), useLayoutSettingsUiState: vi.fn(), useLayoutChromeActions: vi.fn() }),
+  () => ({
+    useToolbarState: vi.fn(),
+    useLayoutSettingsUiState: vi.fn(),
+    useLayoutChromeActions: vi.fn(),
+    useLayoutChromeState: vi.fn(),
+  }),
 );
 vi.mock("$hooks/useViewportTier", () => ({ useViewportTier: vi.fn() }));
 
@@ -35,6 +45,15 @@ describe("Toolbar", () => {
       toggleFilenameVisibility: vi.fn(),
     });
     vi.mocked(useLayoutSettingsUiState).mockReturnValue({ isOpen: false, setOpen: vi.fn() });
+    vi.mocked(useLayoutChromeState).mockReturnValue({
+      sidebarCollapsed: false,
+      topBarsCollapsed: false,
+      statusBarCollapsed: false,
+      showSearch: false,
+      reduceMotion: false,
+      showFilenames: false,
+      createReadmeInNewLocations: true,
+    });
     vi.mocked(useViewportTier).mockReturnValue({
       viewportWidth: 1280,
       tier: "standard",
@@ -93,7 +112,7 @@ describe("Toolbar", () => {
 
     render(<Toolbar saveStatus="Idle" onSave={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide Sidebar" }));
     expect(toggleSidebarCollapsed).toHaveBeenCalledOnce();
   });
 

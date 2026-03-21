@@ -298,18 +298,8 @@ function SearchResultsHeader(
 const GLASS_STYLE = { background: "rgba(35, 38, 43, 0.75)", backdropFilter: "blur(20px)" };
 
 export function SearchPanel(
-  {
-    isOpen,
-    query,
-    results,
-    isSearching,
-    locations,
-    filters,
-    onQueryChange,
-    onFiltersChange,
-    onSelectResult,
-    onClose,
-  }: SearchPanelProps,
+  { isOpen, query, results, isSearching, locations, filters, onQueryChange, onFiltersChange, onSelectResult, onClose }:
+    SearchPanelProps,
 ) {
   const { viewportWidth, isCompact } = useViewportTier();
   const [showFilters, setShowFilters] = useState(false);
@@ -361,10 +351,9 @@ export function SearchPanel(
     [compact],
   );
 
-  const panelBodyClassName = useMemo(
-    () => cn("overflow-y-auto px-3 py-3", compact ? "flex-1" : "max-h-[50vh]"),
-    [compact],
-  );
+  const panelBodyClassName = useMemo(() => cn("overflow-y-auto px-3 py-3", compact ? "flex-1" : "max-h-[50vh]"), [
+    compact,
+  ]);
 
   const containerClassName = useMemo(
     () =>

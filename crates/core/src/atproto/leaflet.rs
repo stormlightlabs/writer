@@ -122,7 +122,6 @@ fn render_block(block: &Block<'_>) -> Result<String, AppError> {
     };
 
     Ok(match &block.alignment {
-        // Some(alignment) if !alignment.is_empty() => format!("<!-- alignment: {} -->\n{}", alignment, body),
         Some(alignment) => match alignment {
             BlockAlignment::TextAlignCenter => format!("<!-- alignment: center; -->\n{}", body),
             BlockAlignment::TextAlignLeft => format!("<!-- alignment: left; -->\n{}", body),

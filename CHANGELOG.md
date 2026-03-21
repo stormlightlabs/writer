@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.3.0
+
+### Features
+
+- AT Protocol integration (login with your [internet handle](https://internethandle.org/))
+- Import strings (snippets) from [Tangled](https://tangled.org/)
+- Import [standard.site](https://standard.site/) posts ([Leaflet](https://leaflet.pub))
+- UI/Design overhaul - reduced visual clutter
+
 ## v0.2.0 — 2026-03-20
 
 ### Features

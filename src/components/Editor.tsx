@@ -537,7 +537,9 @@ export function Editor(
   return (
     <div
       ref={containerRef}
-      className={`editor-container ${className}`}
+      className={`editor-container ${
+        textWrappingEnabled ? "editor-container--wrapped" : "editor-container--scroll"
+      } ${className}`}
       data-theme={theme}
       data-ready={isReady}
       style={containerStyle}

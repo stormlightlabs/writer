@@ -2,7 +2,7 @@
 title: "Parking Lot"
 description: >
     A collection of ideas/proposals for new features and quick bug notes.
-updated: 2026-03-19
+updated: 2026-03-21
 ---
 
 1. **Outline utilization**
@@ -16,6 +16,4 @@ updated: 2026-03-19
 
 ---
 
-- We should let users pick editor and PDF font in settings and export
-- The new/empty (when nothing is open) document/buffer isn't good UI. We should show a welcome screen with some options like create new, open existing, import, etc.
-- Toggling off word wrap should be reflected in the editor by removing horizontal padding/margins
+- We should let users distinctly pick editor and PDF font in settings and export

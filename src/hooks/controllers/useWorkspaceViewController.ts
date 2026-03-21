@@ -1,4 +1,8 @@
-import type { WorkspaceEditorProps, WorkspacePanelProps } from "$components/AppLayout/WorkspacePanel";
+import type {
+  WorkspaceEditorProps,
+  WorkspacePanelProps,
+  WorkspaceWelcomeProps,
+} from "$components/AppLayout/WorkspacePanel";
 import { StatusBarProps } from "$components/StatusBar";
 import type { StyleMatch } from "$editor/types";
 import { useDocumentSessionEffects } from "$hooks/app/useDocumentSessionEffects";
@@ -83,6 +87,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     handleSelectDocument,
     handleCreateDraftTab,
     handleCreateNewDocument,
+    handleAddLocation,
     handleRefreshSidebar,
   } = useWorkspaceController();
   const atProto = useAtProtoController({ locations, selectedLocationId, refreshSidebar: handleRefreshSidebar });
@@ -117,6 +122,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     editorModel.docRef,
   ]);
   const hasLocations = useMemo(() => locations.length > 0, [locations.length]);
+  const showWelcomeScreen = useMemo(() => isSessionHydrated && !activeTab, [activeTab, isSessionHydrated]);
 
   const cursorPosition = useMemo(
     () => ({ cursorLine: editorModel.cursorLine, cursorColumn: editorModel.cursorColumn }),
@@ -178,7 +184,6 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     activeDocRef,
     openDoc,
     handleSelectDocument,
-    handleNewDocument,
   });
 
   useEditorPreviewEffects({
@@ -296,6 +301,17 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     ],
   );
 
+  const welcomeProps = useMemo<WorkspaceWelcomeProps>(
+    () => ({
+      isVisible: showWelcomeScreen,
+      hasLocations,
+      locationCount: locations.length,
+      documentCount: documents.length,
+      onAddLocation: handleAddLocation,
+    }),
+    [showWelcomeScreen, hasLocations, locations.length, documents.length, handleAddLocation],
+  );
+
   const workspacePanelProps = useMemo(
     () => ({
       toolbar: toolbarProps,
@@ -312,6 +328,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
         onClose: closeDiagnostics,
         onOpenSettings: openSettingsRoute,
       },
+      welcome: welcomeProps,
     }),
     [
       toolbarProps,
@@ -326,6 +343,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       handleSelectStyleMatch,
       closeDiagnostics,
       openSettingsRoute,
+      welcomeProps,
     ],
   );
 

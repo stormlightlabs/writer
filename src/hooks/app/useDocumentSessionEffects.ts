@@ -12,7 +12,6 @@ type UseDocumentSessionEffectsArgs = {
   activeDocRef: DocRef | null;
   openDoc: (docRef: DocRef) => void;
   handleSelectDocument: (locationId: number, path: string) => void;
-  handleNewDocument: (locationId?: number) => void;
 };
 
 export function useDocumentSessionEffects(
@@ -27,7 +26,6 @@ export function useDocumentSessionEffects(
     activeDocRef,
     openDoc,
     handleSelectDocument,
-    handleNewDocument,
   }: UseDocumentSessionEffectsArgs,
 ): void {
   const startupDocumentReadyRef = useRef(false);
@@ -45,11 +43,7 @@ export function useDocumentSessionEffects(
 
     startupDocumentReadyRef.current = true;
     startupDocumentRestoredRef.current = true;
-
-    if (tabs.length === 0) {
-      handleNewDocument(selectedLocationId ?? locations[0]?.id);
-    }
-  }, [isSessionHydrated, isSidebarLoading, locations, selectedLocationId, tabs.length, handleNewDocument]);
+  }, [isSessionHydrated, isSidebarLoading, locations]);
 
   useEffect(() => {
     if (!activeDocRef) {
@@ -80,9 +74,6 @@ export function useDocumentSessionEffects(
     const existingTab = tabs.find((tab) => tab.docRef.location_id === selectedLocationId);
     if (existingTab) {
       handleSelectDocument(existingTab.docRef.location_id, existingTab.docRef.rel_path);
-      return;
     }
-
-    handleNewDocument(selectedLocationId);
-  }, [activeTab, documentsCount, handleNewDocument, handleSelectDocument, isSidebarLoading, selectedLocationId, tabs]);
+  }, [activeTab, documentsCount, handleSelectDocument, isSidebarLoading, selectedLocationId, tabs]);
 }

@@ -10,6 +10,7 @@ import {
   useEditorPresentationActions,
   useEditorPresentationState,
   useLayoutChromeActions,
+  useLayoutChromeState,
   useLayoutSettingsUiState,
   useSidebarState,
   useToolbarState,
@@ -28,7 +29,6 @@ import type {
   WorkspacePanelSidebarStateReturn,
 } from "$state/selectors";
 import type { MarkdownPreviewStyle } from "$types";
-import { formatShortcut } from "$utils/shortcuts";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -39,6 +39,7 @@ vi.mock(
     useToolbarState: vi.fn(),
     useEditorPresentationActions: vi.fn(),
     useLayoutChromeActions: vi.fn(),
+    useLayoutChromeState: vi.fn(),
     useLayoutSettingsUiState: vi.fn(),
     useEditorPresentationState: vi.fn(),
     useWorkspacePanelSidebarState: vi.fn(),
@@ -55,6 +56,8 @@ type SelectorOverrides = {
   toolbarState?: Partial<ToolbarStateReturn>;
   editorPresentationState?: Partial<EditorPresentationStateReturn>;
   setMarkdownPreviewStyle?: (value: MarkdownPreviewStyle) => void;
+  setShowSearch?: (value: boolean) => void;
+  toggleSidebarCollapsed?: () => void;
   workspacePanelSidebarState?: Partial<WorkspacePanelSidebarStateReturn>;
   workspacePanelModeState?: Partial<WorkspacePanelModeStateReturn>;
   topBarsCollapsed?: TopBarsCollapsedReturn;
@@ -63,10 +66,13 @@ type SelectorOverrides = {
 
 type WorkspacePanelPropOverrides = {
   toolbar?: Partial<WorkspacePanelProps["toolbar"]>;
+  onOpenImportSheet?: WorkspacePanelProps["onOpenImportSheet"];
+  onOpenStandardSiteImportSheet?: WorkspacePanelProps["onOpenStandardSiteImportSheet"];
   editor?: Partial<EditorProps>;
   preview?: Partial<PreviewProps>;
   statusBar?: Partial<StatusBarProps>;
   diagnostics?: Partial<WorkspaceDiagnosticsProps>;
+  welcome?: Partial<NonNullable<WorkspacePanelProps["welcome"]>>;
 };
 
 const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => ({
@@ -152,15 +158,24 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
   });
   vi.mocked(useLayoutChromeActions).mockReturnValue({
     setSidebarCollapsed: vi.fn(),
-    toggleSidebarCollapsed: vi.fn(),
+    toggleSidebarCollapsed: overrides.toggleSidebarCollapsed ?? vi.fn(),
     setTopBarsCollapsed: vi.fn(),
     toggleTabBarCollapsed: vi.fn(),
     setStatusBarCollapsed: vi.fn(),
     toggleStatusBarCollapsed: vi.fn(),
-    setShowSearch: vi.fn(),
+    setShowSearch: overrides.setShowSearch ?? vi.fn(),
     toggleShowSearch: vi.fn(),
     setFilenameVisibility: vi.fn(),
     toggleFilenameVisibility: vi.fn(),
+  });
+  vi.mocked(useLayoutChromeState).mockReturnValue({
+    sidebarCollapsed: overrides.workspacePanelSidebarState?.sidebarCollapsed ?? true,
+    topBarsCollapsed: false,
+    statusBarCollapsed: false,
+    showSearch: false,
+    reduceMotion: false,
+    showFilenames: false,
+    createReadmeInNewLocations: true,
   });
   vi.mocked(useLayoutSettingsUiState).mockReturnValue({ isOpen: false, setOpen: vi.fn() });
   vi.mocked(useEditorPresentationState).mockReturnValue(
@@ -223,6 +238,8 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
 
 const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}): WorkspacePanelProps => ({
   toolbar: { saveStatus: "Idle", onSave: vi.fn(), ...overrides.toolbar },
+  onOpenImportSheet: overrides.onOpenImportSheet,
+  onOpenStandardSiteImportSheet: overrides.onOpenStandardSiteImportSheet,
   editor: {
     initialText: "# Document",
     onChange: vi.fn(),
@@ -252,6 +269,14 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     onClose: vi.fn(),
     onOpenSettings: vi.fn(),
     ...overrides.diagnostics,
+  },
+  welcome: {
+    isVisible: false,
+    hasLocations: true,
+    locationCount: 1,
+    documentCount: 1,
+    onAddLocation: vi.fn(),
+    ...overrides.welcome,
   },
 });
 
@@ -297,11 +322,11 @@ describe("WorkspacePanel", () => {
     const onToggleSidebar = vi.fn();
 
     renderWorkspacePanel({ editor: { initialText: "# Visible" } }, {
-      sidebarState: { toggleSidebarCollapsed: onToggleSidebar },
+      toggleSidebarCollapsed: onToggleSidebar,
       workspacePanelSidebarState: { sidebarCollapsed: false },
     });
 
-    fireEvent.click(screen.getByTitle(`Hide sidebar (${formatShortcut("Cmd+B")})`));
+    fireEvent.click(screen.getByRole("button", { name: /hide sidebar/i }));
     expect(onToggleSidebar).toHaveBeenCalledOnce();
 
     const separator = screen.getByRole("separator", { name: "Resize sidebar" });
@@ -387,5 +412,33 @@ describe("WorkspacePanel", () => {
     fireEvent.click(screen.getByLabelText("Close diagnostics panel"));
     expect(onClose).toHaveBeenCalledOnce();
     expect(onOpenSettings).not.toHaveBeenCalled();
+  });
+
+  it("renders the welcome screen and routes its actions", () => {
+    const onNewDocument = vi.fn();
+    const onAddLocation = vi.fn();
+    const onOpenImportSheet = vi.fn();
+    const onOpenStandardSiteImportSheet = vi.fn();
+    const setShowSearch = vi.fn();
+
+    renderWorkspacePanel({
+      toolbar: { onNewDocument },
+      onOpenImportSheet,
+      onOpenStandardSiteImportSheet,
+      welcome: { isVisible: true, hasLocations: true, locationCount: 2, documentCount: 4, onAddLocation },
+    }, { workspacePanelSidebarState: { sidebarCollapsed: true }, setShowSearch });
+
+    expect(screen.getByTestId("workspace-welcome-screen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /create new/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open existing/i }));
+    fireEvent.click(screen.getByRole("button", { name: /import tangled/i }));
+    fireEvent.click(screen.getByRole("button", { name: /import standard\.site/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add another location/i }));
+
+    expect(onNewDocument).toHaveBeenCalledOnce();
+    expect(setShowSearch).toHaveBeenCalledWith(true);
+    expect(onOpenImportSheet).toHaveBeenCalledOnce();
+    expect(onOpenStandardSiteImportSheet).toHaveBeenCalledOnce();
+    expect(onAddLocation).toHaveBeenCalledOnce();
   });
 });
