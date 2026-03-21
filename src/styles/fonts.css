@@ -1,3 +1,7 @@
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/libre-franklin";
+@import "@fontsource-variable/jetbrains-mono";
+
 @font-face {
     font-family: "Writer IBM Plex Mono";
     src: url("/fonts/ibm-plex-mono-400-normal.ttf") format("truetype");

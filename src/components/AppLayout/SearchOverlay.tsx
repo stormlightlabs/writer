@@ -25,7 +25,6 @@ export function SearchOverlay() {
       query={searchQuery}
       results={searchResults}
       isSearching={isSearching}
-      topOffset={48}
       locations={locationsToRender}
       filters={filters}
       onQueryChange={handleSearch}

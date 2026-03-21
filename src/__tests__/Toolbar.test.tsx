@@ -1,10 +1,13 @@
 import { Toolbar } from "$components/Toolbar";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
+import { useLayoutChromeActions, useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$state/selectors", () => ({ useToolbarState: vi.fn(), useLayoutSettingsUiState: vi.fn() }));
+vi.mock(
+  "$state/selectors",
+  () => ({ useToolbarState: vi.fn(), useLayoutSettingsUiState: vi.fn(), useLayoutChromeActions: vi.fn() }),
+);
 vi.mock("$hooks/useViewportTier", () => ({ useViewportTier: vi.fn() }));
 
 describe("Toolbar", () => {
@@ -18,6 +21,18 @@ describe("Toolbar", () => {
       toggleSplitView: vi.fn(),
       toggleFocusMode: vi.fn(),
       togglePreviewVisible: vi.fn(),
+    });
+    vi.mocked(useLayoutChromeActions).mockReturnValue({
+      setSidebarCollapsed: vi.fn(),
+      toggleSidebarCollapsed: vi.fn(),
+      setTopBarsCollapsed: vi.fn(),
+      toggleTabBarCollapsed: vi.fn(),
+      setStatusBarCollapsed: vi.fn(),
+      toggleStatusBarCollapsed: vi.fn(),
+      setShowSearch: vi.fn(),
+      toggleShowSearch: vi.fn(),
+      setFilenameVisibility: vi.fn(),
+      toggleFilenameVisibility: vi.fn(),
     });
     vi.mocked(useLayoutSettingsUiState).mockReturnValue({ isOpen: false, setOpen: vi.fn() });
     vi.mocked(useViewportTier).mockReturnValue({
@@ -61,6 +76,27 @@ describe("Toolbar", () => {
     expect(setEditorOnlyMode).toHaveBeenCalledOnce();
   });
 
+  it("toggles the sidebar from the toolbar next to save", () => {
+    const toggleSidebarCollapsed = vi.fn();
+    vi.mocked(useLayoutChromeActions).mockReturnValue({
+      setSidebarCollapsed: vi.fn(),
+      toggleSidebarCollapsed,
+      setTopBarsCollapsed: vi.fn(),
+      toggleTabBarCollapsed: vi.fn(),
+      setStatusBarCollapsed: vi.fn(),
+      toggleStatusBarCollapsed: vi.fn(),
+      setShowSearch: vi.fn(),
+      toggleShowSearch: vi.fn(),
+      setFilenameVisibility: vi.fn(),
+      toggleFilenameVisibility: vi.fn(),
+    });
+
+    render(<Toolbar saveStatus="Idle" onSave={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }));
+    expect(toggleSidebarCollapsed).toHaveBeenCalledOnce();
+  });
+
   it("opens the AT Protocol auth entry from the toolbar", () => {
     const onAtProtoAuth = vi.fn();
 
@@ -81,5 +117,13 @@ describe("Toolbar", () => {
 
     fireEvent.click(trigger);
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  });
+
+  it("does not render non-functional formatting buttons", () => {
+    render(<Toolbar saveStatus="Idle" onSave={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "Bold" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Italic" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Link" })).not.toBeInTheDocument();
   });
 });

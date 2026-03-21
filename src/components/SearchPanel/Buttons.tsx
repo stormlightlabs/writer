@@ -17,18 +17,18 @@ type FilterLocationProps = {
   handleToggleLocation: (locationId: number) => void;
 };
 
-export function ToggleButton({ toggleFilters, showFilters, activeFilterCount, compact = false }: ToggleButtonProps) {
+export function ToggleButton({ toggleFilters, showFilters, activeFilterCount }: ToggleButtonProps) {
   const classes = useMemo(() => {
     const base = [
-      compact ? "px-3 py-2" : "px-4 py-2.5",
-      "border border-stroke-subtle rounded-md",
+      "px-3 py-2",
+      "border border-stroke-subtle/10 rounded-lg",
       "text-sm cursor-pointer flex items-center gap-1.5 transition-colors duration-150",
     ];
 
     if (showFilters) {
-      base.push("bg-layer-accent-01");
+      base.push("bg-surface-bright/40");
     } else {
-      base.push("bg-layer-01");
+      base.push("bg-surface-bright/20 hover:bg-surface-bright/40");
     }
 
     if (activeFilterCount > 0) {
@@ -38,7 +38,7 @@ export function ToggleButton({ toggleFilters, showFilters, activeFilterCount, co
     }
 
     return base.join(" ");
-  }, [showFilters, activeFilterCount, compact]);
+  }, [showFilters, activeFilterCount]);
   return (
     <Button onClick={toggleFilters} className={classes}>
       Filters
@@ -51,13 +51,11 @@ export function ToggleButton({ toggleFilters, showFilters, activeFilterCount, co
   );
 }
 
-export function CloseButton({ onClose, compact = false }: { onClose: () => void; compact?: boolean }) {
+export function CloseButton({ onClose }: { onClose: () => void; compact?: boolean }) {
   return (
     <Button
       onClick={onClose}
-      className={`bg-transparent border-none text-icon-secondary cursor-pointer rounded-md ${
-        compact ? "p-2" : "p-2.5"
-      }`}>
+      className="bg-transparent border-none text-icon-secondary hover:text-text-primary cursor-pointer rounded-sm p-2 transition-colors duration-150">
       <XIcon size="xl" />
     </Button>
   );
@@ -78,14 +76,14 @@ export function FilterLocationButton({ location, filters, handleToggleLocation }
   const classes = useMemo(() => {
     const base = [
       "px-3 py-1.5",
-      "border border-stroke-subtle rounded",
+      "border border-stroke-subtle/10 rounded-lg",
       "text-[0.8125rem] cursor-pointer transition-colors duration-150",
     ];
 
     if (filters.locations?.includes(location.id)) {
       base.push("bg-accent-blue text-white");
     } else {
-      base.push("bg-layer-02 text-text-primary");
+      base.push("bg-surface-bright/20 hover:bg-surface-bright/40 text-text-primary");
     }
 
     return base.join(" ");

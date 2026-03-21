@@ -9,13 +9,16 @@ import type { StyleMatch } from "$editor/types";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useResizable } from "$hooks/useResizable";
 import { useViewportTier } from "$hooks/useViewportTier";
+import { EyeIcon } from "$icons";
 import {
+  useEditorPresentationActions,
   useWorkspacePanelModeState,
   useWorkspacePanelSidebarState,
   useWorkspacePanelStatusBarCollapsed,
   useWorkspacePanelTopBarsCollapsed,
 } from "$state/selectors";
 import { PanelMode } from "$types";
+import { cn } from "$utils/tw";
 import { AnimatePresence, EasingDefinition, motion } from "motion/react";
 import { type PointerEventHandler, useCallback, useEffect, useMemo } from "react";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
@@ -72,10 +75,57 @@ const SIDEBAR_MIN_WIDTH = 220;
 const SIDEBAR_MAX_WIDTH = 480;
 const FALLBACK_VIEWPORT_WIDTH = 1280;
 
+type PreviewMode = "reading" | "web";
+
+function previewModeToStyle(mode: PreviewMode): WorkspacePreviewProps["previewStyle"] {
+  return mode === "reading" ? "github" : "pdf";
+}
+
+function previewStyleToMode(style: WorkspacePreviewProps["previewStyle"]): PreviewMode {
+  return style === "pdf" ? "web" : "reading";
+}
+
+function PreviewModeButton(
+  { mode, isActive, onSelect }: { mode: PreviewMode; isActive: boolean; onSelect: (m: PreviewMode) => void },
+) {
+  const handleClick = useCallback(() => onSelect(mode), [mode, onSelect]);
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        "px-2 py-1 text-[10px] uppercase tracking-widest bg-transparent border-none cursor-pointer transition-colors duration-200 rounded-sm",
+        isActive ? "text-accent-blue border-b border-accent-blue" : "text-text-secondary hover:text-text-primary",
+      )}>
+      {mode}
+    </button>
+  );
+}
+
+function PreviewHeader(
+  { previewStyle, onSelectMode }: { previewStyle: WorkspacePreviewProps["previewStyle"]; onSelectMode: (mode: PreviewMode) => void },
+) {
+  const activeMode = useMemo(() => previewStyleToMode(previewStyle), [previewStyle]);
+
+  return (
+    <div className="h-10 flex items-center justify-between px-4 bg-layer-01/50 border-b border-stroke-subtle/5 shrink-0">
+      <div className="flex items-center gap-2 text-text-secondary">
+        <EyeIcon size="sm" />
+        <span className="text-[10px] uppercase tracking-widest">Live Preview</span>
+      </div>
+      <div className="flex items-center gap-0.5">
+        <PreviewModeButton mode="reading" isActive={activeMode === "reading"} onSelect={onSelectMode} />
+        <PreviewModeButton mode="web" isActive={activeMode === "web"} onSelect={onSelectMode} />
+      </div>
+    </div>
+  );
+}
+
 type MainPanelProps = {
   panelMode: PanelMode;
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
+  onSelectPreviewMode: (mode: PreviewMode) => void;
   splitEditorWidth: number;
   isSplitResizing: boolean;
   onSplitResizeStart: PointerEventHandler<HTMLDivElement>;
@@ -94,11 +144,14 @@ function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMod
 }
 
 function MainPanel(
-  { panelMode, editor, preview, splitEditorWidth, isSplitResizing, onSplitResizeStart }: MainPanelProps,
+  { panelMode, editor, preview, onSelectPreviewMode, splitEditorWidth, isSplitResizing, onSplitResizeStart }: MainPanelProps,
 ) {
   const container = useMemo(() => {
     if (panelMode === "split") {
-      return { className: "flex min-h-0 min-w-0 shrink-0 flex-col", style: { width: `${splitEditorWidth}px` } };
+      return {
+        className: "flex min-h-0 min-w-0 shrink-0 flex-col border-r border-stroke-subtle/10",
+        style: { width: `${splitEditorWidth}px` },
+      };
     }
     return { className: "flex min-h-0 min-w-0 flex-col w-full" };
   }, [panelMode, splitEditorWidth]);
@@ -113,10 +166,12 @@ function MainPanel(
           aria-orientation="vertical"
           onPointerDown={onSplitResizeStart}
           className={`relative z-10 w-1 shrink-0 cursor-col-resize transition-colors ${
-            isSplitResizing ? "bg-stroke-interactive" : "bg-stroke-subtle hover:bg-stroke-strong"
+            isSplitResizing ? "bg-stroke-interactive" : "bg-stroke-subtle/10 hover:bg-stroke-strong"
           }`} />
-
-        <Preview className="min-h-0 min-w-0 flex-1 bg-surface-primary" {...preview} />
+        <div className="flex flex-col min-h-0 min-w-0 flex-1">
+          <PreviewHeader previewStyle={preview.previewStyle} onSelectMode={onSelectPreviewMode} />
+          <Preview className="min-h-0 min-w-0 flex-1" {...preview} />
+        </div>
       </div>
     );
   }
@@ -124,7 +179,12 @@ function MainPanel(
   return (
     <div className="flex-1 min-h-0 flex overflow-hidden">
       {panelMode === "editor" && <EditorWithContainer {...editor} container={container} />}
-      {panelMode === "preview" && <Preview className="min-h-0 min-w-0 flex-1 w-full bg-surface-primary" {...preview} />}
+      {panelMode === "preview" && (
+        <div className="flex flex-col min-h-0 min-w-0 flex-1 w-full">
+          <PreviewHeader previewStyle={preview.previewStyle} onSelectMode={onSelectPreviewMode} />
+          <Preview className="min-h-0 min-w-0 flex-1 w-full" {...preview} />
+        </div>
+      )}
     </div>
   );
 }
@@ -164,6 +224,7 @@ export function WorkspacePanel(
 ) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
+  const { setMarkdownPreviewStyle } = useEditorPresentationActions();
   const { sidebarCollapsed } = useWorkspacePanelSidebarState();
   const { isSplitView, isPreviewVisible } = useWorkspacePanelModeState();
   const topBarsCollapsed = useWorkspacePanelTopBarsCollapsed();
@@ -176,7 +237,7 @@ export function WorkspacePanel(
   const effectiveStatusBarVisible = !statusBarCollapsed;
 
   const { size: sidebarWidth, isResizing, startResizing, setSize: setSidebarWidth } = useResizable({
-    initialSize: 280,
+    initialSize: 256,
     minSize: SIDEBAR_MIN_WIDTH,
     maxSize: sidebarMaxWidth,
     axis: "x",
@@ -229,6 +290,10 @@ export function WorkspacePanel(
     event.preventDefault();
     startSplitResizing(event.clientX);
   }, [startSplitResizing]);
+
+  const handleSelectPreviewMode = useCallback((mode: PreviewMode) => {
+    setMarkdownPreviewStyle(previewModeToStyle(mode));
+  }, [setMarkdownPreviewStyle]);
 
   const sidebarStyle = useMemo(() => ({ width: `${sidebarWidth}px` }), [sidebarWidth]);
 
@@ -301,6 +366,7 @@ export function WorkspacePanel(
           panelMode={effectivePanelMode}
           editor={editor}
           preview={preview}
+          onSelectPreviewMode={handleSelectPreviewMode}
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}
           onSplitResizeStart={handleSplitResizeStart} />

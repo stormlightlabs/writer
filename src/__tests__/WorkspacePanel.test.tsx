@@ -7,7 +7,9 @@ import { StatusBarProps } from "$components/StatusBar";
 import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import {
+  useEditorPresentationActions,
   useEditorPresentationState,
+  useLayoutChromeActions,
   useLayoutSettingsUiState,
   useSidebarState,
   useToolbarState,
@@ -25,6 +27,7 @@ import type {
   WorkspacePanelModeStateReturn,
   WorkspacePanelSidebarStateReturn,
 } from "$state/selectors";
+import type { MarkdownPreviewStyle } from "$types";
 import { formatShortcut } from "$utils/shortcuts";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,6 +37,8 @@ vi.mock(
   () => ({
     useSidebarState: vi.fn(),
     useToolbarState: vi.fn(),
+    useEditorPresentationActions: vi.fn(),
+    useLayoutChromeActions: vi.fn(),
     useLayoutSettingsUiState: vi.fn(),
     useEditorPresentationState: vi.fn(),
     useWorkspacePanelSidebarState: vi.fn(),
@@ -49,6 +54,7 @@ type SelectorOverrides = {
   sidebarState?: Partial<SidebarStateReturn>;
   toolbarState?: Partial<ToolbarStateReturn>;
   editorPresentationState?: Partial<EditorPresentationStateReturn>;
+  setMarkdownPreviewStyle?: (value: MarkdownPreviewStyle) => void;
   workspacePanelSidebarState?: Partial<WorkspacePanelSidebarStateReturn>;
   workspacePanelModeState?: Partial<WorkspacePanelModeStateReturn>;
   topBarsCollapsed?: TopBarsCollapsedReturn;
@@ -133,6 +139,29 @@ const createWorkspacePanelModeState = (
 const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
   vi.mocked(useSidebarState).mockReturnValue(createSidebarState(overrides.sidebarState));
   vi.mocked(useToolbarState).mockReturnValue(createToolbarState(overrides.toolbarState));
+  vi.mocked(useEditorPresentationActions).mockReturnValue({
+    setLineNumbersVisible: vi.fn(),
+    toggleLineNumbersVisible: vi.fn(),
+    setTextWrappingEnabled: vi.fn(),
+    toggleTextWrappingEnabled: vi.fn(),
+    setSyntaxHighlightingEnabled: vi.fn(),
+    toggleSyntaxHighlightingEnabled: vi.fn(),
+    setEditorFontSize: vi.fn(),
+    setEditorFontFamily: vi.fn(),
+    setMarkdownPreviewStyle: overrides.setMarkdownPreviewStyle ?? vi.fn(),
+  });
+  vi.mocked(useLayoutChromeActions).mockReturnValue({
+    setSidebarCollapsed: vi.fn(),
+    toggleSidebarCollapsed: vi.fn(),
+    setTopBarsCollapsed: vi.fn(),
+    toggleTabBarCollapsed: vi.fn(),
+    setStatusBarCollapsed: vi.fn(),
+    toggleStatusBarCollapsed: vi.fn(),
+    setShowSearch: vi.fn(),
+    toggleShowSearch: vi.fn(),
+    setFilenameVisibility: vi.fn(),
+    toggleFilenameVisibility: vi.fn(),
+  });
   vi.mocked(useLayoutSettingsUiState).mockReturnValue({ isOpen: false, setOpen: vi.fn() });
   vi.mocked(useEditorPresentationState).mockReturnValue(
     createEditorPresentationState(overrides.editorPresentationState),
@@ -249,6 +278,21 @@ describe("WorkspacePanel", () => {
     expect(container.querySelector("[data-testid='editor-container']")).not.toBeInTheDocument();
   });
 
+  it("switches preview chrome between Reading and Web modes", () => {
+    const setMarkdownPreviewStyle = vi.fn();
+    renderWorkspacePanel({ editor: { initialText: "# Visible" } }, {
+      setMarkdownPreviewStyle,
+      toolbarState: { isPreviewVisible: true },
+      workspacePanelModeState: { isPreviewVisible: true },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /web/i }));
+    fireEvent.click(screen.getByRole("button", { name: /reading/i }));
+
+    expect(setMarkdownPreviewStyle).toHaveBeenNthCalledWith(1, "pdf");
+    expect(setMarkdownPreviewStyle).toHaveBeenNthCalledWith(2, "github");
+  });
+
   it("renders sidebar controls and supports resizing", () => {
     const onToggleSidebar = vi.fn();
 
@@ -263,9 +307,9 @@ describe("WorkspacePanel", () => {
     const separator = screen.getByRole("separator", { name: "Resize sidebar" });
     const sidebarContainer = separator.parentElement as HTMLElement;
     const appWindow = globalThis as unknown as Window;
-    expect(sidebarContainer).toHaveStyle({ width: "280px" });
+    expect(sidebarContainer).toHaveStyle({ width: "256px" });
 
-    fireEvent.pointerDown(separator, { clientX: 280 });
+    fireEvent.pointerDown(separator, { clientX: 256 });
     fireEvent.pointerMove(appWindow, { clientX: 360 });
     fireEvent.pointerUp(appWindow);
 

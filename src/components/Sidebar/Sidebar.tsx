@@ -1,7 +1,6 @@
 import { Button } from "$components/Button";
 import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
 import {
-  CollapseIcon,
   FileAddIcon,
   FileTextIcon,
   FolderAddIcon,
@@ -13,7 +12,6 @@ import {
 } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
-import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useMemo, useState } from "react";
 import { AddButton } from "./AddButton";
 import {
@@ -41,35 +39,19 @@ type SidebarActionsProps = {
   onAddLocation: () => void;
   onAddDocument: () => void;
   onRefresh: () => void;
-  onToggleCollapse: () => void;
   addDocumentDisabled: boolean;
   refreshDisabled: boolean;
 };
 
 type CountPillProps = { count: number; kind: "location" | "document" | "directory" };
 
-const HideSidebarButton = ({ onToggleCollapse }: { onToggleCollapse: () => void }) => (
-  <Button
-    type="button"
-    variant="outline"
-    size="sm"
-    onClick={onToggleCollapse}
-    className="flex items-center gap-1.5"
-    title={`Hide sidebar (${formatShortcut("Cmd+B")})`}>
-    <CollapseIcon size="sm" />
-    Hide
-  </Button>
-);
-
 const SidebarActions = (
-  { onAddLocation, onAddDocument, onRefresh, onToggleCollapse, addDocumentDisabled, refreshDisabled }:
-    SidebarActionsProps,
+  { onAddLocation, onAddDocument, onRefresh, addDocumentDisabled, refreshDisabled }: SidebarActionsProps,
 ) => (
   <div className="flex items-center gap-2">
     <AddButton onClick={onAddLocation} icon={FolderAddIcon} title="New Location" />
     <AddButton onClick={onAddDocument} icon={FileAddIcon} title="New Document" disabled={addDocumentDisabled} />
     <AddButton onClick={onRefresh} icon={RefreshIcon} title="Refresh Sidebar" disabled={refreshDisabled} />
-    <HideSidebarButton onToggleCollapse={onToggleCollapse} />
   </div>
 );
 
@@ -137,7 +119,6 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
     setActiveDropTarget,
     reorderFolderSortOrder,
     selectLocation,
-    toggleSidebarCollapsed,
     filenameVisibility,
   } = useSidebarState();
 
@@ -299,16 +280,24 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
   ]);
 
   return (
-    <aside className="w-full bg-layer-01 border-r border-stroke-subtle flex h-full flex-col shrink-0 overflow-hidden">
-      <div className="p-4 border-b border-stroke-subtle flex items-center justify-between">
-        <Title isLoading={isLoading} />
-        <SidebarActions
-          onAddLocation={handleAddLocation}
-          onAddDocument={handleAddDocument}
-          onRefresh={handleRefresh}
-          onToggleCollapse={toggleSidebarCollapsed}
-          addDocumentDisabled={!selectedLocationId}
-          refreshDisabled={!selectedLocationId || refreshingLocationId === selectedLocationId} />
+    <aside className="w-full bg-layer-01 border-r border-stroke-subtle/10 flex h-full flex-col shrink-0 overflow-hidden">
+      <div className="px-4 pt-3 pb-2 border-b border-stroke-subtle/10">
+        <div className="flex items-center justify-between mb-2">
+          <Title isLoading={isLoading} />
+          <SidebarActions
+            onAddLocation={handleAddLocation}
+            onAddDocument={handleAddDocument}
+            onRefresh={handleRefresh}
+            addDocumentDisabled={!selectedLocationId}
+            refreshDisabled={!selectedLocationId || refreshingLocationId === selectedLocationId} />
+        </div>
+        <button
+          type="button"
+          onClick={handleAddDocument}
+          disabled={!selectedLocationId}
+          className="w-full text-xs border border-accent-blue/20 text-accent-blue bg-accent-blue/10 hover:bg-accent-blue/15 rounded-sm py-1.5 cursor-pointer transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed">
+          + New Document
+        </button>
       </div>
 
       <SearchInput />
@@ -334,7 +323,7 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
           )}
       </div>
 
-      <div className="flex min-h-10 items-center justify-between gap-2 border-t border-stroke-subtle px-4 py-2">
+      <div className="flex min-h-10 items-center justify-between gap-2 border-t border-stroke-subtle/10 px-4 py-2">
         <div className="flex items-center gap-2">
           <CountPill count={locations.length} kind="location" />
           <CountPill count={selectedLocationId ? locationDocuments.length : 0} kind="document" />

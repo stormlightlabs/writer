@@ -66,7 +66,7 @@ function TreeItemComponent(
     }
 
     if (isSelected) {
-      base.push("bg-layer-accent-01 text-text-primary");
+      base.push("bg-layer-accent-01 text-text-primary border-l-2 border-accent-blue");
     } else {
       base.push("bg-transparent text-text-secondary");
     }

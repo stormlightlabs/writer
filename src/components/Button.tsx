@@ -19,23 +19,23 @@ export type ButtonSize = "none" | "xs" | "sm" | "md" | "lg" | "iconXs" | "iconSm
 const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, ClassValue> = {
   unstyled: "",
   iconGhost:
-    "inline-flex items-center justify-center rounded bg-transparent border-none text-icon-secondary cursor-pointer",
+    "inline-flex items-center justify-center rounded-sm bg-transparent border-none text-[#94979e] hover:bg-surface-bright/40 cursor-pointer transition-colors duration-200",
   iconSubtle:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-icon-secondary hover:text-icon-primary cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-icon-secondary hover:text-icon-primary cursor-pointer transition-colors duration-200",
   outline:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-transparent text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-accent-blue/20 bg-transparent text-accent-blue hover:bg-layer-hover-01 cursor-pointer transition-colors duration-200",
   surface:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-01 text-text-secondary hover:bg-surface-active hover:text-text-primary cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle/20 bg-layer-accent-01 text-text-secondary hover:bg-layer-accent-02 hover:text-text-primary cursor-pointer transition-colors duration-200",
   secondary:
-    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-stroke-subtle bg-layer-02 text-text-primary hover:bg-layer-03 cursor-pointer transition-colors duration-200",
   primary:
-    "inline-flex items-center justify-center rounded border border-accent-cyan bg-accent-cyan text-white hover:opacity-90 cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-accent-blue bg-accent-blue text-white hover:bg-primary-dim active:scale-95 cursor-pointer transition-all duration-200",
   primaryBlue:
-    "inline-flex items-center justify-center rounded border border-accent-blue bg-accent-blue text-white hover:bg-link-hover cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center rounded border border-accent-blue bg-accent-blue text-white hover:bg-link-hover cursor-pointer transition-colors duration-200",
   link:
-    "inline-flex items-center justify-center bg-transparent border-none text-link-primary underline underline-offset-2 cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center bg-transparent border-none text-link-primary underline underline-offset-2 cursor-pointer transition-colors duration-200",
   dangerGhost:
-    "inline-flex items-center justify-center bg-transparent border-none text-support-error cursor-pointer transition-colors duration-300",
+    "inline-flex items-center justify-center bg-transparent border-none text-support-error cursor-pointer transition-colors duration-200",
 };
 
 const BUTTON_SIZE_CLASSES: Record<ButtonSize, ClassValue> = {

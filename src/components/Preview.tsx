@@ -140,7 +140,7 @@ export function Preview(
       ref={containerRef}
       onScroll={handleScroll}
       data-theme={theme}
-      className={`flex-1 overflow-auto p-6 bg-surface-primary text-text-primary ${className}`}>
+      className={`flex-1 overflow-auto p-16 bg-surface-lowest text-text-primary ${className}`}>
       <div className={previewContentClassName} style={previewContentStyle} dangerouslySetInnerHTML={previewContent} />
     </div>
   );

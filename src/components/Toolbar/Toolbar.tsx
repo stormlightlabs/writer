@@ -3,7 +3,9 @@ import type { IconSize } from "$icons";
 import {
   AtSignIcon,
   CheckIcon,
+  CollapseIcon,
   DocumentIcon,
+  ExpandIcon,
   EyeIcon,
   FocusIcon,
   IconProps,
@@ -14,7 +16,12 @@ import {
   SettingsIcon,
   SplitViewIcon,
 } from "$icons";
-import { useLayoutSettingsUiState, useToolbarState } from "$state/selectors";
+import {
+  useLayoutChromeActions,
+  useLayoutChromeState,
+  useLayoutSettingsUiState,
+  useToolbarState,
+} from "$state/selectors";
 import { AtProtoSession, SaveStatus } from "$types";
 import { formatShortcut } from "$utils/shortcuts";
 import { useCallback, useMemo } from "react";
@@ -62,14 +69,18 @@ export function Toolbar(
     toggleFocusMode,
     togglePreviewVisible,
   } = useToolbarState();
+  const { toggleSidebarCollapsed } = useLayoutChromeActions();
   const { setOpen: openSettings } = useLayoutSettingsUiState();
-  const { viewportWidth, isCompact, isNarrow } = useViewportTier();
+  const { sidebarCollapsed } = useLayoutChromeState();
+  const { isNarrow } = useViewportTier();
 
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
-      save: { Component: SaveIcon, size: "sm" },
-      newDoc: { Component: PlusIcon, size: "sm" },
-      refresh: { Component: RefreshIcon, size: "sm" },
+      save: { Component: SaveIcon, size: "xs" },
+      openSidebar: { Component: ExpandIcon, size: "xs" },
+      closeSidebar: { Component: CollapseIcon, size: "xs" },
+      newDoc: { Component: PlusIcon, size: "xs" },
+      refresh: { Component: RefreshIcon, size: "xs" },
       editor: { Component: PenIcon, size: "sm" },
       splitView: { Component: SplitViewIcon, size: "sm" },
       eye: { Component: EyeIcon, size: "sm" },
@@ -81,8 +92,6 @@ export function Toolbar(
     [],
   );
 
-  const hideRefresh = useMemo(() => viewportWidth < 1080, [viewportWidth]);
-  const compactStatus = useMemo(() => viewportWidth < 960, [viewportWidth]);
   const isEditorOnly = useMemo(() => !isSplitView && !isPreviewVisible, [isSplitView, isPreviewVisible]);
 
   const currentViewIcon = useMemo(() => {
@@ -134,15 +143,20 @@ export function Toolbar(
   }, [atProtoSession, onAtProtoAuth, onExportPdf, isExportingPdf, isPdfExportDisabled, handleOpenSettings]);
 
   return (
-    <div className="h-[48px] bg-layer-01 border-b border-stroke-subtle flex items-center justify-between px-2 sm:px-4 gap-2 overflow-x-auto">
-      <div className="flex items-center gap-1.5 shrink-0">
+    <div className="h-12 bg-layer-01 border-b border-stroke-subtle/10 flex items-center justify-between px-3 gap-2 overflow-x-auto shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
+        <ToolbarButton
+          icon={sidebarCollapsed ? icons.openSidebar : icons.closeSidebar}
+          label={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+          onClick={toggleSidebarCollapsed}
+          shortcut={formatShortcut("Cmd+B")} />
         <ToolbarButton
           icon={icons.save}
           label="Save"
           onClick={onSave}
           disabled={saveStatus === "Saved" || saveStatus === "Saving"}
           shortcut={formatShortcut("Cmd+S")}
-          iconOnly={isCompact} />
+          iconOnly />
         {onNewDocument && (
           <ToolbarButton
             icon={icons.newDoc}
@@ -150,16 +164,20 @@ export function Toolbar(
             onClick={onNewDocument}
             disabled={isNewDocumentDisabled}
             shortcut={formatShortcut("Cmd+N")}
-            iconOnly={isCompact} />
+            iconOnly />
         )}
-        {hasActiveDocument ? <SaveStatusIndicator status={saveStatus} compact={compactStatus} /> : null}
-        {onRefresh && !hideRefresh && (
-          <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly={isNarrow} />
-        )}
+        {onRefresh && <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly />}
+        {hasActiveDocument
+          ? (
+            <span className="ml-1 text-[10px] uppercase tracking-widest text-text-secondary">
+              <SaveStatusIndicator status={saveStatus} compact={isNarrow} />
+            </span>
+          )
+          : null}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
-        <ToolbarDropdown icon={currentViewIcon} label="View" items={viewModeItems} iconOnly={isNarrow} />
+      <div className="flex items-center gap-0.5 shrink-0">
+        <ToolbarDropdown icon={currentViewIcon} label="View" items={viewModeItems} />
         <ToolbarDropdown icon={icons.settings} label="Tools" items={toolsItems} iconOnly={isNarrow} />
       </div>
     </div>

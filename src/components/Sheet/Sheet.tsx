@@ -317,7 +317,7 @@ export function Sheet(
             aria-modal={showBackdrop}
             tabIndex={-1}
             className={cn(
-              "pointer-events-auto bg-layer-01 border-stroke-subtle shadow-2xl min-h-0 overflow-hidden flex flex-col",
+              "pointer-events-auto bg-layer-01 border-stroke-subtle/10 shadow-2xl min-h-0 overflow-hidden flex flex-col",
               positionClassName,
               sizeClassName,
               className,

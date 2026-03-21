@@ -6,6 +6,7 @@ import { useViewportTier } from "$hooks/useViewportTier";
 import { FileTextIcon, SearchIcon, XIcon } from "$icons";
 import type { SearchFilters } from "$state/types";
 import type { SearchHit } from "$types";
+import { formatShortcut } from "$utils/shortcuts";
 import { cn } from "$utils/tw";
 import { AnimatePresence, motion } from "motion/react";
 import type { ChangeEventHandler, MouseEventHandler } from "react";
@@ -65,7 +66,6 @@ type SearchPanelProps = {
   query: string;
   results: SearchHit[];
   isSearching: boolean;
-  topOffset: number;
   locations: Array<{ id: number; name: string }>;
   filters: SearchFilters;
   onQueryChange: (query: string) => void;
@@ -122,7 +122,7 @@ function SearchResult({ hit, onSelectResult }: SearchResultProps) {
   return (
     <Button
       onClick={handleClick}
-      className="w-full px-4 py-3 bg-layer-01 border border-stroke-subtle rounded-md text-left cursor-pointer transition-[border-color,background-color,box-shadow] duration-150 hover:bg-layer-hover-01 hover:border-stroke-strong">
+      className="w-full px-4 py-3 bg-surface-bright/20 border border-stroke-subtle/10 rounded-lg text-left cursor-pointer transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-bright/40 hover:border-stroke-subtle/20">
       <HighlightLabel hit={hit} />
       <HighlightedSnippet text={hit.snippet} matches={hit.matches} />
     </Button>
@@ -181,6 +181,8 @@ function Results({ isSearching, results, query, onSelectResult }: ResultsProps) 
 }
 
 function SearchInput({ query, handleQueryChange, clearQuery, compact = false }: SearchInputProps) {
+  const searchShortcut = useMemo(() => formatShortcut("Cmd+Shift+F"), []);
+
   return (
     <div className="min-w-0 flex-1 basis-[16rem] relative">
       <SearchIcon
@@ -192,16 +194,26 @@ function SearchInput({ query, handleQueryChange, clearQuery, compact = false }: 
         onChange={handleQueryChange}
         placeholder="Search across all documents..."
         autoFocus
-        className={`w-full pl-10 pr-3 text-base bg-field-01 border border-stroke-subtle rounded-md text-text-primary outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-stroke-interactive focus:shadow-[0_0_0_3px_rgba(69,137,255,0.2)] ${
-          compact ? "py-2" : "py-2.5"
-        }`} />
-      {query && (
-        <Button
-          onClick={clearQuery}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded">
-          <XIcon size="sm" />
-        </Button>
-      )}
+        className={cn(
+          "w-full pl-10 text-base rounded-lg text-text-primary outline-none border border-stroke-subtle/10",
+          "bg-surface-bright/40 transition-[border-color,box-shadow] duration-150",
+          "focus:border-accent-blue/30 focus:ring-1 focus:ring-accent-blue/30",
+          query ? "pr-9" : "pr-16",
+          compact ? "py-2" : "py-2.5",
+        )} />
+      {query
+        ? (
+          <Button
+            onClick={clearQuery}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-transparent border-none text-icon-secondary cursor-pointer rounded-sm">
+            <XIcon size="sm" />
+          </Button>
+        )
+        : (
+          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-bold text-text-secondary bg-layer-accent-01 border border-stroke-subtle/20 rounded pointer-events-none">
+            {searchShortcut}
+          </kbd>
+        )}
     </div>
   );
 }
@@ -225,7 +237,7 @@ function VisibleFilters(
       {showFilters && (
         <motion.div
           {...getAnimationProps(skipAnimation)}
-          className="p-4 bg-layer-01 rounded-md border border-stroke-subtle flex flex-col gap-4">
+          className="p-4 bg-surface-bright/20 rounded-lg border border-stroke-subtle/10 flex flex-col gap-4">
           <LocationList locations={locations} filters={filters} toggler={handleToggleLocation} />
           {activeFilterCount > 0 && <ClearAllFiltersButton handleClearFilters={handleClearFilters} />}
         </motion.div>
@@ -254,7 +266,7 @@ function SearchResultsHeader(
   }: SearchResultsHeaderProps,
 ) {
   return (
-    <div className={`border-b border-stroke-subtle flex flex-col gap-3 ${compact ? "px-3 py-3" : "px-6 py-4"}`}>
+    <div className={`border-b border-stroke-subtle/10 flex flex-col gap-3 ${compact ? "px-3 py-3" : "px-3 py-3"}`}>
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput query={query} handleQueryChange={handleQueryChange} clearQuery={clearQuery} compact={compact} />
         <ToggleButton
@@ -283,13 +295,14 @@ function SearchResultsHeader(
   );
 }
 
+const GLASS_STYLE = { background: "rgba(35, 38, 43, 0.75)", backdropFilter: "blur(20px)" };
+
 export function SearchPanel(
   {
     isOpen,
     query,
     results,
     isSearching,
-    topOffset,
     locations,
     filters,
     onQueryChange,
@@ -337,29 +350,29 @@ export function SearchPanel(
     [filters],
   );
 
-  const panelTopOffset = useMemo(() => Math.max(0, topOffset), [topOffset]);
-  const containerStyle = useMemo(() => ({ top: panelTopOffset, left: 0, right: 0, bottom: 0 }), [panelTopOffset]);
+  const compact = isCompact || viewportWidth < 640;
+
   const panelClassName = useMemo(
     () =>
       cn(
-        "flex h-full flex-col overflow-hidden bg-surface-primary border border-stroke-subtle",
-        isCompact ? "w-full rounded-none" : "mx-auto w-full max-w-5xl rounded-lg shadow-2xl",
+        "flex flex-col overflow-hidden border border-stroke-subtle/10 shadow-2xl",
+        compact ? "w-full rounded-t-xl max-h-[80vh]" : "w-full max-w-lg rounded-xl max-h-[70vh]",
       ),
-    [isCompact],
+    [compact],
   );
+
   const panelBodyClassName = useMemo(
-    () => (isCompact ? "flex-1 overflow-y-auto px-3 py-3" : "flex-1 overflow-y-auto px-6 py-4"),
-    [isCompact],
+    () => cn("overflow-y-auto px-3 py-3", compact ? "flex-1" : "max-h-[50vh]"),
+    [compact],
   );
-  const backdropClassName = useMemo(() => (isCompact ? "bg-black/35" : "bg-black/20"), [isCompact]);
+
   const containerClassName = useMemo(
     () =>
       cn(
-        "z-[var(--z-modal)] flex",
-        isCompact ? "items-stretch justify-stretch" : "items-end justify-center px-3 pb-3",
-        "pointer-events-none",
+        "z-[var(--z-modal)] flex pointer-events-none",
+        compact ? "items-end justify-stretch" : "items-center justify-center px-4 py-8",
       ),
-    [isCompact],
+    [compact],
   );
 
   return (
@@ -370,10 +383,10 @@ export function SearchPanel(
       showBackdrop
       closeOnBackdrop
       motionPreset="slideUp"
-      backdropClassName={backdropClassName}
+      backdropClassName="bg-black/45"
       containerClassName={containerClassName}
-      containerStyle={containerStyle}
-      panelClassName={panelClassName}>
+      panelClassName={panelClassName}
+      panelStyle={GLASS_STYLE}>
       <SearchResultsHeader
         query={query}
         isSearching={isSearching}
@@ -388,7 +401,7 @@ export function SearchPanel(
         handleQueryChange={handleQueryChange}
         clearQuery={clearQuery}
         toggleFilters={toggleFilters}
-        compact={isCompact || viewportWidth < 900}
+        compact={compact}
         skipAnimation={skipAnimation} />
 
       <div className={panelBodyClassName}>
