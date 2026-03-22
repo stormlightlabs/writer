@@ -104,11 +104,11 @@ updated: 2026-03-21
 
 ### Backend (Rust)
 
-- [ ] Add `Image` variant to `PdfNode` enum in `crates/markdown/src/lib.rs`
+- [x] Add `Image` variant to `PdfNode` enum in `crates/markdown/src/lib.rs`
   - Fields: `src: String`, `alt: String`
-- [ ] Update `transform_to_pdf_nodes()` in `crates/markdown/src/transformer.rs`
+- [x] Update `transform_to_pdf_nodes()` in `crates/markdown/src/transformer.rs`
   - Handle Comrak image nodes → emit `PdfNode::Image`
-- [ ] Update `PdfRenderResult` serialization to include new variant
+- [x] Update `PdfRenderResult` serialization to include new variant
 
 ### Frontend
 

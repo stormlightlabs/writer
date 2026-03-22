@@ -194,6 +194,8 @@ pub enum PdfNode {
     Blockquote { content: String },
     /// Footnote with id and content
     Footnote { id: String, content: String },
+    /// Image with source path and alt text
+    Image { src: String, alt: String },
 }
 
 /// Result of rendering Markdown for PDF export
@@ -658,6 +660,94 @@ mod tests {
         assert_eq!(items.len(), 2);
         assert!(matches!(items[0], PdfNode::Paragraph { ref content } if content == "One"));
         assert!(matches!(items[1], PdfNode::Paragraph { ref content } if content == "Two"));
+    }
+
+    #[test]
+    fn test_render_for_pdf_standalone_image() {
+        let engine = MarkdownEngine::new();
+        let markdown = "![Alt text](.writer-assets/abc123.png)";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        let image = result.nodes.iter().find_map(|node| match node {
+            PdfNode::Image { src, alt } => Some((src, alt)),
+            _ => None,
+        });
+
+        assert!(image.is_some(), "expected PdfNode::Image in nodes");
+        let (src, alt) = image.unwrap();
+        assert_eq!(src, ".writer-assets/abc123.png");
+        assert_eq!(alt, "Alt text");
+    }
+
+    #[test]
+    fn test_render_for_pdf_image_with_empty_alt() {
+        let engine = MarkdownEngine::new();
+        let markdown = "![](.writer-assets/abc123.jpg)";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        let image = result.nodes.iter().find_map(|node| match node {
+            PdfNode::Image { src, alt } => Some((src, alt)),
+            _ => None,
+        });
+
+        assert!(image.is_some(), "expected PdfNode::Image in nodes");
+        let (src, alt) = image.unwrap();
+        assert_eq!(src, ".writer-assets/abc123.jpg");
+        assert_eq!(alt, "");
+    }
+
+    #[test]
+    fn test_render_for_pdf_image_between_paragraphs() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Before text.\n\n![A photo](.writer-assets/photo.png)\n\nAfter text.";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        let node_types: Vec<_> = result
+            .nodes
+            .iter()
+            .map(|n| match n {
+                PdfNode::Paragraph { .. } => "paragraph",
+                PdfNode::Image { .. } => "image",
+                _ => "other",
+            })
+            .collect();
+
+        assert_eq!(node_types, vec!["paragraph", "image", "paragraph"]);
+    }
+
+    #[test]
+    fn test_render_for_pdf_image_inline_with_text() {
+        let engine = MarkdownEngine::new();
+        let markdown = "Text before ![inline](.writer-assets/x.png) text after.";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        assert!(
+            result
+                .nodes
+                .iter()
+                .any(|n| matches!(n, PdfNode::Image { src, .. } if src == ".writer-assets/x.png"))
+        );
+        assert!(
+            result
+                .nodes
+                .iter()
+                .any(|n| matches!(n, PdfNode::Paragraph { content } if content.contains("Text before")))
+        );
+        assert!(
+            result
+                .nodes
+                .iter()
+                .any(|n| matches!(n, PdfNode::Paragraph { content } if content.contains("text after.")))
+        );
+    }
+
+    #[test]
+    fn test_pdf_image_serializes_with_correct_type_tag() {
+        let node = PdfNode::Image { src: ".writer-assets/img.png".to_string(), alt: "My image".to_string() };
+        let json = serde_json::to_value(&node).unwrap();
+        assert_eq!(json["type"], "image");
+        assert_eq!(json["src"], ".writer-assets/img.png");
+        assert_eq!(json["alt"], "My image");
     }
 
     #[test]

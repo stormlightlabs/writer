@@ -26,6 +26,14 @@ impl MarkdownTransformer {
                         text.push_str(&link_text);
                     }
                 }
+                NodeValue::Image(link) => {
+                    let alt = Self::extract_text_content(child);
+                    if !alt.is_empty() {
+                        text.push_str(&alt);
+                    } else {
+                        text.push_str(&link.url);
+                    }
+                }
                 NodeValue::Strikethrough => text.push_str(&Self::extract_text_content(child)),
                 NodeValue::FootnoteReference(_) => continue,
                 NodeValue::TaskItem(task_item) => {
@@ -54,9 +62,36 @@ impl MarkdownTransformer {
                     nodes.push(PdfNode::Heading { level: heading.level, content });
                 }
                 NodeValue::Paragraph => {
-                    let content = Self::extract_text_content(child);
-                    if !content.is_empty() {
-                        nodes.push(PdfNode::Paragraph { content });
+                    let has_images = child
+                        .children()
+                        .any(|c| matches!(&c.data.borrow().value, NodeValue::Image(_)));
+                    if has_images {
+                        let mut text_parts: Vec<String> = Vec::new();
+                        for inline_child in child.children() {
+                            match &inline_child.data.borrow().value {
+                                NodeValue::Image(link) => {
+                                    let pending = text_parts.join("").trim().to_string();
+                                    if !pending.is_empty() {
+                                        nodes.push(PdfNode::Paragraph { content: pending });
+                                        text_parts.clear();
+                                    }
+                                    let alt = Self::extract_text_content(inline_child);
+                                    nodes.push(PdfNode::Image { src: link.url.clone(), alt });
+                                }
+                                NodeValue::Text(t) => text_parts.push(t.to_string()),
+                                NodeValue::SoftBreak | NodeValue::LineBreak => text_parts.push(" ".to_string()),
+                                _ => text_parts.push(Self::extract_text_content(inline_child)),
+                            }
+                        }
+                        let pending = text_parts.join("").trim().to_string();
+                        if !pending.is_empty() {
+                            nodes.push(PdfNode::Paragraph { content: pending });
+                        }
+                    } else {
+                        let content = Self::extract_text_content(child);
+                        if !content.is_empty() {
+                            nodes.push(PdfNode::Paragraph { content });
+                        }
                     }
                 }
                 NodeValue::CodeBlock(code_block) => {
