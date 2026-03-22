@@ -12,6 +12,7 @@ rusqlite = { version = "0.38", features = ["bundled", "chrono", "serde_json"] }
 dirs = "6"
 tempfile = "3.27"
 log = "0.4"
+blake3 = "1"
 
 writer-core = { path = "../core" }
 writer-md = { path = "../markdown" }

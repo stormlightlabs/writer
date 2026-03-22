@@ -1,0 +1,76 @@
+use super::{AppState, CommandResponse};
+use std::path::PathBuf;
+use tauri::State;
+use writer_core::{AppError, CommandResult, ImageAsset, LocationId};
+
+/// Imports an image file into `.writer-assets/` for the given location.
+///
+/// Validates format (PNG, JPEG, GIF, WebP, SVG) and size (≤ 10 MiB),
+/// hashes the file with blake3, and copies it to `.writer-assets/<hash>.<ext>`.
+/// If the hash already exists the call is a no-op and returns the existing path.
+///
+/// Returns the relative asset path, e.g. `.writer-assets/abc123.png`.
+#[tauri::command]
+pub fn image_import(state: State<'_, AppState>, location_id: i64, source_path: String) -> CommandResponse<String> {
+    let location_id = LocationId(location_id);
+    let source = PathBuf::from(&source_path);
+
+    log::debug!("image_import: location={:?}, source={:?}", location_id, source);
+
+    match state.store.image_import(location_id, &source) {
+        Ok(rel_path) => {
+            log::info!("image_import: ok → {}", rel_path);
+            Ok(CommandResult::ok(rel_path))
+        }
+        Err(e) => {
+            log::error!("image_import failed: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Deletes an image asset from `.writer-assets/` for the given location.
+///
+/// Returns `true` if the file was removed, `false` if it did not exist.
+/// Returns an error if `asset_path` does not start with `.writer-assets/`.
+#[tauri::command]
+pub fn image_delete(state: State<'_, AppState>, location_id: i64, asset_path: String) -> CommandResponse<bool> {
+    let location_id = LocationId(location_id);
+
+    log::debug!("image_delete: location={:?}, asset_path={}", location_id, asset_path);
+
+    match state.store.image_delete(location_id, &asset_path) {
+        Ok(removed) => {
+            log::info!("image_delete: removed={}", removed);
+            Ok(CommandResult::ok(removed))
+        }
+        Err(e) => {
+            log::error!("image_delete failed: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Lists all image assets in `.writer-assets/` for the given location.
+///
+/// Returns an empty vec if the assets directory does not exist yet.
+#[tauri::command]
+pub fn image_list(state: State<'_, AppState>, location_id: i64) -> CommandResponse<Vec<ImageAsset>> {
+    let location_id = LocationId(location_id);
+
+    log::debug!("image_list: location={:?}", location_id);
+
+    match state.store.image_list(location_id) {
+        Ok(assets) => {
+            log::debug!("image_list: {} assets", assets.len());
+            Ok(CommandResult::ok(assets))
+        }
+        Err(e) => {
+            log::error!("image_list failed: {}", e);
+            Ok(CommandResult::err(AppError::io(format!(
+                "Failed to list images: {}",
+                e
+            ))))
+        }
+    }
+}

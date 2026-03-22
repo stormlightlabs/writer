@@ -5,22 +5,22 @@ updated: 2026-03-21
 
 ## Backend (Tauri + Rust)
 
-- [ ] Add `.writer-assets/` directory creation on location init
+- [x] Add `.writer-assets/` directory creation on location init
   - Create directory if missing when a location is opened
   - Add to `.gitignore`-style ignore list for file watcher (don't index asset files as documents)
-- [ ] Implement `image_import` command
+- [x] Implement `image_import` command
   - Validate format (PNG, JPEG, GIF, WebP, SVG) and size (≤10 MB)
   - Hash file contents with blake3, derive filename
   - Copy to `.writer-assets/<hash>.<ext>`
   - Dedup: if hash exists, return existing path
   - Return relative asset path string
-- [ ] Implement `image_delete` command
+- [x] Implement `image_delete` command
   - Remove file from `.writer-assets/`
   - No dangling reference scan
-- [ ] Implement `image_list` command
+- [x] Implement `image_list` command
   - List all files in `.writer-assets/`
   - Return filename, size, extension
-- [ ] Register commands in `lib.rs` and expose via Tauri
+- [x] Register commands in `lib.rs` and expose via Tauri
 
 ## Frontend Ports & State
 

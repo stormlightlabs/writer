@@ -9,6 +9,23 @@ pub use nlp::{
     StyleScanInput, scan_style_matches,
 };
 
+/// Directory name for local image assets within a location root
+pub const ASSETS_DIR_NAME: &str = ".writer-assets";
+
+/// Supported image file extensions for import
+pub const SUPPORTED_IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
+
+/// Maximum allowed image file size (10 MiB)
+pub const IMAGE_SIZE_LIMIT_BYTES: u64 = 10 * 1024 * 1024;
+
+/// Metadata for a locally-stored image asset
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ImageAsset {
+    pub filename: String,
+    pub size_bytes: u64,
+    pub extension: String,
+}
+
 /// Unique identifier for a document within a location
 /// Combines location_id + rel_path for stable identity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]

@@ -256,6 +256,16 @@ pub(super) fn handle_watcher_event(
             None => continue,
         };
 
+        // TODO: verify that effect of not indexing asset files is acceptable
+        if rel_path.starts_with(writer_core::ASSETS_DIR_NAME) {
+            log::debug!(
+                "Watcher skipping asset path: {:?} in location {:?}",
+                rel_path,
+                location_id
+            );
+            continue;
+        }
+
         if path.exists() && path.is_dir() {
             reconcile_directory_index_and_emit(app, store, location_id, rel_path, change_kind, None);
             continue;

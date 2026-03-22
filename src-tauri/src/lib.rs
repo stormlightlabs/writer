@@ -148,6 +148,9 @@ pub fn run() {
             cmd::global_capture_pause,
             cmd::global_capture_validate_shortcut,
             cmd::markdown_help_get,
+            cmd::image_import,
+            cmd::image_delete,
+            cmd::image_list,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

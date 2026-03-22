@@ -2237,6 +2237,154 @@ impl Store {
 
         Ok(hits)
     }
+
+    fn assets_dir(root_path: &Path) -> PathBuf {
+        root_path.join(writer_core::ASSETS_DIR_NAME)
+    }
+
+    fn ensure_assets_dir(root_path: &Path) -> Result<PathBuf, AppError> {
+        let dir = Self::assets_dir(root_path);
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| AppError::io(format!("Failed to create assets directory {:?}: {}", dir, e)))?;
+        Ok(dir)
+    }
+
+    /// Imports an image file into `.writer-assets/` under the given location.
+    ///
+    /// Validates format and size, hashes the file bytes with blake3, and copies
+    /// the file to `.writer-assets/<hash>.<ext>`. If the hash already exists the
+    /// existing path is returned without copying (dedup).
+    ///
+    /// Returns the relative asset path, e.g. `.writer-assets/abc123.png`.
+    pub fn image_import(&self, location_id: LocationId, source_path: &Path) -> Result<String, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        let ext = source_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .ok_or_else(|| AppError::new(ErrorCode::InvalidPath, "File has no extension"))?;
+
+        if !writer_core::SUPPORTED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                format!(
+                    "Unsupported image format: .{}. Allowed: {}",
+                    ext,
+                    writer_core::SUPPORTED_IMAGE_EXTENSIONS.join(", ")
+                ),
+            ));
+        }
+
+        let metadata = std::fs::metadata(source_path)
+            .map_err(|e| AppError::io(format!("Failed to read source file metadata: {}", e)))?;
+
+        if metadata.len() > writer_core::IMAGE_SIZE_LIMIT_BYTES {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                format!(
+                    "Image exceeds size limit ({} bytes > {} bytes)",
+                    metadata.len(),
+                    writer_core::IMAGE_SIZE_LIMIT_BYTES
+                ),
+            ));
+        }
+
+        let bytes =
+            std::fs::read(source_path).map_err(|e| AppError::io(format!("Failed to read source file: {}", e)))?;
+        let hash = blake3::hash(&bytes);
+        let hash_hex = hash.to_hex();
+        let dest_filename = format!("{}.{}", hash_hex, ext);
+
+        let assets_dir = Self::ensure_assets_dir(&location.root_path)?;
+        let dest_path = assets_dir.join(&dest_filename);
+
+        if dest_path.exists() {
+            let rel = format!("{}/{}", writer_core::ASSETS_DIR_NAME, dest_filename);
+            log::debug!("image_import dedup hit: {}", rel);
+            return Ok(rel);
+        }
+
+        std::fs::copy(source_path, &dest_path)
+            .map_err(|e| AppError::io(format!("Failed to copy image to assets dir: {}", e)))?;
+
+        let rel = format!("{}/{}", writer_core::ASSETS_DIR_NAME, dest_filename);
+        log::info!("image_import: stored {} as {}", source_path.display(), rel);
+        Ok(rel)
+    }
+
+    /// Deletes an image asset from `.writer-assets/`.
+    ///
+    /// Returns `true` if the file was removed, `false` if it did not exist.
+    /// Returns an error if `asset_path` does not start with `.writer-assets/`
+    /// (path-traversal guard).
+    pub fn image_delete(&self, location_id: LocationId, asset_path: &str) -> Result<bool, AppError> {
+        let expected_prefix = format!("{}/", writer_core::ASSETS_DIR_NAME);
+        if !asset_path.starts_with(&expected_prefix) {
+            return Err(AppError::invalid_path(format!(
+                "asset_path must start with '{}'",
+                expected_prefix
+            )));
+        }
+
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        let full_path = location.root_path.join(asset_path);
+
+        if !full_path.exists() {
+            log::debug!("image_delete: file not found: {:?}", full_path);
+            return Ok(false);
+        }
+
+        std::fs::remove_file(&full_path)
+            .map_err(|e| AppError::io(format!("Failed to delete asset {:?}: {}", full_path, e)))?;
+
+        log::info!("image_delete: removed {:?}", full_path);
+        Ok(true)
+    }
+
+    /// Lists all image assets in `.writer-assets/` for the given location.
+    ///
+    /// Returns an empty vec if the directory does not exist yet.
+    pub fn image_list(&self, location_id: LocationId) -> Result<Vec<writer_core::ImageAsset>, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        let assets_dir = Self::assets_dir(&location.root_path);
+
+        if !assets_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let entries = std::fs::read_dir(&assets_dir)
+            .map_err(|e| AppError::io(format!("Failed to read assets directory: {}", e)))?;
+
+        let mut assets = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|e| AppError::io(format!("Failed to read assets entry: {}", e)))?;
+            let path = entry.path();
+
+            if !path.is_file() {
+                continue;
+            }
+
+            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+
+            let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+
+            let size_bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+
+            assets.push(writer_core::ImageAsset { filename, size_bytes, extension });
+        }
+
+        log::debug!("image_list: {} assets in location {:?}", assets.len(), location_id);
+        Ok(assets)
+    }
 }
 
 #[cfg(test)]
@@ -2249,6 +2397,22 @@ mod tests {
         let db_path = temp_dir.path().join("test.db");
         let store = Store::open(&db_path).unwrap();
         (store, temp_dir)
+    }
+
+    fn create_test_location(store: &Store) -> (writer_core::LocationId, TempDir) {
+        let location_dir = TempDir::new().unwrap();
+        let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
+        store.ui_layout_set(&settings).unwrap();
+        let location = store
+            .location_add("Test".to_string(), location_dir.path().to_path_buf())
+            .unwrap();
+        (location.id, location_dir)
+    }
+
+    fn write_test_image(dir: &std::path::Path, name: &str, bytes: &[u8]) -> PathBuf {
+        let path = dir.join(name);
+        std::fs::write(&path, bytes).unwrap();
+        path
     }
 
     #[test]
@@ -3173,5 +3337,119 @@ mod tests {
         let loaded = store.ui_layout_get().unwrap();
 
         assert!(!loaded.create_readme_in_new_locations);
+    }
+
+    #[test]
+    fn test_image_import_png() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+        let src = write_test_image(location_dir.path(), "photo.png", b"\x89PNG\r\n\x1a\nfake");
+        let rel = store.image_import(location_id, &src).unwrap();
+
+        assert!(rel.starts_with(".writer-assets/"));
+        assert!(rel.ends_with(".png"));
+
+        let full = location_dir.path().join(&rel);
+        assert!(full.exists(), "imported file should be on disk");
+    }
+
+    #[test]
+    fn test_image_import_dedup() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+        let src = write_test_image(location_dir.path(), "same.jpg", b"fakejpeg");
+        let rel1 = store.image_import(location_id, &src).unwrap();
+        let rel2 = store.image_import(location_id, &src).unwrap();
+
+        assert_eq!(rel1, rel2, "same content should produce same path");
+
+        let assets_dir = location_dir.path().join(".writer-assets");
+        let count = std::fs::read_dir(assets_dir).unwrap().count();
+        assert_eq!(count, 1, "only one file should be on disk after dedup");
+    }
+
+    #[test]
+    fn test_image_import_invalid_format() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+        let src = write_test_image(location_dir.path(), "program.exe", b"MZ");
+        let result = store.image_import(location_id, &src);
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, ErrorCode::InvalidPath);
+    }
+
+    #[test]
+    fn test_image_import_size_limit() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+        let oversized: Vec<u8> = vec![0u8; (writer_core::IMAGE_SIZE_LIMIT_BYTES + 1) as usize];
+        let src = write_test_image(location_dir.path(), "big.png", &oversized);
+        let result = store.image_import(location_id, &src);
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, ErrorCode::InvalidPath);
+    }
+
+    #[test]
+    fn test_image_delete_existing() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+
+        let src = write_test_image(location_dir.path(), "delete_me.gif", b"GIF89a");
+        let rel = store.image_import(location_id, &src).unwrap();
+
+        let removed = store.image_delete(location_id, &rel).unwrap();
+        assert!(removed, "should return true when file was deleted");
+
+        let full = location_dir.path().join(&rel);
+        assert!(!full.exists(), "file should no longer be on disk");
+    }
+
+    #[test]
+    fn test_image_delete_nonexistent() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, _location_dir) = create_test_location(&store);
+
+        let removed = store
+            .image_delete(location_id, ".writer-assets/doesnotexist.png")
+            .unwrap();
+        assert!(!removed, "should return false when file was not found");
+    }
+
+    #[test]
+    fn test_image_delete_traversal_guard() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, _location_dir) = create_test_location(&store);
+        let result = store.image_delete(location_id, "../etc/passwd");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code, ErrorCode::InvalidPath);
+    }
+
+    #[test]
+    fn test_image_list_empty() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, _location_dir) = create_test_location(&store);
+
+        let assets = store.image_list(location_id).unwrap();
+        assert!(assets.is_empty(), "no assets dir yet → empty list");
+    }
+
+    #[test]
+    fn test_image_list_multiple() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+
+        let s1 = write_test_image(location_dir.path(), "a.png", b"\x89PNG one");
+        let s2 = write_test_image(location_dir.path(), "b.webp", b"RIFF webp");
+        store.image_import(location_id, &s1).unwrap();
+        store.image_import(location_id, &s2).unwrap();
+
+        let assets = store.image_list(location_id).unwrap();
+        assert_eq!(assets.len(), 2, "should list both imported images");
+
+        let exts: Vec<&str> = assets.iter().map(|a| a.extension.as_str()).collect();
+        assert!(exts.contains(&"png"), "png should be present");
+        assert!(exts.contains(&"webp"), "webp should be present");
     }
 }

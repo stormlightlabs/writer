@@ -16,11 +16,13 @@ use writer_core::{
 use writer_store::{SidebarTreeState, Store, StyleCheckSettings, UiLayoutSettings};
 
 mod atproto;
+mod images;
 mod md;
 mod standard_site;
 mod strings;
 
 pub use atproto::*;
+pub use images::*;
 pub use md::*;
 pub use standard_site::*;
 pub use strings::*;
