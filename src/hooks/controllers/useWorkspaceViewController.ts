@@ -14,6 +14,7 @@ import { useWorkspaceController } from "$hooks/controllers/useWorkspaceControlle
 import { useDocumentActions } from "$hooks/useDocumentActions";
 import { useEditor } from "$hooks/useEditor";
 import { useEditorBridge } from "$hooks/useEditorBridge";
+import { useEditorImageHandlers } from "$hooks/useEditorImageHandlers";
 import { useHelpSheetHotkey } from "$hooks/useHelpSheetHotkey";
 import { useLayoutHotkeys } from "$hooks/useLayoutHotkeys";
 import { usePdfExport, usePdfExportUI } from "$hooks/usePdfExport";
@@ -110,6 +111,9 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     dispatchEditor: editorDispatch,
     syncPreviewLine,
   });
+
+  const imageLocationId = editorModel.docRef?.location_id ?? null;
+  const { insertAt, handleImageFilePaste, handlePickAndInsertImage } = useEditorImageHandlers(imageLocationId);
   const { handleOpenPdfExport, handleExportPdf, previewResult } = usePdfExportUI({
     activeTab,
     text: editorModel.text,
@@ -216,6 +220,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       isNewDocumentDisabled: !hasLocations,
       onExportPdf: handleOpenPdfExport,
       isPdfExportDisabled: !activeTab,
+      onInsertImage: activeTab ? handlePickAndInsertImage : undefined,
       onRefresh: handleRefreshSidebar,
     }),
     [
@@ -229,6 +234,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       hasLocations,
       handleSave,
       hasOpenDocument,
+      handlePickAndInsertImage,
     ],
   );
 
@@ -241,6 +247,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       onSelectionChange: handleSelectionChange,
       onStyleMatchesChange: handleStyleMatchesChange,
       styleSelection,
+      imageHandlers: { insertAt, onImageFilePaste: handleImageFilePaste },
     }),
     [
       editorModel.text,
@@ -250,6 +257,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       handleSelectionChange,
       handleStyleMatchesChange,
       styleSelection,
+      insertAt,
+      handleImageFilePaste,
     ],
   );
 

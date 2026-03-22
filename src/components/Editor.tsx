@@ -31,12 +31,18 @@ export type EditorPresentationOverrides = Partial<
   }
 >;
 
+export type EditorImageHandlers = {
+  insertAt?: { text: string; requestId: number } | null;
+  onImageFilePaste?: (file: File) => void;
+};
+
 export type EditorProps = {
   initialText?: string;
   disabled?: boolean;
   placeholder?: string;
   debounceMs?: number;
   styleSelection?: { from: number; to: number; requestId: number } | null;
+  imageHandlers?: EditorImageHandlers;
   presentation?: EditorPresentationOverrides;
   onChange?: (text: string) => void;
   onSave?: () => void;
@@ -48,7 +54,7 @@ export type EditorProps = {
 
 type EditorCallbacks = Pick<
   EditorProps,
-  "onChange" | "onSave" | "onCursorMove" | "onSelectionChange" | "onStyleMatchesChange"
+  "onChange" | "onSave" | "onCursorMove" | "onSelectionChange" | "onStyleMatchesChange" | "imageHandlers"
 >;
 
 type CreateEditorStateOptions = {
@@ -210,6 +216,7 @@ export function Editor(
     placeholder,
     debounceMs = 500,
     styleSelection = null,
+    imageHandlers,
     presentation,
     onChange,
     onSave,
@@ -239,6 +246,7 @@ export function Editor(
     onCursorMove,
     onSelectionChange,
     onStyleMatchesChange,
+    imageHandlers,
   });
   const debounceMsRef = useRef(debounceMs);
   const onChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -270,8 +278,8 @@ export function Editor(
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    callbacksRef.current = { onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange };
-  }, [onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange]);
+    callbacksRef.current = { onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange, imageHandlers };
+  }, [onChange, onSave, onCursorMove, onSelectionChange, onStyleMatchesChange, imageHandlers]);
 
   useEffect(() => {
     debounceMsRef.current = debounceMs;
@@ -520,6 +528,36 @@ export function Editor(
     view.focus();
   }, [styleSelection, styleSelection?.requestId]);
 
+  const insertAt = imageHandlers?.insertAt ?? null;
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !insertAt) {
+      return;
+    }
+
+    const { from } = view.state.selection.main;
+    view.dispatch({ changes: { from, insert: insertAt.text }, selection: { anchor: from + insertAt.text.length } });
+    view.focus();
+  }, [insertAt, insertAt?.requestId]);
+
+  const handlePaste = useCallback((event: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = event.clipboardData?.items;
+    if (!items) {
+      return;
+    }
+
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        event.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          callbacksRef.current.imageHandlers?.onImageFilePaste?.(file);
+        }
+        return;
+      }
+    }
+  }, []);
+
   const focus = useCallback(() => {
     viewRef.current?.focus();
   }, []);
@@ -544,6 +582,7 @@ export function Editor(
       data-ready={isReady}
       style={containerStyle}
       onClick={focus}
+      onPaste={handlePaste}
       data-testid="editor-container" />
   );
 }

@@ -24,24 +24,28 @@ updated: 2026-03-21
 
 ## Frontend Ports & State
 
-- [ ] Add command builders in `src/ports/commands.ts`
+- [x] Add command builders in `src/ports/commands.ts`
   - `imageImport(locationId, sourcePath, onOk, onErr)`
   - `imageDelete(locationId, assetPath, onOk, onErr)`
   - `imageList(locationId, onOk, onErr)`
-- [ ] Add controller hook `useImageController` or extend workspace controller
-  - `importImage(file)` — write temp file, call `image_import`, insert markdown at cursor
-  - `deleteImage(assetPath)` — call `image_delete`
+- [x] Add controller hook `useImageController`
+  - `importImage(locationId, sourcePath)` — call `image_import`, return asset path
+  - `deleteImage(locationId, assetPath)` — call `image_delete`
+- [x] Add `useEditorImageHandlers` hook
+  - `handleImageFilePaste(file)` — write temp file, call `image_import`, set `insertAt`
+  - `handlePickAndInsertImage()` — Tauri file picker dialog, call `image_import`, set `insertAt`
+  - Window drag-drop listener: imports image files dropped on editor area
 
 ## Editor Integration
 
-- [ ] Paste handler
-  - Intercept clipboard paste with image data
+- [x] Paste handler
+  - Intercept clipboard paste with image data (`Editor.tsx` `onPaste`)
   - Write to temp file, call `image_import`, insert `![image](.writer-assets/hash.ext)` at cursor
-- [ ] Drag-and-drop handler
-  - Intercept file drop on editor area
+- [x] Drag-and-drop handler
+  - Intercept file drop on editor area (Tauri window `onDragDropEvent`)
   - Filter to supported image formats
   - Same import + insert flow as paste
-- [ ] **3.3** Toolbar "Insert Image" button
+- [x] Toolbar "Insert Image" button
   - Open Tauri file picker dialog filtered to image types
   - Import selected file, insert reference
 
@@ -117,7 +121,7 @@ updated: 2026-03-21
   - Scan PdfNodes for Image variants, resolve all paths, then render
 - [ ] Handle SVG gracefully — skip or render placeholder if `@react-pdf/renderer` doesn't support it
 
-## Test Plan
+## Test/QA Plan
 
 - [ ] Test import with each supported format
 - [ ] Test dedup (import same image twice)
@@ -129,5 +133,3 @@ updated: 2026-03-21
 - [ ] Test import with images (`at://blob/` refs rewritten to `.writer-assets/` in saved markdown)
 - [ ] Test PDF export with embedded images (images render in output PDF)
 - [ ] Test PDF export with missing image (graceful fallback, no crash)
-- [ ] `pnpm test:run` + `cargo test` passing
-- [ ] `pnpm lint` + `pnpm check` clean

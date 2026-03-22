@@ -176,6 +176,9 @@ export type CaptureSubmitInput = {
   openMainAfterSave?: boolean;
 };
 
+/** Metadata for a locally-stored image asset in `.writer-assets/`. */
+export type ImageAsset = { filename: string; sizeBytes: number; extension: string };
+
 export type Maybe<T> = T | null | undefined;
 
 export type SettingsScope = "basic" | "full";

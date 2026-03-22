@@ -63,7 +63,7 @@ function renderExportDialog(
 }
 
 function seedActiveDocument() {
-  useAppStore.getState().setDocuments([{
+  useAppStore.getState().setDocumentsForLocation(1, [{
     location_id: 1,
     rel_path: "test.md",
     title: "My Document",

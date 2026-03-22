@@ -238,6 +238,12 @@ export const GithubIcon = ({ size = "md", className = "", style }: IconProps) =>
   </span>
 );
 
+export const ImageIcon = ({ size = "md", className = "", style }: IconProps) => (
+  <span className={`flex items-center ${sizeClass(size)} ${className}`} style={style}>
+    <i className="i-ri-image-line" />
+  </span>
+);
+
 export const StandardSiteIcon = ({ className = "", style }: Omit<IconProps, "size">) => (
   <svg
     viewBox="0 0 28 28"

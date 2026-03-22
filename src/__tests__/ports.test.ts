@@ -17,6 +17,9 @@ import {
   globalCaptureSet,
   globalCaptureSubmit,
   globalCaptureValidateShortcut,
+  imageDelete,
+  imageImport,
+  imageList,
   invokeCmd,
   isErr,
   isOk,
@@ -1273,6 +1276,73 @@ describe("global capture Commands", () => {
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("app_version_get");
       expect(cmd.payload).toStrictEqual({});
+    });
+  });
+
+  describe("image commands", () => {
+    it("imageImport builds correct InvokeCmd", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = imageImport(7, "/tmp/photo.png", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("image_import");
+      expect(cmd.payload).toStrictEqual({ locationId: 7, sourcePath: "/tmp/photo.png" });
+    });
+
+    it("imageDelete builds correct InvokeCmd", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = imageDelete(7, ".writer-assets/abc123.png", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("image_delete");
+      expect(cmd.payload).toStrictEqual({ locationId: 7, assetPath: ".writer-assets/abc123.png" });
+    });
+
+    it("imageList builds correct InvokeCmd", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = imageList(7, onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("image_list");
+      expect(cmd.payload).toStrictEqual({ locationId: 7 });
+    });
+
+    it("runCmd + image_list normalizes size_bytes to sizeBytes", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        type: "ok",
+        value: [{ filename: "abc123.png", size_bytes: 204_800, extension: "png" }, {
+          filename: "def456.jpg",
+          size_bytes: 512_000,
+          extension: "jpg",
+        }],
+      });
+
+      await runCmd(imageList(7, onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith([{ filename: "abc123.png", sizeBytes: 204_800, extension: "png" }, {
+        filename: "def456.jpg",
+        sizeBytes: 512_000,
+        extension: "jpg",
+      }]);
+      expect(onErr).not.toHaveBeenCalled();
+    });
+
+    it("runCmd + image_list returns empty array for non-array response", async () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      vi.mocked(invoke).mockResolvedValueOnce({ type: "ok", value: null });
+
+      await runCmd(imageList(7, onOk, onErr));
+
+      expect(onOk).toHaveBeenCalledWith([]);
+      expect(onErr).not.toHaveBeenCalled();
     });
   });
 });

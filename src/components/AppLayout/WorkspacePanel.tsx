@@ -33,7 +33,8 @@ type K =
   | "onCursorMove"
   | "onSelectionChange"
   | "onStyleMatchesChange"
-  | "styleSelection";
+  | "styleSelection"
+  | "imageHandlers";
 export type WorkspaceEditorProps = Pick<EditorProps, K>;
 
 type PK = "renderResult" | "theme" | "editorLine" | "previewStyle" | "editorFontFamily" | "onScrollToLine";
@@ -69,6 +70,7 @@ export type WorkspacePanelProps = {
     | "onExportPdf"
     | "isExportingPdf"
     | "isPdfExportDisabled"
+    | "onInsertImage"
     | "onRefresh"
   >;
   onOpenImportSheet?: () => void;

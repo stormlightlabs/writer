@@ -289,4 +289,42 @@ describe(Editor, () => {
       expect(secondEditorRoot).toBe(firstEditorRoot);
     });
   });
+
+  describe("image paste handling", () => {
+    function makeClipboardData(items: { type: string; file?: File }[]) {
+      return { items: items.map(({ type, file }) => ({ type, getAsFile: () => file ?? null })) };
+    }
+
+    it("calls onImageFilePaste with image File when image is pasted", () => {
+      const onImageFilePaste = vi.fn();
+      render(<Editor imageHandlers={{ onImageFilePaste }} />);
+      const container = screen.getByTestId("editor-container");
+
+      const file = new File([new Uint8Array([1, 2, 3])], "photo.png", { type: "image/png" });
+
+      fireEvent.paste(container, { clipboardData: makeClipboardData([{ type: "image/png", file }]) });
+
+      expect(onImageFilePaste).toHaveBeenCalledWith(file);
+    });
+
+    it("does not call onImageFilePaste when paste contains only text", () => {
+      const onImageFilePaste = vi.fn();
+      render(<Editor imageHandlers={{ onImageFilePaste }} />);
+      const container = screen.getByTestId("editor-container");
+
+      fireEvent.paste(container, { clipboardData: makeClipboardData([{ type: "text/plain" }]) });
+
+      expect(onImageFilePaste).not.toHaveBeenCalled();
+    });
+
+    it("does not throw when imageHandlers is not provided and image is pasted", () => {
+      render(<Editor />);
+      const container = screen.getByTestId("editor-container");
+
+      const file = new File([new Uint8Array([1])], "photo.png", { type: "image/png" });
+
+      expect(() => fireEvent.paste(container, { clipboardData: makeClipboardData([{ type: "image/png", file }]) })).not
+        .toThrow();
+    });
+  });
 });

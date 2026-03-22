@@ -9,6 +9,7 @@ import {
   EyeIcon,
   FocusIcon,
   IconProps,
+  ImageIcon,
   PenIcon,
   PlusIcon,
   RefreshIcon,
@@ -40,6 +41,7 @@ export type ToolbarProps = {
   onExportPdf?: () => void;
   isExportingPdf?: boolean;
   isPdfExportDisabled?: boolean;
+  onInsertImage?: () => void;
   onRefresh?: () => void;
 };
 
@@ -57,6 +59,7 @@ export function Toolbar(
     onExportPdf,
     isExportingPdf = false,
     isPdfExportDisabled = false,
+    onInsertImage,
     onRefresh,
   }: ToolbarProps,
 ) {
@@ -86,6 +89,7 @@ export function Toolbar(
       eye: { Component: EyeIcon, size: "sm" },
       focus: { Component: FocusIcon, size: "sm" },
       export: { Component: DocumentIcon, size: "sm" },
+      image: { Component: ImageIcon, size: "sm" },
       atproto: { Component: AtSignIcon, size: "sm" },
       settings: { Component: SettingsIcon, size: "sm" },
     }),
@@ -137,10 +141,21 @@ export function Toolbar(
         icon: <DocumentIcon size="sm" />,
       });
     }
+    if (onInsertImage) {
+      items.push({ label: "Insert Image", onClick: onInsertImage, icon: <ImageIcon size="sm" /> });
+    }
     items.push({ divider: true as const });
     items.push({ label: "Settings", onClick: handleOpenSettings, icon: <SettingsIcon size="sm" /> });
     return items;
-  }, [atProtoSession, onAtProtoAuth, onExportPdf, isExportingPdf, isPdfExportDisabled, handleOpenSettings]);
+  }, [
+    atProtoSession,
+    onAtProtoAuth,
+    onExportPdf,
+    isExportingPdf,
+    isPdfExportDisabled,
+    onInsertImage,
+    handleOpenSettings,
+  ]);
 
   return (
     <div className="h-12 bg-layer-01 border-b border-stroke-subtle/10 flex items-center justify-between px-3 gap-2 overflow-x-auto shrink-0">

@@ -6,6 +6,7 @@ import type {
   DocContent,
   DocMeta,
   GlobalCaptureSettings,
+  ImageAsset,
   LocationDescriptor,
   LocationId,
   MarkdownProfile,
@@ -42,6 +43,9 @@ import type {
   GlobalCaptureSetParams,
   GlobalCaptureSubmitParams,
   GlobalCaptureValidateShortcutParams,
+  ImageDeleteParams,
+  ImageImportParams,
+  ImageListParams,
   LocParams,
   PersistedSidebarTreeState,
   PersistedStyleCheckSettings,
@@ -471,6 +475,18 @@ export function markdownHelpGet(...[onOk, onErr]: LocParams<string>): Cmd {
 
 export function appVersionGet(...[onOk, onErr]: LocParams<string>): Cmd {
   return invokeCmd<string>("app_version_get", {}, onOk, onErr);
+}
+
+export function imageImport(...[locationId, sourcePath, onOk, onErr]: ImageImportParams<string>): Cmd {
+  return invokeCmd<string>("image_import", { locationId, sourcePath }, onOk, onErr);
+}
+
+export function imageDelete(...[locationId, assetPath, onOk, onErr]: ImageDeleteParams<boolean>): Cmd {
+  return invokeCmd<boolean>("image_delete", { locationId, assetPath }, onOk, onErr);
+}
+
+export function imageList(...[locationId, onOk, onErr]: ImageListParams<ImageAsset[]>): Cmd {
+  return invokeCmd<ImageAsset[]>("image_list", { locationId }, onOk, onErr);
 }
 
 export type { MarkdownProfile, SearchFiltersPayload };

@@ -321,3 +321,13 @@ export type PostListParams = Parameters<
 export type PostGetMarkdownParams = Parameters<
   (didOrHandle: string, tid: string, onOk: SuccessCallback<string>, onErr: ErrorCallback) => void
 >;
+
+export type ImageImportParams<T> = Parameters<
+  (locationId: LocationId, sourcePath: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+export type ImageDeleteParams<T> = Parameters<
+  (locationId: LocationId, assetPath: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;
+export type ImageListParams<T> = Parameters<
+  (locationId: LocationId, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
+>;

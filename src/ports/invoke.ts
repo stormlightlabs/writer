@@ -8,6 +8,7 @@ import type {
   DocRef,
   ErrorCode,
   GlobalCaptureSettings,
+  ImageAsset,
   PublicationListResult,
   PublicationRecord,
   SearchHit,
@@ -309,6 +310,18 @@ function normalizePublicationListResult(value: unknown): PublicationListResult {
   };
 }
 
+function normalizeImageAsset(value: unknown): ImageAsset {
+  if (!isRecord(value)) {
+    return { filename: "", sizeBytes: 0, extension: "" };
+  }
+
+  return {
+    filename: typeof value.filename === "string" ? value.filename : "",
+    sizeBytes: typeof value.size_bytes === "number" ? value.size_bytes : 0,
+    extension: typeof value.extension === "string" ? value.extension : "",
+  };
+}
+
 function normalizeSessionState(value: unknown): SessionState {
   if (!isRecord(value) || !Array.isArray(value.tabs)) {
     return { tabs: [], activeTabId: null };
@@ -396,6 +409,13 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
     }
     case "publication_list": {
       return normalizePublicationListResult(value);
+    }
+    case "image_list": {
+      if (!Array.isArray(value)) {
+        return [];
+      }
+
+      return value.map((asset) => normalizeImageAsset(asset));
     }
     case "style_check_scan": {
       if (!Array.isArray(value)) {
