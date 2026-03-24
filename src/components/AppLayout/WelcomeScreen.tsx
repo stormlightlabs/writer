@@ -162,7 +162,7 @@ export function WelcomeScreen(
 ) {
   const meta = useMemo(
     () => ({
-      headline: hasLocations ? "Nothing is open." : "Start by adding a location.",
+      headline: hasLocations ? "Welcome" : "Start by adding a location.",
       description: hasLocations
         ? "Create a fresh draft, reopen something from your library, or pull material in from an external source."
         : "Writer needs a location before it can create drafts, save notes, or import anything into your workspace.",
@@ -170,8 +170,8 @@ export function WelcomeScreen(
         ? `${formatCount(locationCount, "location", "locations")} connected`
         : "No locations connected",
       documentSummary: hasLocations
-        ? `${formatCount(documentCount, "document", "documents")} in the current location`
-        : "Imports stay disabled until a location is available",
+        ? `${formatCount(documentCount, "document", "documents")}`
+        : "Import available after connecting a location",
     }),
     [hasLocations, locationCount, documentCount],
   );

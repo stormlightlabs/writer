@@ -3,17 +3,16 @@ import { EMPTY_NEW_DOC_TRANSITION, NO_MOTION_TRANSITION } from "$constants";
 import { useWorkspaceController } from "$hooks/controllers/useWorkspaceController";
 import { useSkipAnimation } from "$hooks/useMotion";
 import { useViewportTier } from "$hooks/useViewportTier";
-import { useTabsState, useWorkspaceLocationsState } from "$state/selectors";
+import { useTabsState } from "$state/selectors";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { DocumentTab } from "./DocumentTab";
 import { NewButton } from "./NewButton";
 
-export type DocumentTabsProps = { onNewDocument?: () => void };
+export type DocumentTabsProps = { onNewTab?: () => void };
 
-export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
+export function DocumentTabs({ onNewTab }: DocumentTabsProps) {
   const { tabs, activeTabId } = useTabsState();
-  const { locations } = useWorkspaceLocationsState();
-  const { handleSelectTab, handleCloseTab, handleReorderTabs, handleCreateNewDocument } = useWorkspaceController();
+  const { handleSelectTab, handleCloseTab, handleReorderTabs } = useWorkspaceController();
   const { viewportWidth, isCompact } = useViewportTier();
   const skipAnimation = useSkipAnimation();
   const [draggingTab, setDraggingTab] = useState<string | null>(null);
@@ -91,16 +90,11 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
 
   const compactTabs = useMemo(() => isCompact || viewportWidth < 860, [isCompact, viewportWidth]);
 
-  const handleNewDocument = useMemo(
-    () => (locations.length > 0 ? onNewDocument ?? (() => handleCreateNewDocument()) : void 0),
-    [locations.length, onNewDocument, handleCreateNewDocument],
-  );
-
   if (tabs.length === 0) {
     return (
       <div className="h-tab bg-surface-primary border-b border-stroke-subtle flex items-center justify-between pl-4 pr-3 text-text-placeholder text-[0.8125rem]">
         <span>No documents open</span>
-        <NewButton onNewDocument={handleNewDocument} hasTabs={false} transition={transition} />
+        <NewButton onNewTab={onNewTab} hasTabs={false} transition={transition} />
       </div>
     );
   }
@@ -125,7 +119,7 @@ export function DocumentTabs({ onNewDocument }: DocumentTabsProps) {
           onCloseTab={handleCloseTab}
           compact={compactTabs} />
       ))}
-      <NewButton onNewDocument={handleNewDocument} hasTabs transition={transition} />
+      <NewButton onNewTab={onNewTab} hasTabs transition={transition} />
 
       <ContextMenu
         isOpen={isContextMenuOpen}

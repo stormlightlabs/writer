@@ -79,9 +79,11 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   const { open: openSettingsRoute } = useRoutedSheet("/settings");
   const [styleMatches, setStyleMatches] = useState<StyleMatch[]>([]);
   const [styleSelection, setStyleSelection] = useState<{ from: number; to: number; requestId: number } | null>(null);
+  const [isWelcomeTabOpen, setWelcomeTabOpen] = useState(false);
   const {
     locations,
     documents,
+    documentsByLocation,
     selectedLocationId,
     isSidebarLoading,
     isSessionHydrated,
@@ -137,7 +139,34 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   );
   const hasEditableDocument = hasOpenDocument && !isImageDocument;
   const hasLocations = useMemo(() => locations.length > 0, [locations.length]);
-  const showWelcomeScreen = useMemo(() => isSessionHydrated && !activeTab, [activeTab, isSessionHydrated]);
+  const openLocationDocumentCount = useMemo(() =>
+    locations.reduce((count, location) => {
+      const cachedDocuments = documentsByLocation[location.id];
+      if (cachedDocuments) {
+        return count + cachedDocuments.length;
+      }
+
+      if (selectedLocationId === location.id) {
+        return count + documents.filter((doc) => doc.location_id === location.id).length;
+      }
+
+      return count;
+    }, 0), [documents, documentsByLocation, locations, selectedLocationId]);
+  const showWelcomeScreen = useMemo(() => isSessionHydrated && (!activeTab || isWelcomeTabOpen), [
+    activeTab,
+    isSessionHydrated,
+    isWelcomeTabOpen,
+  ]);
+
+  useEffect(() => {
+    if (activeTab) {
+      setWelcomeTabOpen(false);
+    }
+  }, [activeTab]);
+
+  const handleOpenWelcomeTab = useCallback(() => {
+    setWelcomeTabOpen(true);
+  }, []);
 
   const cursorPosition = useMemo(
     () => ({ cursorLine: editorModel.cursorLine, cursorColumn: editorModel.cursorColumn }),
@@ -333,15 +362,16 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       isVisible: showWelcomeScreen,
       hasLocations,
       locationCount: locations.length,
-      documentCount: documents.length,
+      documentCount: openLocationDocumentCount,
       onAddLocation: handleAddLocation,
     }),
-    [showWelcomeScreen, hasLocations, locations.length, documents.length, handleAddLocation],
+    [showWelcomeScreen, hasLocations, locations.length, openLocationDocumentCount, handleAddLocation],
   );
 
   const workspacePanelProps = useMemo(
     () => ({
       toolbar: toolbarProps,
+      onOpenWelcomeTab: handleOpenWelcomeTab,
       onOpenImportSheet: atProto.openImportSheet,
       onOpenStandardSiteImportSheet: standardSite.openImportSheet,
       editor: editorProps,
@@ -361,6 +391,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     }),
     [
       toolbarProps,
+      handleOpenWelcomeTab,
       atProto.openImportSheet,
       standardSite.openImportSheet,
       editorProps,

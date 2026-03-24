@@ -1,4 +1,4 @@
-/* oxlint-disable eslint-plugin-react-perf/jsx-no-new-object-as-prop */
+/**/
 import { WorkspacePanel } from "$components/AppLayout/WorkspacePanel";
 import type { WorkspaceDiagnosticsProps, WorkspacePanelProps } from "$components/AppLayout/WorkspacePanel";
 import { EditorProps } from "$components/Editor";
@@ -13,6 +13,7 @@ import {
   useLayoutChromeState,
   useLayoutSettingsUiState,
   useSidebarState,
+  useTabsState,
   useToolbarState,
   useWorkspacePanelModeState,
   useWorkspacePanelSidebarState,
@@ -36,6 +37,7 @@ vi.mock(
   "$state/selectors",
   () => ({
     useSidebarState: vi.fn(),
+    useTabsState: vi.fn(),
     useToolbarState: vi.fn(),
     useEditorPresentationActions: vi.fn(),
     useLayoutChromeActions: vi.fn(),
@@ -66,6 +68,7 @@ type SelectorOverrides = {
 
 type WorkspacePanelPropOverrides = {
   toolbar?: Partial<WorkspacePanelProps["toolbar"]>;
+  onOpenWelcomeTab?: WorkspacePanelProps["onOpenWelcomeTab"];
   onOpenImportSheet?: WorkspacePanelProps["onOpenImportSheet"];
   onOpenStandardSiteImportSheet?: WorkspacePanelProps["onOpenStandardSiteImportSheet"];
   editor?: Partial<EditorProps>;
@@ -163,6 +166,7 @@ const createWorkspacePanelModeState = (
 
 const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
   vi.mocked(useSidebarState).mockReturnValue(createSidebarState(overrides.sidebarState));
+  vi.mocked(useTabsState).mockReturnValue({ tabs: [], activeTabId: null, isSessionHydrated: true });
   vi.mocked(useToolbarState).mockReturnValue(createToolbarState(overrides.toolbarState));
   vi.mocked(useEditorPresentationActions).mockReturnValue({
     setLineNumbersVisible: vi.fn(),
@@ -211,6 +215,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
   vi.mocked(useWorkspaceController).mockReturnValue({
     locations: [],
     documents: [],
+    documentsByLocation: {},
     selectedLocationId: undefined,
     selectedDocPath: undefined,
     locationDocuments: [],
@@ -257,6 +262,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
 
 const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}): WorkspacePanelProps => ({
   toolbar: { saveStatus: "Idle", onSave: vi.fn(), ...overrides.toolbar },
+  onOpenWelcomeTab: overrides.onOpenWelcomeTab,
   onOpenImportSheet: overrides.onOpenImportSheet,
   onOpenStandardSiteImportSheet: overrides.onOpenStandardSiteImportSheet,
   editor: {
@@ -431,6 +437,26 @@ describe("WorkspacePanel", () => {
     fireEvent.click(screen.getByLabelText("Close diagnostics panel"));
     expect(onClose).toHaveBeenCalledOnce();
     expect(onOpenSettings).not.toHaveBeenCalled();
+  });
+
+  it("routes tab-strip new tab actions to the welcome handler", () => {
+    const onOpenWelcomeTab = vi.fn();
+
+    renderWorkspacePanel({ onOpenWelcomeTab, welcome: { isVisible: false } }, { topBarsCollapsed: false });
+
+    fireEvent.click(screen.getByRole("button", { name: /new tab/i }));
+    expect(onOpenWelcomeTab).toHaveBeenCalledOnce();
+  });
+
+  it("renders welcome instead of image view when welcome is visible", () => {
+    renderWorkspacePanel({
+      welcome: { isVisible: true, hasLocations: true, locationCount: 2, documentCount: 4, onAddLocation: vi.fn() },
+      activeDocRelPath: "images/cover.png",
+      activeDocContentType: "image/png",
+    });
+
+    expect(screen.getByTestId("workspace-welcome-screen")).toBeInTheDocument();
+    expect(screen.queryByText("Loading image...")).not.toBeInTheDocument();
   });
 
   it("renders the welcome screen and routes its actions", () => {

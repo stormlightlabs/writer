@@ -84,6 +84,7 @@ export type WorkspacePanelProps = {
     | "onInsertImage"
     | "onRefresh"
   >;
+  onOpenWelcomeTab?: () => void;
   onOpenImportSheet?: () => void;
   onOpenStandardSiteImportSheet?: () => void;
   editor: WorkspaceEditorProps;
@@ -212,10 +213,6 @@ function MainPanel(
     return { className: "flex min-h-0 min-w-0 flex-col w-full" };
   }, [panelMode, splitEditorWidth]);
 
-  if (isImageDocument) {
-    return <ImageDocumentView locationId={preview.locationId} relPath={activeDocRelPath} className="w-full" />;
-  }
-
   if (welcome?.isVisible) {
     return (
       <WelcomeScreen
@@ -228,6 +225,10 @@ function MainPanel(
         onOpenImportSheet={onOpenImportSheet}
         onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />
     );
+  }
+
+  if (isImageDocument) {
+    return <ImageDocumentView locationId={preview.locationId} relPath={activeDocRelPath} className="w-full" />;
   }
 
   if (panelMode === "split") {
@@ -295,6 +296,7 @@ function Section({ children, initial, animate, exit, transition, className, styl
 export function WorkspacePanel(
   {
     toolbar,
+    onOpenWelcomeTab,
     onOpenImportSheet,
     onOpenStandardSiteImportSheet,
     editor,
@@ -449,7 +451,7 @@ export function WorkspacePanel(
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Toolbar {...toolbar} />
         <Section isVisible={effectiveTabBarVisible} {...tabBarMotionProps} className="overflow-hidden">
-          <DocumentTabs onNewDocument={newDocumentHandler} />
+          <DocumentTabs onNewTab={onOpenWelcomeTab} />
         </Section>
         <MainPanel
           panelMode={effectivePanelMode}

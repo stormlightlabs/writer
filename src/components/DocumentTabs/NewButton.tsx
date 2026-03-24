@@ -6,35 +6,34 @@ import {
   NO_MOTION_TRANSITION,
 } from "$constants";
 import { PlusIcon } from "$icons";
-import { formatShortcut } from "$utils/shortcuts";
 import { motion } from "motion/react";
 
 type TransitionType = typeof EMPTY_NEW_DOC_TRANSITION | typeof NO_MOTION_TRANSITION;
 
-type NewButtonProps = { onNewDocument?: () => void; hasTabs: boolean; transition: TransitionType };
+type NewButtonProps = { onNewTab?: () => void; hasTabs: boolean; transition: TransitionType };
 
-export function NewButton({ onNewDocument, hasTabs, transition }: NewButtonProps) {
-  if (onNewDocument && hasTabs) {
+export function NewButton({ onNewTab, hasTabs, transition }: NewButtonProps) {
+  if (onNewTab && hasTabs) {
     return (
       <div className="sticky right-0 z-10 flex items-center px-2 border-l border-stroke-subtle bg-surface-primary">
         <Button
           variant="iconGhost"
           size="iconMd"
-          onClick={onNewDocument}
+          onClick={onNewTab}
           className="text-text-secondary hover:text-text-primary"
-          title={`New Document (${formatShortcut("Cmd+N")})`}>
+          title="New Tab">
           <PlusIcon size="sm" />
         </Button>
       </div>
     );
   }
 
-  if (onNewDocument) {
+  if (onNewTab) {
     return (
       <motion.div initial={EMPTY_NEW_DOC_INITIAL} animate={EMPTY_NEW_DOC_ANIMATE} transition={transition}>
-        <Button variant="outline" size="xs" onClick={onNewDocument} className="flex items-center gap-1.5">
+        <Button variant="outline" size="xs" onClick={onNewTab} className="flex items-center gap-1.5">
           <PlusIcon size="sm" />
-          New Document
+          New Tab
         </Button>
       </motion.div>
     );

@@ -97,8 +97,14 @@ function mapDirectoryMovedRelPath(sourceDir: string, destinationDir: string, can
 
 export function useWorkspaceController() {
   const { locations, selectedLocationId, isLoadingLocations, sidebarFilter } = useWorkspaceLocationsState();
-  const { selectedDocPath, documents, isLoadingDocuments, refreshingLocationId, sidebarRefreshReason } =
-    useWorkspaceDocumentsState();
+  const {
+    selectedDocPath,
+    documents,
+    documentsByLocation,
+    isLoadingDocuments,
+    refreshingLocationId,
+    sidebarRefreshReason,
+  } = useWorkspaceDocumentsState();
   const { setSidebarRefreshState, setDocumentsForLocation, setDirectoriesForLocation } = useWorkspaceDocumentsActions();
   const { setSidebarFilter, setSelectedLocation, setLocations } = useWorkspaceLocationsActions();
   const { tabs, activeTabId, isSessionHydrated } = useTabsState();
@@ -471,6 +477,7 @@ export function useWorkspaceController() {
       documents,
       selectedLocationId,
       selectedDocPath,
+      documentsByLocation,
       locationDocuments,
       sidebarFilter,
       isSidebarLoading: isLoadingLocations || isLoadingDocuments,
@@ -504,6 +511,7 @@ export function useWorkspaceController() {
       documents,
       selectedLocationId,
       selectedDocPath,
+      documentsByLocation,
       locationDocuments,
       sidebarFilter,
       isLoadingLocations,
