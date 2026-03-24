@@ -150,7 +150,6 @@ pub fn run() {
             cmd::markdown_help_get,
             cmd::image_import,
             cmd::image_delete,
-            cmd::image_list,
             cmd::asset_resolve,
             cmd::svg_to_png,
         ])

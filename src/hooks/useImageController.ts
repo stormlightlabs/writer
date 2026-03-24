@@ -5,20 +5,17 @@ import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useMemo } from "react";
 
 /**
- * Controller hook for local image asset operations.
- *
- * Covers `importImage` and `deleteImage`.
- * Image listing is available via the `imageList` port directly when needed on-demand.
+ * Controller hook for local image asset operations: `importImage` and `deleteImage`.
  */
 export function useImageController() {
   const importImage = useCallback(
-    (locationId: number, sourcePath: string): Promise<string | false> =>
+    (locationId: number, sourcePath: string, targetDir: string): Promise<string | false> =>
       new Promise((resolve) => {
-        runCmd(imageImport(locationId, sourcePath, (assetPath) => {
-          logger.info(f("Image imported", { locationId, sourcePath, assetPath }));
+        runCmd(imageImport(locationId, sourcePath, targetDir, (assetPath) => {
+          logger.info(f("Image imported", { locationId, sourcePath, targetDir, assetPath }));
           resolve(assetPath);
         }, (error: AppError) => {
-          logger.error(f("Failed to import image", { locationId, sourcePath, error }));
+          logger.error(f("Failed to import image", { locationId, sourcePath, targetDir, error }));
           resolve(false);
         }));
       }),

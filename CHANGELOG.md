@@ -9,6 +9,8 @@
 - AT Protocol integration (login with your [internet handle](https://internethandle.org/))
 - Import strings (snippets) from [Tangled](https://tangled.org/)
 - Import [standard.site](https://standard.site/) posts ([Leaflet](https://leaflet.pub))
+- Image handling in locations
+- Image rendering in PDFs
 
 ### Changed
 

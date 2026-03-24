@@ -2,7 +2,11 @@
 title: "Parking Lot"
 description: >
     A collection of ideas/proposals for new features and quick bug notes.
-updated: 2026-03-23
+updated: 2026-03-24
+---
+
+- Consider using [ignore](https://crates.io/crates/ignore) crate for directory walking.
+
 ---
 
 1. **CJK Font Support**[^1][^2][^3] ✅

@@ -3,44 +3,49 @@ title: Image Handling Spec
 updated: 2026-03-24
 ---
 
-> Goal: Support local image embedding in markdown documents with storage, preview, lifecycle management, AT Protocol blob sync, and PDF export.
+> Goal: Support local image embedding in markdown documents with inline storage, preview, AT Protocol blob sync, and PDF export.
 
 ## Problem
 
-Images in documents are currently only supported through AT Protocol Leaflet blob references (`at://blob/CID`). There is no local image support — no upload, no storage, no preview, no drag-and-drop. Users cannot embed images in their markdown files.
+Images in documents are currently stored in a hidden `.writer-assets/` directory at the location root. This directory is excluded from the file browser and file watcher, making images invisible to the user. Images should be regular files — visible in the sidebar, stored alongside documents, and managed like any other file.
 
 ## Design
 
 ### Storage Model
 
-Each location gets an asset directory at its root:
+Images are regular files within the location. No dedicated asset directory.
 
 ```sh
 <location_root>/
-  .writer-assets/
-    <content-hash>.png
-    <content-hash>.jpg
-    ...
   my-document.md
+  abc123def.png          ← imported via paste/drop
   drafts/
     another-doc.md
+    f9e8d7c6b.jpg        ← imported while editing another-doc.md
 ```
 
-- **Directory**: `.writer-assets/` — hidden by convention, one per location.
-- **Naming**: content-addressed (`blake3` hash of file bytes + original extension). Prevents duplicates and naming collisions.
-- **Formats**: PNG, JPEG, GIF, WebP, SVG. Reject anything else at the command boundary.
-- **Size limit**: 10 MB per image. Enforced in the Tauri command.
+- **Location**: imported images are placed in the same directory as the active document.
+- **Naming**: content-addressed (`blake3` hash of file bytes + original extension). Prevents duplicates and collisions from paste/drag-drop imports. User-placed images keep their original names.
+- **Formats**: PNG, JPEG, GIF, WebP, SVG. Validated at the import command boundary.
+- **Size limit**: 10 MB per image, enforced in the Tauri command.
+- **Visibility**: images appear in the file browser alongside documents. The indexer catalogs them in the `documents` table (metadata only, no FTS).
 
 ### Markdown Reference Format
 
 Standard markdown image syntax with a relative path:
 
 ```markdown
-![Alt text](.writer-assets/abc123def.png)
+![Alt text](abc123def.png)
+![Photo](../photos/image.jpg)
 ```
 
-- Relative to the document's location root, not the document's own directory.
-- When a document is in a subdirectory (`drafts/doc.md`), the path is still relative to location root: `![img](../.writer-assets/abc123.png)` — or the editor resolves it at render time.
+Paths are relative to the document's own directory, following standard markdown conventions.
+
+### File Browser
+
+The sidebar shows all non-hidden files in the location. Image files appear alongside documents. No special filtering — the existing `reconcile_location_index` already indexes all files and `doc_list` returns them.
+
+Hidden directories (names starting with `.`) are skipped during file collection. This replaces the previous `.writer-assets/`-specific skip in the file watcher with a general hidden-directory exclusion.
 
 ### Tauri Commands (Rust)
 
@@ -48,98 +53,89 @@ Standard markdown image syntax with a relative path:
 
 ```rust
 #[tauri::command]
-pub fn image_import(location_id: LocationId, source_path: PathBuf) -> Result<String, Error>
+pub fn image_import(
+    location_id: LocationId,
+    source_path: PathBuf,
+    target_dir: String,  // relative to location root, e.g. "" or "drafts"
+) -> Result<String, Error>
 ```
 
-- Copies source file into `.writer-assets/`.
-- Hashes contents, derives filename.
-- Returns the relative asset path string (e.g., `.writer-assets/abc123.png`).
-- If hash already exists, returns existing path (dedup).
-- Validates format and size before copying.
+- Validates format and size.
+- Hashes contents with blake3, derives filename as `<hash>.<ext>`.
+- Copies to `<location_root>/<target_dir>/<hash>.<ext>`.
+- Dedup: if hash-named file already exists in target dir, returns existing path.
+- Returns the relative path from location root (e.g., `abc123.png` or `drafts/abc123.png`).
 
 #### `image_delete`
 
 ```rust
 #[tauri::command]
-pub fn image_delete(location_id: LocationId, asset_path: String) -> Result<bool, Error>
+pub fn image_delete(location_id: LocationId, rel_path: String) -> Result<bool, Error>
 ```
 
-- Removes the file from `.writer-assets/`.
-- Does **not** scan documents for dangling references (user's responsibility, or future cleanup pass).
-
-#### `image_list`
-
-```rust
-#[tauri::command]
-pub fn image_list(location_id: LocationId) -> Result<Vec<ImageAsset>, Error>
-```
-
-- Returns all images in `.writer-assets/` with metadata (filename, size, dimensions if cheaply available).
+- Validates `rel_path` resolves within the location root (path-traversal guard).
+- Validates the file has a supported image extension.
+- Removes the file. Returns `true` if removed, `false` if not found.
 
 #### `asset_resolve`
 
 ```rust
 #[tauri::command]
-pub fn asset_resolve(location_id: LocationId, doc_rel_path: PathBuf, asset_path: String) -> Result<String, Error>
+pub fn asset_resolve(
+    location_id: LocationId,
+    doc_rel_path: PathBuf,
+    asset_path: String,
+) -> Result<String, Error>
 ```
 
-- Resolves a markdown-local path against the source document's directory.
-- Rejects traversal outside the location root.
-- Returns an absolute location-scoped path for preview/export consumers.
+Unchanged. Resolves a markdown-relative path against the source document's directory. Rejects traversal outside the location root.
+
+### Removed Commands
+
+- **`image_list`**: no longer needed. Images are in the `documents` table; use `doc_list` with an extension filter.
 
 ### Frontend
 
 #### Editor Integration
 
-- **Paste**: intercept clipboard paste events containing image data. Call `image_import` with a temp file, insert markdown reference at cursor.
-- **Drag-and-drop**: intercept file drop on the editor area. Same flow as paste.
-- **Toolbar button**: "Insert Image" opens a file picker dialog (Tauri `dialog::open`), imports, inserts reference.
+- **Paste**: intercept clipboard paste with image data. Write to temp file, call `image_import` with `target_dir` set to the active document's directory. Insert `![image](hash.ext)` at cursor.
+- **Drag-and-drop**: intercept file drop on editor area. Same import flow as paste.
+- **Toolbar button**: file picker dialog filtered to image types. Import, insert reference.
 
 #### Preview Rendering
 
-- The markdown preview resolves any local markdown image or file link that stays within the active location root, not just `.writer-assets/` imports.
-- Resolution happens through `asset_resolve`, then image URLs are converted to Tauri `asset:` URLs for display.
-- Images render inline with `max-width: 100%` and click-to-zoom.
-- Local file links open through the system opener instead of navigating the webview.
+Unchanged. The preview resolves any relative image path via `asset_resolve`, converts to a Tauri `asset:` URL. Images render inline with `max-width: 100%` and click-to-zoom.
 
 #### State
 
-No dedicated image store slice needed. Images are embedded in document text as markdown. The `image_list` command is called on-demand when needed (e.g., an asset manager UI, if ever built).
+No dedicated image state. Images are markdown references in document text and regular entries in the document index.
 
 ### Indexing
 
-The document index (`documents` table in SQLite) does **not** track images. Images are filesystem-only artifacts referenced by markdown text. This keeps the model simple — no foreign keys, no orphan tracking.
+All non-hidden files are indexed in the `documents` table during `reconcile_location_index`. Image files get metadata (filename, size, mtime) but no FTS content — `is_indexable_text_path` already gates FTS to md/markdown/mdx/txt extensions.
 
-### Cleanup
-
-Orphaned images (not referenced by any document) accumulate over time. A future `image_cleanup` command can scan all documents in a location and remove unreferenced assets. This is **out of scope** for the initial implementation.
+Hidden directories (dotfiles) are excluded from both file collection and file watcher events. This is a general policy, not image-specific.
 
 ### AT Protocol Blob Sync
 
-Bridges local `.writer-assets/` images and AT Protocol blob references (`at://blob/CID`) so images survive publish and import round-trips.
+Bridges local image references and AT Protocol blob references (`at://blob/CID`) for publish/import round-trips.
 
 #### Publish direction (local → remote)
 
-When a document containing `.writer-assets/` image references is published to Leaflet/Standard.Site:
+1. **Scan** markdown for local image paths (any relative path pointing to an image file).
+2. **Resolve** each path via `asset_resolve` to get the absolute file location.
+3. **Upload** each via `com.atproto.repo.uploadBlob`. PDS returns a `BlobRef` (CID, MIME type, size).
+4. **Rewrite** image references to `at://blob/<CID>` in-memory before building the Leaflet document.
+5. **Populate** `Image` block metadata from the `BlobRef` instead of hardcoded values.
 
-1. **Scan** the markdown for `.writer-assets/` image paths.
-2. **Read** each referenced file from the location's `.writer-assets/` directory.
-3. **Upload** each file via `com.atproto.repo.uploadBlob` on the user's PDS. The PDS returns a `BlobRef` with a populated CID, MIME type, and size.
-4. **Rewrite** the markdown image references from `.writer-assets/<hash>.<ext>` to `at://blob/<CID>` before building the Leaflet document.
-5. **Populate** the `Image` block's blob metadata correctly (MIME type from extension, actual file size, aspect ratio if cheaply available) instead of the current hardcoded values (`application/octet-stream`, size 0).
-
-The rewrite is transient — it happens in-memory during the publish pipeline. The local document retains its `.writer-assets/` references.
+The rewrite is transient — the local document retains its relative paths.
 
 #### Import direction (remote → local)
 
-When a Leaflet/Standard.Site post containing blob images is imported:
-
-1. **Detect** `at://blob/<CID>` image references in the converted markdown.
-2. **Download** each blob from the author's PDS via `com.atproto.sync.getBlob` (params: DID + CID).
-3. **Import** the downloaded bytes through the existing `image_import` flow (hash, dedup, store in `.writer-assets/`).
-4. **Rewrite** the markdown image references from `at://blob/<CID>` to `.writer-assets/<hash>.<ext>`.
-
-This means imported posts get fully local images that render in preview without network access.
+1. **Detect** `at://blob/<CID>` image references in converted markdown.
+2. **Download** each blob via `com.atproto.sync.getBlob` (DID + CID).
+3. **Import** downloaded bytes through `image_import` (hash, dedup, store in document's directory).
+4. **Rewrite** `at://blob/<CID>` → `<hash>.<ext>` in the markdown.
 
 #### Tauri Commands
 
@@ -149,14 +145,14 @@ This means imported posts get fully local images that render in preview without 
 #[tauri::command]
 pub async fn blob_upload(
     location_id: LocationId,
-    asset_path: String,
+    asset_rel_path: String,
     auth: AuthSession,
 ) -> Result<BlobRef, Error>
 ```
 
-- Reads the file from `.writer-assets/`, determines MIME type from extension.
-- Calls `com.atproto.repo.uploadBlob` with the file bytes.
-- Returns the `BlobRef` (CID, MIME type, size) for use in Leaflet document construction.
+- Resolves `asset_rel_path` within the location root, reads file bytes, determines MIME type.
+- Calls `com.atproto.repo.uploadBlob`.
+- Returns `BlobRef` for Leaflet document construction.
 
 ##### `blob_download`
 
@@ -166,70 +162,17 @@ pub async fn blob_download(
     location_id: LocationId,
     did: String,
     cid: String,
+    target_dir: String,
 ) -> Result<String, Error>
 ```
 
-- Calls `com.atproto.sync.getBlob` with the DID and CID.
-- Writes the response bytes through `image_import` (hash, dedup, store).
-- Returns the local `.writer-assets/<hash>.<ext>` path.
-
-#### Metadata Accuracy
-
-The current `image_from_url` in `leaflet.rs` hardcodes blob metadata:
-
-```rust
-mime_type: MimeType::new_static("application/octet-stream"),
-size: 0,
-```
-
-With blob sync, `blob_upload` returns real metadata from the PDS. The publish pipeline must thread this metadata into the `Image` block construction so Leaflet clients render images correctly.
+- Downloads blob via `com.atproto.sync.getBlob`.
+- Pipes bytes through `image_import` to `target_dir`.
+- Returns the local relative path.
 
 ### PDF Export with Embedded Images
 
-The PDF pipeline (`crates/markdown` → `@react-pdf/renderer`) currently has no image support. Extending it requires changes at both layers.
-
-#### Rust: PdfNode Image Variant
-
-Add an `Image` variant to `PdfNode`:
-
-```rust
-pub enum PdfNode {
-    // ... existing variants ...
-    Image { src: String, alt: String },
-}
-```
-
-- `src`: the `.writer-assets/<hash>.<ext>` path as written in markdown.
-- `alt`: the alt text from `![alt](src)`.
-
-Update `MarkdownTransformer::transform_to_pdf_nodes()` to emit `PdfNode::Image` when it encounters a Comrak image node, instead of silently dropping it.
-
-#### Frontend: Path Resolution
-
-The `@react-pdf/renderer` `<Image>` component accepts a `src` that can be a URL, a file path, or a base64 data URL. Since Tauri asset protocol URLs may not work inside the PDF renderer's internal fetch:
-
-- Resolve any location-scoped local image path to **base64 data URLs** before passing to the renderer.
-- Use `asset_resolve` to validate and normalize the path first, then `convertFileSrc()` to fetch raster bytes via the webview.
-- This is similar to the font preloading strategy already in `src/pdf/fonts.ts`.
-- SVG images are routed through `svg_to_png(location_id, doc_rel_path, asset_path)` so the backend performs the path resolution and rasterization in one scoped flow.
-
-#### Frontend: MarkdownPdfDocument Rendering
-
-Add an `Image` case to the node renderer in `MarkdownPdfDocument.tsx`:
-
-```tsx
-case "Image":
-  return <Image src={resolvedSrc} style={{ maxWidth: "100%" }} />;
-```
-
-- Respect page margins — images should not overflow the content area.
-- Preserve aspect ratio.
-- Preserve images inside list items by keeping list item content as nested PDF nodes instead of flattening it to text.
-
-#### Limitations
-
-- SVG images may not be supported by `@react-pdf/renderer`. Fall back to a placeholder or skip with a warning.
-- Very large images should be resized to reasonable print dimensions to avoid bloating PDF file size. This can be deferred — initial implementation embeds at original resolution.
+No changes needed for the refactor. The PDF pipeline already resolves image paths via `asset_resolve` and converts to base64 data URLs. The `PdfNode::Image` variant carries the `src` as written in markdown; the frontend resolver handles any relative path.
 
 ---
 
@@ -237,13 +180,14 @@ case "Image":
 
 **In scope:**
 
-- Import from file picker, paste, drag-and-drop
-- Content-addressed storage in `.writer-assets/`
-- Markdown reference insertion
+- Import from file picker, paste, drag-and-drop into document's directory
+- Content-hash naming for imported images
+- Images visible in file browser
+- Markdown reference insertion with relative paths
 - Preview rendering via Tauri asset protocol
-- Single image delete command
 - AT Protocol blob sync (upload on publish, download on import)
 - PDF export with embedded images
+- Hidden-directory exclusion from indexing/watching
 
 **Out of scope (future):**
 

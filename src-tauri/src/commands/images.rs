@@ -1,23 +1,31 @@
 use super::{AppState, CommandResponse};
 use std::path::PathBuf;
 use tauri::State;
-use writer_core::{AppError, CommandResult, ImageAsset, LocationId};
+use writer_core::{CommandResult, LocationId};
 
-/// Imports an image file into `.writer-assets/` for the given location.
+/// Imports an image into the given location, placing it in `target_dir`.
 ///
 /// Validates format (PNG, JPEG, GIF, WebP, SVG) and size (≤ 10 MiB),
-/// hashes the file with blake3, and copies it to `.writer-assets/<hash>.<ext>`.
-/// If the hash already exists the call is a no-op and returns the existing path.
+/// hashes the file with blake3, and copies to `<target_dir>/<hash>.<ext>`.
+/// If the hash already exists in `target_dir` the call is a no-op.
 ///
-/// Returns the relative asset path, e.g. `.writer-assets/abc123.png`.
+/// `target_dir` is relative to the location root; pass `""` to place in the root.
+/// Returns the relative path from the location root, e.g. `abc123.png` or `drafts/abc123.png`.
 #[tauri::command]
-pub fn image_import(state: State<'_, AppState>, location_id: i64, source_path: String) -> CommandResponse<String> {
+pub fn image_import(
+    state: State<'_, AppState>, location_id: i64, source_path: String, target_dir: String,
+) -> CommandResponse<String> {
     let location_id = LocationId(location_id);
     let source = PathBuf::from(&source_path);
 
-    log::debug!("image_import: location={:?}, source={:?}", location_id, source);
+    log::debug!(
+        "image_import: location={:?}, source={:?}, target_dir={}",
+        location_id,
+        source,
+        target_dir
+    );
 
-    match state.store.image_import(location_id, &source) {
+    match state.store.image_import(location_id, &source, &target_dir) {
         Ok(rel_path) => {
             log::info!("image_import: ok → {}", rel_path);
             Ok(CommandResult::ok(rel_path))
@@ -109,30 +117,6 @@ pub fn svg_to_png(
         Err(e) => {
             log::error!("svg_to_png failed: {}", e);
             Ok(CommandResult::err(e))
-        }
-    }
-}
-
-/// Lists all image assets in `.writer-assets/` for the given location.
-///
-/// Returns an empty vec if the assets directory does not exist yet.
-#[tauri::command]
-pub fn image_list(state: State<'_, AppState>, location_id: i64) -> CommandResponse<Vec<ImageAsset>> {
-    let location_id = LocationId(location_id);
-
-    log::debug!("image_list: location={:?}", location_id);
-
-    match state.store.image_list(location_id) {
-        Ok(assets) => {
-            log::debug!("image_list: {} assets", assets.len());
-            Ok(CommandResult::ok(assets))
-        }
-        Err(e) => {
-            log::error!("image_list failed: {}", e);
-            Ok(CommandResult::err(AppError::io(format!(
-                "Failed to list images: {}",
-                e
-            ))))
         }
     }
 }

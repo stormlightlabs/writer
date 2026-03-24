@@ -19,7 +19,15 @@ const MIME_TO_EXT: Record<string, string> = {
 export type EditorInsertAction = { text: string; requestId: number };
 
 function imageMarkdown(assetPath: string): string {
-  return `![image](${assetPath})`;
+  const filename = assetPath.split("/").pop() ?? assetPath;
+  return `![image](${filename})`;
+}
+
+function targetDirFromRelPath(relPath: string | null): string {
+  if (!relPath) return "";
+  const parts = relPath.split("/");
+  parts.pop();
+  return parts.join("/");
 }
 
 function isImagePath(filePath: string): boolean {
@@ -35,6 +43,7 @@ function isImagePath(filePath: string): boolean {
  */
 export function useEditorImageHandlers(
   locationId: number | null,
+  docRelPath: string | null,
 ): {
   insertAt: EditorInsertAction | null;
   handleImageFilePaste: (file: File) => void;
@@ -65,7 +74,7 @@ export function useEditorImageHandlers(
         const tempPath = `/tmp/writer-paste-${Date.now()}.${ext}`;
         const bytes = new Uint8Array(await file.arrayBuffer());
         await writeFile(tempPath, bytes);
-        const assetPath = await importImage(locationId, tempPath);
+        const assetPath = await importImage(locationId, tempPath, targetDirFromRelPath(docRelPath));
         if (assetPath) {
           triggerInsert(assetPath);
         }
@@ -73,7 +82,7 @@ export function useEditorImageHandlers(
         void logger.error(f("Image paste failed", { error: String(err) }));
       }
     })();
-  }, [locationId, importImage, triggerInsert]);
+  }, [locationId, docRelPath, importImage, triggerInsert]);
 
   const handlePickAndInsertImage = useCallback(async () => {
     if (!locationId) {
@@ -87,14 +96,14 @@ export function useEditorImageHandlers(
         return;
       }
 
-      const assetPath = await importImage(locationId, selected);
+      const assetPath = await importImage(locationId, selected, targetDirFromRelPath(docRelPath));
       if (assetPath) {
         triggerInsert(assetPath);
       }
     } catch (err) {
       void logger.error(f("Image pick failed", { error: String(err) }));
     }
-  }, [locationId, importImage, triggerInsert]);
+  }, [locationId, docRelPath, importImage, triggerInsert]);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -116,7 +125,7 @@ export function useEditorImageHandlers(
         return;
       }
 
-      const assetPath = await importImage(locationId, imagePaths[0]);
+      const assetPath = await importImage(locationId, imagePaths[0], targetDirFromRelPath(docRelPath));
       if (assetPath) {
         triggerInsert(assetPath);
       }
@@ -129,7 +138,7 @@ export function useEditorImageHandlers(
     return () => {
       unlisten?.();
     };
-  }, [locationId, importImage, triggerInsert]);
+  }, [locationId, docRelPath, importImage, triggerInsert]);
 
   return { insertAt, handleImageFilePaste, handlePickAndInsertImage };
 }

@@ -115,7 +115,11 @@ export function useWorkspaceViewController(): WorkspaceViewController {
   });
 
   const imageLocationId = editorModel.docRef?.location_id ?? null;
-  const { insertAt, handleImageFilePaste, handlePickAndInsertImage } = useEditorImageHandlers(imageLocationId);
+  const imageDocRelPath = editorModel.docRef?.rel_path ?? null;
+  const { insertAt, handleImageFilePaste, handlePickAndInsertImage } = useEditorImageHandlers(
+    imageLocationId,
+    imageDocRelPath,
+  );
   const { handleOpenPdfExport, handleExportPdf, previewResult, activeDocLocationId, activeDocRelPath } = usePdfExportUI(
     { activeTab, text: editorModel.text, editorFontFamily: editorPresentation.fontFamily, exportPdf },
   );

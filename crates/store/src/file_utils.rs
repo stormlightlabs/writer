@@ -35,7 +35,10 @@ pub fn collect_file_paths_recursive(dir: &Path, files: &mut Vec<PathBuf>) -> Res
         if path.is_file() {
             files.push(path);
         } else if path.is_dir() {
-            collect_file_paths_recursive(&path, files)?;
+            let is_hidden = entry.file_name().to_str().map(|n| n.starts_with('.')).unwrap_or(false);
+            if !is_hidden {
+                collect_file_paths_recursive(&path, files)?;
+            }
         }
     }
 

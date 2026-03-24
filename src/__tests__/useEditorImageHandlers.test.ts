@@ -21,7 +21,7 @@ describe("useEditorImageHandlers", () => {
 
   describe("handleImageFilePaste", () => {
     it("returns false and skips when locationId is null", async () => {
-      const { result } = renderHook(() => useEditorImageHandlers(null));
+      const { result } = renderHook(() => useEditorImageHandlers(null, null));
 
       const file = new File([new Uint8Array([1, 2, 3])], "photo.png", { type: "image/png" });
 
@@ -37,7 +37,7 @@ describe("useEditorImageHandlers", () => {
     });
 
     it("skips unsupported MIME types", async () => {
-      const { result } = renderHook(() => useEditorImageHandlers(1));
+      const { result } = renderHook(() => useEditorImageHandlers(1, "doc.md"));
 
       const file = new File([new Uint8Array([1])], "doc.pdf", { type: "application/pdf" });
 
@@ -53,9 +53,9 @@ describe("useEditorImageHandlers", () => {
     });
 
     it("writes PNG to temp file, calls importImage, and sets insertAt", async () => {
-      mockImportImage.mockResolvedValueOnce(".writer-assets/abc123.png");
+      mockImportImage.mockResolvedValueOnce("abc123.png");
 
-      const { result } = renderHook(() => useEditorImageHandlers(7));
+      const { result } = renderHook(() => useEditorImageHandlers(7, "photo.md"));
 
       const bytes = new Uint8Array([137, 80, 78, 71]);
       const file = new File([bytes], "photo.png", { type: "image/png" });
@@ -72,15 +72,15 @@ describe("useEditorImageHandlers", () => {
       expect(writtenPath).toMatch(/^\/tmp\/writer-paste-\d+\.png$/);
       expect(writtenBytes).toBeInstanceOf(Uint8Array);
 
-      expect(mockImportImage).toHaveBeenCalledWith(7, expect.stringMatching(/\.png$/));
+      expect(mockImportImage).toHaveBeenCalledWith(7, expect.stringMatching(/\.png$/), "");
 
-      expect(result.current.insertAt).toStrictEqual({ text: "![image](.writer-assets/abc123.png)", requestId: 1 });
+      expect(result.current.insertAt).toStrictEqual({ text: "![image](abc123.png)", requestId: 1 });
     });
 
     it("maps JPEG MIME type to .jpg extension", async () => {
-      mockImportImage.mockResolvedValueOnce(".writer-assets/abc.jpg");
+      mockImportImage.mockResolvedValueOnce("abc.jpg");
 
-      const { result } = renderHook(() => useEditorImageHandlers(3));
+      const { result } = renderHook(() => useEditorImageHandlers(3, "drafts/doc.md"));
 
       const file = new File([new Uint8Array([1])], "photo.jpg", { type: "image/jpeg" });
 
@@ -98,7 +98,7 @@ describe("useEditorImageHandlers", () => {
     it("does not update insertAt when importImage returns false", async () => {
       mockImportImage.mockResolvedValueOnce(false);
 
-      const { result } = renderHook(() => useEditorImageHandlers(1));
+      const { result } = renderHook(() => useEditorImageHandlers(1, "doc.md"));
 
       const file = new File([new Uint8Array([1])], "photo.png", { type: "image/png" });
 
@@ -113,11 +113,9 @@ describe("useEditorImageHandlers", () => {
     });
 
     it("increments requestId on each paste", async () => {
-      mockImportImage.mockResolvedValueOnce(".writer-assets/first.png").mockResolvedValueOnce(
-        ".writer-assets/second.png",
-      );
+      mockImportImage.mockResolvedValueOnce("first.png").mockResolvedValueOnce("second.png");
 
-      const { result } = renderHook(() => useEditorImageHandlers(1));
+      const { result } = renderHook(() => useEditorImageHandlers(1, "doc.md"));
 
       const file = new File([new Uint8Array([1])], "a.png", { type: "image/png" });
 
@@ -143,7 +141,7 @@ describe("useEditorImageHandlers", () => {
 
   describe("handlePickAndInsertImage", () => {
     it("does nothing when locationId is null", async () => {
-      const { result } = renderHook(() => useEditorImageHandlers(null));
+      const { result } = renderHook(() => useEditorImageHandlers(null, null));
 
       await act(async () => {
         await result.current.handlePickAndInsertImage();
@@ -156,7 +154,7 @@ describe("useEditorImageHandlers", () => {
     it("does nothing when dialog is cancelled", async () => {
       vi.mocked(open).mockResolvedValueOnce(null);
 
-      const { result } = renderHook(() => useEditorImageHandlers(5));
+      const { result } = renderHook(() => useEditorImageHandlers(5, "doc.md"));
 
       await act(async () => {
         await result.current.handlePickAndInsertImage();
@@ -168,9 +166,9 @@ describe("useEditorImageHandlers", () => {
 
     it("opens dialog with image filters and inserts markdown on success", async () => {
       vi.mocked(open).mockResolvedValueOnce("/Users/me/photo.png");
-      mockImportImage.mockResolvedValueOnce(".writer-assets/hash.png");
+      mockImportImage.mockResolvedValueOnce("hash.png");
 
-      const { result } = renderHook(() => useEditorImageHandlers(4));
+      const { result } = renderHook(() => useEditorImageHandlers(4, "drafts/doc.md"));
 
       await act(async () => {
         await result.current.handlePickAndInsertImage();
@@ -180,15 +178,15 @@ describe("useEditorImageHandlers", () => {
         multiple: false,
         filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }],
       });
-      expect(mockImportImage).toHaveBeenCalledWith(4, "/Users/me/photo.png");
-      expect(result.current.insertAt).toStrictEqual({ text: "![image](.writer-assets/hash.png)", requestId: 1 });
+      expect(mockImportImage).toHaveBeenCalledWith(4, "/Users/me/photo.png", "drafts");
+      expect(result.current.insertAt).toStrictEqual({ text: "![image](hash.png)", requestId: 1 });
     });
 
     it("does not set insertAt when importImage returns false", async () => {
       vi.mocked(open).mockResolvedValueOnce("/Users/me/photo.png");
       mockImportImage.mockResolvedValueOnce(false);
 
-      const { result } = renderHook(() => useEditorImageHandlers(4));
+      const { result } = renderHook(() => useEditorImageHandlers(4, "doc.md"));
 
       await act(async () => {
         await result.current.handlePickAndInsertImage();
@@ -208,7 +206,7 @@ describe("useEditorImageHandlers", () => {
         }),
       } as never);
 
-      renderHook(() => useEditorImageHandlers(1));
+      renderHook(() => useEditorImageHandlers(1, "doc.md"));
 
       await act(async () => {
         await dropListener?.({ payload: { type: "drop", position: { x: 0, y: 0 }, paths: ["/tmp/photo.png"] } });
@@ -231,9 +229,9 @@ describe("useEditorImageHandlers", () => {
       document.body.append(editorEl);
       vi.spyOn(document, "elementFromPoint").mockReturnValue(editorEl);
 
-      mockImportImage.mockResolvedValueOnce(".writer-assets/drop.png");
+      mockImportImage.mockResolvedValueOnce("drop.png");
 
-      const { result } = renderHook(() => useEditorImageHandlers(2));
+      const { result } = renderHook(() => useEditorImageHandlers(2, "drafts/doc.md"));
 
       await act(async () => {
         await dropListener?.({
@@ -241,8 +239,8 @@ describe("useEditorImageHandlers", () => {
         });
       });
 
-      expect(mockImportImage).toHaveBeenCalledWith(2, "/home/user/drop.png");
-      expect(result.current.insertAt).toStrictEqual({ text: "![image](.writer-assets/drop.png)", requestId: 1 });
+      expect(mockImportImage).toHaveBeenCalledWith(2, "/home/user/drop.png", "drafts");
+      expect(result.current.insertAt).toStrictEqual({ text: "![image](drop.png)", requestId: 1 });
 
       editorEl.remove();
     });
@@ -261,7 +259,7 @@ describe("useEditorImageHandlers", () => {
       document.body.append(editorEl);
       vi.spyOn(document, "elementFromPoint").mockReturnValue(editorEl);
 
-      renderHook(() => useEditorImageHandlers(1));
+      renderHook(() => useEditorImageHandlers(1, "doc.md"));
 
       await act(async () => {
         await dropListener?.({
@@ -283,7 +281,7 @@ describe("useEditorImageHandlers", () => {
         }),
       } as never);
 
-      renderHook(() => useEditorImageHandlers(1));
+      renderHook(() => useEditorImageHandlers(1, "doc.md"));
 
       await act(async () => {
         await dropListener?.({ payload: { type: "enter", position: { x: 0, y: 0 }, paths: ["/tmp/a.png"] } });

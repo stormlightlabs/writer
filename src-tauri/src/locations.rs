@@ -256,10 +256,12 @@ pub(super) fn handle_watcher_event(
             None => continue,
         };
 
-        // TODO: verify that effect of not indexing asset files is acceptable
-        if rel_path.starts_with(writer_core::ASSETS_DIR_NAME) {
+        let in_hidden_dir = rel_path
+            .components()
+            .any(|c| c.as_os_str().to_str().map(|s| s.starts_with('.')).unwrap_or(false));
+        if in_hidden_dir {
             log::debug!(
-                "Watcher skipping asset path: {:?} in location {:?}",
+                "Watcher skipping hidden path: {:?} in location {:?}",
                 rel_path,
                 location_id
             );
