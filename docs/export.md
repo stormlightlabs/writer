@@ -1,6 +1,6 @@
 ---
 title: "Exporting"
-last_updated: 2026-03-13
+last_updated: 2026-03-24
 ---
 
 ## Overview
@@ -29,6 +29,7 @@ Implementation:
 - Runtime hook: `src/hooks/usePdfExport.tsx`
 - Preview panel: `src/components/export/preview/PdfPreview.tsx`
 - PDF document renderer: `src/components/export/MarkdownPdfDocument.tsx`
+- Local asset resolver: `src/utils/assets.ts` + backend `asset_resolve`
 
 ### DOCX
 
@@ -83,6 +84,7 @@ These stores track in-flight export state and user-visible error messages.
 - No file is written until the user picks a destination path.
 - Canceling the save dialog exits cleanly without side effects.
 - PDF export retries with built-in fonts if custom font registration fails.
+- PDF preview/export resolve local markdown image paths through a shared backend-validated asset pipeline before rasterization.
 - DOCX and plaintext failures surface through export state and toasts.
 
 ## File Naming

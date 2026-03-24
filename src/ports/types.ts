@@ -132,6 +132,15 @@ export type DirDeleteParams<T> = [...LocationPathParams, ...LocParams<T>];
 export type DirRenameParams<T> = Parameters<
   (locationId: LocationId, relPath: string, newName: string, onOk: SuccessCallback<T>, onErr: ErrorCallback) => void
 >;
+export type AssetResolveParams<T> = Parameters<
+  (
+    locationId: LocationId,
+    docRelPath: string,
+    assetPath: string,
+    onOk: SuccessCallback<T>,
+    onErr: ErrorCallback,
+  ) => void
+>;
 export type DirMoveParams<T> = Parameters<
   (
     locationId: LocationId,

@@ -1,4 +1,4 @@
-use super::PdfNode;
+use super::{PdfListItem, PdfNode};
 use comrak::nodes::NodeValue;
 
 pub struct MarkdownTransformer;
@@ -122,15 +122,15 @@ impl MarkdownTransformer {
     }
 
     /// Transforms list items from a list node
-    fn transform_list_items<'a>(list_node: &'a comrak::nodes::AstNode<'a>, _ordered: bool) -> Vec<PdfNode> {
+    fn transform_list_items<'a>(list_node: &'a comrak::nodes::AstNode<'a>, _ordered: bool) -> Vec<PdfListItem> {
         let mut items = Vec::new();
 
         for child in list_node.children() {
             match &child.data.borrow().value {
                 comrak::nodes::NodeValue::Item(_) => {
-                    let content = Self::extract_text_content(child);
+                    let content = Self::transform_to_pdf_nodes(child);
                     if !content.is_empty() {
-                        items.push(PdfNode::Paragraph { content });
+                        items.push(PdfListItem { content });
                     }
                 }
                 _ => items.extend(Self::transform_list_items(child, _ordered)),

@@ -23,7 +23,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
     focusModePanelProps,
     handleExportPdf,
     previewResult,
-    activeDocLocationRootPath,
+    activeDocLocationId,
     activeDocRelPath,
     editorFontFamily,
     editorText,
@@ -69,7 +69,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
         previewResult={previewResult}
         editorFontFamily={editorFontFamily}
         documentText={editorText}
-        locationRootPath={activeDocLocationRootPath}
+        locationId={activeDocLocationId}
         docRelPath={activeDocRelPath} />
       <SearchOverlay />
       <BackendAlerts />

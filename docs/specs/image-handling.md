@@ -1,6 +1,6 @@
 ---
 title: Image Handling Spec
-updated: 2026-03-21
+updated: 2026-03-24
 ---
 
 > Goal: Support local image embedding in markdown documents with storage, preview, lifecycle management, AT Protocol blob sync, and PDF export.
@@ -76,6 +76,17 @@ pub fn image_list(location_id: LocationId) -> Result<Vec<ImageAsset>, Error>
 
 - Returns all images in `.writer-assets/` with metadata (filename, size, dimensions if cheaply available).
 
+#### `asset_resolve`
+
+```rust
+#[tauri::command]
+pub fn asset_resolve(location_id: LocationId, doc_rel_path: PathBuf, asset_path: String) -> Result<String, Error>
+```
+
+- Resolves a markdown-local path against the source document's directory.
+- Rejects traversal outside the location root.
+- Returns an absolute location-scoped path for preview/export consumers.
+
 ### Frontend
 
 #### Editor Integration
@@ -86,8 +97,10 @@ pub fn image_list(location_id: LocationId) -> Result<Vec<ImageAsset>, Error>
 
 #### Preview Rendering
 
-- The markdown preview must resolve `.writer-assets/` paths to `asset:` protocol URLs (Tauri asset protocol) or `convertFileSrc()` for display.
+- The markdown preview resolves any local markdown image or file link that stays within the active location root, not just `.writer-assets/` imports.
+- Resolution happens through `asset_resolve`, then image URLs are converted to Tauri `asset:` URLs for display.
 - Images render inline with `max-width: 100%` and click-to-zoom.
+- Local file links open through the system opener instead of navigating the webview.
 
 #### State
 
@@ -195,9 +208,10 @@ Update `MarkdownTransformer::transform_to_pdf_nodes()` to emit `PdfNode::Image` 
 
 The `@react-pdf/renderer` `<Image>` component accepts a `src` that can be a URL, a file path, or a base64 data URL. Since Tauri asset protocol URLs may not work inside the PDF renderer's internal fetch:
 
-- Resolve `.writer-assets/` paths to **base64 data URLs** before passing to the renderer.
-- Use `convertFileSrc()` to get the Tauri asset URL, fetch the bytes via the webview, then encode to `data:<mime>;base64,...`.
+- Resolve any location-scoped local image path to **base64 data URLs** before passing to the renderer.
+- Use `asset_resolve` to validate and normalize the path first, then `convertFileSrc()` to fetch raster bytes via the webview.
 - This is similar to the font preloading strategy already in `src/pdf/fonts.ts`.
+- SVG images are routed through `svg_to_png(location_id, doc_rel_path, asset_path)` so the backend performs the path resolution and rasterization in one scoped flow.
 
 #### Frontend: MarkdownPdfDocument Rendering
 
@@ -210,6 +224,7 @@ case "Image":
 
 - Respect page margins — images should not overflow the content area.
 - Preserve aspect ratio.
+- Preserve images inside list items by keeping list item content as nested PDF nodes instead of flattening it to text.
 
 #### Limitations
 

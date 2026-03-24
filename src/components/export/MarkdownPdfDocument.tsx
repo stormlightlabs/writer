@@ -1,5 +1,5 @@
 import { getCodeFontFamily, getPdfFontFamily } from "$pdf/fonts";
-import type { FontName, MarkdownNode, PageSize, PdfExportOptions } from "$pdf/types";
+import type { FontName, MarkdownListItem, MarkdownNode, PageSize, PdfExportOptions } from "$pdf/types";
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { useCallback, useMemo } from "react";
 
@@ -61,8 +61,10 @@ const createStyles = (
       padding: 8,
       marginBottom: 10,
     },
-    list: { marginLeft: 20, marginBottom: 10 },
-    listItem: { fontSize: baseFontSize, lineHeight, marginBottom: 4, color: PDF_TEXT_COLOR },
+    list: { marginBottom: 10 },
+    listItemRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
+    listMarker: { width: 18, fontSize: baseFontSize, lineHeight, color: PDF_TEXT_COLOR },
+    listItemBody: { flex: 1 },
     blockquote: { marginLeft: 20, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: "#ddd", marginBottom: 10 },
     blockquoteText: { fontSize: baseFontSize, lineHeight, fontStyle: "italic", color: PDF_MUTED_TEXT_COLOR },
     footnote: {
@@ -78,7 +80,27 @@ const createStyles = (
 
 type DocumentNodeProps = { node: MarkdownNode; styles: TStyleSheet; resolvedImages: Record<string, string> };
 
+const ListItemContent = (
+  { item, styles, resolvedImages, marker }: {
+    item: MarkdownListItem;
+    styles: TStyleSheet;
+    resolvedImages: Record<string, string>;
+    marker: string;
+  },
+) => (
+  <View style={styles.listItemRow}>
+    <Text style={styles.listMarker}>{marker}</Text>
+    <View style={styles.listItemBody}>
+      {item.content.map((contentNode, index) => {
+        const k = `${marker}:${index}`;
+        return <DocumentNode key={k} node={contentNode} styles={styles} resolvedImages={resolvedImages} />;
+      })}
+    </View>
+  </View>
+);
+
 const DocumentNode = ({ node, styles, resolvedImages }: DocumentNodeProps) => {
+  const listStyles = useMemo(() => [styles.list, styles.listItemBody], [styles.list, styles.listItemBody]);
   switch (node.type) {
     case "heading": {
       const headingStyle = getHeadingStyle(node.level, styles);
@@ -90,14 +112,16 @@ const DocumentNode = ({ node, styles, resolvedImages }: DocumentNodeProps) => {
       return <Text style={styles.code}>{node.content}</Text>;
     case "list":
       return (
-        <View style={styles.list}>
-          {node.items?.map((item: MarkdownNode, i: number) => {
-            const k = `${i}`;
+        <View style={listStyles}>
+          {node.items?.map((item, index) => {
+            let k = `${index}`;
             return (
-              <Text key={k} style={styles.listItem}>
-                {node.ordered ? `${i + 1}. ` : "• "}
-                {item.type === "paragraph" ? item.content : ""}
-              </Text>
+              <ListItemContent
+                key={k}
+                item={item}
+                styles={styles}
+                resolvedImages={resolvedImages}
+                marker={node.ordered ? `${index + 1}.` : "•"} />
             );
           })}
         </View>
@@ -176,8 +200,9 @@ const DocumentFooter = (
 ) => <Text style={styles.footer} fixed render={renderer} />;
 
 export const MarkdownPdfDocument = (
-  { nodes, title, options, editorFontFamily, useBuiltinFonts = false, resolvedImages = {} }: MarkdownPdfDocumentProps,
+  { nodes, title, options, editorFontFamily, useBuiltinFonts = false, resolvedImages }: MarkdownPdfDocumentProps,
 ) => {
+  const images = useMemo(() => resolvedImages ?? {}, [resolvedImages]);
   const fontStrategy = useBuiltinFonts ? "builtin" : "custom";
   const bodyFont = getPdfFontFamily(editorFontFamily, fontStrategy);
   const codeFont = getCodeFontFamily(fontStrategy);
@@ -199,7 +224,7 @@ export const MarkdownPdfDocument = (
           styles={styles}
           options={options}
           hasHeadingOne={hasHeadingOne}
-          resolvedImages={resolvedImages} />
+          resolvedImages={images} />
         {options.includeFooter && <DocumentFooter styles={styles} renderer={renderPageNumber} />}
       </Page>
     </Document>

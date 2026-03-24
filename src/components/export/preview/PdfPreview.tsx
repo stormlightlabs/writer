@@ -24,7 +24,7 @@ type UsePdfPreviewArgs = {
   result: PdfRenderResult | null;
   options: PdfExportOptions;
   editorFontFamily: EditorFontFamily;
-  locationRootPath?: string;
+  locationId?: number;
   docRelPath?: string;
 };
 
@@ -32,7 +32,7 @@ export type PdfPreviewPanelProps = {
   result: PdfRenderResult | null;
   options: PdfExportOptions;
   editorFontFamily: EditorFontFamily;
-  locationRootPath?: string;
+  locationId?: number;
   docRelPath?: string;
 };
 
@@ -52,7 +52,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Failed to generate preview";
 
-export function usePdfPreview({ result, options, editorFontFamily, locationRootPath, docRelPath }: UsePdfPreviewArgs) {
+export function usePdfPreview({ result, options, editorFontFamily, locationId, docRelPath }: UsePdfPreviewArgs) {
   const [state, setState] = useState<PdfPreviewState>({ status: "idle" });
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentPdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -66,8 +66,8 @@ export function usePdfPreview({ result, options, editorFontFamily, locationRootP
   }, []);
 
   const resolveImages = useCallback(async (nodes: MarkdownNode[]) => {
-    return docRelPath && locationRootPath ? await preloadPdfImages(nodes, locationRootPath, docRelPath) : {};
-  }, [docRelPath, locationRootPath]);
+    return docRelPath && locationId !== undefined ? await preloadPdfImages(nodes, locationId, docRelPath) : {};
+  }, [docRelPath, locationId]);
 
   const renderPdfBlob = useCallback(
     async (
@@ -675,10 +675,8 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
   );
 }
 
-export function PdfPreviewPanel(
-  { result, options, editorFontFamily, locationRootPath, docRelPath }: PdfPreviewPanelProps,
-) {
-  const previewState = usePdfPreview({ result, options, editorFontFamily, locationRootPath, docRelPath });
+export function PdfPreviewPanel({ result, options, editorFontFamily, locationId, docRelPath }: PdfPreviewPanelProps) {
+  const previewState = usePdfPreview({ result, options, editorFontFamily, locationId, docRelPath });
 
   switch (previewState.status) {
     case "idle":

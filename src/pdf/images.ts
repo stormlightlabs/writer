@@ -1,21 +1,10 @@
+import type { MarkdownListItem, MarkdownNode } from "$pdf/types";
+import { logAssetResolutionFailure, resolveAssetPath } from "$utils/assets";
 import { f } from "$utils/serialize";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import * as logger from "@tauri-apps/plugin-log";
-import type { MarkdownNode } from "./types";
 
 const preloadedImageSources = new Map<string, string>();
-
-export function resolveAssetSrc(locationRootPath: string, docRelPath: string, imgSrc: string): string {
-  const dirParts = docRelPath.split("/").slice(0, -1);
-  const base = dirParts.length > 0 ? `${locationRootPath}/${dirParts.join("/")}` : locationRootPath;
-  const segments = `${base}/${imgSrc}`.split("/");
-  const resolved: string[] = [];
-  for (const seg of segments) {
-    if (seg === "..") resolved.pop();
-    else if (seg !== ".") resolved.push(seg);
-  }
-  return resolved.join("/");
-}
 
 function mimeForExtension(ext: string): string {
   switch (ext.toLowerCase()) {
@@ -26,6 +15,8 @@ function mimeForExtension(ext: string): string {
       return "image/gif";
     case "webp":
       return "image/webp";
+    case "svg":
+      return "image/svg+xml";
     default:
       return "image/png";
   }
@@ -43,7 +34,7 @@ async function fetchAsDataUrl(absolutePath: string): Promise<string> {
 
   const bytes = new Uint8Array(await response.arrayBuffer());
   let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
+  for (let i = 0; i < bytes.length; i += 1) {
     binary += String.fromCodePoint(bytes[i]);
   }
   const ext = absolutePath.split(".").pop() ?? "png";
@@ -53,20 +44,28 @@ async function fetchAsDataUrl(absolutePath: string): Promise<string> {
   return dataUrl;
 }
 
+function collectImageSrcsFromListItems(items: MarkdownListItem[]): string[] {
+  return items.flatMap((item) => collectImageSrcs(item.content));
+}
+
 function collectImageSrcs(nodes: MarkdownNode[]): string[] {
   const srcs: string[] = [];
   for (const node of nodes) {
-    if (node.type === "image") srcs.push(node.src);
-    else if (node.type === "list") srcs.push(...collectImageSrcs(node.items));
+    if (node.type === "image") {
+      srcs.push(node.src);
+    } else if (node.type === "list") {
+      srcs.push(...collectImageSrcsFromListItems(node.items));
+    }
   }
   return srcs;
 }
 
-async function fetchSvgAsPngDataUrl(absolutePath: string): Promise<string> {
+async function fetchSvgAsPngDataUrl(locationId: number, docRelPath: string, assetRef: string): Promise<string> {
+  const absolutePath = await resolveAssetPath(locationId, docRelPath, assetRef);
   const cached = preloadedImageSources.get(absolutePath);
   if (cached !== undefined) return cached;
 
-  const result = await invoke<unknown>("svg_to_png", { absolutePath });
+  const result = await invoke<unknown>("svg_to_png", { locationId, docRelPath, assetPath: assetRef });
   if (
     typeof result === "object" && result !== null
     && (result as Record<string, unknown>)["type"] === "ok"
@@ -76,29 +75,28 @@ async function fetchSvgAsPngDataUrl(absolutePath: string): Promise<string> {
     preloadedImageSources.set(absolutePath, dataUrl);
     return dataUrl;
   }
-  throw new Error(`svg_to_png failed for ${absolutePath}`);
+  throw new Error(`svg_to_png failed for ${assetRef}`);
 }
 
 export async function preloadPdfImages(
   nodes: MarkdownNode[],
-  locationRootPath: string,
+  locationId: number,
   docRelPath: string,
 ): Promise<Record<string, string>> {
-  const srcs = [...new Set(collectImageSrcs(nodes).filter((src) => src.includes(".writer-assets/")))];
-
+  const srcs = [...new Set(collectImageSrcs(nodes))];
   const resolved: Record<string, string> = {};
 
   await Promise.allSettled(srcs.map(async (src) => {
     try {
-      const absolutePath = resolveAssetSrc(locationRootPath, docRelPath, src);
-      resolved[src] = src.endsWith(".svg")
-        ? await fetchSvgAsPngDataUrl(absolutePath)
+      const absolutePath = await resolveAssetPath(locationId, docRelPath, src);
+      resolved[src] = src.toLowerCase().endsWith(".svg")
+        ? await fetchSvgAsPngDataUrl(locationId, docRelPath, src)
         : await fetchAsDataUrl(absolutePath);
-    } catch (err) {
-      const error = err instanceof Error ? err.message : (String(err));
-      logger.debug(f(`Failed to preload image: ${src}`), { keyValues: { error } });
+    } catch (error) {
+      logAssetResolutionFailure("PDF image", src, error);
     }
   }));
 
+  logger.debug(f("PDF image preload complete", { requested: srcs.length, resolved: Object.keys(resolved).length }));
   return resolved;
 }

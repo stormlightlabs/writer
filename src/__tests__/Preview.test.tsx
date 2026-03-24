@@ -1,7 +1,9 @@
-import { Preview, resolveAssetSrc } from "$components/Preview";
+import { Preview } from "$components/Preview";
 import type { RenderResult } from "$types";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { render, screen } from "@testing-library/react";
+import { invoke } from "@tauri-apps/api/core";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const makeRenderResult = (html: string): RenderResult => ({
@@ -14,115 +16,128 @@ const defaultProps = {
   editorLine: 1,
   previewStyle: "github" as const,
   editorFontFamily: "IBM Plex Mono" as const,
+  locationId: 7,
+  docRelPath: "doc.md",
 };
 
-describe("resolveAssetSrc", () => {
-  it("resolves a root-level asset path", () => {
-    expect(resolveAssetSrc("/root", "doc.md", ".writer-assets/img.png")).toBe("/root/.writer-assets/img.png");
-  });
+const normalize = (value: string) => {
+  const segments = value.split("/");
+  const normalized: string[] = [];
+  for (const segment of segments) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") {
+      normalized.pop();
+      continue;
+    }
+    normalized.push(segment);
+  }
+  return `/${normalized.join("/")}`;
+};
 
-  it("resolves a relative asset path from a subdirectory document", () => {
-    expect(resolveAssetSrc("/root", "drafts/doc.md", "../.writer-assets/img.png")).toBe("/root/.writer-assets/img.png");
-  });
-
-  it("resolves a deeply nested document", () => {
-    expect(resolveAssetSrc("/root", "a/b/doc.md", "../../.writer-assets/img.png")).toBe("/root/.writer-assets/img.png");
-  });
-
-  it("handles no document subdirectory (root doc) with .writer-assets/ src", () => {
-    expect(resolveAssetSrc("/my/location", "notes.md", ".writer-assets/abc.jpg")).toBe(
-      "/my/location/.writer-assets/abc.jpg",
-    );
-  });
-});
-
-describe("Preview image resolution", () => {
+describe("Preview asset resolution", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(convertFileSrc).mockImplementation((path: string) => `asset://localhost${path}`);
+    vi.mocked(invoke).mockImplementation(async (command, payload) => {
+      if (command !== "asset_resolve") {
+        return await Promise.resolve(null);
+      }
+
+      const { docRelPath, assetPath } = payload as { docRelPath: string; assetPath: string };
+      const docDir = docRelPath.includes("/") ? docRelPath.split("/").slice(0, -1).join("/") : "";
+
+      if (assetPath === ".writer-assets/missing.png") {
+        throw new Error("missing");
+      }
+
+      return normalize(`/root/${docDir ? `${docDir}/` : ""}${assetPath}`);
+    });
   });
 
-  it("rewrites .writer-assets/ img src to convertFileSrc URL", () => {
-    const html = `<img src=".writer-assets/abc123.png" alt="test" />`;
+  it("rewrites local image src values through the asset resolver", async () => {
     render(
       <Preview
         {...defaultProps}
-        renderResult={makeRenderResult(html)}
-        locationRootPath="/Users/test/notes"
-        docRelPath="doc.md" />,
+        renderResult={makeRenderResult(`<img src=".writer-assets/abc123.png" alt="test" />`)} />,
     );
 
     const img = screen.getByRole("img", { name: "test" });
-    expect(convertFileSrc).toHaveBeenCalledWith("/Users/test/notes/.writer-assets/abc123.png");
-    expect(img).toHaveAttribute("src", "asset://localhost/Users/test/notes/.writer-assets/abc123.png");
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("asset_resolve", {
+        locationId: 7,
+        docRelPath: "doc.md",
+        assetPath: ".writer-assets/abc123.png",
+      });
+      expect(img).toHaveAttribute("src", "asset://localhost/root/.writer-assets/abc123.png");
+    });
   });
 
-  it("rewrites relative asset paths from subdirectory documents", () => {
-    const html = `<img src="../.writer-assets/img.jpg" alt="sub" />`;
+  it("rewrites relative local image paths from subdirectory documents", async () => {
     render(
       <Preview
         {...defaultProps}
-        renderResult={makeRenderResult(html)}
-        locationRootPath="/root"
-        docRelPath="drafts/doc.md" />,
+        docRelPath="drafts/doc.md"
+        renderResult={makeRenderResult(`<img src="../images/cover.png" alt="cover" />`)} />,
     );
 
-    const img = screen.getByRole("img", { name: "sub" });
-    expect(convertFileSrc).toHaveBeenCalledWith("/root/.writer-assets/img.jpg");
-    expect(img).toHaveAttribute("src", "asset://localhost/root/.writer-assets/img.jpg");
+    const img = screen.getByRole("img", { name: "cover" });
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("asset_resolve", {
+        locationId: 7,
+        docRelPath: "drafts/doc.md",
+        assetPath: "../images/cover.png",
+      });
+      expect(img).toHaveAttribute("src", "asset://localhost/root/images/cover.png");
+    });
   });
 
-  it("does not rewrite external http URLs", () => {
-    const html = `<img src="https://example.com/image.png" alt="ext" />`;
+  it("does not rewrite external image URLs", async () => {
     render(
-      <Preview {...defaultProps} renderResult={makeRenderResult(html)} locationRootPath="/root" docRelPath="doc.md" />,
+      <Preview
+        {...defaultProps}
+        renderResult={makeRenderResult(`<img src="https://example.com/image.png" alt="ext" />`)} />,
     );
 
     const img = screen.getByRole("img", { name: "ext" });
-    expect(convertFileSrc).not.toHaveBeenCalled();
-    expect(img).toHaveAttribute("src", "https://example.com/image.png");
+    await waitFor(() => {
+      expect(img).toHaveAttribute("src", "https://example.com/image.png");
+    });
+    expect(invoke).not.toHaveBeenCalled();
   });
 
-  it("does not rewrite already-resolved asset: URLs", () => {
-    const html = `<img src="asset://localhost/root/.writer-assets/img.png" alt="already" />`;
+  it("opens resolved local file links with the system opener", async () => {
+    const user = userEvent.setup();
+    render(<Preview {...defaultProps} renderResult={makeRenderResult(`<a href="files/report.pdf">Open report</a>`)} />);
+
+    const link = screen.getByRole("link", { name: "Open report" });
+    await user.click(link);
+
+    await waitFor(() => {
+      expect(openPath).toHaveBeenCalledWith("/root/files/report.pdf");
+    });
+  });
+
+  it("opens external links with the system opener instead of navigating the webview", async () => {
+    const user = userEvent.setup();
+    render(<Preview {...defaultProps} renderResult={makeRenderResult(`<a href="https://example.com">External</a>`)} />);
+
+    await user.click(screen.getByRole("link", { name: "External" }));
+
+    await waitFor(() => {
+      expect(openUrl).toHaveBeenCalledWith("https://example.com");
+    });
+  });
+
+  it("leaves missing local images unresolved", async () => {
     render(
-      <Preview {...defaultProps} renderResult={makeRenderResult(html)} locationRootPath="/root" docRelPath="doc.md" />,
-    );
-
-    const img = screen.getByRole("img", { name: "already" });
-    expect(convertFileSrc).not.toHaveBeenCalled();
-    expect(img).toHaveAttribute("src", "asset://localhost/root/.writer-assets/img.png");
-  });
-
-  it("does not rewrite anything when locationRootPath is not provided", () => {
-    const html = `<img src=".writer-assets/img.png" alt="no-path" />`;
-    render(<Preview {...defaultProps} renderResult={makeRenderResult(html)} docRelPath="doc.md" />);
-
-    const img = screen.getByRole("img", { name: "no-path" });
-    expect(convertFileSrc).not.toHaveBeenCalled();
-    expect(img).toHaveAttribute("src", ".writer-assets/img.png");
-  });
-
-  it("re-resolves images when renderResult changes", () => {
-    const { rerender } = render(
       <Preview
         {...defaultProps}
-        renderResult={makeRenderResult(`<img src=".writer-assets/a.png" alt="a" />`)}
-        locationRootPath="/root"
-        docRelPath="doc.md" />,
+        renderResult={makeRenderResult(`<img src=".writer-assets/missing.png" alt="missing" />`)} />,
     );
 
-    expect(convertFileSrc).toHaveBeenCalledWith("/root/.writer-assets/a.png");
-    vi.clearAllMocks();
-
-    rerender(
-      <Preview
-        {...defaultProps}
-        renderResult={makeRenderResult(`<img src=".writer-assets/b.png" alt="b" />`)}
-        locationRootPath="/root"
-        docRelPath="doc.md" />,
-    );
-
-    expect(convertFileSrc).toHaveBeenCalledWith("/root/.writer-assets/b.png");
+    const img = screen.getByRole("img", { name: "missing" });
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalled();
+    });
+    expect(img).toHaveAttribute("src", ".writer-assets/missing.png");
   });
 });

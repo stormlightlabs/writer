@@ -11,7 +11,7 @@ use writer_core::{
     AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
     LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
 };
-use writer_core::{is_conflicted_filename, normalize_relative_path};
+use writer_core::{is_conflicted_filename, is_path_within_location, normalize_relative_path};
 use writer_md::{MarkdownEngine, MarkdownProfile};
 
 mod file_utils;
@@ -2347,6 +2347,38 @@ impl Store {
         Ok(true)
     }
 
+    /// Resolves a local markdown asset reference against a document path.
+    ///
+    /// The returned path is validated to stay within the active location root.
+    pub fn asset_resolve(
+        &self, location_id: LocationId, doc_rel_path: &Path, asset_path: &str,
+    ) -> Result<PathBuf, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+        let doc_id = DocId::new(location_id, doc_rel_path.to_path_buf())?;
+
+        let trimmed_asset_path = asset_path.trim();
+        if trimmed_asset_path.is_empty() {
+            return Err(AppError::invalid_path("Asset path is empty"));
+        }
+
+        let doc_parent = doc_id.rel_path.parent().unwrap_or(Path::new(""));
+        let combined = doc_parent.join(trimmed_asset_path);
+        let normalized = normalize_relative_path(&combined)?;
+        let resolved = location.root_path.join(&normalized);
+
+        if !is_path_within_location(&resolved, &location.root_path) {
+            return Err(AppError::invalid_path("Resolved asset path escaped the location root"));
+        }
+
+        if !resolved.exists() {
+            return Err(AppError::not_found(format!("Asset not found: {}", trimmed_asset_path)));
+        }
+
+        Ok(resolved)
+    }
+
     /// Lists all image assets in `.writer-assets/` for the given location.
     ///
     /// Returns an empty vec if the directory does not exist yet.
@@ -2453,6 +2485,9 @@ mod tests {
 
     fn write_test_image(dir: &std::path::Path, name: &str, bytes: &[u8]) -> PathBuf {
         let path = dir.join(name);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
         std::fs::write(&path, bytes).unwrap();
         path
     }
@@ -3466,6 +3501,60 @@ mod tests {
         let result = store.image_delete(location_id, "../etc/passwd");
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code, ErrorCode::InvalidPath);
+    }
+
+    #[test]
+    fn test_asset_resolve_root_relative_asset() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+        let expected = write_test_image(location_dir.path(), ".writer-assets/photo.png", b"\x89PNG");
+
+        let resolved = store
+            .asset_resolve(location_id, Path::new("doc.md"), ".writer-assets/photo.png")
+            .unwrap();
+
+        assert_eq!(resolved, expected);
+    }
+
+    #[test]
+    fn test_asset_resolve_document_relative_asset() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+        let expected = write_test_image(location_dir.path(), "images/cover.png", b"\x89PNG");
+
+        let resolved = store
+            .asset_resolve(
+                location_id,
+                Path::new("drafts/chapter/doc.md"),
+                "../../images/cover.png",
+            )
+            .unwrap();
+
+        assert_eq!(resolved, expected);
+    }
+
+    #[test]
+    fn test_asset_resolve_rejects_traversal() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, _location_dir) = create_test_location(&store);
+
+        let error = store
+            .asset_resolve(location_id, Path::new("drafts/doc.md"), "../../../etc/passwd")
+            .unwrap_err();
+
+        assert_eq!(error.code, ErrorCode::InvalidPath);
+    }
+
+    #[test]
+    fn test_asset_resolve_rejects_missing_files() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, _location_dir) = create_test_location(&store);
+
+        let error = store
+            .asset_resolve(location_id, Path::new("doc.md"), ".writer-assets/missing.png")
+            .unwrap_err();
+
+        assert_eq!(error.code, ErrorCode::NotFound);
     }
 
     #[test]

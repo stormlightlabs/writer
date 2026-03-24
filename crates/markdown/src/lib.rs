@@ -189,7 +189,7 @@ pub enum PdfNode {
     /// Code block with optional language
     Code { content: String, language: Option<String> },
     /// List with items and ordering flag
-    List { items: Vec<PdfNode>, ordered: bool },
+    List { items: Vec<PdfListItem>, ordered: bool },
     /// Blockquote content
     Blockquote { content: String },
     /// Footnote with id and content
@@ -234,8 +234,8 @@ pub struct DocxExportResult {
 /// A list item for PDF export
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PdfListItem {
-    /// Content of the list item (typically a paragraph)
-    pub content: String,
+    /// Content nodes within the list item
+    pub content: Vec<PdfNode>,
 }
 
 /// Options for HTML export
@@ -658,8 +658,37 @@ mod tests {
         let (items, ordered) = list.unwrap();
         assert!(!ordered);
         assert_eq!(items.len(), 2);
-        assert!(matches!(items[0], PdfNode::Paragraph { ref content } if content == "One"));
-        assert!(matches!(items[1], PdfNode::Paragraph { ref content } if content == "Two"));
+        assert!(matches!(items[0].content[0], PdfNode::Paragraph { ref content } if content == "One"));
+        assert!(matches!(items[1].content[0], PdfNode::Paragraph { ref content } if content == "Two"));
+    }
+
+    #[test]
+    fn test_render_for_pdf_preserves_images_inside_list_items() {
+        let engine = MarkdownEngine::new();
+        let markdown = "- Before ![inline](images/photo.png) after";
+        let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
+
+        let list = result.nodes.iter().find_map(|node| match node {
+            PdfNode::List { items, ordered } => Some((items, ordered)),
+            _ => None,
+        });
+
+        assert!(list.is_some());
+        let (items, ordered) = list.unwrap();
+        assert!(!ordered);
+        assert_eq!(items.len(), 1);
+        assert!(
+            items[0]
+                .content
+                .iter()
+                .any(|node| matches!(node, PdfNode::Image { src, .. } if src == "images/photo.png"))
+        );
+        assert!(
+            items[0]
+                .content
+                .iter()
+                .any(|node| matches!(node, PdfNode::Paragraph { content } if content.contains("Before")))
+        );
     }
 
     #[test]

@@ -21,11 +21,13 @@ export type PdfExportOptions = {
   includeFooter?: boolean;
 };
 
+export type MarkdownListItem = { content: MarkdownNode[] };
+
 export type MarkdownNode =
   | { type: "heading"; level: number; content: string }
   | { type: "paragraph"; content: string }
   | { type: "code"; content: string; language?: string }
-  | { type: "list"; items: MarkdownNode[]; ordered: boolean }
+  | { type: "list"; items: MarkdownListItem[]; ordered: boolean }
   | { type: "blockquote"; content: string }
   | { type: "footnote"; id: string; content: string }
   | { type: "image"; src: string; alt: string };

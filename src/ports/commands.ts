@@ -20,6 +20,7 @@ import type {
 import { info } from "@tauri-apps/plugin-log";
 import { invokeCmd, runCmd } from "./invoke";
 import type {
+  AssetResolveParams,
   AtProtoLoginParams,
   AtProtoSessionStatusParams,
   BackendCaptureDocRef,
@@ -487,6 +488,10 @@ export function imageDelete(...[locationId, assetPath, onOk, onErr]: ImageDelete
 
 export function imageList(...[locationId, onOk, onErr]: ImageListParams<ImageAsset[]>): Cmd {
   return invokeCmd<ImageAsset[]>("image_list", { locationId }, onOk, onErr);
+}
+
+export function assetResolve(...[locationId, docRelPath, assetPath, onOk, onErr]: AssetResolveParams<string>): Cmd {
+  return invokeCmd<string>("asset_resolve", { locationId, docRelPath, assetPath }, onOk, onErr);
 }
 
 export type { MarkdownProfile, SearchFiltersPayload };

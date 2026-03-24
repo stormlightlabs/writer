@@ -5,7 +5,7 @@ import { preloadPdfImages } from "$pdf/images";
 import type { FontName, FontStrategy, MarkdownNode, PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { renderMarkdownForPdf, runCmd } from "$ports";
 import { usePdfDialogUiState, usePdfExportActions } from "$state/selectors";
-import type { EditorFontFamily, LocationDescriptor, Tab } from "$types";
+import type { EditorFontFamily, Tab } from "$types";
 import { f } from "$utils/serialize";
 import { pdf } from "@react-pdf/renderer";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -17,7 +17,7 @@ export type ExportPdfFn = (
   result: PdfRenderResult,
   options: PdfExportOptions,
   editorFontFamily: EditorFontFamily,
-  locationRootPath?: string,
+  locationId?: number,
   docRelPath?: string,
 ) => Promise<boolean>;
 
@@ -30,8 +30,8 @@ const runtimeContext = () => ({
 export function usePdfExport(): ExportPdfFn {
   const { startPdfExport, finishPdfExport, failPdfExport } = usePdfExportActions();
 
-  const resolveImages = useCallback(async (nodes: MarkdownNode[], locationRootPath?: string, docRelPath?: string) => {
-    return locationRootPath && docRelPath ? await preloadPdfImages(nodes, locationRootPath, docRelPath) : {};
+  const resolveImages = useCallback(async (nodes: MarkdownNode[], locationId?: number, docRelPath?: string) => {
+    return locationId !== undefined && docRelPath ? await preloadPdfImages(nodes, locationId, docRelPath) : {};
   }, []);
 
   const renderPdfBlob = useCallback(
@@ -71,7 +71,7 @@ export function usePdfExport(): ExportPdfFn {
       result: PdfRenderResult,
       options: PdfExportOptions,
       editorFontFamily: EditorFontFamily,
-      locationRootPath?: string,
+      locationId?: number,
       docRelPath?: string,
     ) => {
       startPdfExport();
@@ -80,7 +80,7 @@ export function usePdfExport(): ExportPdfFn {
         let blob: Blob;
         let customRenderError: unknown = null;
         try {
-          const images = await resolveImages(result.nodes, locationRootPath, docRelPath);
+          const images = await resolveImages(result.nodes, locationId, docRelPath);
           blob = await renderPdfBlob(result, options, editorFontFamily, "custom", images);
         } catch (initialError) {
           customRenderError = initialError;
@@ -92,7 +92,7 @@ export function usePdfExport(): ExportPdfFn {
           );
 
           try {
-            const images = await resolveImages(result.nodes, locationRootPath, docRelPath);
+            const images = await resolveImages(result.nodes, locationId, docRelPath);
             blob = await renderPdfBlob(result, options, editorFontFamily, "builtin", images);
             logger.warn(
               f("PDF export completed with built-in fonts after custom font failure", {
@@ -155,10 +155,9 @@ type UsePdfExportUIArgs = {
   text: string;
   editorFontFamily: EditorFontFamily;
   exportPdf: ExportPdfFn;
-  locations: LocationDescriptor[];
 };
 
-export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf, locations }: UsePdfExportUIArgs) {
+export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }: UsePdfExportUIArgs) {
   const { setOpen: setPdfExportDialogOpen } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
   const [previewResult, setPreviewResult] = useState<PdfRenderResult | null>(null);
@@ -205,7 +204,6 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf, l
     }
 
     const docRef = activeTab.docRef;
-    const locationRootPath = locations.find((loc) => loc.id === docRef.location_id)?.root_path;
 
     try {
       const renderResult = await new Promise<PdfRenderResult>((resolve, reject) => {
@@ -213,7 +211,7 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf, l
       });
 
       const resolvedFont = resolvePdfFont(editorFontFamily as FontName, text);
-      const didExport = await exportPdf(renderResult, options, resolvedFont, locationRootPath, docRef.rel_path);
+      const didExport = await exportPdf(renderResult, options, resolvedFont, docRef.location_id, docRef.rel_path);
       if (didExport) {
         setPdfExportDialogOpen(false);
         resetPdfExport();
@@ -221,11 +219,9 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf, l
     } catch (error) {
       logger.error(f("Failed to export PDF", { error: error instanceof Error ? error.message : String(error) }));
     }
-  }, [activeTab, editorFontFamily, exportPdf, locations, resetPdfExport, setPdfExportDialogOpen, text]);
+  }, [activeTab, editorFontFamily, exportPdf, resetPdfExport, setPdfExportDialogOpen, text]);
 
-  const activeDocLocationRootPath = activeTab
-    ? locations.find((loc) => loc.id === activeTab.docRef.location_id)?.root_path
-    : undefined;
+  const activeDocLocationId = activeTab?.docRef.location_id;
   const activeDocRelPath = activeTab?.docRef.rel_path;
 
   return {
@@ -233,7 +229,7 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf, l
     handleExportPdf,
     previewResult,
     isLoadingPreview,
-    activeDocLocationRootPath,
+    activeDocLocationId,
     activeDocRelPath,
   };
 }

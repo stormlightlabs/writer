@@ -1,10 +1,15 @@
-import { resolveAssetSrc } from "$pdf/images";
 import type { AppTheme, EditorFontFamily, MarkdownPreviewStyle, RenderResult } from "$types";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import {
+  isExternalAssetReference,
+  isResolvableLocalAssetReference,
+  logAssetResolutionFailure,
+  resolveAssetPath,
+  resolveAssetUrl,
+} from "$utils/assets";
+import * as logger from "@tauri-apps/plugin-log";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-
-export { resolveAssetSrc };
+import type { CSSProperties, MouseEventHandler } from "react";
 
 export type PreviewProps = {
   renderResult: RenderResult | null;
@@ -12,10 +17,10 @@ export type PreviewProps = {
   editorLine: number;
   previewStyle: MarkdownPreviewStyle;
   editorFontFamily: EditorFontFamily;
+  locationId?: number;
+  docRelPath?: string;
   onScrollToLine?: (line: number) => void;
   className?: string;
-  locationRootPath?: string;
-  docRelPath?: string;
 };
 
 const PDF_PREVIEW_FONT_MAP: Record<EditorFontFamily, string> = {
@@ -38,10 +43,10 @@ export function Preview(
     editorLine,
     previewStyle,
     editorFontFamily,
+    locationId,
+    docRelPath,
     onScrollToLine,
     className = "",
-    locationRootPath,
-    docRelPath,
   }: PreviewProps,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,18 +57,50 @@ export function Preview(
   const previewContent = useMemo(() => ({ __html: renderResult?.html ?? "" }), [renderResult]);
 
   useEffect(() => {
-    if (!containerRef.current || !locationRootPath) return;
+    if (!containerRef.current || locationId === undefined || !docRelPath) return;
 
-    const imgs = containerRef.current.querySelectorAll<HTMLImageElement>("img");
-    for (const img of imgs) {
-      const src = img.getAttribute("src");
-      if (!src || !src.includes(".writer-assets/")) continue;
-      if (src.startsWith("http") || src.startsWith("asset:") || src.startsWith("data:")) continue;
+    const container = containerRef.current;
+    let isCancelled = false;
 
-      const absolutePath = resolveAssetSrc(locationRootPath, docRelPath ?? "", src);
-      img.src = convertFileSrc(absolutePath);
-    }
-  }, [renderResult, locationRootPath, docRelPath]);
+    const resolvePreviewAssets = async () => {
+      const images = [...container.querySelectorAll<HTMLImageElement>("img[src]")];
+      const links = [...container.querySelectorAll<HTMLAnchorElement>("a[href]")];
+
+      await Promise.allSettled(images.map(async (img) => {
+        const src = img.getAttribute("src");
+        if (!src || !isResolvableLocalAssetReference(src)) return;
+
+        try {
+          const resolvedUrl = await resolveAssetUrl(locationId, docRelPath, src);
+          if (!isCancelled) {
+            img.src = resolvedUrl;
+          }
+        } catch (error) {
+          logAssetResolutionFailure("preview image", src, error);
+        }
+      }));
+
+      await Promise.allSettled(links.map(async (link) => {
+        const href = link.getAttribute("href");
+        if (!href || !isResolvableLocalAssetReference(href)) return;
+
+        try {
+          const resolvedPath = await resolveAssetPath(locationId, docRelPath, href);
+          if (!isCancelled) {
+            link.dataset.localAssetPath = resolvedPath;
+          }
+        } catch (error) {
+          logAssetResolutionFailure("preview link", href, error);
+        }
+      }));
+    };
+
+    void resolvePreviewAssets();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [docRelPath, locationId, renderResult]);
 
   const findElementForLine = useCallback((line: number): HTMLElement | null => {
     const container = containerRef.current;
@@ -106,19 +143,56 @@ export function Preview(
     }
   }, [editorLine, findElementForLine]);
 
-  const handleImageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).tagName === "IMG") {
-      setZoomedSrc((e.target as HTMLImageElement).src);
+  const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest("a");
+    if (link) {
+      const localAssetPath = link.dataset.localAssetPath;
+      const href = link.getAttribute("href");
+
+      if (localAssetPath) {
+        e.preventDefault();
+        void openPath(localAssetPath).catch((error) => {
+          void logger.warn(
+            `Failed to open local preview asset: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
+        return;
+      }
+
+      if (href && isExternalAssetReference(href)) {
+        e.preventDefault();
+        void openUrl(href).catch((error) => {
+          void logger.warn(`Failed to open preview link: ${error instanceof Error ? error.message : String(error)}`);
+        });
+        return;
+      }
+
+      if (href && locationId !== undefined && docRelPath && isResolvableLocalAssetReference(href)) {
+        e.preventDefault();
+        void resolveAssetPath(locationId, docRelPath, href).then((resolvedPath) => openPath(resolvedPath)).catch(
+          (error) => {
+            logAssetResolutionFailure("preview link", href, error);
+          },
+        );
+        return;
+      }
     }
-  }, []);
+
+    const image = target.closest("img");
+    if (image) {
+      setZoomedSrc((image as HTMLImageElement).src);
+    }
+  }, [docRelPath, locationId]);
 
   useEffect(() => {
     if (!zoomedSrc) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setZoomedSrc(null);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+
+    globalThis.addEventListener("keydown", onKey);
+    return () => globalThis.removeEventListener("keydown", onKey);
   }, [zoomedSrc]);
 
   const handleScroll = useCallback(() => {
@@ -182,12 +256,22 @@ export function Preview(
     [previewStyle, editorFontFamily],
   );
 
+  const handleWrapperClick = useCallback(() => {
+    if (zoomedSrc) {
+      setZoomedSrc(null);
+    }
+  }, [zoomedSrc]);
+
+  const handleImageClick: MouseEventHandler<HTMLImageElement> = useCallback((e) => {
+    e.stopPropagation();
+  }, []);
+
   return (
     <>
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        onClick={handleImageClick}
+        onClick={handleContentClick}
         data-theme={theme}
         className={`flex-1 overflow-auto p-16 bg-surface-lowest text-text-primary ${className}`}>
         <div className={previewContentClassName} style={previewContentStyle} dangerouslySetInnerHTML={previewContent} />
@@ -195,12 +279,12 @@ export function Preview(
       {zoomedSrc && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-zoom-out"
-          onClick={() => setZoomedSrc(null)}>
+          onClick={handleWrapperClick}>
           <img
             src={zoomedSrc}
             alt=""
             className="max-w-[90vw] max-h-[90vh] object-contain cursor-default"
-            onClick={(e) => e.stopPropagation()} />
+            onClick={handleImageClick} />
         </div>
       )}
     </>

@@ -43,9 +43,9 @@ type PK =
   | "editorLine"
   | "previewStyle"
   | "editorFontFamily"
-  | "onScrollToLine"
-  | "locationRootPath"
-  | "docRelPath";
+  | "locationId"
+  | "docRelPath"
+  | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
 export type WorkspaceDiagnosticsProps = {

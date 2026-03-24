@@ -55,6 +55,7 @@ vi.mock(
 );
 
 vi.mock("@tauri-apps/plugin-fs", () => ({ readTextFile: vi.fn(() => "") }));
+vi.mock("@tauri-apps/plugin-opener", () => ({ openPath: vi.fn(async () => {}), openUrl: vi.fn(async () => {}) }));
 
 vi.mock(
   "$state/stores/toasts",

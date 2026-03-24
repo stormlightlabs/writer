@@ -51,13 +51,60 @@ pub fn image_delete(state: State<'_, AppState>, location_id: i64, asset_path: St
     }
 }
 
-/// Converts an SVG at the given absolute path to a PNG data URL.
-///
-/// Delegates to `writer_store::Store::svg_to_png`. Returns `data:image/png;base64,...`.
+/// Resolves a local markdown asset reference to an absolute path within the location root.
 #[tauri::command]
-pub fn svg_to_png(state: State<'_, AppState>, absolute_path: String) -> CommandResponse<String> {
-    log::debug!("svg_to_png: {}", absolute_path);
-    match state.store.svg_to_png(std::path::Path::new(&absolute_path)) {
+pub fn asset_resolve(
+    state: State<'_, AppState>, location_id: i64, doc_rel_path: String, asset_path: String,
+) -> CommandResponse<String> {
+    let location_id = LocationId(location_id);
+    let doc_rel_path = PathBuf::from(&doc_rel_path);
+
+    log::debug!(
+        "asset_resolve: location={:?}, doc_rel_path={:?}, asset_path={}",
+        location_id,
+        doc_rel_path,
+        asset_path
+    );
+
+    match state.store.asset_resolve(location_id, &doc_rel_path, &asset_path) {
+        Ok(resolved_path) => {
+            log::debug!("asset_resolve: ok → {}", resolved_path.display());
+            Ok(CommandResult::ok(resolved_path.to_string_lossy().to_string()))
+        }
+        Err(e) => {
+            log::error!("asset_resolve failed: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
+/// Converts a location-scoped SVG asset to a PNG data URL.
+///
+/// Resolves the asset path relative to the source document, then delegates to
+/// `writer_store::Store::svg_to_png`. Returns `data:image/png;base64,...`.
+#[tauri::command]
+pub fn svg_to_png(
+    state: State<'_, AppState>, location_id: i64, doc_rel_path: String, asset_path: String,
+) -> CommandResponse<String> {
+    let location_id = LocationId(location_id);
+    let doc_rel_path = PathBuf::from(&doc_rel_path);
+
+    log::debug!(
+        "svg_to_png: location={:?}, doc_rel_path={:?}, asset_path={}",
+        location_id,
+        doc_rel_path,
+        asset_path
+    );
+
+    let resolved_path = match state.store.asset_resolve(location_id, &doc_rel_path, &asset_path) {
+        Ok(path) => path,
+        Err(e) => {
+            log::error!("svg_to_png resolve failed: {}", e);
+            return Ok(CommandResult::err(e));
+        }
+    };
+
+    match state.store.svg_to_png(&resolved_path) {
         Ok(data_url) => Ok(CommandResult::ok(data_url)),
         Err(e) => {
             log::error!("svg_to_png failed: {}", e);
