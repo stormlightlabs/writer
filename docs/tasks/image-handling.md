@@ -51,13 +51,13 @@ updated: 2026-03-21
 
 ## Preview Rendering
 
-- [ ] Resolve `.writer-assets/` paths in markdown preview
+- [x] Resolve `.writer-assets/` paths in markdown preview
   - Use `convertFileSrc()` or Tauri asset protocol to create displayable URLs
   - Handle relative path resolution for documents in subdirectories
-- [ ] Image display styling
+- [x] Image display styling
   - `max-width: 100%`, responsive within content column
   - Maintain aspect ratio
-- [ ] Click-to-zoom (optional polish)
+- [x] Click-to-zoom
   - Click image in preview to open full-size overlay
 
 ## AT Protocol Blob Sync
@@ -112,14 +112,14 @@ updated: 2026-03-21
 
 ### Frontend
 
-- [ ] Add image path resolution for PDF renderer
+- [x] Add image path resolution for PDF renderer
   - Resolve `.writer-assets/` paths to base64 data URLs (similar to font preloading in `src/pdf/fonts.ts`)
   - Use `convertFileSrc()` → fetch bytes → encode as `data:<mime>;base64,...`
-- [ ] Add `Image` case to `MarkdownPdfDocument.tsx` node renderer
+- [x] Add `Image` case to `MarkdownPdfDocument.tsx` node renderer
   - Render `<Image src={resolvedDataUrl} />` with `maxWidth: 100%`, preserve aspect ratio
-- [ ] Update `usePdfExport.tsx` to preload images before render
+- [x] Update `usePdfExport.tsx` to preload images before render
   - Scan PdfNodes for Image variants, resolve all paths, then render
-- [ ] Handle SVG gracefully —> convert to PNG on backend, then embed and render
+- [x] Handle SVG gracefully - convert to PNG on the backend
 
 ## Test/QA Plan
 

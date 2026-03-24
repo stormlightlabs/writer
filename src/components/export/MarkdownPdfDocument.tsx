@@ -1,6 +1,6 @@
 import { getCodeFontFamily, getPdfFontFamily } from "$pdf/fonts";
 import type { FontName, MarkdownNode, PageSize, PdfExportOptions } from "$pdf/types";
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { useCallback, useMemo } from "react";
 
 type TStyleSheet = ReturnType<typeof createStyles>;
@@ -73,11 +73,12 @@ const createStyles = (
       borderTopColor: "#ddd",
       color: PDF_MUTED_TEXT_COLOR,
     },
+    image: { maxWidth: "100%", marginBottom: 10 },
   });
 
-type DocumentNodeProps = { node: MarkdownNode; styles: TStyleSheet };
+type DocumentNodeProps = { node: MarkdownNode; styles: TStyleSheet; resolvedImages: Record<string, string> };
 
-const DocumentNode = ({ node, styles }: DocumentNodeProps) => {
+const DocumentNode = ({ node, styles, resolvedImages }: DocumentNodeProps) => {
   switch (node.type) {
     case "heading": {
       const headingStyle = getHeadingStyle(node.level, styles);
@@ -113,6 +114,11 @@ const DocumentNode = ({ node, styles }: DocumentNodeProps) => {
           <Text>[{node.id}] {node.content}</Text>
         </View>
       );
+    case "image": {
+      const src = resolvedImages[node.src];
+      if (!src) return null;
+      return <Image src={src} style={styles.image} />;
+    }
     default:
       return null;
   }
@@ -124,6 +130,7 @@ type MarkdownPdfDocumentProps = {
   options: PdfExportOptions;
   editorFontFamily: FontName;
   useBuiltinFonts?: boolean;
+  resolvedImages?: Record<string, string>;
 };
 
 const DocumentTitle = (
@@ -139,19 +146,20 @@ const DocumentTitle = (
     : null;
 
 const DocumentBody = (
-  { nodes, title, styles, options, hasHeadingOne }: {
+  { nodes, title, styles, options, hasHeadingOne, resolvedImages }: {
     nodes: MarkdownNode[];
     title?: string;
     styles: ReturnType<typeof createStyles>;
     options: PdfExportOptions;
     hasHeadingOne: boolean;
+    resolvedImages: Record<string, string>;
   },
 ) => (
   <View style={styles.content}>
     <DocumentTitle title={title} styles={styles} options={options} hasHeadingOne={hasHeadingOne} />
     {nodes.map((node, index) => {
       const k = `${index}`;
-      return <DocumentNode key={k} node={node} styles={styles} />;
+      return <DocumentNode key={k} node={node} styles={styles} resolvedImages={resolvedImages} />;
     })}
   </View>
 );
@@ -168,7 +176,7 @@ const DocumentFooter = (
 ) => <Text style={styles.footer} fixed render={renderer} />;
 
 export const MarkdownPdfDocument = (
-  { nodes, title, options, editorFontFamily, useBuiltinFonts = false }: MarkdownPdfDocumentProps,
+  { nodes, title, options, editorFontFamily, useBuiltinFonts = false, resolvedImages = {} }: MarkdownPdfDocumentProps,
 ) => {
   const fontStrategy = useBuiltinFonts ? "builtin" : "custom";
   const bodyFont = getPdfFontFamily(editorFontFamily, fontStrategy);
@@ -185,7 +193,13 @@ export const MarkdownPdfDocument = (
     <Document>
       <Page size={toPdfPageSize(options.pageSize)} orientation={options.orientation} style={styles.page}>
         {showHeader && <DocumentHeader title={title!} styles={styles} />}
-        <DocumentBody nodes={nodes} title={title} styles={styles} options={options} hasHeadingOne={hasHeadingOne} />
+        <DocumentBody
+          nodes={nodes}
+          title={title}
+          styles={styles}
+          options={options}
+          hasHeadingOne={hasHeadingOne}
+          resolvedImages={resolvedImages} />
         {options.includeFooter && <DocumentFooter styles={styles} renderer={renderPageNumber} />}
       </Page>
     </Document>

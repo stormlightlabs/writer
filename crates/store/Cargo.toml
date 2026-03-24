@@ -13,6 +13,8 @@ dirs = "6"
 tempfile = "3.27"
 log = "0.4"
 blake3 = "1"
+resvg = "0.44"
+base64 = "0.22"
 
 writer-core = { path = "../core" }
 writer-md = { path = "../markdown" }

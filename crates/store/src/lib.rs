@@ -2385,6 +2385,48 @@ impl Store {
         log::debug!("image_list: {} assets in location {:?}", assets.len(), location_id);
         Ok(assets)
     }
+
+    /// Converts an SVG file at the given absolute path to a PNG data URL.
+    ///
+    /// Renders at intrinsic size (capped at 2048px on the longest side) and returns
+    /// `data:image/png;base64,...`. Used by the PDF renderer to embed SVG images.
+    pub fn svg_to_png(&self, absolute_path: &std::path::Path) -> Result<String, AppError> {
+        use base64::Engine as _;
+
+        log::debug!("svg_to_png: {}", absolute_path.display());
+
+        let svg_data = std::fs::read(absolute_path).map_err(|e| AppError::io(format!("Failed to read SVG: {}", e)))?;
+
+        let opt = resvg::usvg::Options::default();
+        let tree = resvg::usvg::Tree::from_data(&svg_data, &opt)
+            .map_err(|e| AppError::io(format!("SVG parse error: {}", e)))?;
+
+        let size = tree.size().to_int_size();
+        let (w, h) = (size.width(), size.height());
+        let scale = if w > 2048 || h > 2048 { (2048.0_f32 / w as f32).min(2048.0_f32 / h as f32) } else { 1.0_f32 };
+        let out_w = ((w as f32 * scale).round() as u32).max(1);
+        let out_h = ((h as f32 * scale).round() as u32).max(1);
+
+        let mut pixmap = resvg::tiny_skia::Pixmap::new(out_w, out_h)
+            .ok_or_else(|| AppError::io(format!("Failed to allocate pixmap ({}x{})", out_w, out_h)))?;
+
+        resvg::render(
+            &tree,
+            resvg::tiny_skia::Transform::from_scale(scale, scale),
+            &mut pixmap.as_mut(),
+        );
+
+        let png_bytes = pixmap
+            .encode_png()
+            .map_err(|e| AppError::io(format!("PNG encode failed: {}", e)))?;
+
+        let data_url = format!(
+            "data:image/png;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(&png_bytes),
+        );
+        log::debug!("svg_to_png: ok, {} png bytes", png_bytes.len());
+        Ok(data_url)
+    }
 }
 
 #[cfg(test)]

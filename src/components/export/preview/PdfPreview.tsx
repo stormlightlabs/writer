@@ -1,7 +1,8 @@
 import { MarkdownPdfDocument } from "$components/export/MarkdownPdfDocument";
 import { PDFError } from "$pdf/errors";
 import { ensurePdfFontRegistered } from "$pdf/fonts";
-import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { preloadPdfImages } from "$pdf/images";
+import type { FontStrategy, MarkdownNode, PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import type { EditorFontFamily } from "$types";
 import { f } from "$utils/serialize";
 import { pdf } from "@react-pdf/renderer";
@@ -23,12 +24,16 @@ type UsePdfPreviewArgs = {
   result: PdfRenderResult | null;
   options: PdfExportOptions;
   editorFontFamily: EditorFontFamily;
+  locationRootPath?: string;
+  docRelPath?: string;
 };
 
 export type PdfPreviewPanelProps = {
   result: PdfRenderResult | null;
   options: PdfExportOptions;
   editorFontFamily: EditorFontFamily;
+  locationRootPath?: string;
+  docRelPath?: string;
 };
 
 type FitMode = "page" | "width";
@@ -47,7 +52,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Failed to generate preview";
 
-export function usePdfPreview({ result, options, editorFontFamily }: UsePdfPreviewArgs) {
+export function usePdfPreview({ result, options, editorFontFamily, locationRootPath, docRelPath }: UsePdfPreviewArgs) {
   const [state, setState] = useState<PdfPreviewState>({ status: "idle" });
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentPdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -60,6 +65,10 @@ export function usePdfPreview({ result, options, editorFontFamily }: UsePdfPrevi
     }
   }, []);
 
+  const resolveImages = useCallback(async (nodes: MarkdownNode[]) => {
+    return docRelPath && locationRootPath ? await preloadPdfImages(nodes, locationRootPath, docRelPath) : {};
+  }, [docRelPath, locationRootPath]);
+
   const renderPdfBlob = useCallback(
     async (
       pdfResult: PdfRenderResult,
@@ -67,6 +76,7 @@ export function usePdfPreview({ result, options, editorFontFamily }: UsePdfPrevi
       fontFamily: EditorFontFamily,
       strategy: FontStrategy,
       signal: AbortSignal,
+      images: Record<string, string>,
     ): Promise<Blob> => {
       if (signal.aborted) {
         throw new Error("Preview generation aborted");
@@ -81,13 +91,18 @@ export function usePdfPreview({ result, options, editorFontFamily }: UsePdfPrevi
         throw new Error("Preview generation aborted");
       }
 
+      if (signal.aborted) {
+        throw new Error("Preview generation aborted");
+      }
+
       const blob = await pdf(
         <MarkdownPdfDocument
           nodes={pdfResult.nodes}
           title={pdfResult.title}
           options={pdfOptions}
           editorFontFamily={fontFamily}
-          useBuiltinFonts={strategy === "builtin"} />,
+          useBuiltinFonts={strategy === "builtin"}
+          resolvedImages={images} />,
       ).toBlob();
 
       logger.debug(f("PDF preview render attempt completed", { strategy, outputSizeBytes: blob.size }));
@@ -115,7 +130,8 @@ export function usePdfPreview({ result, options, editorFontFamily }: UsePdfPrevi
         const strategy: FontStrategy = attempt === 0 ? "custom" : "builtin";
 
         try {
-          blob = await renderPdfBlob(result, options, editorFontFamily, strategy, signal);
+          const images = await resolveImages(result.nodes);
+          blob = await renderPdfBlob(result, options, editorFontFamily, strategy, signal, images);
           strategyUsed = strategy;
           break;
         } catch (error) {
@@ -173,7 +189,7 @@ export function usePdfPreview({ result, options, editorFontFamily }: UsePdfPrevi
       destroyCurrentPdfDoc();
       setState({ status: "error", message: getErrorMessage(error) });
     }
-  }, [destroyCurrentPdfDoc, editorFontFamily, options, renderPdfBlob, result]);
+  }, [destroyCurrentPdfDoc, editorFontFamily, options, renderPdfBlob, result, resolveImages]);
 
   useEffect(() => {
     abortControllerRef.current?.abort();
@@ -455,7 +471,7 @@ function MultiPageCanvas(
 
   return (
     <div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto bg-layer-02 px-3 py-3">
-      <div className="mx-auto flex w-full max-w-[980px] flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-245 flex-col gap-4">
         {pageNumbers.map((pageNumber, index) => (
           <div
             key={pageNumber}
@@ -509,9 +525,7 @@ function PreviewToolbar(
           aria-label="Zoom out">
           -
         </button>
-        <span className="text-xs text-text-secondary min-w-[44px] text-center" aria-label="Zoom level">
-          {zoomPercent}%
-        </span>
+        <span className="text-xs text-text-secondary min-w-11 text-center" aria-label="Zoom level">{zoomPercent}%</span>
         <button
           type="button"
           data-zoom-direction="in"
@@ -661,8 +675,10 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
   );
 }
 
-export function PdfPreviewPanel({ result, options, editorFontFamily }: PdfPreviewPanelProps) {
-  const previewState = usePdfPreview({ result, options, editorFontFamily });
+export function PdfPreviewPanel(
+  { result, options, editorFontFamily, locationRootPath, docRelPath }: PdfPreviewPanelProps,
+) {
+  const previewState = usePdfPreview({ result, options, editorFontFamily, locationRootPath, docRelPath });
 
   switch (previewState.status) {
     case "idle":

@@ -141,21 +141,10 @@ export function Toolbar(
         icon: <DocumentIcon size="sm" />,
       });
     }
-    if (onInsertImage) {
-      items.push({ label: "Insert Image", onClick: onInsertImage, icon: <ImageIcon size="sm" /> });
-    }
     items.push({ divider: true as const });
     items.push({ label: "Settings", onClick: handleOpenSettings, icon: <SettingsIcon size="sm" /> });
     return items;
-  }, [
-    atProtoSession,
-    onAtProtoAuth,
-    onExportPdf,
-    isExportingPdf,
-    isPdfExportDisabled,
-    onInsertImage,
-    handleOpenSettings,
-  ]);
+  }, [atProtoSession, onAtProtoAuth, onExportPdf, isExportingPdf, isPdfExportDisabled, handleOpenSettings]);
 
   return (
     <div className="h-12 bg-layer-01 border-b border-stroke-subtle/10 flex items-center justify-between px-3 gap-2 overflow-x-auto shrink-0">
@@ -182,13 +171,12 @@ export function Toolbar(
             iconOnly />
         )}
         {onRefresh && <ToolbarButton icon={icons.refresh} label="Refresh" onClick={onRefresh} shortcut="F5" iconOnly />}
-        {hasActiveDocument
-          ? (
-            <span className="ml-1 text-[10px] uppercase tracking-widest text-text-secondary">
-              <SaveStatusIndicator status={saveStatus} compact={isNarrow} />
-            </span>
-          )
-          : null}
+        {onInsertImage && <ToolbarButton icon={icons.image} label="Insert Image" onClick={onInsertImage} iconOnly />}
+        {hasActiveDocument && (
+          <span className="ml-1 text-[10px] uppercase tracking-widest text-text-secondary">
+            <SaveStatusIndicator status={saveStatus} compact={isNarrow} />
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">

@@ -20,7 +20,10 @@ export function clearMockListeners() {
   mockListeners.clear();
 }
 
-vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock(
+  "@tauri-apps/api/core",
+  () => ({ invoke: vi.fn(), convertFileSrc: vi.fn((path: string) => `asset://localhost${path}`) }),
+);
 vi.mock(
   "@tauri-apps/plugin-log",
   () => ({

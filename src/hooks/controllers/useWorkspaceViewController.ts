@@ -39,6 +39,8 @@ export type WorkspaceViewController = {
   focusModePanelProps: FocusModePanelProps;
   handleExportPdf: (options: PdfExportOptions) => Promise<void>;
   previewResult: PdfRenderResult | null;
+  activeDocLocationRootPath: string | undefined;
+  activeDocRelPath: string | undefined;
   editorFontFamily: EditorFontFamily;
   editorText: string;
   atProto: ReturnType<typeof useAtProtoController>;
@@ -114,12 +116,14 @@ export function useWorkspaceViewController(): WorkspaceViewController {
 
   const imageLocationId = editorModel.docRef?.location_id ?? null;
   const { insertAt, handleImageFilePaste, handlePickAndInsertImage } = useEditorImageHandlers(imageLocationId);
-  const { handleOpenPdfExport, handleExportPdf, previewResult } = usePdfExportUI({
-    activeTab,
-    text: editorModel.text,
-    editorFontFamily: editorPresentation.fontFamily,
-    exportPdf,
-  });
+  const { handleOpenPdfExport, handleExportPdf, previewResult, activeDocLocationRootPath, activeDocRelPath } =
+    usePdfExportUI({
+      activeTab,
+      text: editorModel.text,
+      editorFontFamily: editorPresentation.fontFamily,
+      exportPdf,
+      locations,
+    });
 
   const hasOpenDocument = useMemo(() => isSameDocRef(activeTab?.docRef, editorModel.docRef), [
     activeTab,
@@ -264,6 +268,12 @@ export function useWorkspaceViewController(): WorkspaceViewController {
 
   const statusBarProps = useMemo(() => ({ docMeta: activeDocMeta, stats: editorStats }), [activeDocMeta, editorStats]);
 
+  const previewLocationRootPath = useMemo(() => {
+    const locationId = previewModel.docRef?.location_id;
+    if (locationId === undefined) return;
+    return locations.find((loc) => loc.id === locationId)?.root_path;
+  }, [previewModel.docRef?.location_id, locations]);
+
   const previewProps = useMemo(
     () => ({
       renderResult: previewModel.renderResult,
@@ -272,14 +282,18 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       previewStyle: editorPresentation.markdownPreviewStyle,
       editorFontFamily: editorPresentation.fontFamily,
       onScrollToLine: syncPreviewLine,
+      locationRootPath: previewLocationRootPath,
+      docRelPath: previewModel.docRef?.rel_path,
     }),
     [
       previewModel.renderResult,
+      previewModel.docRef?.rel_path,
       editorPresentation.theme,
       editorPresentation.markdownPreviewStyle,
       editorPresentation.fontFamily,
       editorModel.cursorLine,
       syncPreviewLine,
+      previewLocationRootPath,
     ],
   );
 
@@ -361,6 +375,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     focusModePanelProps,
     handleExportPdf,
     previewResult,
+    activeDocLocationRootPath,
+    activeDocRelPath,
     editorFontFamily: editorPresentation.fontFamily,
     editorText: editorModel.text,
     atProto,

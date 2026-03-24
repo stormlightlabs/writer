@@ -87,7 +87,7 @@ pub fn image_list(location_id: LocationId) -> Result<Vec<ImageAsset>, Error>
 #### Preview Rendering
 
 - The markdown preview must resolve `.writer-assets/` paths to `asset:` protocol URLs (Tauri asset protocol) or `convertFileSrc()` for display.
-- Images render inline with `max-width: 100%` and optional click-to-zoom.
+- Images render inline with `max-width: 100%` and click-to-zoom.
 
 #### State
 

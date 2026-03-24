@@ -37,6 +37,8 @@ export type ExportDialogProps = {
   previewResult: PdfRenderResult | null;
   editorFontFamily: EditorFontFamily;
   documentText?: string;
+  locationRootPath?: string;
+  docRelPath?: string;
 };
 
 type ExportFormatTabId = ExportFormat | "string";
@@ -160,11 +162,18 @@ type PreviewPaneProps = {
   previewResult: PdfRenderResult | null;
   options: PdfExportOptions;
   editorFontFamily: EditorFontFamily;
+  locationRootPath?: string;
+  docRelPath?: string;
 };
 
-const PreviewPane = ({ previewResult, options, editorFontFamily }: PreviewPaneProps) => (
+const PreviewPane = ({ previewResult, options, editorFontFamily, locationRootPath, docRelPath }: PreviewPaneProps) => (
   <section className="flex min-h-0 h-full flex-col overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
-    <PdfPreviewPanel result={previewResult} options={options} editorFontFamily={editorFontFamily} />
+    <PdfPreviewPanel
+      result={previewResult}
+      options={options}
+      editorFontFamily={editorFontFamily}
+      locationRootPath={locationRootPath}
+      docRelPath={docRelPath} />
   </section>
 );
 
@@ -182,11 +191,22 @@ type PdfExportContentProps = {
   editorFontFamily: EditorFontFamily;
   documentText: string;
   handleExportClick: () => Promise<void>;
+  locationRootPath?: string;
+  docRelPath?: string;
 };
 
 function PdfExportContent(
-  { onCancel, showPreview, previewResult, options, editorFontFamily, documentText, handleExportClick }:
-    PdfExportContentProps,
+  {
+    onCancel,
+    showPreview,
+    previewResult,
+    options,
+    editorFontFamily,
+    documentText,
+    handleExportClick,
+    locationRootPath,
+    docRelPath,
+  }: PdfExportContentProps,
 ) {
   const { pdfExportError: error } = usePdfExportState();
   const previewFont = resolvePdfFont(editorFontFamily as FontName, documentText);
@@ -203,7 +223,14 @@ function PdfExportContent(
           showPreview ? "grid grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-3" : "flex"
         }`}>
         {showPreview
-          ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={previewFont} />
+          ? (
+            <PreviewPane
+              previewResult={previewResult}
+              options={options}
+              editorFontFamily={previewFont}
+              locationRootPath={locationRootPath}
+              docRelPath={docRelPath} />
+          )
           : null}
         <OptionsPane isFullWidth={!showPreview} />
       </div>
@@ -469,7 +496,9 @@ function StringExportContent({ onCancel, docFilename, documentText }: StringExpo
   );
 }
 
-export function ExportDialog({ onExport, previewResult, editorFontFamily, documentText = "" }: ExportDialogProps) {
+export function ExportDialog(
+  { onExport, previewResult, editorFontFamily, documentText = "", locationRootPath, docRelPath }: ExportDialogProps,
+) {
   const { isOpen, setOpen: setIsOpen, options } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
   const { resetTextExport } = useTextExportActions();
@@ -577,13 +606,10 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
     resetDocxExport();
   }, [resetPdfExport, resetTextExport, resetDocxExport]);
 
-  const pdfExportProps = useMemo(() => ({ showPreview, previewResult, options, editorFontFamily, documentText }), [
-    showPreview,
-    previewResult,
-    options,
-    editorFontFamily,
-    documentText,
-  ]);
+  const pdfExportProps = useMemo(
+    () => ({ showPreview, previewResult, options, editorFontFamily, documentText, locationRootPath, docRelPath }),
+    [showPreview, previewResult, options, editorFontFamily, documentText, locationRootPath, docRelPath],
+  );
 
   return (
     <Dialog

@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD033 -->
-# Writer
+# ~~Writer~~ Commonplace
 
-Writer is a Tauri desktop writing app with a React frontend and a Rust backend. It treats user-selected folders as the source of truth, keeps app state in Rust-backed persistence, and layers focused writing, file management, and export workflows on top.
+Commonplace is a distraction-free markdown editor.
 
 ![Split-pane markdown editor with live preview](www/src/static/images/split-pane-editor.png)
 

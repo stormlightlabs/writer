@@ -5,7 +5,7 @@ description: >
 updated: 2026-03-23
 ---
 
-1. **CJK Font Support** ✅
+1. **CJK Font Support**[^1][^2][^3] ✅
 
    Maple Mono (4 TTF weights, ~1.1 MB bundled) is now the CJK-capable font. `@react-pdf/renderer` has no fallback chains[^4] — CJK fonts must be registered and selected explicitly.
 

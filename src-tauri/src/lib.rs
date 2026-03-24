@@ -151,6 +151,7 @@ pub fn run() {
             cmd::image_import,
             cmd::image_delete,
             cmd::image_list,
+            cmd::svg_to_png,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

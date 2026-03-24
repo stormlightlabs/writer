@@ -51,6 +51,21 @@ pub fn image_delete(state: State<'_, AppState>, location_id: i64, asset_path: St
     }
 }
 
+/// Converts an SVG at the given absolute path to a PNG data URL.
+///
+/// Delegates to `writer_store::Store::svg_to_png`. Returns `data:image/png;base64,...`.
+#[tauri::command]
+pub fn svg_to_png(state: State<'_, AppState>, absolute_path: String) -> CommandResponse<String> {
+    log::debug!("svg_to_png: {}", absolute_path);
+    match state.store.svg_to_png(std::path::Path::new(&absolute_path)) {
+        Ok(data_url) => Ok(CommandResult::ok(data_url)),
+        Err(e) => {
+            log::error!("svg_to_png failed: {}", e);
+            Ok(CommandResult::err(e))
+        }
+    }
+}
+
 /// Lists all image assets in `.writer-assets/` for the given location.
 ///
 /// Returns an empty vec if the assets directory does not exist yet.

@@ -27,7 +27,8 @@ export type MarkdownNode =
   | { type: "code"; content: string; language?: string }
   | { type: "list"; items: MarkdownNode[]; ordered: boolean }
   | { type: "blockquote"; content: string }
-  | { type: "footnote"; id: string; content: string };
+  | { type: "footnote"; id: string; content: string }
+  | { type: "image"; src: string; alt: string };
 
 export type PdfRenderResult = { nodes: MarkdownNode[]; title?: string; word_count: number };
 
