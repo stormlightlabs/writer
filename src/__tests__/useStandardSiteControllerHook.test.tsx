@@ -214,36 +214,37 @@ describe("useStandardSiteController", () => {
   it("downloads blob images and rewrites markdown before save", async () => {
     mockRunCmd.mockImplementation(async (cmd) => {
       if (cmd.type !== "Invoke") {
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "publication_list") {
         cmd.onOk(publicationListResult());
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "post_list") {
         cmd.onOk(POSTS);
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "post_get_markdown") {
         cmd.onOk("![hero](at://blob/bafkrei123)");
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "doc_exists") {
         cmd.onOk(false);
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "blob_download") {
-        cmd.onOk("bafkrei123.png");
-        return;
+        cmd.onOk("images/bafkrei123.png");
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "doc_save") {
         cmd.onOk({ success: true });
+        return await Promise.resolve(void 0);
       }
     });
 
@@ -273,14 +274,14 @@ describe("useStandardSiteController", () => {
       1,
       "did:plc:alice",
       "bafkrei123",
-      "",
+      "images",
       expect.any(Function),
       expect.any(Function),
     );
 
     const docSaveCall = mockDocSave.mock.calls.at(-1);
     expect(docSaveCall).toBeDefined();
-    expect(docSaveCall?.[2]).toBe("![hero](bafkrei123.png)");
+    expect(docSaveCall?.[2]).toBe("![hero](images/bafkrei123.png)");
     expect(refreshSidebar).toHaveBeenCalledWith(1);
   });
 
@@ -289,31 +290,32 @@ describe("useStandardSiteController", () => {
 
     mockRunCmd.mockImplementation(async (cmd) => {
       if (cmd.type !== "Invoke") {
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "publication_list") {
         cmd.onOk(publicationListResult());
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "post_list") {
         cmd.onOk(POSTS);
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "post_get_markdown") {
         cmd.onOk("![hero](at://blob/bafkrei123)");
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "doc_exists") {
         cmd.onOk(false);
-        return;
+        return await Promise.resolve(void 0);
       }
 
       if (cmd.command === "blob_download") {
         cmd.onErr({ code: "IO_ERROR", message: "download failed" });
+        return await Promise.resolve(void 0);
       }
     });
 

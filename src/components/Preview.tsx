@@ -1,11 +1,14 @@
 import type { AppTheme, EditorFontFamily, MarkdownPreviewStyle, RenderResult } from "$types";
 import {
+  isAtProtoBlobReference,
   isExternalAssetReference,
   isResolvableLocalAssetReference,
   logAssetResolutionFailure,
   resolveAssetPath,
   resolveAssetUrl,
+  resolveAtProtoBlobUrl,
 } from "$utils/assets";
+import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,6 +22,7 @@ export type PreviewProps = {
   editorFontFamily: EditorFontFamily;
   locationId?: number;
   docRelPath?: string;
+  blobDid?: string;
   onScrollToLine?: (line: number) => void;
   className?: string;
 };
@@ -45,6 +49,7 @@ export function Preview(
     editorFontFamily,
     locationId,
     docRelPath,
+    blobDid,
     onScrollToLine,
     className = "",
   }: PreviewProps,
@@ -54,7 +59,8 @@ export function Preview(
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [zoomedSrc, setZoomedSrc] = useState<string | null>(null);
 
-  const previewContent = useMemo(() => ({ __html: renderResult?.html ?? "" }), [renderResult]);
+  const previewHtml = renderResult?.html ?? "";
+  const previewContent = useMemo(() => ({ __html: previewHtml }), [previewHtml]);
 
   useEffect(() => {
     if (!containerRef.current || locationId === undefined || !docRelPath) return;
@@ -65,10 +71,44 @@ export function Preview(
     const resolvePreviewAssets = async () => {
       const images = [...container.querySelectorAll<HTMLImageElement>("img[src]")];
       const links = [...container.querySelectorAll<HTMLAnchorElement>("a[href]")];
+      const startedAt = globalThis.performance?.now?.() ?? Date.now();
+
+      void logger.debug(
+        f("Preview asset resolution start", {
+          keyValues: {
+            locationId,
+            docRelPath,
+            blobDid: blobDid ?? "",
+            imageCount: images.length,
+            linkCount: links.length,
+          },
+        }),
+      );
 
       await Promise.allSettled(images.map(async (img) => {
         const src = img.getAttribute("src");
-        if (!src || !isResolvableLocalAssetReference(src)) return;
+        if (!src) return;
+
+        if (isAtProtoBlobReference(src)) {
+          if (!blobDid) {
+            logAssetResolutionFailure("preview blob image", src, "Missing blob DID context");
+            return;
+          }
+
+          try {
+            const resolvedBlobUrl = await resolveAtProtoBlobUrl(locationId, docRelPath, blobDid, src);
+            if (!isCancelled) {
+              img.src = resolvedBlobUrl;
+            }
+          } catch (error) {
+            logAssetResolutionFailure("preview blob image", src, error);
+          }
+          return;
+        }
+
+        if (!isResolvableLocalAssetReference(src)) {
+          return;
+        }
 
         try {
           const resolvedUrl = await resolveAssetUrl(locationId, docRelPath, src);
@@ -93,6 +133,19 @@ export function Preview(
           logAssetResolutionFailure("preview link", href, error);
         }
       }));
+
+      const finishedAt = globalThis.performance?.now?.() ?? Date.now();
+      void logger.debug(
+        f("Preview asset resolution complete", {
+          keyValues: {
+            locationId,
+            docRelPath,
+            elapsedMs: Math.round(finishedAt - startedAt),
+            imageCount: images.length,
+            linkCount: links.length,
+          },
+        }),
+      );
     };
 
     void resolvePreviewAssets();
@@ -100,7 +153,7 @@ export function Preview(
     return () => {
       isCancelled = true;
     };
-  }, [docRelPath, locationId, renderResult]);
+  }, [blobDid, docRelPath, locationId, previewHtml]);
 
   const findElementForLine = useCallback((line: number): HTMLElement | null => {
     const container = containerRef.current;

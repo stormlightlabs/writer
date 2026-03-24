@@ -106,7 +106,7 @@ function ContextMenuContent(
       role="menu"
       aria-label="Context menu"
       className={`fixed bg-layer-02 border border-stroke-subtle rounded shadow-lg z-1000 py-1 ${
-        isNarrow ? "min-w-[140px]" : "min-w-[160px]"
+        isNarrow ? "min-w-35" : "min-w-40"
       }`}
       style={style}>
       {items.map((item, index) => {

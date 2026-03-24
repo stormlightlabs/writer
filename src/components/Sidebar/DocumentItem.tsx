@@ -1,8 +1,9 @@
 import { ContextMenu, ContextMenuDivider, ContextMenuItem, useContextMenu } from "$components/ContextMenu";
 import { draggable, type Edge } from "$dnd";
 import { useSkipAnimation } from "$hooks/useMotion";
-import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, TrashIcon } from "$icons";
+import { ClipboardIcon, EditIcon, FileTextIcon, FolderIcon, ImageIconFilled, TrashIcon } from "$icons";
 import type { DocMeta } from "$types";
+import { isImagePath } from "$utils/documents";
 import { f } from "$utils/serialize";
 import { cn } from "$utils/tw";
 import * as logger from "@tauri-apps/plugin-log";
@@ -14,6 +15,7 @@ import { TreeItem } from "./TreeItem";
 export type DocumentDragData = { type: "document"; locationId: number; relPath: string; title: string };
 
 const FILE_TEXT_ICON = { Component: FileTextIcon, size: "sm" as const };
+const FILE_IMAGE_ICON = { Component: ImageIconFilled, size: "sm" as const };
 
 type DocumentItemProps = {
   doc: DocMeta;
@@ -74,6 +76,8 @@ export function DocumentItem(
 
     return doc.title || doc.rel_path.split("/").pop() || "Untitled";
   }, [doc.title, doc.rel_path, filenameVisibility]);
+
+  const treeItemIcon = useMemo(() => (isImagePath(doc.rel_path) ? FILE_IMAGE_ICON : FILE_TEXT_ICON), [doc.rel_path]);
 
   const handleClick = useCallback(() => {
     onSelectDocument(locationId, doc.rel_path);
@@ -139,7 +143,7 @@ export function DocumentItem(
         data-location-id={locationId}>
         <TreeItem
           key={doc.rel_path}
-          icon={FILE_TEXT_ICON}
+          icon={treeItemIcon}
           label={displayLabel}
           isSelected={isSelected}
           level={level}

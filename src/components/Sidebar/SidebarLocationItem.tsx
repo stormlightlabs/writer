@@ -376,6 +376,7 @@ function SidebarLocationItemComponent(
   const { filenameVisibility, documentActions, onToggleLocation, openDocumentOperation } = useSidebarLocationContext();
   const [pendingSpringFolderPath, setPendingSpringFolderPath] = useState<string | null>(null);
   const hoverExpandRef = useRef<{ path: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const lastAutoExpandRequestRef = useRef<string | null>(null);
   const dragExpandedSnapshotRef = useRef<Set<string> | null>(null);
   const autoExpandedDuringDragRef = useRef<Set<string>>(new Set());
   const skipAnimation = useSkipAnimation();
@@ -407,6 +408,7 @@ function SidebarLocationItemComponent(
 
   useEffect(() => {
     if (!selectedDocPath || selectedLocationId !== location.id) {
+      lastAutoExpandRequestRef.current = null;
       return;
     }
 
@@ -415,12 +417,23 @@ function SidebarLocationItemComponent(
       return;
     }
 
-    onExpandDirectories(parentPaths);
-  }, [location.id, onExpandDirectories, selectedDocPath, selectedLocationId]);
+    const missingPaths = parentPaths.filter((path) => !expandedDirectorySet.has(path));
+    if (missingPaths.length === 0) {
+      lastAutoExpandRequestRef.current = null;
+      return;
+    }
+
+    const requestKey = `${location.id}:${selectedDocPath}:${missingPaths.join("|")}`;
+    if (lastAutoExpandRequestRef.current === requestKey) {
+      return;
+    }
+    lastAutoExpandRequestRef.current = requestKey;
+
+    onExpandDirectories(missingPaths);
+  }, [expandedDirectorySet, location.id, onExpandDirectories, selectedDocPath, selectedLocationId]);
 
   const clearHoverExpand = useCallback(() => {
     if (!hoverExpandRef.current) {
-      setPendingSpringFolderPath(null);
       return;
     }
     globalThis.clearTimeout(hoverExpandRef.current.timer);
@@ -481,7 +494,10 @@ function SidebarLocationItemComponent(
 
     const autoExpanded = autoExpandedDuringDragRef.current;
     if (autoExpanded.size > 0) {
-      onCollapseDirectories(Array.from(autoExpanded).filter((path) => !snapshot.has(path)));
+      const pathsToCollapse = Array.from(autoExpanded).filter((path) => !snapshot.has(path));
+      if (pathsToCollapse.length > 0) {
+        onCollapseDirectories(pathsToCollapse);
+      }
     }
 
     dragExpandedSnapshotRef.current = null;

@@ -1308,11 +1308,11 @@ describe("global capture Commands", () => {
     it("imageDelete builds correct InvokeCmd", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();
-      const cmd = imageDelete(7, ".writer-assets/abc123.png", onOk, onErr) as InvokeCmd;
+      const cmd = imageDelete(7, "images/abc123.png", onOk, onErr) as InvokeCmd;
 
       expect(cmd.type).toBe("Invoke");
       expect(cmd.command).toBe("image_delete");
-      expect(cmd.payload).toStrictEqual({ locationId: 7, assetPath: ".writer-assets/abc123.png" });
+      expect(cmd.payload).toStrictEqual({ locationId: 7, assetPath: "images/abc123.png" });
     });
   });
 });

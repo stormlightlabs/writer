@@ -87,6 +87,33 @@ describe("useWorkspaceController", () => {
     expect(runCmd).toHaveBeenCalled();
   });
 
+  it("seeds directory cache when refresh returns no directories", () => {
+    vi.mocked(dirList).mockImplementation((_locationId, onOk) => {
+      onOk([]);
+      return { type: "None" };
+    });
+    vi.mocked(docList).mockImplementation((locationId, onOk) => {
+      onOk([{
+        location_id: locationId,
+        rel_path: "notes.md",
+        title: "Notes",
+        updated_at: "2024-01-01T00:00:00Z",
+        word_count: 1,
+      }]);
+      return { type: "None" };
+    });
+
+    const { result } = renderHook(() => useWorkspaceController());
+
+    act(() => {
+      result.current.handleRefreshSidebar(1);
+    });
+
+    const state = useWorkspaceStore.getState();
+    expect(Object.prototype.hasOwnProperty.call(state.directoriesByLocation, 1)).toBeTruthy();
+    expect(state.directoriesByLocation[1]).toStrictEqual([]);
+  });
+
   it("does not prune hydrated session tabs until locations finish loading", () => {
     useTabsStore.setState({
       tabs: [{

@@ -37,10 +37,10 @@ pub fn image_import(
     }
 }
 
-/// Deletes an image asset from `.writer-assets/` for the given location.
+/// Deletes an image asset for the given location.
 ///
 /// Returns `true` if the file was removed, `false` if it did not exist.
-/// Returns an error if `asset_path` does not start with `.writer-assets/`.
+/// Returns an error if `asset_path` is invalid or not an image path.
 #[tauri::command]
 pub fn image_delete(state: State<'_, AppState>, location_id: i64, asset_path: String) -> CommandResponse<bool> {
     let location_id = LocationId(location_id);

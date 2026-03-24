@@ -694,7 +694,7 @@ mod tests {
     #[test]
     fn test_render_for_pdf_standalone_image() {
         let engine = MarkdownEngine::new();
-        let markdown = "![Alt text](.writer-assets/abc123.png)";
+        let markdown = "![Alt text](images/abc123.png)";
         let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
 
         let image = result.nodes.iter().find_map(|node| match node {
@@ -704,14 +704,14 @@ mod tests {
 
         assert!(image.is_some(), "expected PdfNode::Image in nodes");
         let (src, alt) = image.unwrap();
-        assert_eq!(src, ".writer-assets/abc123.png");
+        assert_eq!(src, "images/abc123.png");
         assert_eq!(alt, "Alt text");
     }
 
     #[test]
     fn test_render_for_pdf_image_with_empty_alt() {
         let engine = MarkdownEngine::new();
-        let markdown = "![](.writer-assets/abc123.jpg)";
+        let markdown = "![](images/abc123.jpg)";
         let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
 
         let image = result.nodes.iter().find_map(|node| match node {
@@ -721,14 +721,14 @@ mod tests {
 
         assert!(image.is_some(), "expected PdfNode::Image in nodes");
         let (src, alt) = image.unwrap();
-        assert_eq!(src, ".writer-assets/abc123.jpg");
+        assert_eq!(src, "images/abc123.jpg");
         assert_eq!(alt, "");
     }
 
     #[test]
     fn test_render_for_pdf_image_between_paragraphs() {
         let engine = MarkdownEngine::new();
-        let markdown = "Before text.\n\n![A photo](.writer-assets/photo.png)\n\nAfter text.";
+        let markdown = "Before text.\n\n![A photo](images/photo.png)\n\nAfter text.";
         let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
 
         let node_types: Vec<_> = result
@@ -747,14 +747,14 @@ mod tests {
     #[test]
     fn test_render_for_pdf_image_inline_with_text() {
         let engine = MarkdownEngine::new();
-        let markdown = "Text before ![inline](.writer-assets/x.png) text after.";
+        let markdown = "Text before ![inline](images/x.png) text after.";
         let result = engine.render_for_pdf(markdown, MarkdownProfile::GfmSafe).unwrap();
 
         assert!(
             result
                 .nodes
                 .iter()
-                .any(|n| matches!(n, PdfNode::Image { src, .. } if src == ".writer-assets/x.png"))
+                .any(|n| matches!(n, PdfNode::Image { src, .. } if src == "images/x.png"))
         );
         assert!(
             result
@@ -772,10 +772,10 @@ mod tests {
 
     #[test]
     fn test_pdf_image_serializes_with_correct_type_tag() {
-        let node = PdfNode::Image { src: ".writer-assets/img.png".to_string(), alt: "My image".to_string() };
+        let node = PdfNode::Image { src: "images/img.png".to_string(), alt: "My image".to_string() };
         let json = serde_json::to_value(&node).unwrap();
         assert_eq!(json["type"], "image");
-        assert_eq!(json["src"], ".writer-assets/img.png");
+        assert_eq!(json["src"], "images/img.png");
         assert_eq!(json["alt"], "My image");
     }
 

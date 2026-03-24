@@ -7,7 +7,7 @@ updated: 2026-03-24
 
 ## Problem
 
-Images in documents are currently stored in a hidden `.writer-assets/` directory at the location root. This directory is excluded from the file browser and file watcher, making images invisible to the user. Images should be regular files — visible in the sidebar, stored alongside documents, and managed like any other file.
+Images are stored as regular files under the location root `images/` directory. They remain visible in the sidebar and are managed like any other file.
 
 ## Design
 
@@ -45,7 +45,7 @@ Paths are relative to the document's own directory, following standard markdown 
 
 The sidebar shows all non-hidden files in the location. Image files appear alongside documents. No special filtering — the existing `reconcile_location_index` already indexes all files and `doc_list` returns them.
 
-Hidden directories (names starting with `.`) are skipped during file collection. This replaces the previous `.writer-assets/`-specific skip in the file watcher with a general hidden-directory exclusion.
+Hidden directories (names starting with `.`) are skipped during file collection.
 
 ### Tauri Commands (Rust)
 

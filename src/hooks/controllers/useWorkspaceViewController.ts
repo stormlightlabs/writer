@@ -24,6 +24,7 @@ import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useEditorPresentationState } from "$state/selectors";
 import type { DocRef, EditorFontFamily, Maybe, SaveStatus } from "$types";
+import { isImageContentType, isImagePath } from "$utils/documents";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type FocusModePanelProps = {
@@ -128,6 +129,13 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     activeTab,
     editorModel.docRef,
   ]);
+  const isImageDocument = useMemo(
+    () =>
+      isImageContentType(editorModel.contentType)
+      || (editorModel.docRef ? isImagePath(editorModel.docRef.rel_path) : false),
+    [editorModel.contentType, editorModel.docRef],
+  );
+  const hasEditableDocument = hasOpenDocument && !isImageDocument;
   const hasLocations = useMemo(() => locations.length > 0, [locations.length]);
   const showWelcomeScreen = useMemo(() => isSessionHydrated && !activeTab, [activeTab, isSessionHydrated]);
 
@@ -216,14 +224,14 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     () => ({
       saveStatus: editorModel.saveStatus,
       atProtoSession: atProto.session,
-      hasActiveDocument: hasOpenDocument,
+      hasActiveDocument: hasEditableDocument,
       onSave: handleSave,
       onAtProtoAuth: atProto.openAuthSheet,
       onNewDocument: handleNewDocument,
       isNewDocumentDisabled: !hasLocations,
       onExportPdf: handleOpenPdfExport,
-      isPdfExportDisabled: !activeTab,
-      onInsertImage: activeTab ? handlePickAndInsertImage : undefined,
+      isPdfExportDisabled: !activeTab || isImageDocument,
+      onInsertImage: hasEditableDocument ? handlePickAndInsertImage : undefined,
       onRefresh: handleRefreshSidebar,
     }),
     [
@@ -236,7 +244,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       handleRefreshSidebar,
       hasLocations,
       handleSave,
-      hasOpenDocument,
+      hasEditableDocument,
+      isImageDocument,
       handlePickAndInsertImage,
     ],
   );
@@ -276,12 +285,14 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       editorFontFamily: editorPresentation.fontFamily,
       locationId: previewModel.docRef?.location_id,
       docRelPath: previewModel.docRef?.rel_path,
+      blobDid: atProto.session?.did,
       onScrollToLine: syncPreviewLine,
     }),
     [
       previewModel.renderResult,
       previewModel.docRef?.location_id,
       previewModel.docRef?.rel_path,
+      atProto.session?.did,
       editorPresentation.theme,
       editorPresentation.markdownPreviewStyle,
       editorPresentation.fontFamily,
@@ -301,7 +312,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       },
       statusBar: { docMeta: activeDocMeta, stats: editorStats },
       saveStatus: editorModel.saveStatus,
-      hasActiveDocument: hasOpenDocument,
+      hasActiveDocument: hasEditableDocument,
       onSave: handleSave,
     }),
     [
@@ -309,7 +320,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       editorStats,
       editorModel.text,
       editorModel.saveStatus,
-      hasOpenDocument,
+      hasEditableDocument,
       handleEditorChange,
       handleSave,
       handleCursorMove,
@@ -345,6 +356,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
         onOpenSettings: openSettingsRoute,
       },
       welcome: welcomeProps,
+      activeDocRelPath: editorModel.docRef?.rel_path,
+      activeDocContentType: editorModel.contentType,
     }),
     [
       toolbarProps,
@@ -360,6 +373,8 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       closeDiagnostics,
       openSettingsRoute,
       welcomeProps,
+      editorModel.docRef?.rel_path,
+      editorModel.contentType,
     ],
   );
 

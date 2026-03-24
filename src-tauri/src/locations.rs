@@ -12,6 +12,31 @@ fn should_process_watcher_event(kind: &EventKind) -> bool {
     matches!(kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_))
 }
 
+pub(super) fn allow_location_scopes(app: &AppHandle, root_path: &Path, context: &str) {
+    match app.fs_scope().allow_directory(root_path, true) {
+        Ok(()) => {
+            log::debug!("{}: fs scope hydrated for {:?}", context, root_path);
+        }
+        Err(error) => {
+            log::warn!("{}: failed to hydrate fs scope for {:?}: {}", context, root_path, error);
+        }
+    }
+
+    match app.asset_protocol_scope().allow_directory(root_path, true) {
+        Ok(()) => {
+            log::debug!("{}: asset protocol scope hydrated for {:?}", context, root_path);
+        }
+        Err(error) => {
+            log::warn!(
+                "{}: failed to hydrate asset protocol scope for {:?}: {}",
+                context,
+                root_path,
+                error
+            );
+        }
+    }
+}
+
 pub(super) fn emit_doc_modified_event(app: &AppHandle, doc_id: DocId, mtime: chrono::DateTime<chrono::Utc>) {
     let event = BackendEvent::DocModifiedExternally { doc_id, new_mtime: mtime };
     if let Err(error) = app.emit("backend-event", event) {
@@ -367,9 +392,7 @@ pub(super) fn ensure_default_capture_location(app: &AppHandle, state: &AppState)
 
     match state.store.location_add(location_name, capture_root.clone()) {
         Ok(descriptor) => {
-            if let Err(error) = app.fs_scope().allow_directory(&capture_root, true) {
-                log::warn!("Failed to add auto-created capture location to fs scope: {}", error);
-            }
+            allow_location_scopes(app, &capture_root, "ensure_default_capture_location");
 
             if let Err(error) = state.store.reconcile_location_index(descriptor.id) {
                 log::warn!(
@@ -445,7 +468,11 @@ pub fn reconcile(app: &AppHandle) -> Result<(), AppError> {
             if let Err(e) = app.emit("backend-event", event) {
                 log::error!("Failed to emit location missing event: {}", e);
             }
+
+            continue;
         }
+
+        allow_location_scopes(app, &location.root_path, "reconcile");
     }
 
     match state.store.reconcile_indexes() {

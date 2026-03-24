@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
-use tauri_plugin_fs::FsExt;
 use writer_core::atproto::AtProtoState;
 use writer_core::scan_style_matches;
 use writer_core::{
@@ -79,9 +78,7 @@ pub async fn location_add_via_dialog(
                 Ok(descriptor) => {
                     log::info!("Location added successfully: id={:?}", descriptor.id);
 
-                    if let Err(e) = app.fs_scope().allow_directory(&path_buf, true) {
-                        log::warn!("Failed to add directory to fs scope: {}", e);
-                    }
+                    allow_location_scopes(&app, &path_buf, "location_add_via_dialog");
 
                     if let Err(error) = state.store.reconcile_location_index(descriptor.id) {
                         log::warn!("Initial index build failed for location {:?}: {}", descriptor.id, error);

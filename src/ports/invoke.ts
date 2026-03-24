@@ -358,7 +358,15 @@ function normalizeCommandValue(command: string, value: unknown): unknown {
       if (!isRecord(value)) {
         return value;
       }
-      return { ...value, meta: normalizeDocMeta(value.meta) };
+      return {
+        ...value,
+        meta: normalizeDocMeta(value.meta),
+        contentType: typeof value.contentType === "string"
+          ? value.contentType
+          : typeof value.content_type === "string"
+          ? value.content_type
+          : null,
+      };
     }
     case "doc_save": {
       if (!isRecord(value)) {

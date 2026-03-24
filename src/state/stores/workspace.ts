@@ -175,8 +175,14 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
       return { expandedDirectoriesByLocation: { ...state.expandedDirectoriesByLocation, [locationId]: nextPaths } };
     }),
   setLoadingDocuments: (value) => set({ isLoadingDocuments: value }),
-  setSidebarRefreshState: (locationId, reason: SidebarRefreshReason | null = null) =>
-    set({ refreshingLocationId: locationId, sidebarRefreshReason: locationId === undefined ? null : reason }),
+  setSidebarRefreshState: (locationId, reason: SidebarRefreshReason | null = null) => set((state) => {
+    const nextReason = locationId === undefined ? null : reason;
+    if (state.refreshingLocationId === locationId && state.sidebarRefreshReason === nextReason) {
+      return state;
+    }
+
+    return { refreshingLocationId: locationId, sidebarRefreshReason: nextReason };
+  }),
   setExternalDropTarget: (locationId, folderPath) =>
     set((state) => {
       if (locationId === undefined) {

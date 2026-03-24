@@ -28,7 +28,7 @@
       "showMenuOnLeftClick": true,
       "tooltip": "Writer"
     },
-    "security": { "csp": null }
+    "security": { "assetProtocol": { "enable": true, "scope": [] }, "csp": null }
   },
   "bundle": {
     "active": true,

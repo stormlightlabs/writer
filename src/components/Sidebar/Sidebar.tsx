@@ -150,17 +150,26 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
   const expandedLocationSet = useMemo(() => new Set(expandedLocationIds), [expandedLocationIds]);
 
   useEffect(() => {
-    for (const location of locations) {
-      if (!expandedLocationSet.has(location.id) || refreshingLocationId === location.id) {
-        continue;
+    // Refresh one stale expanded location at a time to avoid refresh-id churn loops.
+    if (refreshingLocationId !== undefined) {
+      return;
+    }
+
+    const staleLocation = locations.find((location) => {
+      if (!expandedLocationSet.has(location.id)) {
+        return false;
       }
 
       const hasDocuments = Object.prototype.hasOwnProperty.call(documentsByLocation, location.id);
       const hasDirectories = Object.prototype.hasOwnProperty.call(directoriesByLocation, location.id);
-      if (!hasDocuments || !hasDirectories) {
-        handleRefreshSidebar(location.id);
-      }
+      return !hasDocuments || !hasDirectories;
+    });
+
+    if (!staleLocation) {
+      return;
     }
+
+    handleRefreshSidebar(staleLocation.id);
   }, [
     directoriesByLocation,
     documentsByLocation,

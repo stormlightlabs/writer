@@ -117,6 +117,8 @@ impl From<LineEnding> for i32 {
 pub struct DocContent {
     pub text: String,
     pub meta: DocMeta,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
 }
 
 /// Options for listing documents

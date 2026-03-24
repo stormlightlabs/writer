@@ -18,6 +18,7 @@ const defaultProps = {
   editorFontFamily: "IBM Plex Mono" as const,
   locationId: 7,
   docRelPath: "doc.md",
+  blobDid: "did:plc:alice",
 };
 
 const normalize = (value: string) => {
@@ -37,7 +38,22 @@ const normalize = (value: string) => {
 describe("Preview asset resolution", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+        return await Promise.resolve(
+          { ok: true, arrayBuffer: async () => await Promise.resolve(bytes.buffer) } as unknown as Response,
+        );
+      }),
+    );
+
     vi.mocked(invoke).mockImplementation(async (command, payload) => {
+      if (command === "blob_download") {
+        const { cid } = payload as { cid: string };
+        return `images/${cid}.png`;
+      }
+
       if (command !== "asset_resolve") {
         return await Promise.resolve(null);
       }
@@ -45,7 +61,7 @@ describe("Preview asset resolution", () => {
       const { docRelPath, assetPath } = payload as { docRelPath: string; assetPath: string };
       const docDir = docRelPath.includes("/") ? docRelPath.split("/").slice(0, -1).join("/") : "";
 
-      if (assetPath === ".writer-assets/missing.png") {
+      if (assetPath === "images/missing.png") {
         throw new Error("missing");
       }
 
@@ -54,20 +70,33 @@ describe("Preview asset resolution", () => {
   });
 
   it("rewrites local image src values through the asset resolver", async () => {
-    render(
-      <Preview
-        {...defaultProps}
-        renderResult={makeRenderResult(`<img src=".writer-assets/abc123.png" alt="test" />`)} />,
-    );
+    render(<Preview {...defaultProps} renderResult={makeRenderResult(`<img src="images/abc123.png" alt="test" />`)} />);
 
     const img = screen.getByRole("img", { name: "test" });
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith("asset_resolve", {
         locationId: 7,
         docRelPath: "doc.md",
-        assetPath: ".writer-assets/abc123.png",
+        assetPath: "images/abc123.png",
       });
-      expect(img).toHaveAttribute("src", "asset://localhost/root/.writer-assets/abc123.png");
+      expect(img).toHaveAttribute("src", "asset://localhost/root/images/abc123.png");
+    });
+  });
+
+  it("renders extensionless local image refs via data URL fallback", async () => {
+    render(
+      <Preview {...defaultProps} renderResult={makeRenderResult(`<img src="bc0fb832de00b2f654" alt="hash" />`)} />,
+    );
+
+    const img = screen.getByRole("img", { name: "hash" });
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("asset_resolve", {
+        locationId: 7,
+        docRelPath: "doc.md",
+        assetPath: "bc0fb832de00b2f654",
+      });
+      expect(vi.mocked(fetch)).toHaveBeenCalled();
+      expect(img.getAttribute("src") ?? "").toMatch(/^data:image\/png;base64,/);
     });
   });
 
@@ -104,6 +133,43 @@ describe("Preview asset resolution", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("resolves at://blob image URLs when blob DID context is provided", async () => {
+    render(
+      <Preview {...defaultProps} renderResult={makeRenderResult(`<img src="at://blob/bafkrei123" alt="blob" />`)} />,
+    );
+
+    const img = screen.getByRole("img", { name: "blob" });
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("blob_download", {
+        locationId: 7,
+        did: "did:plc:alice",
+        cid: "bafkrei123",
+        targetDir: "images",
+      });
+      expect(invoke).toHaveBeenCalledWith("asset_resolve", {
+        locationId: 7,
+        docRelPath: "doc.md",
+        assetPath: "images/bafkrei123.png",
+      });
+      expect(img).toHaveAttribute("src", "asset://localhost/root/images/bafkrei123.png");
+    });
+  });
+
+  it("leaves at://blob image URLs unresolved when blob DID context is missing", async () => {
+    render(
+      <Preview
+        {...defaultProps}
+        blobDid={undefined}
+        renderResult={makeRenderResult(`<img src="at://blob/bafkrei999" alt="blob-missing" />`)} />,
+    );
+
+    const img = screen.getByRole("img", { name: "blob-missing" });
+    await waitFor(() => {
+      expect(img).toHaveAttribute("src", "at://blob/bafkrei999");
+    });
+    expect(invoke).not.toHaveBeenCalledWith("blob_download", expect.anything());
+  });
+
   it("opens resolved local file links with the system opener", async () => {
     const user = userEvent.setup();
     render(<Preview {...defaultProps} renderResult={makeRenderResult(`<a href="files/report.pdf">Open report</a>`)} />);
@@ -129,15 +195,13 @@ describe("Preview asset resolution", () => {
 
   it("leaves missing local images unresolved", async () => {
     render(
-      <Preview
-        {...defaultProps}
-        renderResult={makeRenderResult(`<img src=".writer-assets/missing.png" alt="missing" />`)} />,
+      <Preview {...defaultProps} renderResult={makeRenderResult(`<img src="images/missing.png" alt="missing" />`)} />,
     );
 
     const img = screen.getByRole("img", { name: "missing" });
     await waitFor(() => {
       expect(invoke).toHaveBeenCalled();
     });
-    expect(img).toHaveAttribute("src", ".writer-assets/missing.png");
+    expect(img).toHaveAttribute("src", "images/missing.png");
   });
 });

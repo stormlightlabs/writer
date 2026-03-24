@@ -53,7 +53,7 @@ describe("useEditorImageHandlers", () => {
     });
 
     it("writes PNG to temp file, calls importImage, and sets insertAt", async () => {
-      mockImportImage.mockResolvedValueOnce("abc123.png");
+      mockImportImage.mockResolvedValueOnce("images/abc123.png");
 
       const { result } = renderHook(() => useEditorImageHandlers(7, "photo.md"));
 
@@ -72,9 +72,9 @@ describe("useEditorImageHandlers", () => {
       expect(writtenPath).toMatch(/^\/tmp\/writer-paste-\d+\.png$/);
       expect(writtenBytes).toBeInstanceOf(Uint8Array);
 
-      expect(mockImportImage).toHaveBeenCalledWith(7, expect.stringMatching(/\.png$/), "");
+      expect(mockImportImage).toHaveBeenCalledWith(7, expect.stringMatching(/\.png$/), "images");
 
-      expect(result.current.insertAt).toStrictEqual({ text: "![image](abc123.png)", requestId: 1 });
+      expect(result.current.insertAt).toStrictEqual({ text: "![image](images/abc123.png)", requestId: 1 });
     });
 
     it("maps JPEG MIME type to .jpg extension", async () => {
@@ -166,7 +166,7 @@ describe("useEditorImageHandlers", () => {
 
     it("opens dialog with image filters and inserts markdown on success", async () => {
       vi.mocked(open).mockResolvedValueOnce("/Users/me/photo.png");
-      mockImportImage.mockResolvedValueOnce("hash.png");
+      mockImportImage.mockResolvedValueOnce("images/hash.png");
 
       const { result } = renderHook(() => useEditorImageHandlers(4, "drafts/doc.md"));
 
@@ -178,8 +178,8 @@ describe("useEditorImageHandlers", () => {
         multiple: false,
         filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }],
       });
-      expect(mockImportImage).toHaveBeenCalledWith(4, "/Users/me/photo.png", "drafts");
-      expect(result.current.insertAt).toStrictEqual({ text: "![image](hash.png)", requestId: 1 });
+      expect(mockImportImage).toHaveBeenCalledWith(4, "/Users/me/photo.png", "images");
+      expect(result.current.insertAt).toStrictEqual({ text: "![image](../images/hash.png)", requestId: 1 });
     });
 
     it("does not set insertAt when importImage returns false", async () => {
@@ -229,7 +229,7 @@ describe("useEditorImageHandlers", () => {
       document.body.append(editorEl);
       vi.spyOn(document, "elementFromPoint").mockReturnValue(editorEl);
 
-      mockImportImage.mockResolvedValueOnce("drop.png");
+      mockImportImage.mockResolvedValueOnce("images/drop.png");
 
       const { result } = renderHook(() => useEditorImageHandlers(2, "drafts/doc.md"));
 
@@ -239,8 +239,8 @@ describe("useEditorImageHandlers", () => {
         });
       });
 
-      expect(mockImportImage).toHaveBeenCalledWith(2, "/home/user/drop.png", "drafts");
-      expect(result.current.insertAt).toStrictEqual({ text: "![image](drop.png)", requestId: 1 });
+      expect(mockImportImage).toHaveBeenCalledWith(2, "/home/user/drop.png", "images");
+      expect(result.current.insertAt).toStrictEqual({ text: "![image](../images/drop.png)", requestId: 1 });
 
       editorEl.remove();
     });

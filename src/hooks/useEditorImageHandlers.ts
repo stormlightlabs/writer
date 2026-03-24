@@ -7,6 +7,7 @@ import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const SUPPORTED_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
+const IMAGE_IMPORT_DIR = "images";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
@@ -18,16 +19,36 @@ const MIME_TO_EXT: Record<string, string> = {
 
 export type EditorInsertAction = { text: string; requestId: number };
 
-function imageMarkdown(assetPath: string): string {
-  const filename = assetPath.split("/").pop() ?? assetPath;
-  return `![image](${filename})`;
+function normalizePathSegments(path: string): string[] {
+  return path.split("/").filter((segment) => segment !== "" && segment !== ".");
 }
 
-function targetDirFromRelPath(relPath: string | null): string {
-  if (!relPath) return "";
-  const parts = relPath.split("/");
-  parts.pop();
-  return parts.join("/");
+function toDocRelativeAssetPath(docRelPath: string | null, assetPath: string): string {
+  if (!docRelPath || !assetPath) {
+    return assetPath;
+  }
+
+  const docSegments = normalizePathSegments(docRelPath);
+  docSegments.pop();
+  const assetSegments = normalizePathSegments(assetPath);
+
+  let sharedPrefix = 0;
+  while (
+    sharedPrefix < docSegments.length
+    && sharedPrefix < assetSegments.length
+    && docSegments[sharedPrefix] === assetSegments[sharedPrefix]
+  ) {
+    sharedPrefix += 1;
+  }
+
+  const upSegments = new Array(docSegments.length - sharedPrefix).fill("..");
+  const downSegments = assetSegments.slice(sharedPrefix);
+  const relative = [...upSegments, ...downSegments].join("/");
+  return relative || assetPath;
+}
+
+function imageMarkdown(docRelPath: string | null, assetPath: string): string {
+  return `![image](${toDocRelativeAssetPath(docRelPath, assetPath)})`;
 }
 
 function isImagePath(filePath: string): boolean {
@@ -55,8 +76,8 @@ export function useEditorImageHandlers(
 
   const triggerInsert = useCallback((assetPath: string) => {
     requestIdRef.current += 1;
-    setInsertAt({ text: imageMarkdown(assetPath), requestId: requestIdRef.current });
-  }, []);
+    setInsertAt({ text: imageMarkdown(docRelPath, assetPath), requestId: requestIdRef.current });
+  }, [docRelPath]);
 
   const handleImageFilePaste = useCallback((file: File) => {
     if (!locationId) {
@@ -74,7 +95,7 @@ export function useEditorImageHandlers(
         const tempPath = `/tmp/writer-paste-${Date.now()}.${ext}`;
         const bytes = new Uint8Array(await file.arrayBuffer());
         await writeFile(tempPath, bytes);
-        const assetPath = await importImage(locationId, tempPath, targetDirFromRelPath(docRelPath));
+        const assetPath = await importImage(locationId, tempPath, IMAGE_IMPORT_DIR);
         if (assetPath) {
           triggerInsert(assetPath);
         }
@@ -96,7 +117,7 @@ export function useEditorImageHandlers(
         return;
       }
 
-      const assetPath = await importImage(locationId, selected, targetDirFromRelPath(docRelPath));
+      const assetPath = await importImage(locationId, selected, IMAGE_IMPORT_DIR);
       if (assetPath) {
         triggerInsert(assetPath);
       }
@@ -125,7 +146,7 @@ export function useEditorImageHandlers(
         return;
       }
 
-      const assetPath = await importImage(locationId, imagePaths[0], targetDirFromRelPath(docRelPath));
+      const assetPath = await importImage(locationId, imagePaths[0], IMAGE_IMPORT_DIR);
       if (assetPath) {
         triggerInsert(assetPath);
       }

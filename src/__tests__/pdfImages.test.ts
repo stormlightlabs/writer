@@ -18,16 +18,16 @@ describe("preloadPdfImages", () => {
         }
 
         switch (assetPath) {
-          case ".writer-assets/abc123.png":
-            return "/root/.writer-assets/abc123.png";
-          case ".writer-assets/img.png":
-            return "/root/.writer-assets/img.png";
-          case ".writer-assets/diagram.svg":
-            return "/root/.writer-assets/diagram.svg";
-          case "images/photo.png":
-            return "/root/drafts/images/photo.png";
-          case "images/list-img.jpg":
-            return "/root/drafts/images/list-img.jpg";
+          case "../images/abc123.png":
+            return "/root/images/abc123.png";
+          case "../images/img.png":
+            return "/root/images/img.png";
+          case "../images/diagram.svg":
+            return "/root/images/diagram.svg";
+          case "../images/photo.png":
+            return "/root/images/photo.png";
+          case "../images/list-img.jpg":
+            return "/root/images/list-img.jpg";
           default:
             return `/root/${assetPath}`;
         }
@@ -64,45 +64,45 @@ describe("preloadPdfImages", () => {
   });
 
   it("resolves a local image to a base64 data URL", async () => {
-    const nodes: MarkdownNode[] = [{ type: "image", src: ".writer-assets/abc123.png", alt: "test" }];
+    const nodes: MarkdownNode[] = [{ type: "image", src: "../images/abc123.png", alt: "test" }];
     const result = await preloadPdfImages(nodes, locationId, docRelPath);
-    expect(convertFileSrc).toHaveBeenCalledWith("/root/.writer-assets/abc123.png");
-    expect(result[".writer-assets/abc123.png"]).toMatch(/^data:image\/png;base64,/);
+    expect(convertFileSrc).toHaveBeenCalledWith("/root/images/abc123.png");
+    expect(result["../images/abc123.png"]).toMatch(/^data:image\/png;base64,/);
   });
 
-  it("supports non-.writer-assets local image paths", async () => {
-    const nodes: MarkdownNode[] = [{ type: "image", src: "images/photo.png", alt: "photo" }];
+  it("supports location-root image paths referenced from nested documents", async () => {
+    const nodes: MarkdownNode[] = [{ type: "image", src: "../images/photo.png", alt: "photo" }];
     const result = await preloadPdfImages(nodes, locationId, docRelPath);
-    expect(convertFileSrc).toHaveBeenCalledWith("/root/drafts/images/photo.png");
-    expect(result["images/photo.png"]).toMatch(/^data:image\/png;base64,/);
+    expect(convertFileSrc).toHaveBeenCalledWith("/root/images/photo.png");
+    expect(result["../images/photo.png"]).toMatch(/^data:image\/png;base64,/);
   });
 
   it("deduplicates repeated image references", async () => {
-    const nodes: MarkdownNode[] = [{ type: "image", src: ".writer-assets/img.png", alt: "first" }, {
+    const nodes: MarkdownNode[] = [{ type: "image", src: "../images/img.png", alt: "first" }, {
       type: "image",
-      src: ".writer-assets/img.png",
+      src: "../images/img.png",
       alt: "second",
     }];
     const result = await preloadPdfImages(nodes, locationId, docRelPath);
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
-    expect(result[".writer-assets/img.png"]).toBeDefined();
+    expect(result["../images/img.png"]).toBeDefined();
   });
 
   it("gracefully omits images that fail to resolve or fetch", async () => {
-    const nodes: MarkdownNode[] = [{ type: "image", src: ".writer-assets/missing.png", alt: "broken" }];
+    const nodes: MarkdownNode[] = [{ type: "image", src: "../images/missing.png", alt: "broken" }];
     const result = await preloadPdfImages(nodes, locationId, docRelPath);
-    expect(result[".writer-assets/missing.png"]).toBeUndefined();
+    expect(result["../images/missing.png"]).toBeUndefined();
   });
 
   it("converts SVG images via the backend command", async () => {
-    const nodes: MarkdownNode[] = [{ type: "image", src: ".writer-assets/diagram.svg", alt: "svg" }];
+    const nodes: MarkdownNode[] = [{ type: "image", src: "../images/diagram.svg", alt: "svg" }];
     const result = await preloadPdfImages(nodes, locationId, docRelPath);
     expect(vi.mocked(invoke)).toHaveBeenCalledWith("svg_to_png", {
       locationId,
       docRelPath,
-      assetPath: ".writer-assets/diagram.svg",
+      assetPath: "../images/diagram.svg",
     });
-    expect(result[".writer-assets/diagram.svg"]).toBe("data:image/png;base64,c3Zn");
+    expect(result["../images/diagram.svg"]).toBe("data:image/png;base64,c3Zn");
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 
@@ -110,9 +110,9 @@ describe("preloadPdfImages", () => {
     const nodes: MarkdownNode[] = [{
       type: "list",
       ordered: false,
-      items: [{ content: [{ type: "image", src: "images/list-img.jpg", alt: "in list" }] }],
+      items: [{ content: [{ type: "image", src: "../images/list-img.jpg", alt: "in list" }] }],
     }];
     const result = await preloadPdfImages(nodes, locationId, docRelPath);
-    expect(result["images/list-img.jpg"]).toMatch(/^data:image\/jpeg;base64,/);
+    expect(result["../images/list-img.jpg"]).toMatch(/^data:image\/jpeg;base64,/);
   });
 });

@@ -177,9 +177,13 @@ export function useSidebarActions() {
 
     runCmd(dirList(targetLocationId, (nextDirectories) => {
       const latestState = useWorkspaceStore.getState();
+      const hasCachedDirectories = Object.prototype.hasOwnProperty.call(
+        latestState.directoriesByLocation,
+        targetLocationId,
+      );
       const currentDirectories = latestState.directoriesByLocation[targetLocationId] ?? [];
 
-      if (!areDirectoriesEqual(currentDirectories, nextDirectories)) {
+      if (!hasCachedDirectories || !areDirectoriesEqual(currentDirectories, nextDirectories)) {
         setDirectoriesForLocation(targetLocationId, nextDirectories);
       }
     }, (error) => {
@@ -188,6 +192,10 @@ export function useSidebarActions() {
 
     runCmd(docList(targetLocationId, (nextDocuments) => {
       const latestState = useWorkspaceStore.getState();
+      const hasCachedDocuments = Object.prototype.hasOwnProperty.call(
+        latestState.documentsByLocation,
+        targetLocationId,
+      );
       const currentDocuments = latestState.documentsByLocation[targetLocationId] ?? [];
 
       if (nextDocuments.length === 0 && currentDocuments.length > 0 && attempt === 0) {
@@ -197,7 +205,7 @@ export function useSidebarActions() {
         return;
       }
 
-      if (!areDocumentsEqual(currentDocuments, nextDocuments)) {
+      if (!hasCachedDocuments || !areDocumentsEqual(currentDocuments, nextDocuments)) {
         setDocumentsForLocation(targetLocationId, nextDocuments);
       }
 

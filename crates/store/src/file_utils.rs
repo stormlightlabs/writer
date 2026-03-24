@@ -6,6 +6,7 @@ use super::text_utils;
 use writer_core::AppError;
 
 const INDEXABLE_EXTENSIONS: &[&str] = &["md", "markdown", "mdx", "txt"];
+const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
 
 pub fn is_indexable_text_path(path: &Path) -> bool {
     let extension = path
@@ -14,6 +15,32 @@ pub fn is_indexable_text_path(path: &Path) -> bool {
         .unwrap_or("")
         .to_lowercase();
     INDEXABLE_EXTENSIONS.contains(&extension.as_str())
+}
+
+pub fn is_supported_image_path(path: &Path) -> bool {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    IMAGE_EXTENSIONS.contains(&extension.as_str())
+}
+
+pub fn image_mime_type_for_path(path: &Path) -> Option<&'static str> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    match extension.as_str() {
+        "png" => Some("image/png"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "gif" => Some("image/gif"),
+        "webp" => Some("image/webp"),
+        "svg" => Some("image/svg+xml"),
+        _ => None,
+    }
 }
 
 pub fn read_file_text_with_detection(path: &Path) -> Result<String, AppError> {

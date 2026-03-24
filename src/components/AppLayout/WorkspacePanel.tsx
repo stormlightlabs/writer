@@ -1,6 +1,7 @@
 import { WelcomeScreen } from "$components/AppLayout/WelcomeScreen";
 import { DocumentTabs } from "$components/DocumentTabs";
 import { type EditorProps, EditorWithContainer } from "$components/Editor";
+import { ImageDocumentView } from "$components/ImageDocumentView";
 import { Preview, type PreviewProps } from "$components/Preview";
 import { Sidebar } from "$components/Sidebar";
 import { StatusBar, type StatusBarProps } from "$components/StatusBar";
@@ -20,6 +21,7 @@ import {
   useWorkspacePanelTopBarsCollapsed,
 } from "$state/selectors";
 import { PanelMode } from "$types";
+import { isImageContentType, isImagePath } from "$utils/documents";
 import { cn } from "$utils/tw";
 import { AnimatePresence, EasingDefinition, motion } from "motion/react";
 import { type PointerEventHandler, useCallback, useEffect, useMemo } from "react";
@@ -45,6 +47,7 @@ type PK =
   | "editorFontFamily"
   | "locationId"
   | "docRelPath"
+  | "blobDid"
   | "onScrollToLine";
 export type WorkspacePreviewProps = Pick<PreviewProps, PK>;
 
@@ -88,6 +91,8 @@ export type WorkspacePanelProps = {
   statusBar: StatusBarProps;
   diagnostics: WorkspaceDiagnosticsProps;
   welcome?: WorkspaceWelcomeProps;
+  activeDocRelPath?: string;
+  activeDocContentType?: string | null;
 };
 
 const SPLIT_PANEL_MIN_WIDTH = 280;
@@ -158,6 +163,8 @@ type MainPanelProps = {
   splitEditorWidth: number;
   isSplitResizing: boolean;
   onSplitResizeStart: PointerEventHandler<HTMLDivElement>;
+  activeDocRelPath?: string;
+  activeDocContentType?: string | null;
 };
 
 function getPanelMode(isSplitView: boolean, isPreviewVisible: boolean): PanelMode {
@@ -186,8 +193,15 @@ function MainPanel(
     splitEditorWidth,
     isSplitResizing,
     onSplitResizeStart,
+    activeDocRelPath,
+    activeDocContentType,
   }: MainPanelProps,
 ) {
+  const isImageDocument = useMemo(
+    () => isImageContentType(activeDocContentType) || (activeDocRelPath ? isImagePath(activeDocRelPath) : false),
+    [activeDocContentType, activeDocRelPath],
+  );
+
   const container = useMemo(() => {
     if (panelMode === "split") {
       return {
@@ -197,6 +211,10 @@ function MainPanel(
     }
     return { className: "flex min-h-0 min-w-0 flex-col w-full" };
   }, [panelMode, splitEditorWidth]);
+
+  if (isImageDocument) {
+    return <ImageDocumentView locationId={preview.locationId} relPath={activeDocRelPath} className="w-full" />;
+  }
 
   if (welcome?.isVisible) {
     return (
@@ -275,8 +293,18 @@ function Section({ children, initial, animate, exit, transition, className, styl
 }
 
 export function WorkspacePanel(
-  { toolbar, onOpenImportSheet, onOpenStandardSiteImportSheet, editor, preview, statusBar, diagnostics, welcome }:
-    WorkspacePanelProps,
+  {
+    toolbar,
+    onOpenImportSheet,
+    onOpenStandardSiteImportSheet,
+    editor,
+    preview,
+    statusBar,
+    diagnostics,
+    welcome,
+    activeDocRelPath,
+    activeDocContentType,
+  }: WorkspacePanelProps,
 ) {
   const skipAnimation = useSkipAnimation();
   const { viewportWidth } = useViewportTier(FALLBACK_VIEWPORT_WIDTH);
@@ -435,7 +463,9 @@ export function WorkspacePanel(
           onSelectPreviewMode={handleSelectPreviewMode}
           splitEditorWidth={splitEditorWidth}
           isSplitResizing={isSplitResizing}
-          onSplitResizeStart={handleSplitResizeStart} />
+          onSplitResizeStart={handleSplitResizeStart}
+          activeDocRelPath={activeDocRelPath}
+          activeDocContentType={activeDocContentType} />
 
         <Section isVisible={effectiveStatusBarVisible} {...statusBarMotionProps} className="overflow-hidden">
           <StatusBar {...statusBar} />

@@ -30,6 +30,8 @@ type ImportState = {
   isSaving: boolean;
 };
 
+const IMAGE_IMPORT_DIR = "images";
+
 function getDefaultLocationId(locations: LocationDescriptor[], selectedLocationId?: number): number | null {
   if (selectedLocationId && locations.some((location) => location.id === selectedLocationId)) {
     return selectedLocationId;
@@ -61,10 +63,28 @@ function extractBlobCids(markdown: string): string[] {
   return Array.from(cids);
 }
 
-function deriveTargetDirFromRelPath(relPath: string): string {
-  const normalized = normalizeImportPath(relPath);
-  const lastSlashIndex = normalized.lastIndexOf("/");
-  return lastSlashIndex === -1 ? "" : normalized.slice(0, lastSlashIndex);
+function splitNormalizedSegments(value: string): string[] {
+  return normalizeImportPath(value).split("/").filter((segment) => segment !== "" && segment !== ".");
+}
+
+function toDocRelativePath(docRelPath: string, assetRelPath: string): string {
+  const docSegments = splitNormalizedSegments(docRelPath);
+  docSegments.pop();
+  const assetSegments = splitNormalizedSegments(assetRelPath);
+
+  let sharedPrefix = 0;
+  while (
+    sharedPrefix < docSegments.length
+    && sharedPrefix < assetSegments.length
+    && docSegments[sharedPrefix] === assetSegments[sharedPrefix]
+  ) {
+    sharedPrefix += 1;
+  }
+
+  const upSegments = new Array(docSegments.length - sharedPrefix).fill("..");
+  const downSegments = assetSegments.slice(sharedPrefix);
+  const relative = [...upSegments, ...downSegments].join("/");
+  return relative || assetRelPath;
 }
 
 function didFromAtUri(uri: string): string | null {
@@ -297,16 +317,21 @@ export function useStandardSiteController(
         return;
       }
 
-      const targetDir = deriveTargetDirFromRelPath(relPath);
       const cidToLocalPath = new Map<string, string>();
 
       for (const cid of blobCids) {
         const localPath = await new Promise<string | null>((resolve) => {
-          void runCmd(blobDownload(destinationLocationId, authorDid, cid, targetDir, (downloadedPath) => {
+          void runCmd(blobDownload(destinationLocationId, authorDid, cid, IMAGE_IMPORT_DIR, (downloadedPath) => {
             resolve(downloadedPath);
           }, (error) => {
             logger.error(
-              f("Failed to download post image blob", { destinationLocationId, authorDid, cid, targetDir, error }),
+              f("Failed to download post image blob", {
+                destinationLocationId,
+                authorDid,
+                cid,
+                targetDir: IMAGE_IMPORT_DIR,
+                error,
+              }),
             );
             resolve(null);
           }));
@@ -331,7 +356,8 @@ export function useStandardSiteController(
       }
 
       for (const [cid, localPath] of cidToLocalPath) {
-        markdownToSave = markdownToSave.replaceAll(`at://blob/${cid}`, localPath);
+        const docRelativePath = toDocRelativePath(relPath, localPath);
+        markdownToSave = markdownToSave.replaceAll(`at://blob/${cid}`, docRelativePath);
       }
     }
 

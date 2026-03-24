@@ -30,6 +30,7 @@ const GLOBAL_CAPTURE_SETTINGS_KEY: &str = "global_capture";
 const LAST_OPEN_DOC_SETTINGS_KEY: &str = "last_open_doc";
 const SESSION_STATE_SETTINGS_KEY: &str = "session_state";
 const README_TEMPLATE: &str = include_str!("../assets/README_TEMPLATE.md");
+const DEFAULT_IMAGE_IMPORT_DIR: &str = "images";
 
 pub fn get_markdown_help() -> &'static str {
     README_TEMPLATE
@@ -1149,15 +1150,47 @@ impl Store {
             return Err(AppError::not_found(format!("Document not found: {:?}", full_path)));
         }
 
-        let mut file = File::open(&full_path).map_err(|e| AppError::io(format!("Failed to open file: {}", e)))?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)
-            .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
+        let is_image = file_utils::is_supported_image_path(&doc_id.rel_path);
 
-        let (text, encoding) = text_utils::detect_and_decode(&bytes)?;
+        let (text, encoding, line_ending, title, word_count, content_hash, content_type): (
+            String,
+            Encoding,
+            LineEnding,
+            Option<String>,
+            Option<usize>,
+            Option<String>,
+            Option<String>,
+        ) = if is_image {
+            let title = file_utils::fallback_title_from_path(&doc_id.rel_path).unwrap_or_else(|| {
+                doc_id
+                    .rel_path
+                    .file_stem()
+                    .and_then(|value| value.to_str())
+                    .unwrap_or("image")
+                    .to_string()
+            });
+            (
+                String::new(),
+                Encoding::default(),
+                LineEnding::default(),
+                Some(title),
+                None,
+                None,
+                file_utils::image_mime_type_for_path(&doc_id.rel_path).map(|value| value.to_string()),
+            )
+        } else {
+            let mut file = File::open(&full_path).map_err(|e| AppError::io(format!("Failed to open file: {}", e)))?;
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes)
+                .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
 
-        let line_ending = LineEnding::detect(&text);
-        let (title, word_count) = Self::derive_text_metadata(&text, &doc_id.rel_path);
+            let (text, encoding) = text_utils::detect_and_decode(&bytes)?;
+            let line_ending = LineEnding::detect(&text);
+            let (title, word_count) = Self::derive_text_metadata(&text, &doc_id.rel_path);
+            let content_hash = Some(text_utils::hash_text(&text));
+
+            (text, encoding, line_ending, title, Some(word_count), content_hash, None)
+        };
 
         let metadata =
             std::fs::metadata(&full_path).map_err(|e| AppError::io(format!("Failed to read metadata: {}", e)))?;
@@ -1180,17 +1213,17 @@ impl Store {
             size_bytes: metadata.len(),
             mtime,
             created_at,
-            content_hash: Some(text_utils::hash_text(&text)),
+            content_hash,
             encoding,
             line_ending,
             is_conflict,
             title,
-            word_count: Some(word_count),
+            word_count,
         };
 
         log::info!("Opened document: {:?}", doc_id.rel_path);
 
-        Ok(DocContent { text, meta: doc_meta })
+        Ok(DocContent { text, meta: doc_meta, content_type })
     }
 
     /// Saves a document with atomic write semantics
@@ -2244,8 +2277,9 @@ impl Store {
     /// the file to `<target_dir>/<hash>.<ext>`. Dedup within `target_dir`: if
     /// the hash file already exists there the existing path is returned.
     ///
-    /// `target_dir` is relative to the location root (use `""` for the root).
-    /// Returns the relative path from the location root, e.g. `abc123.png` or
+    /// `target_dir` is relative to the location root. Passing `""` stores
+    /// images under `images/`.
+    /// Returns the relative path from the location root, e.g. `images/abc123.png` or
     /// `drafts/abc123.png`.
     pub fn image_import(
         &self, location_id: LocationId, source_path: &Path, target_dir: &str,
@@ -2308,22 +2342,22 @@ impl Store {
         let hash_hex = hash.to_hex();
         let dest_filename = format!("{}.{}", hash_hex, ext);
 
-        let dest_dir = if target_dir.is_empty() {
-            location.root_path.clone()
+        let normalized_target_dir = if target_dir.trim().is_empty() {
+            DEFAULT_IMAGE_IMPORT_DIR.to_string()
         } else {
-            let normalized = normalize_relative_path(Path::new(target_dir))?;
-            location.root_path.join(&normalized)
+            normalize_relative_path(Path::new(target_dir))?
+                .to_string_lossy()
+                .to_string()
         };
+
+        let normalized_target_path = normalize_relative_path(Path::new(&normalized_target_dir))?;
+        let dest_dir = location.root_path.join(&normalized_target_path);
 
         std::fs::create_dir_all(&dest_dir)
             .map_err(|e| AppError::io(format!("Failed to create target directory: {}", e)))?;
 
         let dest_path = dest_dir.join(&dest_filename);
-        let rel = if target_dir.is_empty() {
-            dest_filename.clone()
-        } else {
-            format!("{}/{}", target_dir, dest_filename)
-        };
+        let rel = format!("{}/{}", normalized_target_dir, dest_filename);
 
         if dest_path.exists() {
             log::debug!("image_import dedup hit: {}", rel);
@@ -3409,7 +3443,7 @@ mod tests {
         let src = write_test_image(tmp.path(), "photo.png", b"\x89PNG\r\n\x1a\nfake");
         let rel = store.image_import(location_id, &src, "").unwrap();
 
-        assert!(!rel.contains('/'), "root import should be a bare filename");
+        assert!(rel.starts_with("images/"), "empty target dir should default to images/");
         assert!(rel.ends_with(".png"));
 
         let full = location_dir.path().join(&rel);
@@ -3440,7 +3474,7 @@ mod tests {
 
         assert_eq!(rel1, rel2, "same content should produce same path");
 
-        let count = std::fs::read_dir(location_dir.path())
+        let count = std::fs::read_dir(location_dir.path().join("images"))
             .unwrap()
             .filter(|e| e.as_ref().map(|e| e.path().is_file()).unwrap_or(false))
             .count();

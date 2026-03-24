@@ -46,7 +46,7 @@ export type DocMeta = {
   word_count: number;
 };
 
-export type DocContent = { text: string; meta: DocMeta };
+export type DocContent = { text: string; meta: DocMeta; contentType?: string | null };
 
 export type LocationDescriptor = { id: LocationId; name: string; root_path: string; added_at: string };
 export type SidebarTreeState = {
@@ -177,7 +177,7 @@ export type CaptureSubmitInput = {
   openMainAfterSave?: boolean;
 };
 
-/** Metadata for a locally-stored image asset in `.writer-assets/`. */
+/** Metadata for a locally-stored image asset. */
 export type ImageAsset = { filename: string; sizeBytes: number; extension: string };
 
 export type Maybe<T> = T | null | undefined;

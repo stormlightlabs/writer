@@ -1,6 +1,7 @@
 import type { Cmd, SaveResult } from "$ports";
 import { docOpen, docSave, none } from "$ports";
 import type { AppError, DocContent, DocRef, SaveStatus } from "$types";
+import { isImageContentType } from "$utils/documents";
 import { useCallback, useMemo } from "react";
 import { useCmdLoop } from "./useCmdLoop";
 
@@ -12,6 +13,7 @@ export type EditorModel = {
   cursorColumn: number;
   selectionFrom: number | null;
   selectionTo: number | null;
+  contentType: string | null;
   isLoading: boolean;
   error: AppError | null;
 };
@@ -24,6 +26,7 @@ export const initialEditorModel: EditorModel = {
   cursorColumn: 0,
   selectionFrom: null,
   selectionTo: null,
+  contentType: null,
   isLoading: false,
   error: null,
 };
@@ -59,7 +62,7 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
     }
 
     case "SaveRequested": {
-      if (!model.docRef || model.saveStatus === "Saving") {
+      if (!model.docRef || model.saveStatus === "Saving" || isImageContentType(model.contentType)) {
         return [model, none];
       }
       return [
@@ -79,7 +82,7 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
     }
 
     case "DraftDocInitialized": {
-      return [{ ...model, docRef: msg.docRef, saveStatus: "Dirty", error: null }, none];
+      return [{ ...model, docRef: msg.docRef, contentType: null, saveStatus: "Dirty", error: null }, none];
     }
 
     case "NewDraftCreated": {
@@ -92,6 +95,7 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
         cursorColumn: 0,
         selectionFrom: null,
         selectionTo: null,
+        contentType: null,
         isLoading: false,
         error: null,
       }, none];
@@ -114,6 +118,7 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
         ...model,
         docRef: { location_id: msg.doc.meta.location_id, rel_path: msg.doc.meta.rel_path },
         text: msg.doc.text,
+        contentType: msg.doc.contentType ?? null,
         saveStatus: "Saved",
         isLoading: false,
         error: null,
@@ -131,6 +136,7 @@ export function updateEditor(model: EditorModel, msg: EditorMsg): [EditorModel, 
           cursorColumn: 0,
           selectionFrom: null,
           selectionTo: null,
+          contentType: null,
           isLoading: false,
           error: null,
         }, none];
