@@ -3,6 +3,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Editor } from "../components/Editor";
 
+const makeClipboardData = (items: { type: string; file?: File }[]) => ({
+  items: items.map(({ type, file }) => ({ type, getAsFile: () => file ?? null })),
+});
+
 describe(Editor, () => {
   const mockOnChange = vi.fn();
 
@@ -291,10 +295,6 @@ describe(Editor, () => {
   });
 
   describe("image paste handling", () => {
-    function makeClipboardData(items: { type: string; file?: File }[]) {
-      return { items: items.map(({ type, file }) => ({ type, getAsFile: () => file ?? null })) };
-    }
-
     it("calls onImageFilePaste with image File when image is pasted", () => {
       const onImageFilePaste = vi.fn();
       render(<Editor imageHandlers={{ onImageFilePaste }} />);

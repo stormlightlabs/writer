@@ -5,6 +5,7 @@ const EDITOR_FONT_OPTIONS: Array<{ label: string; value: EditorFontFamily }> = [
   { label: "IBM Plex Mono", value: "IBM Plex Mono" },
   { label: "IBM Plex Sans Variable", value: "IBM Plex Sans Variable" },
   { label: "IBM Plex Serif", value: "IBM Plex Serif" },
+  { label: "Maple Mono (CJK)", value: "Maple Mono" },
   { label: "Monaspace Argon", value: "Monaspace Argon" },
   { label: "Monaspace Krypton", value: "Monaspace Krypton" },
   { label: "Monaspace Neon", value: "Monaspace Neon" },

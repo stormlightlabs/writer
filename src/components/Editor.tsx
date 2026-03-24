@@ -97,6 +97,7 @@ const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
   "IBM Plex Sans Variable":
     "\"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
   "IBM Plex Serif": "\"Writer IBM Plex Serif\", \"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
+  "Maple Mono": "\"Writer Maple Mono\", \"Maple Mono\", \"SF Mono\", Monaco, monospace",
   "Monaspace Argon": "\"Writer Monaspace Argon\", \"Writer IBM Plex Mono\", monospace",
   "Monaspace Krypton": "\"Writer Monaspace Krypton\", \"Writer IBM Plex Mono\", monospace",
   "Monaspace Neon": "\"Writer Monaspace Neon\", \"Writer IBM Plex Mono\", monospace",

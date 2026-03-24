@@ -5,3 +5,5 @@ onlyBuiltDependencies:
   - dprint
   - esbuild
   - fsevents
+  - sharp
+  - workerd

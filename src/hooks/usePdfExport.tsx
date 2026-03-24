@@ -1,7 +1,7 @@
 import { MarkdownPdfDocument } from "$components/export/MarkdownPdfDocument";
 import { PDFError } from "$pdf/errors";
-import { describePdfFont, ensurePdfFontRegistered } from "$pdf/fonts";
-import type { FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { describePdfFont, ensurePdfFontRegistered, resolvePdfFont } from "$pdf/fonts";
+import type { FontName, FontStrategy, PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { renderMarkdownForPdf, runCmd } from "$ports";
 import { usePdfDialogUiState, usePdfExportActions } from "$state/selectors";
 import type { EditorFontFamily, Tab } from "$types";
@@ -193,7 +193,8 @@ export function usePdfExportUI({ activeTab, text, editorFontFamily, exportPdf }:
         void runCmd(renderMarkdownForPdf(docRef.location_id, docRef.rel_path, text, void 0, resolve, reject));
       });
 
-      const didExport = await exportPdf(renderResult, options, editorFontFamily);
+      const resolvedFont = resolvePdfFont(editorFontFamily as FontName, text);
+      const didExport = await exportPdf(renderResult, options, resolvedFont);
       if (didExport) {
         setPdfExportDialogOpen(false);
         resetPdfExport();

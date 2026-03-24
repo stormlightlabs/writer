@@ -7,7 +7,8 @@ import { useDocxExportUI } from "$hooks/useDocxExport";
 import { useTextExportUI } from "$hooks/useTextExport";
 import { useViewportTier } from "$hooks/useViewportTier";
 import { Tangled } from "$icons";
-import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
+import { resolvePdfFont } from "$pdf/fonts";
+import type { FontName, PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { runCmd, stringCreate } from "$ports";
 import {
   useAtProtoUiState,
@@ -29,7 +30,7 @@ import * as logger from "@tauri-apps/plugin-log";
 import { type ChangeEventHandler, type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ExportDialogFooter, PdfExportDialogFooter } from "./ExportFooter";
 import { ExportDialogHeader } from "./ExportHeader";
-import { PdfExportDialogOptions } from "./ExportOptions";
+import { PdfCjkWarning, PdfExportDialogOptions } from "./ExportOptions";
 
 export type ExportDialogProps = {
   onExport: (options: PdfExportOptions) => Promise<void>;
@@ -179,13 +180,16 @@ type PdfExportContentProps = {
   previewResult: PdfRenderResult | null;
   options: PdfExportOptions;
   editorFontFamily: EditorFontFamily;
+  documentText: string;
   handleExportClick: () => Promise<void>;
 };
 
 function PdfExportContent(
-  { onCancel, showPreview, previewResult, options, editorFontFamily, handleExportClick }: PdfExportContentProps,
+  { onCancel, showPreview, previewResult, options, editorFontFamily, documentText, handleExportClick }:
+    PdfExportContentProps,
 ) {
   const { pdfExportError: error } = usePdfExportState();
+  const previewFont = resolvePdfFont(editorFontFamily as FontName, documentText);
 
   return (
     <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -193,12 +197,13 @@ function PdfExportContent(
         title="PDF Export"
         description="Tune pagination and typography, then export a polished, print-ready PDF." />
       <ExportError error={error} />
+      <PdfCjkWarning documentText={documentText} editorFontFamily={editorFontFamily} />
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
           showPreview ? "grid grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-3" : "flex"
         }`}>
         {showPreview
-          ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={editorFontFamily} />
+          ? <PreviewPane previewResult={previewResult} options={options} editorFontFamily={previewFont} />
           : null}
         <OptionsPane isFullWidth={!showPreview} />
       </div>
@@ -572,11 +577,12 @@ export function ExportDialog({ onExport, previewResult, editorFontFamily, docume
     resetDocxExport();
   }, [resetPdfExport, resetTextExport, resetDocxExport]);
 
-  const pdfExportProps = useMemo(() => ({ showPreview, previewResult, options, editorFontFamily }), [
+  const pdfExportProps = useMemo(() => ({ showPreview, previewResult, options, editorFontFamily, documentText }), [
     showPreview,
     previewResult,
     options,
     editorFontFamily,
+    documentText,
   ]);
 
   return (

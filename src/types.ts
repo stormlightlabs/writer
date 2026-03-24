@@ -8,6 +8,7 @@ export type EditorFontFamily =
   | "IBM Plex Mono"
   | "IBM Plex Sans Variable"
   | "IBM Plex Serif"
+  | "Maple Mono"
   | "Monaspace Argon"
   | "Monaspace Krypton"
   | "Monaspace Neon"

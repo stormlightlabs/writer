@@ -27,6 +27,9 @@ describe("useEditorImageHandlers", () => {
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       expect(writeFile).not.toHaveBeenCalled();
@@ -40,6 +43,9 @@ describe("useEditorImageHandlers", () => {
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       expect(writeFile).not.toHaveBeenCalled();
@@ -56,7 +62,9 @@ describe("useEditorImageHandlers", () => {
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
-        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       expect(writeFile).toHaveBeenCalledOnce();
@@ -78,7 +86,9 @@ describe("useEditorImageHandlers", () => {
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
-        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       const [writtenPath] = vi.mocked(writeFile).mock.calls[0];
@@ -94,7 +104,9 @@ describe("useEditorImageHandlers", () => {
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
-        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       expect(result.current.insertAt).toBeNull();
@@ -111,14 +123,18 @@ describe("useEditorImageHandlers", () => {
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
-        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       expect(result.current.insertAt?.requestId).toBe(1);
 
       await act(async () => {
         result.current.handleImageFilePaste(file);
-        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((r) => {
+          setTimeout(r, 0);
+        });
       });
 
       expect(result.current.insertAt?.requestId).toBe(2);
@@ -211,8 +227,8 @@ describe("useEditorImageHandlers", () => {
       } as never);
 
       const editorEl = document.createElement("div");
-      editorEl.setAttribute("data-testid", "editor-container");
-      document.body.appendChild(editorEl);
+      editorEl.dataset.testid = "editor-container";
+      document.body.append(editorEl);
       vi.spyOn(document, "elementFromPoint").mockReturnValue(editorEl);
 
       mockImportImage.mockResolvedValueOnce(".writer-assets/drop.png");
@@ -228,7 +244,7 @@ describe("useEditorImageHandlers", () => {
       expect(mockImportImage).toHaveBeenCalledWith(2, "/home/user/drop.png");
       expect(result.current.insertAt).toStrictEqual({ text: "![image](.writer-assets/drop.png)", requestId: 1 });
 
-      document.body.removeChild(editorEl);
+      editorEl.remove();
     });
 
     it("skips non-image file paths in drop", async () => {
@@ -241,8 +257,8 @@ describe("useEditorImageHandlers", () => {
       } as never);
 
       const editorEl = document.createElement("div");
-      editorEl.setAttribute("data-testid", "editor-container");
-      document.body.appendChild(editorEl);
+      editorEl.dataset.testid = "editor-container";
+      document.body.append(editorEl);
       vi.spyOn(document, "elementFromPoint").mockReturnValue(editorEl);
 
       renderHook(() => useEditorImageHandlers(1));
@@ -255,7 +271,7 @@ describe("useEditorImageHandlers", () => {
 
       expect(mockImportImage).not.toHaveBeenCalled();
 
-      document.body.removeChild(editorEl);
+      editorEl.remove();
     });
 
     it("ignores non-drop event types", async () => {

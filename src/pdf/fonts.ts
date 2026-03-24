@@ -46,6 +46,15 @@ const FONT_PATHS: Record<FontName, FontConfig> = {
       { file: "ibm-plex-serif-700-italic.ttf", fontWeight: "bold", fontStyle: "italic" },
     ],
   },
+  "Maple Mono": {
+    family: "MapleMono",
+    files: [
+      { file: "maple-mono-400-normal.ttf", fontWeight: "normal", fontStyle: "normal" },
+      { file: "maple-mono-400-italic.ttf", fontWeight: "normal", fontStyle: "italic" },
+      { file: "maple-mono-700-normal.ttf", fontWeight: "bold", fontStyle: "normal" },
+      { file: "maple-mono-700-italic.ttf", fontWeight: "bold", fontStyle: "italic" },
+    ],
+  },
   "Monaspace Argon": {
     family: "MonaspaceArgon",
     files: [
@@ -101,11 +110,43 @@ const BUILTIN_FONT_FAMILY_MAP: Record<FontName, string> = {
   "IBM Plex Mono": "Courier",
   "IBM Plex Sans Variable": "Helvetica",
   "IBM Plex Serif": "Times-Roman",
+  "Maple Mono": "Courier",
   "Monaspace Argon": "Courier",
   "Monaspace Krypton": "Courier",
   "Monaspace Neon": "Courier",
   "Monaspace Radon": "Courier",
   "Monaspace Xenon": "Courier",
+};
+
+const CJK_RANGE = /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/;
+
+/** Returns true if the text contains any CJK (Chinese, Japanese, or Korean) characters. */
+export const hasCjkContent = (text: string): boolean => CJK_RANGE.test(text);
+
+/**
+ * Latin-only fonts that have no CJK glyph coverage.
+ * When CJK content is detected, the PDF renderer will substitute Maple Mono.
+ */
+export const LATIN_ONLY_FONT_NAMES: ReadonlySet<FontName> = new Set([
+  "IBM Plex Mono",
+  "IBM Plex Sans Variable",
+  "IBM Plex Serif",
+  "Monaspace Argon",
+  "Monaspace Krypton",
+  "Monaspace Neon",
+  "Monaspace Radon",
+  "Monaspace Xenon",
+]);
+
+/**
+ * Returns the PDF font to use, auto-switching to Maple Mono when the chosen
+ * font has no CJK coverage but the content contains CJK characters.
+ */
+export const resolvePdfFont = (fontName: FontName, text: string): FontName => {
+  if (LATIN_ONLY_FONT_NAMES.has(fontName) && hasCjkContent(text)) {
+    return "Maple Mono";
+  }
+  return fontName;
 };
 
 const getBuiltinFamily = (fontName: FontName): string => BUILTIN_FONT_FAMILY_MAP[fontName] ?? "Helvetica";

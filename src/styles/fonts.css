@@ -1,6 +1,12 @@
 @import "@fontsource-variable/space-grotesk";
 @import "@fontsource-variable/libre-franklin";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
+@import "@fontsource/noto-sans-sc/chinese-simplified-700.css";
+@import "@fontsource/noto-sans-jp/japanese-400.css";
+@import "@fontsource/noto-sans-jp/japanese-700.css";
+@import "@fontsource/noto-sans-kr/korean-400.css";
+@import "@fontsource/noto-sans-kr/korean-700.css";
 
 @font-face {
     font-family: "Writer IBM Plex Mono";
@@ -253,6 +259,38 @@
 @font-face {
     font-family: "Writer Monaspace Xenon";
     src: url("/fonts/monaspace-xenon-700-italic.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Maple Mono";
+    src: url("/fonts/maple-mono-400-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Maple Mono";
+    src: url("/fonts/maple-mono-400-italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Maple Mono";
+    src: url("/fonts/maple-mono-700-normal.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Maple Mono";
+    src: url("/fonts/maple-mono-700-italic.ttf") format("truetype");
     font-style: italic;
     font-weight: 700;
     font-display: swap;

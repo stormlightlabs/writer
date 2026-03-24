@@ -119,7 +119,7 @@ updated: 2026-03-21
   - Render `<Image src={resolvedDataUrl} />` with `maxWidth: 100%`, preserve aspect ratio
 - [ ] Update `usePdfExport.tsx` to preload images before render
   - Scan PdfNodes for Image variants, resolve all paths, then render
-- [ ] Handle SVG gracefully — skip or render placeholder if `@react-pdf/renderer` doesn't support it
+- [ ] Handle SVG gracefully —> convert to PNG on backend, then embed and render
 
 ## Test/QA Plan
 
