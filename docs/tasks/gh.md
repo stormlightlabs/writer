@@ -1,10 +1,27 @@
 ---
 title: "GitHub Gist Integration"
-last_updated: 2026-03-20
+last_updated: 2026-03-24
 ---
 
 Import public gists, read personal/secret gists, and publish documents as gists.
 Full spec in [docs/integration/gh.md](../integration/gh.md).
+
+## Status (2026-03-24)
+
+- Part 1 is implemented end-to-end.
+- Part 2 and Part 3 are not implemented yet.
+
+### Implemented now
+
+1. **Backend gist service** in `writer-core` using `octocrab`.
+2. **Tauri commands** `gist_list_public` and `gist_get` wired and registered.
+3. **Frontend import flow parity** in the shared AtProto import sheet:
+	- Tangled/GitHub mode switch
+	- username browsing for public gists
+	- gist list + detail fetch for preview/import
+	- destination picker + path + `doc_exists`/`doc_save` import flow
+4. **Sidebar UX cleanup**: replaced three separate import buttons with one `Import` menu button that lists Tangled/GitHub/Standard.Site entries with icons.
+5. **Tests and checks**: frontend lint/type/tests and Rust checks pass for the implemented scope.
 
 ## Part 1 — Public gist browsing
 

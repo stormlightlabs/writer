@@ -43,6 +43,17 @@ pub struct StyleCheckPattern {
     pub replacement: Option<String>,
 }
 
+/// Helper tuple for managing file content and associated metadata during document operations
+struct FileContents(
+    String,
+    Encoding,
+    LineEnding,
+    Option<String>,
+    Option<usize>,
+    Option<String>,
+    Option<String>,
+);
+
 /// Manages the SQLite database for the application
 ///
 /// TODO: Break this impl up into smaller "Repositories"
@@ -1152,45 +1163,39 @@ impl Store {
 
         let is_image = file_utils::is_supported_image_path(&doc_id.rel_path);
 
-        let (text, encoding, line_ending, title, word_count, content_hash, content_type): (
-            String,
-            Encoding,
-            LineEnding,
-            Option<String>,
-            Option<usize>,
-            Option<String>,
-            Option<String>,
-        ) = if is_image {
-            let title = file_utils::fallback_title_from_path(&doc_id.rel_path).unwrap_or_else(|| {
-                doc_id
-                    .rel_path
-                    .file_stem()
-                    .and_then(|value| value.to_str())
-                    .unwrap_or("image")
-                    .to_string()
-            });
-            (
-                String::new(),
-                Encoding::default(),
-                LineEnding::default(),
-                Some(title),
-                None,
-                None,
-                file_utils::image_mime_type_for_path(&doc_id.rel_path).map(|value| value.to_string()),
-            )
-        } else {
-            let mut file = File::open(&full_path).map_err(|e| AppError::io(format!("Failed to open file: {}", e)))?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes)
-                .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
+        let FileContents(text, encoding, line_ending, title, word_count, content_hash, content_type): FileContents =
+            if is_image {
+                let title = file_utils::fallback_title_from_path(&doc_id.rel_path).unwrap_or_else(|| {
+                    doc_id
+                        .rel_path
+                        .file_stem()
+                        .and_then(|value| value.to_str())
+                        .unwrap_or("image")
+                        .to_string()
+                });
+                FileContents(
+                    String::new(),
+                    Encoding::default(),
+                    LineEnding::default(),
+                    Some(title),
+                    None,
+                    None,
+                    file_utils::image_mime_type_for_path(&doc_id.rel_path).map(|value| value.to_string()),
+                )
+            } else {
+                let mut file =
+                    File::open(&full_path).map_err(|e| AppError::io(format!("Failed to open file: {}", e)))?;
+                let mut bytes = Vec::new();
+                file.read_to_end(&mut bytes)
+                    .map_err(|e| AppError::io(format!("Failed to read file: {}", e)))?;
 
-            let (text, encoding) = text_utils::detect_and_decode(&bytes)?;
-            let line_ending = LineEnding::detect(&text);
-            let (title, word_count) = Self::derive_text_metadata(&text, &doc_id.rel_path);
-            let content_hash = Some(text_utils::hash_text(&text));
+                let (text, encoding) = text_utils::detect_and_decode(&bytes)?;
+                let line_ending = LineEnding::detect(&text);
+                let (title, word_count) = Self::derive_text_metadata(&text, &doc_id.rel_path);
+                let content_hash = Some(text_utils::hash_text(&text));
 
-            (text, encoding, line_ending, title, Some(word_count), content_hash, None)
-        };
+                FileContents(text, encoding, line_ending, title, Some(word_count), content_hash, None)
+            };
 
         let metadata =
             std::fs::metadata(&full_path).map_err(|e| AppError::io(format!("Failed to read metadata: {}", e)))?;

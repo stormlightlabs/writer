@@ -100,6 +100,8 @@ pub fn run() {
             cmd::string_create,
             cmd::string_update,
             cmd::string_delete,
+            cmd::gist_list_public,
+            cmd::gist_get,
             cmd::app_version_get,
             cmd::location_add_via_dialog,
             cmd::location_list,

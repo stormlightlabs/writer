@@ -1,4 +1,4 @@
-import { toImportMarkdown } from "$hooks/controllers/useAtProtoController";
+import { toGistImportMarkdown, toImportMarkdown } from "$hooks/controllers/useAtProtoController";
 import { stringCreate, stringDelete, stringUpdate } from "$ports";
 import { describe, expect, it } from "vitest";
 
@@ -40,6 +40,44 @@ describe("toImportMarkdown", () => {
         createdAt: "2026-03-19T10:00:00Z",
       }),
     ).toBe("````ts\nconst fence = '```';\n````\n");
+  });
+});
+
+describe("toGistImportMarkdown", () => {
+  it("passes markdown gist content through unchanged", () => {
+    expect(
+      toGistImportMarkdown({
+        id: "1",
+        filename: "README.md",
+        description: "",
+        contents: "# Gist",
+        language: "Markdown",
+        public: true,
+        htmlUrl: "https://gist.github.com/example/1",
+        owner: "octocat",
+        createdAt: "2026-03-19T10:00:00Z",
+        updatedAt: "2026-03-20T10:00:00Z",
+        fileCount: 1,
+      }),
+    ).toBe("# Gist");
+  });
+
+  it("wraps non-markdown gist content in fenced blocks using gist language", () => {
+    expect(
+      toGistImportMarkdown({
+        id: "2",
+        filename: "script.rb",
+        description: "",
+        contents: "puts 'hello'",
+        language: "Ruby",
+        public: true,
+        htmlUrl: "https://gist.github.com/example/2",
+        owner: "octocat",
+        createdAt: "2026-03-19T10:00:00Z",
+        updatedAt: "2026-03-20T10:00:00Z",
+        fileCount: 1,
+      }),
+    ).toBe("```ruby\nputs 'hello'\n```\n");
   });
 });
 

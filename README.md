@@ -13,9 +13,8 @@ Commonplace is a distraction-free markdown editor.
 - Multi-document tabs with Rust-backed session restore
 - Rule-based writing assistance with style check diagnostics and parts-of-speech highlighting
 - Quick Capture window (`#/quick-capture`) for global shortcut capture flows
-- Export dialog with PDF preview, DOCX export, plaintext export, and source-markdown save
-- Import Tangled strings as documents
-- Publish documents as Tangled strings
+- Export as PDF, DOCX or plaintext/markdown with a preview
+- Import Tangled strings & Github gists into your workspace
 
 ### File Management
 
@@ -72,6 +71,8 @@ Export polished PDFs with inline preview, Word-compatible DOCX files, clean plai
 - Frontend: React 19, TypeScript, Vite, Zustand, CodeMirror 6, Tailwind CSS
 - Backend: Tauri 2, Rust workspace (`core`, `markdown`, `store`)
 - Testing: Vitest + Testing Library (frontend), `cargo test` (Rust)
+
+- Integrations: AT Protocol integration via `jacquard`. Github via `octocrab`.
 
 </details>
 

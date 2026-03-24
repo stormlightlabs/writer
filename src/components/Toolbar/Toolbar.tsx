@@ -10,8 +10,8 @@ import {
   FocusIcon,
   IconProps,
   ImageIcon,
+  NewDocumentIcon,
   PenIcon,
-  PlusIcon,
   RefreshIcon,
   SaveIcon,
   SettingsIcon,
@@ -79,11 +79,11 @@ export function Toolbar(
 
   const icons: Record<string, { Component: React.ComponentType<IconProps>; size: IconSize }> = useMemo(
     () => ({
-      save: { Component: SaveIcon, size: "xs" },
-      openSidebar: { Component: ExpandIcon, size: "xs" },
-      closeSidebar: { Component: CollapseIcon, size: "xs" },
-      newDoc: { Component: PlusIcon, size: "xs" },
-      refresh: { Component: RefreshIcon, size: "xs" },
+      save: { Component: SaveIcon, size: "sm" },
+      openSidebar: { Component: ExpandIcon, size: "sm" },
+      closeSidebar: { Component: CollapseIcon, size: "sm" },
+      newDoc: { Component: NewDocumentIcon, size: "sm" },
+      refresh: { Component: RefreshIcon, size: "sm" },
       editor: { Component: PenIcon, size: "sm" },
       splitView: { Component: SplitViewIcon, size: "sm" },
       eye: { Component: EyeIcon, size: "sm" },

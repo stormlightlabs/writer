@@ -15,7 +15,7 @@ function SheetTitle() {
 
 function SheetHeader({ onBack }: { onBack?: () => void }) {
   return (
-    <header className="border-b border-stroke-subtle px-5 py-4 sm:px-6">
+    <header className="shrink-0 border-b border-stroke-subtle px-5 py-4 sm:px-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <SheetTitle />
@@ -44,7 +44,7 @@ function BrowseHandleForm({ controller }: { controller: Controller }) {
   }, [controller]);
 
   return (
-    <div className="rounded-lg border border-stroke-subtle bg-layer-02/25 p-3">
+    <div className="shrink-0 rounded-lg border border-stroke-subtle bg-layer-02 p-3">
       <label className="block space-y-1.5">
         <span className="text-sm font-medium text-text-primary">Handle or DID</span>
         <div className="flex items-center gap-2">
@@ -53,7 +53,7 @@ function BrowseHandleForm({ controller }: { controller: Controller }) {
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="alice.bsky.social"
-            className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
+            className="w-full rounded-lg border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
           <Button
             variant="primaryBlue"
             size="sm"
@@ -78,8 +78,8 @@ function PublicationRow({ publication, isSelected, onSelect }: PublicationRowPro
     <button
       type="button"
       onClick={handleClick}
-      className={`flex w-full items-start gap-3 border-b border-stroke-subtle/70 px-3 py-2.5 text-left transition ${
-        isSelected ? "bg-layer-03/60" : "hover:bg-layer-02/50"
+      className={`flex w-full items-start gap-3 border-b border-stroke-subtle/70 border-l-2 px-3 py-2.5 text-left transition ${
+        isSelected ? "bg-layer-03/60 border-l-accent-purple" : "hover:bg-layer-02/50 border-l-transparent"
       }`}>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-text-primary">{publication.name}</div>
@@ -98,18 +98,18 @@ function PublicationsPanel({ controller }: { controller: Controller }) {
   const skippedCount = controller.importState.skippedInvalidPublicationCount;
 
   return (
-    <div className="min-h-0 rounded-lg border border-stroke-subtle bg-layer-02/15">
-      <div className="border-b border-stroke-subtle px-3 py-2 text-xs uppercase tracking-[0.14em] text-text-secondary">
+    <div className="shrink-0 max-h-40 flex flex-col rounded-lg border border-stroke-subtle bg-layer-02">
+      <div className="shrink-0 border-b border-stroke-subtle px-3 py-2 text-xs uppercase tracking-[0.14em] text-text-secondary">
         {controller.importState.browseHandle
           ? `Publications for ${controller.importState.browseHandle}`
           : "Publications"}
       </div>
       {skippedCount > 0 && (
-        <div className="border-b border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+        <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
           Skipped {skippedCount} invalid publication{skippedCount === 1 ? "" : "s"} while loading this account.
         </div>
       )}
-      <div className="min-h-0 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {controller.importState.publications.length === 0
           ? (
             <div className="px-3 py-5 text-sm text-text-secondary">
@@ -143,8 +143,8 @@ function PostRow(
     <button
       type="button"
       onClick={handleClick}
-      className={`flex w-full items-start gap-3 border-b border-stroke-subtle/70 px-3 py-2.5 text-left transition ${
-        isSelected ? "bg-layer-03/60" : "hover:bg-layer-02/50"
+      className={`flex w-full items-start gap-3 border-b border-stroke-subtle/70 border-l-2 px-3 py-2.5 text-left transition ${
+        isSelected ? "bg-layer-03/60 border-l-accent-magenta" : "hover:bg-layer-02/50 border-l-transparent"
       }`}>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-text-primary">{post.title}</div>
@@ -161,11 +161,11 @@ function PostsPanel({ controller }: { controller: Controller }) {
   }, [controller]);
 
   return (
-    <div className="min-h-0 rounded-lg border border-stroke-subtle bg-layer-02/15">
-      <div className="border-b border-stroke-subtle px-3 py-2 text-xs uppercase tracking-[0.14em] text-text-secondary">
+    <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-stroke-subtle bg-layer-02">
+      <div className="shrink-0 border-b border-stroke-subtle px-3 py-2 text-xs uppercase tracking-[0.14em] text-text-secondary">
         Posts
       </div>
-      <div className="min-h-0 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {controller.importState.posts.length === 0
           ? (
             <div className="px-3 py-5 text-sm text-text-secondary">
@@ -194,7 +194,7 @@ function SelectedPostSummary({ controller }: { controller: Controller }) {
   ]);
 
   return (
-    <div className="rounded-lg border border-stroke-subtle bg-layer-02/25 p-3">
+    <div className="shrink-0 rounded-lg border border-stroke-subtle border-l-4 border-l-accent-purple bg-layer-02 p-3">
       <div className="text-sm font-medium text-text-primary">{title}</div>
       <p className="m-0 mt-1 text-xs text-text-secondary">
         {controller.importState.selectedPost?.description || "Select a post to preview its content."}
@@ -268,7 +268,7 @@ function ImportDestinationForm({ controller }: { controller: Controller }) {
   );
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-stroke-subtle bg-layer-02/20 p-3">
+    <div className="shrink-0 flex flex-col gap-3 rounded-lg border border-stroke-subtle bg-layer-02 p-3">
       <div className="flex gap-2">
         <LocationSelect
           value={controller.importState.destinationLocationId}
@@ -281,7 +281,7 @@ function ImportDestinationForm({ controller }: { controller: Controller }) {
             value={controller.importState.destinationRelPath}
             onChange={handlePathChange}
             placeholder="posts/my-post.md"
-            className="w-full rounded-lg border border-stroke-subtle bg-field-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
+            className="w-full rounded-lg border border-stroke-subtle bg-layer-01 px-3 py-2 text-sm text-text-primary outline-none transition focus:border-stroke-strong" />
         </label>
       </div>
       <div className="flex items-end justify-between gap-2">
@@ -296,11 +296,11 @@ function ImportDestinationForm({ controller }: { controller: Controller }) {
 
 function PreviewPanel({ controller }: { controller: Controller }) {
   return (
-    <div className="min-h-0 overflow-hidden rounded-lg border border-stroke-subtle bg-[#0f1720]">
-      <div className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-[0.14em] text-white/65">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-stroke-subtle bg-[#0c1520]">
+      <div className="shrink-0 border-b border-white/10 px-3 py-2 text-xs uppercase tracking-[0.14em] text-white/60">
         Preview
       </div>
-      <pre className="min-h-0 overflow-auto whitespace-pre-wrap break-words px-3 py-3 text-xs leading-5 text-white/90">
+      <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap wrap-break-word px-3 py-3 text-xs leading-5 text-white/85">
         {controller.importState.isFetchingPreview
           ? "Loading post preview..."
           : controller.importState.previewMarkdown || "Select a post to preview the imported Markdown."}
@@ -311,14 +311,14 @@ function PreviewPanel({ controller }: { controller: Controller }) {
 
 function SheetBody({ controller }: { controller: Controller }) {
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="grid min-h-full gap-4 px-5 py-4 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] sm:px-6">
-        <section className="flex min-h-112 flex-col gap-3 overflow-hidden">
+    <div className="min-h-0 flex-1 overflow-hidden px-5 py-4 sm:px-6">
+      <div className="grid h-full gap-4 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <section className="flex min-h-0 flex-col gap-3 overflow-hidden">
           <BrowseHandleForm controller={controller} />
           <PublicationsPanel controller={controller} />
           <PostsPanel controller={controller} />
         </section>
-        <section className="flex min-h-112 flex-col gap-3 overflow-hidden">
+        <section className="flex min-h-0 flex-col gap-3 overflow-hidden">
           <SelectedPostSummary controller={controller} />
           <ImportDestinationForm controller={controller} />
           <PreviewPanel controller={controller} />

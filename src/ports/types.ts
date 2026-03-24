@@ -10,6 +10,7 @@ import type {
   DocRef,
   EditorFontFamily,
   FocusDimmingMode,
+  GithubGistRecord,
   GlobalCaptureSettings,
   LocationId,
   MarkdownPreviewStyle,
@@ -292,6 +293,12 @@ export type StringListParams = Parameters<
 >;
 export type StringGetParams = Parameters<
   (didOrHandle: string, tid: string, onOk: SuccessCallback<TangledStringRecord>, onErr: ErrorCallback) => void
+>;
+export type GistListPublicParams = Parameters<
+  (username: string, onOk: SuccessCallback<GithubGistRecord[]>, onErr: ErrorCallback) => void
+>;
+export type GistGetParams = Parameters<
+  (gistId: string, onOk: SuccessCallback<GithubGistRecord>, onErr: ErrorCallback) => void
 >;
 export type StringCreateParams = Parameters<
   (

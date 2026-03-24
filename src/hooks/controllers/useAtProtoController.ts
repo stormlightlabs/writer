@@ -4,6 +4,8 @@ import {
   atprotoSessionStatus,
   docExists,
   docSave,
+  gistGet,
+  gistListPublic,
   runCmd,
   stringCreate,
   stringGet,
@@ -11,7 +13,7 @@ import {
 } from "$ports";
 import { useAtProtoUiState } from "$state/selectors";
 import { showErrorToast, showSuccessToast } from "$state/stores/toasts";
-import type { LocationDescriptor, TangledStringRecord } from "$types";
+import type { GithubGistRecord, LocationDescriptor, TangledStringRecord } from "$types";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -50,14 +52,26 @@ export function toImportMarkdown(record: TangledStringRecord | null): string {
     return "";
   }
 
-  const extension = getFileExtension(record.filename);
-  if (!extension || PLAINTEXT_EXTENSIONS.has(extension)) {
-    return record.contents;
+  return toImportMarkdownText(record.filename, record.contents);
+}
+
+export function toGistImportMarkdown(record: GithubGistRecord | null): string {
+  if (!record) {
+    return "";
   }
 
-  const language = getLanguageTag(extension);
-  const fence = buildFence(record.contents);
-  return `${fence}${language}\n${record.contents}\n${fence}\n`;
+  return toImportMarkdownText(record.filename, record.contents, record.language);
+}
+
+function toImportMarkdownText(filename: string, contents: string, languageHint?: string | null): string {
+  const extension = getFileExtension(filename);
+  if (!extension || PLAINTEXT_EXTENSIONS.has(extension)) {
+    return contents;
+  }
+
+  const language = (languageHint ?? "").trim().toLowerCase() || getLanguageTag(extension);
+  const fence = buildFence(contents);
+  return `${fence}${language}\n${contents}\n${fence}\n`;
 }
 
 function normalizeImportPath(value: string): string {
@@ -79,11 +93,17 @@ type UseAtProtoControllerOptions = {
 };
 
 type ImportState = {
+  source: "tangled" | "github";
   handle: string;
+  githubUsername: string;
   browseHandle: string;
+  browseUsername: string;
   records: TangledStringRecord[];
+  gists: GithubGistRecord[];
   selectedTid: string | null;
+  selectedGistId: string | null;
   selectedRecord: TangledStringRecord | null;
+  selectedGist: GithubGistRecord | null;
   destinationLocationId: number | null;
   destinationRelPath: string;
   previewText: string;
@@ -108,10 +128,16 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     setPending,
   } = useAtProtoUiState();
   const [importHandle, setImportHandle] = useState("");
+  const [importSource, setImportSource] = useState<"tangled" | "github">("tangled");
+  const [githubUsername, setGithubUsername] = useState("");
   const [browseHandle, setBrowseHandle] = useState("");
+  const [browseUsername, setBrowseUsername] = useState("");
   const [records, setRecords] = useState<TangledStringRecord[]>([]);
+  const [gists, setGists] = useState<GithubGistRecord[]>([]);
   const [selectedTid, setSelectedTid] = useState<string | null>(null);
+  const [selectedGistId, setSelectedGistId] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<TangledStringRecord | null>(null);
+  const [selectedGist, setSelectedGist] = useState<GithubGistRecord | null>(null);
   const [destinationLocationId, setDestinationLocationId] = useState<number | null>(null);
   const [destinationRelPath, setDestinationRelPath] = useState("");
   const [isListing, setIsListing] = useState(false);
@@ -119,6 +145,8 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
   const [isSaving, setIsSaving] = useState(false);
   const listRequestIdRef = useRef(0);
   const getRequestIdRef = useRef(0);
+  const gistListRequestIdRef = useRef(0);
+  const gistGetRequestIdRef = useRef(0);
 
   const [publishFilename, setPublishFilename] = useState("");
   const [publishDescription, setPublishDescription] = useState("");
@@ -172,12 +200,21 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
   }, [openLoginSheet, openSessionSheet, session]);
 
   const openImportSheet = useCallback(() => {
+    setImportSource("tangled");
     setImportHandle((currentHandle) => currentHandle.trim() ? currentHandle : session?.handle ?? "");
     setDestinationLocationId((currentLocationId) =>
       currentLocationId ?? getDefaultLocationId(locations, selectedLocationId)
     );
     openImportSheetState();
   }, [locations, openImportSheetState, selectedLocationId, session?.handle]);
+
+  const openGithubImportSheet = useCallback(() => {
+    setImportSource("github");
+    setDestinationLocationId((currentLocationId) =>
+      currentLocationId ?? getDefaultLocationId(locations, selectedLocationId)
+    );
+    openImportSheetState();
+  }, [locations, openImportSheetState, selectedLocationId]);
 
   const handleLogin = useCallback((handle: string) => {
     const trimmedHandle = handle.trim();
@@ -294,8 +331,85 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     }));
   }, [handleSelectString, importHandle, isListing, selectedTid]);
 
+  const handleSelectGist = useCallback((gistId: string) => {
+    const trimmedGistId = gistId.trim();
+    if (!trimmedGistId) {
+      return;
+    }
+
+    setSelectedGistId(trimmedGistId);
+    setIsFetching(true);
+    const requestId = gistGetRequestIdRef.current + 1;
+    gistGetRequestIdRef.current = requestId;
+
+    void runCmd(gistGet(trimmedGistId, (record) => {
+      if (gistGetRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setIsFetching(false);
+      setSelectedGist(record);
+      setDestinationRelPath(record.filename);
+    }, (error) => {
+      if (gistGetRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setIsFetching(false);
+      logger.error(f("Failed to load GitHub gist", { gistId: trimmedGistId, error }));
+      showErrorToast(error.message);
+    }));
+  }, []);
+
+  const handleBrowseGists = useCallback(() => {
+    const trimmedUsername = githubUsername.trim();
+    if (!trimmedUsername || isListing) {
+      return;
+    }
+
+    setIsListing(true);
+    setBrowseUsername(trimmedUsername);
+    const requestId = gistListRequestIdRef.current + 1;
+    gistListRequestIdRef.current = requestId;
+
+    void runCmd(gistListPublic(trimmedUsername, (nextGists) => {
+      if (gistListRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setIsListing(false);
+      setGists(nextGists);
+
+      if (nextGists.length === 0) {
+        setSelectedGistId(null);
+        setSelectedGist(null);
+        setDestinationRelPath("");
+        return;
+      }
+
+      const nextSelectedGistId = nextGists.some((record) => record.id === selectedGistId)
+        ? selectedGistId
+        : nextGists[0]?.id ?? null;
+
+      if (!nextSelectedGistId) {
+        return;
+      }
+
+      handleSelectGist(nextSelectedGistId);
+    }, (error) => {
+      if (gistListRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setIsListing(false);
+      logger.error(f("Failed to list GitHub gists", { username: trimmedUsername, error }));
+      showErrorToast(error.message);
+    }));
+  }, [githubUsername, handleSelectGist, isListing, selectedGistId]);
+
   const handleImport = useCallback(async () => {
-    if (isSaving || !selectedRecord || !destinationLocationId) {
+    const selectedImport = importSource === "github" ? selectedGist : selectedRecord;
+    if (isSaving || !selectedImport || !destinationLocationId) {
       return;
     }
 
@@ -306,7 +420,9 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     }
 
     setIsSaving(true);
-    const targetContents = toImportMarkdown(selectedRecord);
+    const targetContents = importSource === "github"
+      ? toGistImportMarkdown(selectedGist)
+      : toImportMarkdown(selectedRecord);
 
     const alreadyExists = await new Promise<boolean>((resolve) => {
       void runCmd(docExists(destinationLocationId, relPath, (exists) => {
@@ -329,7 +445,13 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
         resolve(result.success);
       }, (error) => {
         logger.error(
-          f("Failed to import Tangled string", { destinationLocationId, relPath, tid: selectedRecord.tid, error }),
+          f("Failed to import remote document", {
+            destinationLocationId,
+            relPath,
+            source: importSource,
+            sourceId: importSource === "github" ? selectedGist?.id : selectedRecord?.tid,
+            error,
+          }),
         );
         showErrorToast(error.message);
         resolve(false);
@@ -343,8 +465,17 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
 
     refreshSidebar(destinationLocationId);
     closeSheet();
-    showSuccessToast(`Imported ${selectedRecord.filename} into ${relPath}`);
-  }, [closeSheet, destinationLocationId, destinationRelPath, isSaving, refreshSidebar, selectedRecord]);
+    showSuccessToast(`Imported ${selectedImport.filename} into ${relPath}`);
+  }, [
+    closeSheet,
+    destinationLocationId,
+    destinationRelPath,
+    importSource,
+    isSaving,
+    refreshSidebar,
+    selectedGist,
+    selectedRecord,
+  ]);
 
   const openPublishSheet = useCallback((filename: string, contents: string) => {
     setPublishFilename(filename);
@@ -385,14 +516,20 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
 
   const importState = useMemo<ImportState>(
     () => ({
+      source: importSource,
       handle: importHandle,
+      githubUsername,
       browseHandle,
+      browseUsername,
       records,
+      gists,
       selectedTid,
+      selectedGistId,
       selectedRecord,
+      selectedGist,
       destinationLocationId,
       destinationRelPath,
-      previewText: toImportMarkdown(selectedRecord),
+      previewText: importSource === "github" ? toGistImportMarkdown(selectedGist) : toImportMarkdown(selectedRecord),
       isListing,
       isFetching,
       isSaving,
@@ -402,12 +539,18 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
       destinationLocationId,
       destinationRelPath,
       importHandle,
+      githubUsername,
+      gists,
+      importSource,
       isFetching,
       isListing,
       isSaving,
       records,
+      selectedGist,
+      selectedGistId,
       selectedRecord,
       selectedTid,
+      browseUsername,
     ],
   );
 
@@ -434,15 +577,20 @@ export function useAtProtoController({ locations, selectedLocationId, refreshSid
     openLoginSheet,
     openSessionSheet,
     openImportSheet,
+    openGithubImportSheet,
     openPublishSheet,
     closeSheet,
     handleLogin,
     handleLogout,
     handleBrowseStrings,
+    handleBrowseGists,
     handleSelectString,
+    handleSelectGist,
     handleImport,
     handlePublish,
     setImportHandle,
+    setImportSource,
+    setGithubUsername,
     setDestinationLocationId,
     setDestinationRelPath,
     setPublishFilename,

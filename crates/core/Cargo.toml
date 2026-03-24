@@ -13,6 +13,7 @@ jacquard = "0.10"
 unicode-segmentation = "1.12.0"
 comrak = "0.50"
 reqwest = "0.12"
+octocrab = "0.49.6"
 log = "0.4"
 
 [dev-dependencies]

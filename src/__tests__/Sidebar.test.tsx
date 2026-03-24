@@ -148,19 +148,30 @@ describe("Sidebar", () => {
     expect(handleRefreshSidebar).toHaveBeenCalledWith(1);
   });
 
-  it("shows import actions for Tangled strings and Standard.Site posts", () => {
+  it("shows import actions for Tangled strings, GitHub gists, and Standard.Site posts", () => {
     vi.mocked(useSidebarState).mockReturnValue(createSidebarState());
     const onOpenImportSheet = vi.fn();
+    const onOpenGithubImportSheet = vi.fn();
     const onOpenStandardSiteImportSheet = vi.fn();
 
     render(
-      <Sidebar onOpenImportSheet={onOpenImportSheet} onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />,
+      <Sidebar
+        onOpenImportSheet={onOpenImportSheet}
+        onOpenGithubImportSheet={onOpenGithubImportSheet}
+        onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />,
     );
 
-    fireEvent.click(screen.getByTitle("Import Tangled strings"));
-    fireEvent.click(screen.getByTitle("Import Standard.Site posts"));
+    fireEvent.click(screen.getByTitle("Import"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Tangled Strings" }));
+
+    fireEvent.click(screen.getByTitle("Import"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "GitHub Gists" }));
+
+    fireEvent.click(screen.getByTitle("Import"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Standard.Site Posts" }));
 
     expect(onOpenImportSheet).toHaveBeenCalledOnce();
+    expect(onOpenGithubImportSheet).toHaveBeenCalledOnce();
     expect(onOpenStandardSiteImportSheet).toHaveBeenCalledOnce();
   });
 

@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use writer_core::atproto::AtProtoState;
+use writer_core::github::GithubState;
 use writer_core::scan_style_matches;
 use writer_core::{
     AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
@@ -15,12 +16,14 @@ use writer_core::{
 use writer_store::{SidebarTreeState, Store, StyleCheckSettings, UiLayoutSettings};
 
 mod atproto;
+mod github;
 mod images;
 mod md;
 mod standard_site;
 mod strings;
 
 pub use atproto::*;
+pub use github::*;
 pub use images::*;
 pub use md::*;
 pub use standard_site::*;
@@ -33,13 +36,20 @@ pub struct AppState {
     pub store: Arc<Store>,
     pub watchers: Mutex<HashMap<i64, RecommendedWatcher>>,
     pub atproto: Arc<AtProtoState>,
+    pub github: Arc<GithubState>,
 }
 
 impl AppState {
     pub fn new(store: Store) -> Self {
         let app_dir = Store::default_app_dir().expect("store app dir should resolve");
         let atproto = AtProtoState::new(&app_dir).expect("AT Protocol state should initialize");
-        Self { store: Arc::new(store), watchers: Mutex::new(HashMap::new()), atproto: Arc::new(atproto) }
+        let github = GithubState::new();
+        Self {
+            store: Arc::new(store),
+            watchers: Mutex::new(HashMap::new()),
+            atproto: Arc::new(atproto),
+            github: Arc::new(github),
+        }
     }
 }
 

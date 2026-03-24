@@ -103,7 +103,7 @@ export function useEditorImageHandlers(
         void logger.error(f("Image paste failed", { error: String(err) }));
       }
     })();
-  }, [locationId, docRelPath, importImage, triggerInsert]);
+  }, [locationId, importImage, triggerInsert]);
 
   const handlePickAndInsertImage = useCallback(async () => {
     if (!locationId) {
@@ -124,7 +124,7 @@ export function useEditorImageHandlers(
     } catch (err) {
       void logger.error(f("Image pick failed", { error: String(err) }));
     }
-  }, [locationId, docRelPath, importImage, triggerInsert]);
+  }, [locationId, importImage, triggerInsert]);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -159,7 +159,7 @@ export function useEditorImageHandlers(
     return () => {
       unlisten?.();
     };
-  }, [locationId, docRelPath, importImage, triggerInsert]);
+  }, [locationId, importImage, triggerInsert]);
 
   return { insertAt, handleImageFilePaste, handlePickAndInsertImage };
 }

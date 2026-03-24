@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub mod atproto;
+pub mod github;
 mod nlp;
 pub use nlp::{
     PatternCategory, PatternMatcher, StyleCategorySettings, StyleMatch, StylePattern, StylePatternInput,

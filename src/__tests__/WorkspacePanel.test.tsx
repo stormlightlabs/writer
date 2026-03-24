@@ -76,6 +76,8 @@ type WorkspacePanelPropOverrides = {
   statusBar?: Partial<StatusBarProps>;
   diagnostics?: Partial<WorkspaceDiagnosticsProps>;
   welcome?: Partial<NonNullable<WorkspacePanelProps["welcome"]>>;
+  activeDocRelPath?: WorkspacePanelProps["activeDocRelPath"];
+  activeDocContentType?: WorkspacePanelProps["activeDocContentType"];
 };
 
 const createSidebarState = (overrides: Partial<SidebarStateReturn> = {}): SidebarStateReturn => {
@@ -303,6 +305,8 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     onAddLocation: vi.fn(),
     ...overrides.welcome,
   },
+  activeDocRelPath: overrides.activeDocRelPath,
+  activeDocContentType: overrides.activeDocContentType,
 });
 
 const renderWorkspacePanel = (

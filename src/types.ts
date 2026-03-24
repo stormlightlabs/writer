@@ -94,6 +94,20 @@ export type TangledStringRecord = {
   createdAt: string;
 };
 
+export type GithubGistRecord = {
+  id: string;
+  filename: string;
+  description: string;
+  contents: string;
+  language?: string | null;
+  public: boolean;
+  htmlUrl: string;
+  owner: string;
+  createdAt: string;
+  updatedAt: string;
+  fileCount: number;
+};
+
 /**
  * A Standard.Site publication — a named blog/site container owned by a DID.
  * @see https://standard.site

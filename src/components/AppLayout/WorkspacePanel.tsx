@@ -86,6 +86,7 @@ export type WorkspacePanelProps = {
   >;
   onOpenWelcomeTab?: () => void;
   onOpenImportSheet?: () => void;
+  onOpenGithubImportSheet?: () => void;
   onOpenStandardSiteImportSheet?: () => void;
   editor: WorkspaceEditorProps;
   preview: WorkspacePreviewProps;
@@ -298,6 +299,7 @@ export function WorkspacePanel(
     toolbar,
     onOpenWelcomeTab,
     onOpenImportSheet,
+    onOpenGithubImportSheet,
     onOpenStandardSiteImportSheet,
     editor,
     preview,
@@ -437,6 +439,7 @@ export function WorkspacePanel(
         <Sidebar
           onNewDocument={newDocumentHandler}
           onOpenImportSheet={onOpenImportSheet}
+          onOpenGithubImportSheet={onOpenGithubImportSheet}
           onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />
         <div
           role="separator"

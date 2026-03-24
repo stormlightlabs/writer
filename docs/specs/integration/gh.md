@@ -1,7 +1,13 @@
 ---
 title: GitHub Gist Integration Spec
-updated: 2026-03-19
+updated: 2026-03-24
 ---
+
+## Implementation Status (2026-03-24)
+
+- Implemented: Part 1 public gist browse/import path (`gist_list_public`, `gist_get`) with frontend integration in the shared import sheet.
+- Not implemented: Part 2 auth/private gist flow and Part 3 publish/update/delete/origin tracking.
+- UX update: sidebar now uses a single `Import` menu button instead of three separate import buttons.
 
 ## Goals
 
@@ -92,7 +98,7 @@ Register a GitHub OAuth App at `https://github.com/settings/developers`:
 │              │  ◄── CommandResponse  │  + github.rs      │
 └──────────────┘                       └────────┬──────────┘
                                                 │
-                                       reqwest + token auth
+                                       octocrab + token auth
                                                 │
                                        ┌────────▼──────────┐
                                        │  api.github.com   │

@@ -9,7 +9,7 @@ function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
   switch (status) {
     case "Saving": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-accent-cyan p-2.5 bg-layer-01 rounded border border-stroke-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-accent-cyan p-2.5 bg-layer-01">
           <SaveIcon size="sm" />
           {compact ? null : <span>Saving...</span>}
         </div>
@@ -17,7 +17,7 @@ function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
     }
     case "Saved": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-accent-green p-2.5 bg-layer-01 rounded border border-stroke-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-accent-green p-2.5 bg-layer-01">
           <CheckIcon size="sm" />
           <SaveIcon size="sm" />
           {compact ? null : <span>Saved</span>}
@@ -26,7 +26,7 @@ function Status({ status, compact }: { status: SaveStatus; compact: boolean }) {
     }
     case "Dirty": {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-accent-yellow p-2.5 bg-layer-01 rounded border border-stroke-subtle">
+        <div className="flex items-center gap-1.5 text-xs text-accent-yellow p-2.5 bg-layer-01">
           <SaveIcon size="sm" />
           {compact ? null : <span>Unsaved</span>}
         </div>

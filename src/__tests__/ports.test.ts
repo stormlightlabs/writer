@@ -12,6 +12,8 @@ import {
   docOpen,
   docSave,
   err,
+  gistGet,
+  gistListPublic,
   globalCaptureGet,
   globalCaptureOpen,
   globalCapturePause,
@@ -235,6 +237,23 @@ describe("command Builders", () => {
         type: "Invoke",
         command: "string_get",
         payload: { didOrHandle: "alice.bsky.social", tid: "3lxyz" },
+      });
+    });
+
+    it("should create GitHub gist list and get commands", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+
+      expect(gistListPublic("octocat", onOk, onErr)).toMatchObject({
+        type: "Invoke",
+        command: "gist_list_public",
+        payload: { username: "octocat" },
+      });
+
+      expect(gistGet("aa5a315d61ae9438b18d", onOk, onErr)).toMatchObject({
+        type: "Invoke",
+        command: "gist_get",
+        payload: { gistId: "aa5a315d61ae9438b18d" },
       });
     });
   });

@@ -1,4 +1,5 @@
 import { Button } from "$components/Button";
+import { ContextMenu, type ContextMenuItem } from "$components/ContextMenu";
 import { useSidebarActions } from "$hooks/controllers/useSidebarActions";
 import {
   FileAddIcon,
@@ -6,13 +7,14 @@ import {
   FolderAddIcon,
   FolderIcon,
   GithubIcon,
+  ImportIcon,
   RefreshIcon,
   StandardSiteIcon,
   Tangled,
 } from "$icons";
 import { useSidebarState } from "$state/selectors";
 import type { DocMeta } from "$types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddButton } from "./AddButton";
 import {
   DocumentOperationDialog,
@@ -32,6 +34,7 @@ const EMPTY_DIRECTORIES: string[] = [];
 export type SidebarProps = {
   onNewDocument?: (locationId?: number) => void;
   onOpenImportSheet?: () => void;
+  onOpenGithubImportSheet?: () => void;
   onOpenStandardSiteImportSheet?: () => void;
 };
 
@@ -73,25 +76,86 @@ const CountPill = ({ count, kind }: CountPillProps) => (
   </span>
 );
 
-type ImportButtonProps = { onClick: () => void; label: string; icon: "tangled" | "github" | "standardSite" };
+type ImportMenuProps = {
+  onOpenImportSheet?: () => void;
+  onOpenGithubImportSheet?: () => void;
+  onOpenStandardSiteImportSheet?: () => void;
+};
 
-const ImportButton = ({ onClick, label, icon }: ImportButtonProps) => (
-  <Button
-    type="button"
-    variant="outline"
-    size="sm"
-    onClick={onClick}
-    title={label}
-    aria-label={label}
-    className="flex items-center gap-1.5 hover:bg-surface-active">
-    {icon === "github" && <GithubIcon size="sm" />}
-    {icon === "standardSite" && <StandardSiteIcon />}
-    {icon === "tangled" && <Tangled className="h-4 w-4 shrink-0" />}
-    <span className="sr-only">{label}</span>
-  </Button>
-);
+function ImportMenu({ onOpenImportSheet, onOpenGithubImportSheet, onOpenStandardSiteImportSheet }: ImportMenuProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
 
-export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteImportSheet }: SidebarProps) {
+  const menuItems = useMemo<ContextMenuItem[]>(() => {
+    const items: ContextMenuItem[] = [];
+
+    if (onOpenImportSheet) {
+      items.push({
+        label: "Tangled Strings",
+        onClick: onOpenImportSheet,
+        icon: <Tangled className="h-4 w-4 shrink-0" />,
+      });
+    }
+
+    if (onOpenGithubImportSheet) {
+      items.push({ label: "GitHub Gists", onClick: onOpenGithubImportSheet, icon: <GithubIcon size="sm" /> });
+    }
+
+    if (onOpenStandardSiteImportSheet) {
+      items.push({ label: "Standard.Site Posts", onClick: onOpenStandardSiteImportSheet, icon: <StandardSiteIcon /> });
+    }
+
+    return items;
+  }, [onOpenGithubImportSheet, onOpenImportSheet, onOpenStandardSiteImportSheet]);
+
+  const handleOpenMenu = useCallback(() => {
+    if (!wrapperRef.current || menuItems.length === 0) {
+      return;
+    }
+
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setPosition({ x: rect.left, y: rect.top - 4 });
+    setIsOpen((prev) => !prev);
+  }, [menuItems.length]);
+
+  const handleCloseMenu = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  if (menuItems.length === 0) {
+    return null;
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleOpenMenu}
+        title="Import"
+        aria-label="Import"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        className="flex items-center gap-1.5 hover:bg-surface-active">
+        <ImportIcon size="sm" />
+        <span className="text-xs">Import</span>
+      </Button>
+
+      <ContextMenu
+        isOpen={isOpen}
+        position={position}
+        onClose={handleCloseMenu}
+        items={menuItems}
+        anchorRef={wrapperRef} />
+    </div>
+  );
+}
+
+export function Sidebar(
+  { onNewDocument, onOpenImportSheet, onOpenGithubImportSheet, onOpenStandardSiteImportSheet }: SidebarProps,
+) {
   const {
     handleAddLocation,
     handleRemoveLocation,
@@ -360,15 +424,10 @@ export function Sidebar({ onNewDocument, onOpenImportSheet, onOpenStandardSiteIm
           <CountPill count={selectedLocationId ? locationDocuments.length : 0} kind="document" />
         </div>
         <div className="flex items-center gap-2">
-          {onOpenStandardSiteImportSheet && (
-            <ImportButton
-              onClick={onOpenStandardSiteImportSheet}
-              label="Import Standard.Site posts"
-              icon="standardSite" />
-          )}
-          {onOpenImportSheet && (
-            <ImportButton onClick={onOpenImportSheet} label="Import Tangled strings" icon="tangled" />
-          )}
+          <ImportMenu
+            onOpenImportSheet={onOpenImportSheet}
+            onOpenGithubImportSheet={onOpenGithubImportSheet}
+            onOpenStandardSiteImportSheet={onOpenStandardSiteImportSheet} />
         </div>
       </div>
 

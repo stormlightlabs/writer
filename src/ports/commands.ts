@@ -5,6 +5,7 @@ import type {
   CaptureSubmitResult,
   DocContent,
   DocMeta,
+  GithubGistRecord,
   GlobalCaptureSettings,
   LocationDescriptor,
   LocationId,
@@ -39,6 +40,8 @@ import type {
   DocOpenParams,
   DocRenameParams,
   DocSaveParams,
+  GistGetParams,
+  GistListPublicParams,
   GlobalCaptureGetParams,
   GlobalCapturePauseParams,
   GlobalCaptureSetParams,
@@ -172,6 +175,14 @@ export function stringList(...[didOrHandle, onOk, onErr]: StringListParams): Cmd
 
 export function stringGet(...[didOrHandle, tid, onOk, onErr]: StringGetParams): Cmd {
   return invokeCmd<TangledStringRecord>("string_get", { didOrHandle, tid }, onOk, onErr);
+}
+
+export function gistListPublic(...[username, onOk, onErr]: GistListPublicParams): Cmd {
+  return invokeCmd<GithubGistRecord[]>("gist_list_public", { username }, onOk, onErr);
+}
+
+export function gistGet(...[gistId, onOk, onErr]: GistGetParams): Cmd {
+  return invokeCmd<GithubGistRecord>("gist_get", { gistId }, onOk, onErr);
 }
 
 export function stringCreate(...[filename, description, contents, onOk, onErr]: StringCreateParams): Cmd {
