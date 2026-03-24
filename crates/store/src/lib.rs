@@ -2250,15 +2250,36 @@ impl Store {
     pub fn image_import(
         &self, location_id: LocationId, source_path: &Path, target_dir: &str,
     ) -> Result<String, AppError> {
-        let location = self
-            .location_get(location_id)?
-            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
-
         let ext = source_path
             .extension()
             .and_then(|e| e.to_str())
             .map(|e| e.to_lowercase())
             .ok_or_else(|| AppError::new(ErrorCode::InvalidPath, "File has no extension"))?;
+
+        let bytes =
+            std::fs::read(source_path).map_err(|e| AppError::io(format!("Failed to read source file: {}", e)))?;
+        let rel = self.image_import_bytes(location_id, &bytes, &ext, target_dir)?;
+
+        log::info!("image_import: stored {} as {}", source_path.display(), rel);
+        Ok(rel)
+    }
+
+    /// Imports in-memory image bytes into `target_dir` under the given location.
+    ///
+    /// Validates format and size, hashes bytes with blake3, and writes to
+    /// `<target_dir>/<hash>.<ext>`. Dedup within `target_dir`: if the hash file
+    /// already exists there the existing path is returned.
+    pub fn image_import_bytes(
+        &self, location_id: LocationId, source_bytes: &[u8], extension: &str, target_dir: &str,
+    ) -> Result<String, AppError> {
+        let location = self
+            .location_get(location_id)?
+            .ok_or_else(|| AppError::not_found(format!("Location not found: {:?}", location_id)))?;
+
+        let ext = extension.trim().to_lowercase();
+        if ext.is_empty() {
+            return Err(AppError::new(ErrorCode::InvalidPath, "Image extension is required"));
+        }
 
         if !writer_core::SUPPORTED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
             return Err(AppError::new(
@@ -2271,23 +2292,19 @@ impl Store {
             ));
         }
 
-        let metadata = std::fs::metadata(source_path)
-            .map_err(|e| AppError::io(format!("Failed to read source file metadata: {}", e)))?;
-
-        if metadata.len() > writer_core::IMAGE_SIZE_LIMIT_BYTES {
+        let bytes_len = source_bytes.len() as u64;
+        if bytes_len > writer_core::IMAGE_SIZE_LIMIT_BYTES {
             return Err(AppError::new(
                 ErrorCode::InvalidPath,
                 format!(
                     "Image exceeds size limit ({} bytes > {} bytes)",
-                    metadata.len(),
+                    bytes_len,
                     writer_core::IMAGE_SIZE_LIMIT_BYTES
                 ),
             ));
         }
 
-        let bytes =
-            std::fs::read(source_path).map_err(|e| AppError::io(format!("Failed to read source file: {}", e)))?;
-        let hash = blake3::hash(&bytes);
+        let hash = blake3::hash(source_bytes);
         let hash_hex = hash.to_hex();
         let dest_filename = format!("{}.{}", hash_hex, ext);
 
@@ -2302,7 +2319,6 @@ impl Store {
             .map_err(|e| AppError::io(format!("Failed to create target directory: {}", e)))?;
 
         let dest_path = dest_dir.join(&dest_filename);
-
         let rel = if target_dir.is_empty() {
             dest_filename.clone()
         } else {
@@ -2314,9 +2330,9 @@ impl Store {
             return Ok(rel);
         }
 
-        std::fs::copy(source_path, &dest_path).map_err(|e| AppError::io(format!("Failed to copy image: {}", e)))?;
+        std::fs::write(&dest_path, source_bytes)
+            .map_err(|e| AppError::io(format!("Failed to write imported image: {}", e)))?;
 
-        log::info!("image_import: stored {} as {}", source_path.display(), rel);
         Ok(rel)
     }
 
@@ -3452,6 +3468,20 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().code, ErrorCode::InvalidPath);
+    }
+
+    #[test]
+    fn test_image_import_bytes_into_subdir() {
+        let (store, _tmp) = create_test_store();
+        let (location_id, location_dir) = create_test_location(&store);
+
+        let rel = store
+            .image_import_bytes(location_id, b"fakejpeg", "jpg", "images")
+            .unwrap();
+
+        assert!(rel.starts_with("images/"));
+        assert!(rel.ends_with(".jpg"));
+        assert!(location_dir.path().join(&rel).exists());
     }
 
     #[test]

@@ -11,7 +11,7 @@ updated: 2026-03-24
   - Resolve `asset_rel_path` within location root, determine MIME type
   - Call `com.atproto.repo.uploadBlob` on user's PDS
   - Return `BlobRef` (CID, MIME type, size)
-- [ ] Implement `blob_download` command
+- [x] Implement `blob_download` command
   - Call `com.atproto.sync.getBlob` with DID + CID
   - Pipe response bytes through `image_import` with `target_dir`
   - Return local relative path
@@ -19,6 +19,8 @@ updated: 2026-03-24
   - Replace hardcoded `application/octet-stream` / size 0 with real `BlobRef` values
   - Thread metadata through publish pipeline into `Image` block construction
 - [ ] Register `blob_upload` and `blob_download` in `lib.rs`
+  - [x] Register `blob_download` in `lib.rs`
+  - [ ] Register `blob_upload` in `lib.rs`
 
 ### Publish Pipeline Integration
 
@@ -30,7 +32,7 @@ updated: 2026-03-24
 
 ### Import Pipeline Integration
 
-- [ ] Add blob download step to Standard.Site post import
+- [x] Add blob download step to Standard.Site post import
   - After `post_get_markdown`, scan for `at://blob/<CID>` image refs
   - For each, call `blob_download` with author DID + CID + target dir
   - Rewrite `at://blob/<CID>` → `<hash>.<ext>` in the markdown
@@ -39,6 +41,6 @@ updated: 2026-03-24
 ### Frontend
 
 - [ ] Add command builders in `src/ports/commands.ts`
-  - `blobUpload(locationId, assetRelPath, auth, onOk, onErr)`
-  - `blobDownload(locationId, did, cid, targetDir, onOk, onErr)`
-- [ ] Update Standard.Site import controller to call blob download + rewrite
+  - [ ] `blobUpload(locationId, assetRelPath, auth, onOk, onErr)`
+  - [x] `blobDownload(locationId, did, cid, targetDir, onOk, onErr)`
+- [x] Update Standard.Site import controller to call blob download + rewrite

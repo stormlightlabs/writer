@@ -5,6 +5,7 @@ import {
   atprotoSessionStatus,
   backendEvents,
   batch,
+  blobDownload,
   dirMove,
   docList,
   docMove,
@@ -1279,6 +1280,21 @@ describe("global capture Commands", () => {
   });
 
   describe("image commands", () => {
+    it("blobDownload builds correct InvokeCmd", () => {
+      const onOk = vi.fn();
+      const onErr = vi.fn();
+      const cmd = blobDownload(7, "did:plc:alice", "bafkreiabc", "drafts", onOk, onErr) as InvokeCmd;
+
+      expect(cmd.type).toBe("Invoke");
+      expect(cmd.command).toBe("blob_download");
+      expect(cmd.payload).toStrictEqual({
+        locationId: 7,
+        did: "did:plc:alice",
+        cid: "bafkreiabc",
+        targetDir: "drafts",
+      });
+    });
+
     it("imageImport builds correct InvokeCmd", () => {
       const onOk = vi.fn();
       const onErr = vi.fn();

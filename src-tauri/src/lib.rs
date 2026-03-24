@@ -89,6 +89,7 @@ pub fn run() {
             cmd::atproto_login,
             cmd::atproto_logout,
             cmd::atproto_session_status,
+            cmd::blob_download,
             cmd::publication_list,
             cmd::publication_get,
             cmd::post_list,

@@ -1,4 +1,4 @@
-import { docExists, docSave, postGetMarkdown, postList, publicationList, runCmd } from "$ports";
+import { blobDownload, docExists, docSave, postGetMarkdown, postList, publicationList, runCmd } from "$ports";
 import { useStandardSiteUiState } from "$state/selectors";
 import { showErrorToast, showSuccessToast, showWarnToast } from "$state/stores/toasts";
 import type { LocationDescriptor, PostRecord, PublicationRecord } from "$types";
@@ -45,6 +45,31 @@ function normalizeImportPath(value: string): string {
 function deriveDefaultRelPath(post: PostRecord): string {
   const slug = post.title.toLowerCase().trim().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-+|-+$/g, "");
   return slug ? `${slug}.md` : "post.md";
+}
+
+function extractBlobCids(markdown: string): string[] {
+  const cids = new Set<string>();
+  const matches = markdown.matchAll(/at:\/\/blob\/([A-Za-z0-9._:-]+)/g);
+
+  for (const match of matches) {
+    const cid = match[1]?.trim();
+    if (cid) {
+      cids.add(cid);
+    }
+  }
+
+  return Array.from(cids);
+}
+
+function deriveTargetDirFromRelPath(relPath: string): string {
+  const normalized = normalizeImportPath(relPath);
+  const lastSlashIndex = normalized.lastIndexOf("/");
+  return lastSlashIndex === -1 ? "" : normalized.slice(0, lastSlashIndex);
+}
+
+function didFromAtUri(uri: string): string | null {
+  const match = uri.trim().match(/^at:\/\/([^/]+)\//);
+  return match?.[1] ?? null;
 }
 
 export function useStandardSiteController(
@@ -261,8 +286,57 @@ export function useStandardSiteController(
       return;
     }
 
+    const blobCids = extractBlobCids(previewMarkdown);
+    let markdownToSave = previewMarkdown;
+
+    if (blobCids.length > 0) {
+      const authorDid = didFromAtUri(selectedPost.uri);
+      if (!authorDid) {
+        setIsSaving(false);
+        showErrorToast("Failed to resolve post author DID for blob downloads.");
+        return;
+      }
+
+      const targetDir = deriveTargetDirFromRelPath(relPath);
+      const cidToLocalPath = new Map<string, string>();
+
+      for (const cid of blobCids) {
+        const localPath = await new Promise<string | null>((resolve) => {
+          void runCmd(blobDownload(destinationLocationId, authorDid, cid, targetDir, (downloadedPath) => {
+            resolve(downloadedPath);
+          }, (error) => {
+            logger.error(
+              f("Failed to download post image blob", { destinationLocationId, authorDid, cid, targetDir, error }),
+            );
+            resolve(null);
+          }));
+        });
+
+        if (localPath) {
+          cidToLocalPath.set(cid, localPath);
+          continue;
+        }
+
+        const shouldContinue = typeof globalThis.confirm === "function"
+          ? globalThis.confirm(`Failed to download image blob ${cid}. Continue import without this image?`)
+          : false;
+
+        if (!shouldContinue) {
+          setIsSaving(false);
+          showWarnToast("Import canceled after image blob download failure.");
+          return;
+        }
+
+        showWarnToast(`Skipped image blob ${cid}.`);
+      }
+
+      for (const [cid, localPath] of cidToLocalPath) {
+        markdownToSave = markdownToSave.replaceAll(`at://blob/${cid}`, localPath);
+      }
+    }
+
     const saved = await new Promise<boolean>((resolve) => {
-      void runCmd(docSave(destinationLocationId, relPath, previewMarkdown, (result) => {
+      void runCmd(docSave(destinationLocationId, relPath, markdownToSave, (result) => {
         resolve(result.success);
       }, (error) => {
         logger.error(f("Failed to import post", { destinationLocationId, relPath, tid: selectedPost.tid, error }));

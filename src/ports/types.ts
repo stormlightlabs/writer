@@ -331,6 +331,17 @@ export type PostGetMarkdownParams = Parameters<
   (didOrHandle: string, tid: string, onOk: SuccessCallback<string>, onErr: ErrorCallback) => void
 >;
 
+export type BlobDownloadParams<T> = Parameters<
+  (
+    locationId: LocationId,
+    did: string,
+    cid: string,
+    targetDir: string,
+    onOk: SuccessCallback<T>,
+    onErr: ErrorCallback,
+  ) => void
+>;
+
 export type ImageImportParams<T> = Parameters<
   (
     locationId: LocationId,

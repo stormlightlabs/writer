@@ -8,6 +8,7 @@ use jacquard::oauth::loopback::{LoopbackConfig, LoopbackPort};
 use jacquard::types::did::Did;
 use jacquard::types::ident::AtIdentifier;
 use reqwest::Client as HttpClient;
+use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -28,6 +29,12 @@ pub struct SessionInfo {
     pub handle: String,
     pub session_id: String,
     pub endpoint: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlobDownloadResult {
+    pub bytes: Vec<u8>,
+    pub content_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -307,6 +314,51 @@ impl AtProtoState {
                 .await
                 .map_err(|error| AppError::io(format!("Failed to resolve PDS for handle: {}", error))),
         }
+    }
+
+    pub async fn blob_download(&self, did_or_handle: &str, cid: &str) -> Result<BlobDownloadResult, AppError> {
+        let trimmed_cid = cid.trim();
+        if trimmed_cid.is_empty() {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "CID is required to download a blob",
+            ));
+        }
+
+        let (repo_did, pds_url) = self.resolve_repo_and_pds(did_or_handle).await?;
+        let endpoint = format!(
+            "{}/xrpc/com.atproto.sync.getBlob",
+            pds_url.to_string().trim_end_matches('/')
+        );
+
+        let response = self
+            .http
+            .get(endpoint)
+            .query(&[("did", repo_did.to_string()), ("cid", trimmed_cid.to_string())])
+            .send()
+            .await
+            .map_err(|error| AppError::io(format!("Failed to download blob: {}", error)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::io(format!(
+                "Blob download failed with status {}",
+                response.status()
+            )));
+        }
+
+        let content_type = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .map(|value| value.split(';').next().unwrap_or(value).trim().to_string())
+            .filter(|value| !value.is_empty());
+
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|error| AppError::io(format!("Failed to read blob response bytes: {}", error)))?;
+
+        Ok(BlobDownloadResult { bytes: bytes.to_vec(), content_type })
     }
 }
 

@@ -26,6 +26,7 @@ import type {
   BackendCaptureSubmitInput,
   BackendGlobalCaptureSettings,
   BackendStyleCheckScanMatch,
+  BlobDownloadParams,
   Cmd,
   DirCreateParams,
   DirDeleteParams,
@@ -195,6 +196,10 @@ export function postList(...[didOrHandle, publicationTid, onOk, onErr]: PostList
 
 export function postGetMarkdown(...[didOrHandle, tid, onOk, onErr]: PostGetMarkdownParams): Cmd {
   return invokeCmd<string>("post_get_markdown", { didOrHandle, tid }, onOk, onErr);
+}
+
+export function blobDownload(...[locationId, did, cid, targetDir, onOk, onErr]: BlobDownloadParams<string>): Cmd {
+  return invokeCmd<string>("blob_download", { locationId, did, cid, targetDir }, onOk, onErr);
 }
 
 export function locationAddViaDialog(...[onOk, onErr]: LocParams<LocationDescriptor>): Cmd {

@@ -4,18 +4,30 @@ import type { LocationDescriptor, PostRecord, PublicationListResult, Publication
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockRunCmd, mockPublicationList, mockPostList, mockPostGetMarkdown } = vi.hoisted(() => ({
+const {
+  mockRunCmd,
+  mockPublicationList,
+  mockPostList,
+  mockPostGetMarkdown,
+  mockBlobDownload,
+  mockDocExists,
+  mockDocSave,
+} = vi.hoisted(() => ({
   mockRunCmd: vi.fn<(cmd: Cmd) => Promise<void>>(),
   mockPublicationList: vi.fn(),
   mockPostList: vi.fn(),
   mockPostGetMarkdown: vi.fn(),
+  mockBlobDownload: vi.fn(),
+  mockDocExists: vi.fn(),
+  mockDocSave: vi.fn(),
 }));
 
 vi.mock(
   "$ports",
   () => ({
-    docExists: vi.fn(),
-    docSave: vi.fn(),
+    blobDownload: mockBlobDownload,
+    docExists: mockDocExists,
+    docSave: mockDocSave,
     postGetMarkdown: mockPostGetMarkdown,
     postList: mockPostList,
     publicationList: mockPublicationList,
@@ -75,28 +87,52 @@ describe("useStandardSiteController", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockPublicationList.mockImplementation((didOrHandle, onOk: (value: PublicationListResult) => void) => ({
+    mockPublicationList.mockImplementation((didOrHandle, onOk: (value: PublicationListResult) => void, onErr) => ({
       type: "Invoke",
       command: "publication_list",
       payload: { didOrHandle },
       onOk,
-      onErr: vi.fn(),
+      onErr,
     }));
 
-    mockPostList.mockImplementation((didOrHandle, publicationTid, onOk: (value: PostRecord[]) => void) => ({
+    mockPostList.mockImplementation((didOrHandle, publicationTid, onOk: (value: PostRecord[]) => void, onErr) => ({
       type: "Invoke",
       command: "post_list",
       payload: { didOrHandle, publicationTid },
       onOk,
-      onErr: vi.fn(),
+      onErr,
     }));
 
-    mockPostGetMarkdown.mockImplementation((didOrHandle, tid, onOk: (value: string) => void) => ({
+    mockPostGetMarkdown.mockImplementation((didOrHandle, tid, onOk: (value: string) => void, onErr) => ({
       type: "Invoke",
       command: "post_get_markdown",
       payload: { didOrHandle, tid },
       onOk,
-      onErr: vi.fn(),
+      onErr,
+    }));
+
+    mockBlobDownload.mockImplementation((locationId, did, cid, targetDir, onOk: (value: string) => void, onErr) => ({
+      type: "Invoke",
+      command: "blob_download",
+      payload: { locationId, did, cid, targetDir },
+      onOk,
+      onErr,
+    }));
+
+    mockDocExists.mockImplementation((locationId, relPath, onOk: (value: boolean) => void, onErr) => ({
+      type: "Invoke",
+      command: "doc_exists",
+      payload: { locationId, relPath },
+      onOk,
+      onErr,
+    }));
+
+    mockDocSave.mockImplementation((locationId, relPath, text, onOk: (value: { success: boolean }) => void, onErr) => ({
+      type: "Invoke",
+      command: "doc_save",
+      payload: { locationId, relPath, text },
+      onOk,
+      onErr,
     }));
 
     mockRunCmd.mockImplementation(async (cmd) => {
@@ -120,8 +156,29 @@ describe("useStandardSiteController", () => {
         await Promise.resolve();
         const payload = cmd.payload as { tid?: string };
         cmd.onOk(`# ${payload.tid ?? ""}`);
+        return;
+      }
+
+      if (cmd.command === "doc_exists") {
+        await Promise.resolve();
+        cmd.onOk(false);
+        return;
+      }
+
+      if (cmd.command === "blob_download") {
+        await Promise.resolve();
+        const payload = cmd.payload as { cid?: string };
+        cmd.onOk(`${payload.cid ?? "blob"}.png`);
+        return;
+      }
+
+      if (cmd.command === "doc_save") {
+        await Promise.resolve();
+        cmd.onOk({ success: true });
       }
     });
+
+    vi.stubGlobal("confirm", vi.fn(() => true));
   });
 
   it("updates the destination path when selecting a different post", async () => {
@@ -152,5 +209,134 @@ describe("useStandardSiteController", () => {
     });
 
     expect(result.current.importState.destinationRelPath).toBe("second-post.md");
+  });
+
+  it("downloads blob images and rewrites markdown before save", async () => {
+    mockRunCmd.mockImplementation(async (cmd) => {
+      if (cmd.type !== "Invoke") {
+        return;
+      }
+
+      if (cmd.command === "publication_list") {
+        cmd.onOk(publicationListResult());
+        return;
+      }
+
+      if (cmd.command === "post_list") {
+        cmd.onOk(POSTS);
+        return;
+      }
+
+      if (cmd.command === "post_get_markdown") {
+        cmd.onOk("![hero](at://blob/bafkrei123)");
+        return;
+      }
+
+      if (cmd.command === "doc_exists") {
+        cmd.onOk(false);
+        return;
+      }
+
+      if (cmd.command === "blob_download") {
+        cmd.onOk("bafkrei123.png");
+        return;
+      }
+
+      if (cmd.command === "doc_save") {
+        cmd.onOk({ success: true });
+      }
+    });
+
+    const refreshSidebar = vi.fn();
+    const { result } = renderHook(() =>
+      useStandardSiteController({ locations: LOCATIONS, selectedLocationId: 1, refreshSidebar })
+    );
+
+    act(() => {
+      result.current.setHandle("alice.bsky.social");
+    });
+
+    act(() => {
+      result.current.handleBrowsePublications();
+    });
+
+    await waitFor(() => {
+      expect(result.current.importState.selectedPostTid).toBe("3post1");
+      expect(result.current.importState.previewMarkdown).toContain("at://blob/bafkrei123");
+    });
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+
+    expect(mockBlobDownload).toHaveBeenCalledWith(
+      1,
+      "did:plc:alice",
+      "bafkrei123",
+      "",
+      expect.any(Function),
+      expect.any(Function),
+    );
+
+    const docSaveCall = mockDocSave.mock.calls.at(-1);
+    expect(docSaveCall).toBeDefined();
+    expect(docSaveCall?.[2]).toBe("![hero](bafkrei123.png)");
+    expect(refreshSidebar).toHaveBeenCalledWith(1);
+  });
+
+  it("cancels import when blob download fails and user chooses stop", async () => {
+    vi.stubGlobal("confirm", vi.fn(() => false));
+
+    mockRunCmd.mockImplementation(async (cmd) => {
+      if (cmd.type !== "Invoke") {
+        return;
+      }
+
+      if (cmd.command === "publication_list") {
+        cmd.onOk(publicationListResult());
+        return;
+      }
+
+      if (cmd.command === "post_list") {
+        cmd.onOk(POSTS);
+        return;
+      }
+
+      if (cmd.command === "post_get_markdown") {
+        cmd.onOk("![hero](at://blob/bafkrei123)");
+        return;
+      }
+
+      if (cmd.command === "doc_exists") {
+        cmd.onOk(false);
+        return;
+      }
+
+      if (cmd.command === "blob_download") {
+        cmd.onErr({ code: "IO_ERROR", message: "download failed" });
+      }
+    });
+
+    const { result } = renderHook(() =>
+      useStandardSiteController({ locations: LOCATIONS, selectedLocationId: 1, refreshSidebar: vi.fn() })
+    );
+
+    act(() => {
+      result.current.setHandle("alice.bsky.social");
+    });
+
+    act(() => {
+      result.current.handleBrowsePublications();
+    });
+
+    await waitFor(() => {
+      expect(result.current.importState.selectedPostTid).toBe("3post1");
+    });
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+
+    expect(mockDocSave).not.toHaveBeenCalled();
   });
 });
