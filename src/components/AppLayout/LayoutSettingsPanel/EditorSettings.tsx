@@ -1,7 +1,7 @@
 import { useLayoutSettingsEditorState } from "$state/selectors";
-import { EditorFontFamily, MarkdownPreviewStyle } from "$types";
+import { EditorFontFamily, MarkdownPreviewStyle, RenderedFontFamily } from "$types";
 import { ChangeEvent, useCallback } from "react";
-import { FontFamilyRow, FontSizeRow } from "./FontRows";
+import { FontFamilyRow, FontSizeRow, RenderedFontFamilyRow } from "./FontRows";
 import { ToggleRow } from "./ToggleRow";
 
 const MARKDOWN_PREVIEW_STYLE_OPTIONS: Array<{ label: string; value: MarkdownPreviewStyle }> = [{
@@ -16,12 +16,14 @@ export function EditorSettingsSection() {
     syntaxHighlightingEnabled,
     editorFontSize,
     editorFontFamily,
+    renderedFontFamily,
     markdownPreviewStyle,
     toggleLineNumbersVisible,
     toggleTextWrappingEnabled,
     toggleSyntaxHighlightingEnabled,
     setEditorFontSize,
     setEditorFontFamily,
+    setRenderedFontFamily,
     setMarkdownPreviewStyle,
   } = useLayoutSettingsEditorState();
 
@@ -32,6 +34,10 @@ export function EditorSettingsSection() {
   const handleFontFamilyChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     setEditorFontFamily(event.target.value as EditorFontFamily);
   }, [setEditorFontFamily]);
+
+  const handleRenderedFontFamilyChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    setRenderedFontFamily(event.target.value as RenderedFontFamily);
+  }, [setRenderedFontFamily]);
 
   const handlePreviewStyleChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     setMarkdownPreviewStyle(event.target.value as MarkdownPreviewStyle);
@@ -69,6 +75,7 @@ export function EditorSettingsSection() {
         </select>
       </div>
       <FontFamilyRow value={editorFontFamily} setter={handleFontFamilyChange} />
+      <RenderedFontFamilyRow value={renderedFontFamily} setter={handleRenderedFontFamilyChange} />
       <FontSizeRow value={editorFontSize} setter={handleFontSizeChange} />
     </>
   );

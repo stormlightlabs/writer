@@ -1,6 +1,6 @@
 ---
 title: "PDF Exporting"
-last_updated: 2026-03-24
+last_updated: 2026-03-25
 ---
 
 For the full multi-format export flow, see [Exporting](./export.md).
@@ -30,6 +30,8 @@ PDF export is split into two stages:
 
 The dialog supports page/layout options (size, orientation, font size, line height, margins, header/footer).
 
+Rendered PDF font selection is persisted separately from the editor font in UI layout settings. PDF-style reading preview and export preview/export all use the rendered font selection, while the editor keeps its own independent font family.
+
 PDF export state is tracked in a dedicated Zustand store slice (`isExportingPdf`, `pdfExportError`).
 
 ## Failure Handling
@@ -37,5 +39,6 @@ PDF export state is tracked in a dedicated Zustand store slice (`isExportingPdf`
 - User cancel exits cleanly without writes.
 - Export failures are surfaced through export error state.
 - Font fallback handling is implemented in `src/pdf/fonts.ts` — custom font fetch failures automatically fall back to builtin fonts.
+- Bundled CJK coverage is provided by `Maple Mono` and `Noto Sans CJK SC` from `public/fonts/`. When the chosen rendered font lacks CJK glyphs, PDF rendering auto-selects a bundled fallback instead of attempting an on-demand download.
 - Missing or invalid local images are skipped per-image with debug logging instead of aborting the whole preview/export.
 - Images inside markdown list items are preserved in the PDF AST and renderer instead of being flattened into plain text.

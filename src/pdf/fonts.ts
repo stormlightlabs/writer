@@ -100,6 +100,15 @@ const FONT_PATHS: Record<FontName, FontConfig> = {
       { file: "monaspace-xenon-700-italic.otf", fontWeight: "bold", fontStyle: "italic" },
     ],
   },
+  "Noto Sans CJK SC": {
+    family: "NotoSansCJKSC",
+    files: [
+      { file: "noto-sans-cjk-sc-400-normal.otf", fontWeight: "normal", fontStyle: "normal" },
+      { file: "noto-sans-cjk-sc-400-normal.otf", fontWeight: "normal", fontStyle: "italic" },
+      { file: "noto-sans-cjk-sc-700-normal.otf", fontWeight: "bold", fontStyle: "normal" },
+      { file: "noto-sans-cjk-sc-700-normal.otf", fontWeight: "bold", fontStyle: "italic" },
+    ],
+  },
 };
 
 const registeredFonts = new Set<string>();
@@ -116,6 +125,7 @@ const BUILTIN_FONT_FAMILY_MAP: Record<FontName, string> = {
   "Monaspace Neon": "Courier",
   "Monaspace Radon": "Courier",
   "Monaspace Xenon": "Courier",
+  "Noto Sans CJK SC": "Helvetica",
 };
 
 const CJK_RANGE = /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/;
@@ -138,13 +148,27 @@ export const LATIN_ONLY_FONT_NAMES: ReadonlySet<FontName> = new Set([
   "Monaspace Xenon",
 ]);
 
+const MONO_FONT_NAMES: ReadonlySet<FontName> = new Set([
+  "IBM Plex Mono",
+  "Maple Mono",
+  "Monaspace Argon",
+  "Monaspace Krypton",
+  "Monaspace Neon",
+  "Monaspace Radon",
+  "Monaspace Xenon",
+]);
+
+export const getCjkFallbackFont = (fontName: FontName): FontName => {
+  return MONO_FONT_NAMES.has(fontName) ? "Maple Mono" : "Noto Sans CJK SC";
+};
+
 /**
- * Returns the PDF font to use, auto-switching to Maple Mono when the chosen
- * font has no CJK coverage but the content contains CJK characters.
+ * Returns the PDF font to use, auto-switching to a bundled CJK-capable font
+ * when the chosen font has no CJK coverage but the content contains CJK characters.
  */
 export const resolvePdfFont = (fontName: FontName, text: string): FontName => {
   if (LATIN_ONLY_FONT_NAMES.has(fontName) && hasCjkContent(text)) {
-    return "Maple Mono";
+    return getCjkFallbackFont(fontName);
   }
   return fontName;
 };

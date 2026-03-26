@@ -3,7 +3,7 @@ import { PDFError } from "$pdf/errors";
 import { ensurePdfFontRegistered } from "$pdf/fonts";
 import { preloadPdfImages } from "$pdf/images";
 import type { FontStrategy, MarkdownNode, PdfExportOptions, PdfRenderResult } from "$pdf/types";
-import type { EditorFontFamily } from "$types";
+import type { RenderedFontFamily } from "$types";
 import { f } from "$utils/serialize";
 import { pdf } from "@react-pdf/renderer";
 import * as logger from "@tauri-apps/plugin-log";
@@ -23,7 +23,7 @@ type PdfPreviewState = { status: "idle" } | { status: "loading" } | { status: "e
 type UsePdfPreviewArgs = {
   result: PdfRenderResult | null;
   options: PdfExportOptions;
-  editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   locationId?: number;
   docRelPath?: string;
 };
@@ -31,7 +31,7 @@ type UsePdfPreviewArgs = {
 export type PdfPreviewPanelProps = {
   result: PdfRenderResult | null;
   options: PdfExportOptions;
-  editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   locationId?: number;
   docRelPath?: string;
 };
@@ -52,7 +52,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Failed to generate preview";
 
-export function usePdfPreview({ result, options, editorFontFamily, locationId, docRelPath }: UsePdfPreviewArgs) {
+export function usePdfPreview({ result, options, renderedFontFamily, locationId, docRelPath }: UsePdfPreviewArgs) {
   const [state, setState] = useState<PdfPreviewState>({ status: "idle" });
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentPdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -73,7 +73,7 @@ export function usePdfPreview({ result, options, editorFontFamily, locationId, d
     async (
       pdfResult: PdfRenderResult,
       pdfOptions: PdfExportOptions,
-      fontFamily: EditorFontFamily,
+      fontFamily: RenderedFontFamily,
       strategy: FontStrategy,
       signal: AbortSignal,
       images: Record<string, string>,
@@ -131,7 +131,7 @@ export function usePdfPreview({ result, options, editorFontFamily, locationId, d
 
         try {
           const images = await resolveImages(result.nodes);
-          blob = await renderPdfBlob(result, options, editorFontFamily, strategy, signal, images);
+          blob = await renderPdfBlob(result, options, renderedFontFamily, strategy, signal, images);
           strategyUsed = strategy;
           break;
         } catch (error) {
@@ -143,7 +143,7 @@ export function usePdfPreview({ result, options, editorFontFamily, locationId, d
             customError = error;
             logger.warn(
               f("PDF preview custom font render failed; retrying with built-in fonts", {
-                editorFontFamily,
+                renderedFontFamily,
                 error: PDFError.serialize(error),
               }),
             );
@@ -152,7 +152,7 @@ export function usePdfPreview({ result, options, editorFontFamily, locationId, d
 
           logger.error(
             f("PDF preview render failed", {
-              editorFontFamily,
+              renderedFontFamily,
               customError: PDFError.serialize(customError),
               builtinError: PDFError.serialize(error),
             }),
@@ -189,7 +189,7 @@ export function usePdfPreview({ result, options, editorFontFamily, locationId, d
       destroyCurrentPdfDoc();
       setState({ status: "error", message: getErrorMessage(error) });
     }
-  }, [destroyCurrentPdfDoc, editorFontFamily, options, renderPdfBlob, result, resolveImages]);
+  }, [destroyCurrentPdfDoc, options, renderPdfBlob, renderedFontFamily, result, resolveImages]);
 
   useEffect(() => {
     abortControllerRef.current?.abort();
@@ -675,8 +675,8 @@ function PreviewSuccess({ pdfDoc, pageCount, usedBuiltinFonts }: PreviewSuccessP
   );
 }
 
-export function PdfPreviewPanel({ result, options, editorFontFamily, locationId, docRelPath }: PdfPreviewPanelProps) {
-  const previewState = usePdfPreview({ result, options, editorFontFamily, locationId, docRelPath });
+export function PdfPreviewPanel({ result, options, renderedFontFamily, locationId, docRelPath }: PdfPreviewPanelProps) {
+  const previewState = usePdfPreview({ result, options, renderedFontFamily, locationId, docRelPath });
 
   switch (previewState.status) {
     case "idle":

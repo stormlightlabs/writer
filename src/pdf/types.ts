@@ -1,3 +1,5 @@
+import type { RenderedFontFamily } from "$types";
+
 export type Orientation = "portrait" | "landscape";
 
 export type StandardPageSize = "A4" | "A3" | "A5" | "LETTER" | "LEGAL" | "TABLOID" | "EXECUTIVE" | "FOLIO";
@@ -34,16 +36,7 @@ export type MarkdownNode =
 
 export type PdfRenderResult = { nodes: MarkdownNode[]; title?: string; word_count: number };
 
-export type FontName =
-  | "IBM Plex Mono"
-  | "IBM Plex Sans Variable"
-  | "IBM Plex Serif"
-  | "Maple Mono"
-  | "Monaspace Argon"
-  | "Monaspace Krypton"
-  | "Monaspace Neon"
-  | "Monaspace Radon"
-  | "Monaspace Xenon";
+export type FontName = RenderedFontFamily;
 
 export type FontPayloadFormat = "woff" | "ttf" | "otf";
 

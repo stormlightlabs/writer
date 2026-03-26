@@ -1,7 +1,7 @@
 import { Button } from "$components/Button";
 import { Sheet } from "$components/Sheet";
 import type { useStandardSiteController } from "$hooks/controllers/useStandardSiteController";
-import type { PostRecord, PublicationRecord } from "$types";
+import type { LocationDescriptor, PostRecord, PublicationRecord } from "$types";
 import type { ChangeEventHandler } from "react";
 import { useCallback, useMemo } from "react";
 
@@ -9,16 +9,12 @@ type Controller = ReturnType<typeof useStandardSiteController>;
 
 type PostImportSheetProps = { controller: Controller; isOpen: boolean; onClose: () => void; onBack?: () => void };
 
-function SheetTitle() {
-  return <h2 className="m-0 text-base font-semibold text-text-primary">Import from Standard.Site</h2>;
-}
-
 function SheetHeader({ onBack }: { onBack?: () => void }) {
   return (
     <header className="shrink-0 border-b border-stroke-subtle px-5 py-4 sm:px-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <SheetTitle />
+          <h2 className="m-0 text-base font-semibold text-text-primary">Import from Standard.Site</h2>;
           <p className="m-0 mt-1 text-sm text-text-secondary">
             Browse any AT Protocol handle, select a publication and post, preview the converted Markdown, and save it
             into one of your locations.
@@ -215,7 +211,7 @@ function SelectedPostSummary({ controller }: { controller: Controller }) {
 type LocationSelectProps = {
   value: number | null;
   hasLocations: boolean;
-  locations: Controller["locations"];
+  locations: LocationDescriptor[];
   onChange: ChangeEventHandler<HTMLSelectElement>;
 };
 

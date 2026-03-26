@@ -24,7 +24,7 @@ import {
 } from "$state/selectors";
 import { showErrorToast, showSuccessToast } from "$state/stores/toasts";
 import type { TangledStringRecord } from "$types";
-import type { EditorFontFamily, ExportFormat } from "$types";
+import type { ExportFormat, RenderedFontFamily } from "$types";
 import { f } from "$utils/serialize";
 import * as logger from "@tauri-apps/plugin-log";
 import { type ChangeEventHandler, type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -35,7 +35,7 @@ import { PdfCjkWarning, PdfExportDialogOptions } from "./ExportOptions";
 export type ExportDialogProps = {
   onExport: (options: PdfExportOptions) => Promise<void>;
   previewResult: PdfRenderResult | null;
-  editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   documentText?: string;
   locationId?: number;
   docRelPath?: string;
@@ -161,17 +161,17 @@ const FormatSummary = ({ title, description }: { title: string; description: str
 type PreviewPaneProps = {
   previewResult: PdfRenderResult | null;
   options: PdfExportOptions;
-  editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   locationId?: number;
   docRelPath?: string;
 };
 
-const PreviewPane = ({ previewResult, options, editorFontFamily, locationId, docRelPath }: PreviewPaneProps) => (
+const PreviewPane = ({ previewResult, options, renderedFontFamily, locationId, docRelPath }: PreviewPaneProps) => (
   <section className="flex min-h-0 h-full flex-col overflow-hidden rounded-lg border border-stroke-subtle bg-layer-02/35 p-2">
     <PdfPreviewPanel
       result={previewResult}
       options={options}
-      editorFontFamily={editorFontFamily}
+      renderedFontFamily={renderedFontFamily}
       locationId={locationId}
       docRelPath={docRelPath} />
   </section>
@@ -188,7 +188,7 @@ type PdfExportContentProps = {
   showPreview: boolean;
   previewResult: PdfRenderResult | null;
   options: PdfExportOptions;
-  editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   documentText: string;
   handleExportClick: () => Promise<void>;
   locationId?: number;
@@ -201,7 +201,7 @@ function PdfExportContent(
     showPreview,
     previewResult,
     options,
-    editorFontFamily,
+    renderedFontFamily,
     documentText,
     handleExportClick,
     locationId,
@@ -209,7 +209,7 @@ function PdfExportContent(
   }: PdfExportContentProps,
 ) {
   const { pdfExportError: error } = usePdfExportState();
-  const previewFont = resolvePdfFont(editorFontFamily as FontName, documentText);
+  const previewFont = resolvePdfFont(renderedFontFamily as FontName, documentText);
 
   return (
     <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -217,7 +217,7 @@ function PdfExportContent(
         title="PDF Export"
         description="Tune pagination and typography, then export a polished, print-ready PDF." />
       <ExportError error={error} />
-      <PdfCjkWarning documentText={documentText} editorFontFamily={editorFontFamily} />
+      <PdfCjkWarning documentText={documentText} renderedFontFamily={renderedFontFamily} />
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
           showPreview ? "grid grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-3" : "flex"
@@ -227,7 +227,7 @@ function PdfExportContent(
             <PreviewPane
               previewResult={previewResult}
               options={options}
-              editorFontFamily={previewFont}
+              renderedFontFamily={previewFont}
               locationId={locationId}
               docRelPath={docRelPath} />
           )
@@ -497,7 +497,7 @@ function StringExportContent({ onCancel, docFilename, documentText }: StringExpo
 }
 
 export function ExportDialog(
-  { onExport, previewResult, editorFontFamily, documentText = "", locationId, docRelPath }: ExportDialogProps,
+  { onExport, previewResult, renderedFontFamily, documentText = "", locationId, docRelPath }: ExportDialogProps,
 ) {
   const { isOpen, setOpen: setIsOpen, options } = usePdfDialogUiState();
   const { resetPdfExport } = usePdfExportActions();
@@ -607,8 +607,8 @@ export function ExportDialog(
   }, [resetPdfExport, resetTextExport, resetDocxExport]);
 
   const pdfExportProps = useMemo(
-    () => ({ showPreview, previewResult, options, editorFontFamily, documentText, locationId, docRelPath }),
-    [showPreview, previewResult, options, editorFontFamily, documentText, locationId, docRelPath],
+    () => ({ showPreview, previewResult, options, renderedFontFamily, documentText, locationId, docRelPath }),
+    [showPreview, previewResult, options, renderedFontFamily, documentText, locationId, docRelPath],
   );
 
   return (

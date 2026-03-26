@@ -111,6 +111,7 @@ describe("appStore", () => {
     expect(editorState.current.syntaxHighlightingEnabled).toBeTruthy();
     expect(editorState.current.editorFontSize).toBe(16);
     expect(editorState.current.editorFontFamily).toBe("IBM Plex Mono");
+    expect(editorState.current.renderedFontFamily).toBe("IBM Plex Mono");
     expect(editorState.current.markdownPreviewStyle).toBe("github");
     expect(viewModeState.current.isSplitView).toBeFalsy();
     expect(viewModeState.current.isFocusMode).toBeFalsy();
@@ -126,6 +127,7 @@ describe("appStore", () => {
       editorActions.current.toggleSyntaxHighlightingEnabled();
       editorActions.current.setEditorFontSize(20);
       editorActions.current.setEditorFontFamily("Monaspace Neon");
+      editorActions.current.setRenderedFontFamily("IBM Plex Serif");
       editorActions.current.setMarkdownPreviewStyle("pdf");
       viewModeActions.current.setSplitView(true);
       viewModeActions.current.toggleFocusMode();
@@ -141,6 +143,7 @@ describe("appStore", () => {
     expect(editorState.current.syntaxHighlightingEnabled).toBeFalsy();
     expect(editorState.current.editorFontSize).toBe(20);
     expect(editorState.current.editorFontFamily).toBe("Monaspace Neon");
+    expect(editorState.current.renderedFontFamily).toBe("IBM Plex Serif");
     expect(editorState.current.markdownPreviewStyle).toBe("pdf");
     expect(editorState.current.theme).toBe("dark");
     expect(viewModeState.current.isSplitView).toBeTruthy();

@@ -44,7 +44,7 @@ type PK =
   | "theme"
   | "editorLine"
   | "previewStyle"
-  | "editorFontFamily"
+  | "renderedFontFamily"
   | "locationId"
   | "docRelPath"
   | "blobDid"

@@ -145,6 +145,7 @@ const createEditorPresentationState = (
   syntaxHighlightingEnabled: true,
   fontSize: 16,
   fontFamily: "IBM Plex Mono",
+  renderedFontFamily: "IBM Plex Mono",
   markdownPreviewStyle: "github",
   typewriterScrollingEnabled: false,
   focusDimmingMode: "off",
@@ -179,6 +180,7 @@ const mockPanelSelectors = (overrides: SelectorOverrides = {}): void => {
     toggleSyntaxHighlightingEnabled: vi.fn(),
     setEditorFontSize: vi.fn(),
     setEditorFontFamily: vi.fn(),
+    setRenderedFontFamily: vi.fn(),
     setMarkdownPreviewStyle: overrides.setMarkdownPreviewStyle ?? vi.fn(),
   });
   vi.mocked(useLayoutChromeActions).mockReturnValue({
@@ -283,7 +285,7 @@ const createWorkspacePanelProps = (overrides: WorkspacePanelPropOverrides = {}):
     theme: "dark",
     editorLine: 1,
     previewStyle: "github",
-    editorFontFamily: "IBM Plex Mono",
+    renderedFontFamily: "IBM Plex Mono",
     onScrollToLine: vi.fn(),
     ...overrides.preview,
   },

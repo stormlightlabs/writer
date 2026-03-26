@@ -59,7 +59,7 @@ describe("usePdfPreview", () => {
 
   it("returns idle state when result is null", () => {
     const { result } = renderHook(() =>
-      usePdfPreview({ result: null, options: DEFAULT_OPTIONS, editorFontFamily: "IBM Plex Sans Variable" })
+      usePdfPreview({ result: null, options: DEFAULT_OPTIONS, renderedFontFamily: "IBM Plex Sans Variable" })
     );
 
     expect(result.current.status).toBe("idle");
@@ -71,7 +71,11 @@ describe("usePdfPreview", () => {
     mockGetDocument.mockResolvedValueOnce(mockPdfDoc);
 
     const { result } = renderHook(() =>
-      usePdfPreview({ result: mockRenderResult, options: DEFAULT_OPTIONS, editorFontFamily: "IBM Plex Sans Variable" })
+      usePdfPreview({
+        result: mockRenderResult,
+        options: DEFAULT_OPTIONS,
+        renderedFontFamily: "IBM Plex Sans Variable",
+      })
     );
 
     expect(result.current.status).toBe("idle");
@@ -97,7 +101,11 @@ describe("usePdfPreview", () => {
     mockGetDocument.mockResolvedValueOnce(mockPdfDoc);
 
     const { result } = renderHook(() =>
-      usePdfPreview({ result: mockRenderResult, options: DEFAULT_OPTIONS, editorFontFamily: "IBM Plex Sans Variable" })
+      usePdfPreview({
+        result: mockRenderResult,
+        options: DEFAULT_OPTIONS,
+        renderedFontFamily: "IBM Plex Sans Variable",
+      })
     );
 
     await waitFor(() => {
@@ -113,7 +121,11 @@ describe("usePdfPreview", () => {
     toBlobMock.mockRejectedValue(new Error("Render failed"));
 
     const { result } = renderHook(() =>
-      usePdfPreview({ result: mockRenderResult, options: DEFAULT_OPTIONS, editorFontFamily: "IBM Plex Sans Variable" })
+      usePdfPreview({
+        result: mockRenderResult,
+        options: DEFAULT_OPTIONS,
+        renderedFontFamily: "IBM Plex Sans Variable",
+      })
     );
 
     await waitFor(() => {
@@ -132,7 +144,8 @@ describe("usePdfPreview", () => {
     mockGetDocument.mockResolvedValue(mockPdfDoc);
 
     const { result, rerender } = renderHook(
-      ({ options }) => usePdfPreview({ result: mockRenderResult, options, editorFontFamily: "IBM Plex Sans Variable" }),
+      ({ options }) =>
+        usePdfPreview({ result: mockRenderResult, options, renderedFontFamily: "IBM Plex Sans Variable" }),
       { initialProps: { options: DEFAULT_OPTIONS } },
     );
 
@@ -169,7 +182,7 @@ describe("PdfPreviewPanel", () => {
   });
 
   it("renders idle state when result is null", () => {
-    render(<PdfPreviewPanel result={null} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />);
+    render(<PdfPreviewPanel result={null} options={DEFAULT_OPTIONS} renderedFontFamily="IBM Plex Sans Variable" />);
 
     expect(screen.getByText("Select a document to preview")).toBeInTheDocument();
   });
@@ -178,7 +191,10 @@ describe("PdfPreviewPanel", () => {
     toBlobMock.mockImplementation(() => new Promise(() => {}));
 
     const { container } = render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     await waitFor(() => {
@@ -191,7 +207,10 @@ describe("PdfPreviewPanel", () => {
     toBlobMock.mockRejectedValue(new Error("Generation failed"));
 
     render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     await waitFor(() => {
@@ -212,7 +231,10 @@ describe("PdfPreviewPanel", () => {
     });
 
     const { container } = render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     await waitFor(() => {
@@ -236,7 +258,10 @@ describe("PdfPreviewPanel", () => {
     });
 
     render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     await waitFor(() => {
@@ -259,7 +284,10 @@ describe("PdfPreviewPanel", () => {
     });
 
     const { container } = render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     await waitFor(() => {
@@ -283,7 +311,10 @@ describe("PdfPreviewPanel", () => {
     });
 
     render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     await waitFor(() => {
@@ -321,7 +352,10 @@ describe("PdfPreviewPanel", () => {
     mockGetDocument.mockResolvedValueOnce(mockPdfDoc);
 
     const { unmount } = render(
-      <PdfPreviewPanel result={mockRenderResult} options={DEFAULT_OPTIONS} editorFontFamily="IBM Plex Sans Variable" />,
+      <PdfPreviewPanel
+        result={mockRenderResult}
+        options={DEFAULT_OPTIONS}
+        renderedFontFamily="IBM Plex Sans Variable" />,
     );
 
     unmount();

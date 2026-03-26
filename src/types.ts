@@ -15,6 +15,8 @@ export type EditorFontFamily =
   | "Monaspace Radon"
   | "Monaspace Xenon";
 
+export type RenderedFontFamily = EditorFontFamily | "Noto Sans CJK SC";
+
 export type MarkdownProfile = "StrictCommonMark" | "GfmSafe";
 
 export type PanelMode = "editor" | "preview" | "split";

@@ -295,3 +295,35 @@
     font-weight: 700;
     font-display: swap;
 }
+
+@font-face {
+    font-family: "Writer Noto Sans CJK SC";
+    src: url("/fonts/noto-sans-cjk-sc-400-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Noto Sans CJK SC";
+    src: url("/fonts/noto-sans-cjk-sc-400-normal.otf") format("opentype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Noto Sans CJK SC";
+    src: url("/fonts/noto-sans-cjk-sc-700-normal.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Writer Noto Sans CJK SC";
+    src: url("/fonts/noto-sans-cjk-sc-700-normal.otf") format("opentype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}

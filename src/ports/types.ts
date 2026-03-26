@@ -17,6 +17,7 @@ import type {
   MarkdownProfile,
   PostRecord,
   PublicationListResult,
+  RenderedFontFamily,
   RenderResult,
   SaveStatus,
   SearchHit,
@@ -48,6 +49,7 @@ export type UiLayoutSettings = {
   syntax_highlighting_enabled: boolean;
   editor_font_size: number;
   editor_font_family: EditorFontFamily;
+  rendered_font_family: RenderedFontFamily;
   focus_typewriter_scrolling_enabled: boolean;
   focus_dimming_mode: FocusDimmingMode;
   focus_auto_enter_focus_mode: boolean;

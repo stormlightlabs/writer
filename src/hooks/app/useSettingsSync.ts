@@ -51,6 +51,7 @@ export function useSettingsSync(): void {
       state.setSyntaxHighlightingEnabled(settings.syntax_highlighting_enabled);
       state.setEditorFontSize(settings.editor_font_size);
       state.setEditorFontFamily(settings.editor_font_family);
+      state.setRenderedFontFamily(settings.rendered_font_family);
       state.setMarkdownPreviewStyle(settings.markdown_preview_style === "pdf" ? "pdf" : "github");
       state.setFocusModeSettings(uiSettingsToFocusMode(settings));
       state.setFilenameVisibility(settings.filename_visibility);

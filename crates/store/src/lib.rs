@@ -3030,6 +3030,7 @@ mod tests {
             syntax_highlighting_enabled: false,
             editor_font_size: 18,
             editor_font_family: "Monaspace Neon".to_string(),
+            rendered_font_family: "IBM Plex Serif".to_string(),
             focus_typewriter_scrolling_enabled: false,
             focus_dimming_mode: FocusDimmingMode::Paragraph,
             focus_auto_enter_focus_mode: false,
@@ -3070,10 +3071,35 @@ mod tests {
         assert!(loaded.syntax_highlighting_enabled);
         assert_eq!(loaded.editor_font_size, 16);
         assert_eq!(loaded.editor_font_family, "IBM Plex Mono");
+        assert_eq!(loaded.rendered_font_family, "IBM Plex Mono");
         assert!(loaded.focus_auto_enter_focus_mode);
         assert!(loaded.focus_typewriter_scrolling_enabled);
         assert_eq!(loaded.focus_dimming_mode, FocusDimmingMode::Sentence);
         assert_eq!(loaded.markdown_preview_style, MarkdownPreviewStyle::Github);
+    }
+
+    #[test]
+    fn test_ui_layout_settings_backfills_rendered_font_from_editor_font() {
+        let (store, _temp) = create_test_store();
+        let conn = store
+            .conn
+            .lock()
+            .expect("expected to lock database connection for test");
+
+        conn.execute(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![
+                UI_LAYOUT_SETTINGS_KEY,
+                "{\"editor_font_family\":\"Monaspace Neon\"}",
+                Utc::now().to_rfc3339(),
+            ],
+        )
+        .unwrap();
+        drop(conn);
+
+        let loaded = store.ui_layout_get().unwrap();
+        assert_eq!(loaded.editor_font_family, "Monaspace Neon");
+        assert_eq!(loaded.rendered_font_family, "Monaspace Neon");
     }
 
     #[test]

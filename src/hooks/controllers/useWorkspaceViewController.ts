@@ -23,7 +23,7 @@ import { useRoutedSheet } from "$hooks/useRoutedSheet";
 import { useWorkspaceSync } from "$hooks/useWorkspaceSync";
 import type { PdfExportOptions, PdfRenderResult } from "$pdf/types";
 import { useEditorPresentationState } from "$state/selectors";
-import type { DocRef, EditorFontFamily, Maybe, SaveStatus } from "$types";
+import type { DocRef, EditorFontFamily, Maybe, RenderedFontFamily, SaveStatus } from "$types";
 import { isImageContentType, isImagePath } from "$utils/documents";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -43,6 +43,7 @@ export type WorkspaceViewController = {
   activeDocLocationId: number | undefined;
   activeDocRelPath: string | undefined;
   editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   editorText: string;
   atProto: ReturnType<typeof useAtProtoController>;
   standardSite: ReturnType<typeof useStandardSiteController>;
@@ -124,7 +125,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     imageDocRelPath,
   );
   const { handleOpenPdfExport, handleExportPdf, previewResult, activeDocLocationId, activeDocRelPath } = usePdfExportUI(
-    { activeTab, text: editorModel.text, editorFontFamily: editorPresentation.fontFamily, exportPdf },
+    { activeTab, text: editorModel.text, renderedFontFamily: editorPresentation.renderedFontFamily, exportPdf },
   );
 
   const hasOpenDocument = useMemo(() => isSameDocRef(activeTab?.docRef, editorModel.docRef), [
@@ -311,7 +312,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       theme: editorPresentation.theme,
       editorLine: editorModel.cursorLine,
       previewStyle: editorPresentation.markdownPreviewStyle,
-      editorFontFamily: editorPresentation.fontFamily,
+      renderedFontFamily: editorPresentation.renderedFontFamily,
       locationId: previewModel.docRef?.location_id,
       docRelPath: previewModel.docRef?.rel_path,
       blobDid: atProto.session?.did,
@@ -324,7 +325,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
       atProto.session?.did,
       editorPresentation.theme,
       editorPresentation.markdownPreviewStyle,
-      editorPresentation.fontFamily,
+      editorPresentation.renderedFontFamily,
       editorModel.cursorLine,
       syncPreviewLine,
     ],
@@ -419,6 +420,7 @@ export function useWorkspaceViewController(): WorkspaceViewController {
     activeDocLocationId,
     activeDocRelPath,
     editorFontFamily: editorPresentation.fontFamily,
+    renderedFontFamily: editorPresentation.renderedFontFamily,
     editorText: editorModel.text,
     atProto,
     standardSite,

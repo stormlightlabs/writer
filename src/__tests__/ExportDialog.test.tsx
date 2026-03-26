@@ -6,7 +6,7 @@ import { resetDocxExportStore, useDocxExportStore } from "$state/stores/docx-exp
 import { resetPdfExportStore, usePdfExportStore } from "$state/stores/pdf-export";
 import { resetTextExportStore, useTextExportStore } from "$state/stores/text-export";
 import { resetUiStore, useUiStore } from "$state/stores/ui";
-import type { EditorFontFamily } from "$types";
+import type { RenderedFontFamily } from "$types";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -40,7 +40,7 @@ vi.mock("$hooks/useViewportTier", () => ({ useViewportTier: () => ({ isCompact: 
 
 type RenderDialogArgs = {
   previewResult?: PdfRenderResult | null;
-  editorFontFamily?: EditorFontFamily;
+  renderedFontFamily?: RenderedFontFamily;
   onExport?: (options: PdfExportOptions) => Promise<void>;
   documentText?: string;
 };
@@ -48,7 +48,7 @@ type RenderDialogArgs = {
 function renderExportDialog(
   {
     previewResult = mockRenderResult,
-    editorFontFamily = "IBM Plex Sans Variable",
+    renderedFontFamily = "IBM Plex Sans Variable",
     onExport = mockOnExport,
     documentText = "",
   }: RenderDialogArgs = {},
@@ -57,7 +57,7 @@ function renderExportDialog(
     <ExportDialog
       onExport={onExport}
       previewResult={previewResult}
-      editorFontFamily={editorFontFamily}
+      renderedFontFamily={renderedFontFamily}
       documentText={documentText} />,
   );
 }

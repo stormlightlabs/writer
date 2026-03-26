@@ -1,5 +1,5 @@
 use super::StyleCheckPattern;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::BTreeMap;
 
 fn default_true() -> bool {
@@ -12,6 +12,10 @@ fn default_editor_font_size() -> u16 {
 
 fn default_editor_font_family() -> String {
     "IBM Plex Mono".to_string()
+}
+
+fn default_rendered_font_family() -> String {
+    default_editor_font_family()
 }
 
 fn default_global_capture_shortcut() -> String {
@@ -97,7 +101,7 @@ pub struct StyleCheckSettings {
     pub marker_style: StyleMarkerStyle,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct UiLayoutSettings {
     pub sidebar_collapsed: bool,
     pub top_bars_collapsed: bool,
@@ -114,6 +118,7 @@ pub struct UiLayoutSettings {
     pub editor_font_size: u16,
     #[serde(default = "default_editor_font_family")]
     pub editor_font_family: String,
+    pub rendered_font_family: String,
     #[serde(default = "default_focus_typewriter_scrolling_enabled")]
     pub focus_typewriter_scrolling_enabled: bool,
     #[serde(default = "default_focus_dimming_mode")]
@@ -128,6 +133,73 @@ pub struct UiLayoutSettings {
     pub markdown_preview_style: MarkdownPreviewStyle,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+struct UiLayoutSettingsSerde {
+    #[serde(default)]
+    sidebar_collapsed: bool,
+    #[serde(default)]
+    top_bars_collapsed: bool,
+    #[serde(default)]
+    status_bar_collapsed: bool,
+    #[serde(default)]
+    reduce_motion: bool,
+    #[serde(default = "default_true")]
+    line_numbers_visible: bool,
+    #[serde(default = "default_true")]
+    text_wrapping_enabled: bool,
+    #[serde(default = "default_true")]
+    syntax_highlighting_enabled: bool,
+    #[serde(default = "default_editor_font_size")]
+    editor_font_size: u16,
+    #[serde(default = "default_editor_font_family")]
+    editor_font_family: String,
+    #[serde(default)]
+    rendered_font_family: Option<String>,
+    #[serde(default = "default_focus_typewriter_scrolling_enabled")]
+    focus_typewriter_scrolling_enabled: bool,
+    #[serde(default = "default_focus_dimming_mode")]
+    focus_dimming_mode: FocusDimmingMode,
+    #[serde(default = "default_focus_auto_enter_focus_mode")]
+    focus_auto_enter_focus_mode: bool,
+    #[serde(default)]
+    filename_visibility: bool,
+    #[serde(default = "default_create_readme_in_new_locations")]
+    create_readme_in_new_locations: bool,
+    #[serde(default = "default_markdown_preview_style")]
+    markdown_preview_style: MarkdownPreviewStyle,
+}
+
+impl<'de> Deserialize<'de> for UiLayoutSettings {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = UiLayoutSettingsSerde::deserialize(deserializer)?;
+        let rendered_font_family = raw
+            .rendered_font_family
+            .unwrap_or_else(|| raw.editor_font_family.clone());
+
+        Ok(Self {
+            sidebar_collapsed: raw.sidebar_collapsed,
+            top_bars_collapsed: raw.top_bars_collapsed,
+            status_bar_collapsed: raw.status_bar_collapsed,
+            reduce_motion: raw.reduce_motion,
+            line_numbers_visible: raw.line_numbers_visible,
+            text_wrapping_enabled: raw.text_wrapping_enabled,
+            syntax_highlighting_enabled: raw.syntax_highlighting_enabled,
+            editor_font_size: raw.editor_font_size,
+            editor_font_family: raw.editor_font_family,
+            rendered_font_family,
+            focus_typewriter_scrolling_enabled: raw.focus_typewriter_scrolling_enabled,
+            focus_dimming_mode: raw.focus_dimming_mode,
+            focus_auto_enter_focus_mode: raw.focus_auto_enter_focus_mode,
+            filename_visibility: raw.filename_visibility,
+            create_readme_in_new_locations: raw.create_readme_in_new_locations,
+            markdown_preview_style: raw.markdown_preview_style,
+        })
+    }
+}
+
 impl Default for UiLayoutSettings {
     fn default() -> Self {
         Self {
@@ -140,6 +212,7 @@ impl Default for UiLayoutSettings {
             syntax_highlighting_enabled: true,
             editor_font_size: default_editor_font_size(),
             editor_font_family: default_editor_font_family(),
+            rendered_font_family: default_rendered_font_family(),
             focus_typewriter_scrolling_enabled: default_focus_typewriter_scrolling_enabled(),
             focus_dimming_mode: default_focus_dimming_mode(),
             focus_auto_enter_focus_mode: default_focus_auto_enter_focus_mode(),

@@ -81,7 +81,7 @@ describe(usePdfExport, () => {
       expect.stringContaining("PDF export custom font render failed; retrying with built-in fonts"),
     );
     expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
-      expect.stringContaining("\"editorFontFamily\":\"IBM Plex Sans Variable\""),
+      expect.stringContaining("\"renderedFontFamily\":\"IBM Plex Sans Variable\""),
     );
     expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
       expect.stringContaining("\"message\":\"Custom font failure without known substrings\""),

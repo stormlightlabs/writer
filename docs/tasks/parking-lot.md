@@ -2,7 +2,7 @@
 title: "Parking Lot"
 description: >
     A collection of ideas/proposals for new features and quick bug notes.
-updated: 2026-03-24
+updated: 2026-03-25
 ---
 
 - Consider using [ignore](https://crates.io/crates/ignore) crate for directory walking.
@@ -11,17 +11,17 @@ updated: 2026-03-24
 
 1. **CJK Font Support**[^1][^2][^3] ✅
 
-   Maple Mono (4 TTF weights, ~1.1 MB bundled) is now the CJK-capable font. `@react-pdf/renderer` has no fallback chains[^4] — CJK fonts must be registered and selected explicitly.
+   Maple Mono and Noto Sans CJK SC are now bundled for PDF rendering. `@react-pdf/renderer` has no fallback chains[^4] — CJK fonts must be registered and selected explicitly.
 
-   **Remaining:** Noto Sans CJK SC (~16 MB) — requires on-demand Tauri download to avoid bundle bloat. Noto SC/JP/KR woff2 subsets are loaded for editor display only via `@fontsource`.
+   Noto SC/JP/KR subsets remain loaded for editor/browser display via `@fontsource`, while the PDF renderer uses bundled OTF/TTF assets from `public/fonts/`.
 
    - [x] Bundle Maple Mono TTF in `public/fonts/` (`maple-mono-{400,700}-{normal,italic}.ttf`)
    - [x] Extend `FontName` (`src/pdf/types.ts`), `EditorFontFamily` (`src/types.ts`), `FONT_PATHS` + `BUILTIN_FONT_FAMILY_MAP` (`src/pdf/fonts.ts`)
    - [x] Add `@font-face` rules in `src/styles/fonts.css`; import Noto SC/JP/KR subsets for editor
    - [x] Add `FontConfig` entries in `src/pdf/fonts.ts`
    - [x] Add Maple Mono to `EDITOR_FONT_OPTIONS` (`FontRows.tsx`)
-   - [x] `hasCjkContent` + `resolvePdfFont` in `src/pdf/fonts.ts`; auto-switch to Maple Mono when Latin-only font + CJK detected; `PdfCjkWarning` banner in ExportOptions
-   - [ ] Noto Sans CJK SC PDF support — on-demand Tauri download command (separate ticket)
+   - [x] `hasCjkContent` + `resolvePdfFont` in `src/pdf/fonts.ts`; auto-switch to Maple Mono or Noto Sans CJK SC when the selected rendered font lacks CJK coverage; `PdfCjkWarning` banner in ExportOptions
+   - [x] Bundle Noto Sans CJK SC OTF assets in `public/fonts/` and register them like the other PDF fonts
 
 2. **Corrupted DMG / Gatekeeper quarantine**[^5][^6]
 
@@ -42,10 +42,6 @@ updated: 2026-03-24
 5. **Recovery**
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
-
----
-
-- We should let users distinctly pick editor and PDF font in settings and export
 
 [^1]: [Noto Sans CJK — Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+SC)
 [^2]: [Maple Mono — GitHub](https://github.com/subframe7536/maple-font)

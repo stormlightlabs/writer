@@ -16,6 +16,7 @@ export const stateToLayoutSettings = (
   syntax_highlighting_enabled: presentation.syntaxHighlightingEnabled,
   editor_font_size: presentation.editorFontSize,
   editor_font_family: presentation.editorFontFamily,
+  rendered_font_family: presentation.renderedFontFamily,
   focus_typewriter_scrolling_enabled: focusModeSettings.typewriterScrollingEnabled,
   focus_dimming_mode: focusModeSettings.dimmingMode,
   focus_auto_enter_focus_mode: focusModeSettings.autoEnterFocusMode,

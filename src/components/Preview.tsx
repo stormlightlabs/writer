@@ -1,4 +1,4 @@
-import type { AppTheme, EditorFontFamily, MarkdownPreviewStyle, RenderResult } from "$types";
+import type { AppTheme, MarkdownPreviewStyle, RenderedFontFamily, RenderResult } from "$types";
 import {
   isAtProtoBlobReference,
   isExternalAssetReference,
@@ -19,7 +19,7 @@ export type PreviewProps = {
   theme: AppTheme;
   editorLine: number;
   previewStyle: MarkdownPreviewStyle;
-  editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   locationId?: number;
   docRelPath?: string;
   blobDid?: string;
@@ -27,7 +27,7 @@ export type PreviewProps = {
   className?: string;
 };
 
-const PDF_PREVIEW_FONT_MAP: Record<EditorFontFamily, string> = {
+const PDF_PREVIEW_FONT_MAP: Record<RenderedFontFamily, string> = {
   "IBM Plex Mono": "\"Writer IBM Plex Mono\", \"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
   "IBM Plex Sans Variable":
     "\"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
@@ -38,6 +38,7 @@ const PDF_PREVIEW_FONT_MAP: Record<EditorFontFamily, string> = {
   "Monaspace Neon": "\"Writer Monaspace Neon\", \"Writer IBM Plex Mono\", monospace",
   "Monaspace Radon": "\"Writer Monaspace Radon\", \"Writer IBM Plex Mono\", monospace",
   "Monaspace Xenon": "\"Writer Monaspace Xenon\", \"Writer IBM Plex Mono\", monospace",
+  "Noto Sans CJK SC": "\"Writer Noto Sans CJK SC\", \"Noto Sans SC\", \"Noto Sans JP\", \"Noto Sans KR\", sans-serif",
 };
 
 export function Preview(
@@ -46,7 +47,7 @@ export function Preview(
     theme,
     editorLine,
     previewStyle,
-    editorFontFamily,
+    renderedFontFamily,
     locationId,
     docRelPath,
     blobDid,
@@ -304,9 +305,9 @@ export function Preview(
   const previewContentStyle = useMemo<CSSProperties | undefined>(
     () =>
       previewStyle === "pdf"
-        ? { ["--preview-pdf-font-family" as string]: PDF_PREVIEW_FONT_MAP[editorFontFamily] }
+        ? { ["--preview-pdf-font-family" as string]: PDF_PREVIEW_FONT_MAP[renderedFontFamily] }
         : undefined,
-    [previewStyle, editorFontFamily],
+    [previewStyle, renderedFontFamily],
   );
 
   const handleWrapperClick = useCallback(() => {

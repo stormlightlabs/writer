@@ -1,8 +1,8 @@
 import { ORIENTATIONS, PAGE_SIZES } from "$pdf/constants";
-import { hasCjkContent, LATIN_ONLY_FONT_NAMES } from "$pdf/fonts";
+import { getCjkFallbackFont, hasCjkContent, LATIN_ONLY_FONT_NAMES } from "$pdf/fonts";
 import { type FontName, MarginSide, Orientation, PageSize } from "$pdf/types";
 import { usePdfDialogUiState } from "$state/selectors";
-import type { EditorFontFamily } from "$types";
+import type { RenderedFontFamily } from "$types";
 import { type ReactNode, useCallback } from "react";
 
 type OptionSectionProps = { title: string; description: string; children: ReactNode };
@@ -175,15 +175,16 @@ export const PdfExportDialogOptions = () => (
   </div>
 );
 
-type PdfCjkWarningProps = { documentText: string; editorFontFamily: EditorFontFamily };
+type PdfCjkWarningProps = { documentText: string; renderedFontFamily: RenderedFontFamily };
 
-export const PdfCjkWarning = ({ documentText, editorFontFamily }: PdfCjkWarningProps) => {
-  const isLatinOnly = LATIN_ONLY_FONT_NAMES.has(editorFontFamily as FontName);
+export const PdfCjkWarning = ({ documentText, renderedFontFamily }: PdfCjkWarningProps) => {
+  const isLatinOnly = LATIN_ONLY_FONT_NAMES.has(renderedFontFamily as FontName);
   const hasCjk = hasCjkContent(documentText);
+  const fallbackFont = getCjkFallbackFont(renderedFontFamily as FontName);
   if (!isLatinOnly || !hasCjk) return null;
   return (
     <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
-      CJK characters detected. PDF will use Maple Mono since {editorFontFamily} lacks CJK glyphs.
+      CJK characters detected. PDF will use {fallbackFont} since {renderedFontFamily} lacks CJK glyphs.
     </div>
   );
 };

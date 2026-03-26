@@ -10,6 +10,7 @@ import type {
   LocationDescriptor,
   MarkdownPreviewStyle,
   PatternCategory,
+  RenderedFontFamily,
   SearchHit,
   SessionState,
   SidebarTreeState,
@@ -36,6 +37,7 @@ export type EditorPresentationState = {
   syntaxHighlightingEnabled: boolean;
   editorFontSize: number;
   editorFontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   markdownPreviewStyle: MarkdownPreviewStyle;
   theme: AppTheme;
 };
@@ -73,6 +75,7 @@ export type EditorPresentationActions = {
   toggleSyntaxHighlightingEnabled: () => void;
   setEditorFontSize: (value: number) => void;
   setEditorFontFamily: (value: EditorFontFamily) => void;
+  setRenderedFontFamily: (value: RenderedFontFamily) => void;
   setMarkdownPreviewStyle: (value: MarkdownPreviewStyle) => void;
 };
 
@@ -316,6 +319,7 @@ export type EditorPresentation = {
   syntaxHighlightingEnabled: boolean;
   fontSize: number;
   fontFamily: EditorFontFamily;
+  renderedFontFamily: RenderedFontFamily;
   markdownPreviewStyle: MarkdownPreviewStyle;
   typewriterScrollingEnabled: boolean;
   focusDimmingMode: FocusDimmingMode;

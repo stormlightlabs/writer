@@ -25,7 +25,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
     previewResult,
     activeDocLocationId,
     activeDocRelPath,
-    editorFontFamily,
+    renderedFontFamily,
     editorText,
     atProto,
     standardSite,
@@ -67,7 +67,7 @@ const AppContent = ({ isFocusMode, view }: { isFocusMode: boolean; view: Workspa
       <ExportDialog
         onExport={handleExportPdf}
         previewResult={previewResult}
-        editorFontFamily={editorFontFamily}
+        renderedFontFamily={renderedFontFamily}
         documentText={editorText}
         locationId={activeDocLocationId}
         docRelPath={activeDocRelPath} />

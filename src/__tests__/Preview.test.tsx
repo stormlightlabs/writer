@@ -15,7 +15,7 @@ const defaultProps = {
   theme: "dark" as const,
   editorLine: 1,
   previewStyle: "github" as const,
-  editorFontFamily: "IBM Plex Mono" as const,
+  renderedFontFamily: "IBM Plex Mono" as const,
   locationId: 7,
   docRelPath: "doc.md",
   blobDid: "did:plc:alice",
