@@ -64,7 +64,7 @@ describe(Editor, () => {
       render(<Editor presentation={{ fontFamily: "IBM Plex Sans Variable", fontSize: 19 }} />);
       const container = screen.getByTestId("editor-container");
       expect(container).toHaveStyle(
-        "--editor-font-family: \"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+        "--editor-font-family: \"Commonplace IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
       );
       expect(container).toHaveStyle("--editor-font-size: 19px");
     });

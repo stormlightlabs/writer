@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 describe("Support", () => {
   it("renders the support heading", () => {
     render(<Support />);
-    expect(screen.getByText("Support Writer")).toBeInTheDocument();
+    expect(screen.getByText("Support Commonplace")).toBeInTheDocument();
   });
 
   it("renders the support description", () => {
@@ -57,7 +57,7 @@ describe("Support", () => {
 
   it("renders the thank you message", () => {
     render(<Support />);
-    expect(screen.getByText("Thanks for using Writer!")).toBeInTheDocument();
+    expect(screen.getByText("Thanks for using Commonplace!")).toBeInTheDocument();
   });
 
   it("applies custom className", () => {

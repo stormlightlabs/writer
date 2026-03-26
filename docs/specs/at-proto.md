@@ -160,7 +160,7 @@ The pull browser flow is:
 
 1. Enter a handle or DID and call `string_list`.
 2. Select a string and hydrate the preview with `string_get`.
-3. Choose a Writer location + relative path.
+3. Choose a Commonplace location + relative path.
 4. Import with `doc_exists` guard + `doc_save`.
 
 Imported non-Markdown/non-plaintext strings are wrapped in fenced code blocks using the source filename extension as the language tag when possible.
@@ -181,7 +181,7 @@ Non-markdown/non-plaintext content (detected by file extension on the string's `
 
 ## Standard.Site Integration
 
-Pull and push long-form posts from/to AT Protocol publishing platforms that implement the [Standard.Site](https://standard.site) shared lexicons. The `site.standard.*` schemas are format-agnostic — each platform (Leaflet, pckt, GreenGale, etc.) fills the open `content` union with its own block model. Writer converts between these block formats and Markdown on import/export.
+Pull and push long-form posts from/to AT Protocol publishing platforms that implement the [Standard.Site](https://standard.site) shared lexicons. The `site.standard.*` schemas are format-agnostic — each platform (Leaflet, pckt, GreenGale, etc.) fills the open `content` union with its own block model. Commonplace converts between these block formats and Markdown on import/export.
 
 Jacquard provides generated bindings for both Standard.Site and Leaflet lexicons behind feature flags:
 
@@ -258,7 +258,7 @@ Leaflet is the first target platform. Its documents use `pub.leaflet.pages.linea
 #### Pages
 
 - **`pub.leaflet.pages.linearDocument`** — ordered array of blocks with optional alignment (`left` | `center` | `right` | `justify`).
-- **`pub.leaflet.pages.canvas`** — blocks with spatial positioning (`x`, `y`, `width`, `height`, `rotation`). Canvas pages are not importable into Writer (skip with warning).
+- **`pub.leaflet.pages.canvas`** — blocks with spatial positioning (`x`, `y`, `width`, `height`, `rotation`). Canvas pages are not importable into Commonplace (skip with warning).
 
 #### Block Types
 
@@ -354,7 +354,7 @@ src-tauri/src/
 │   └── standard_site.rs  # publication/post command wrappers
 ```
 
-In the current codebase, the conversion logic belongs in `commonplace_core::atproto`, with `src-tauri` only responsible for exposing it through Tauri commands. Part 1 is implemented as [leaflet.rs](/Users/owais/Desktop/writer/crates/core/src/atproto/leaflet.rs); `standard_site.rs` remains the intended shared-core location for the record fetch/list helpers from later parts.
+In the current codebase, the conversion logic belongs in `commonplace_core::atproto`, with `src-tauri` only responsible for exposing it through Tauri commands. Part 1 is implemented as [leaflet.rs](/crates/core/src/atproto/leaflet.rs); `standard_site.rs` remains the intended shared-core location for the record fetch/list helpers from later parts.
 
 ### Tauri Commands
 
@@ -393,11 +393,11 @@ src/
 ### Import Flow (Pull)
 
 1. User opens import sheet from toolbar or settings panel.
-2. Standard.Site post import should remain available without an authenticated Writer/Tangled session because it only reads public records.
+2. Standard.Site post import should remain available without an authenticated Leaflet/Tangled session because it only reads public records.
 3. Enter a handle or DID → call `publication_list` to list their publications and report any skipped malformed records.
 4. Select a publication → call `post_list` filtered by that publication.
 5. Select a post → call `post_get_markdown` to preview the converted Markdown.
-6. Choose a Writer location + relative path → import with `doc_exists` guard + `doc_save`.
+6. Choose a Commonplace location + relative path → import with `doc_exists` guard + `doc_save`.
 
 ### Publish Flow (Push)
 

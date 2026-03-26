@@ -48,7 +48,9 @@ function LoginActions({ controller, isDisabled }: { controller: Controller; isDi
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <p className="m-0 text-xs text-text-secondary">Writer opens your browser so you can authenticate with BlueSky.</p>
+      <p className="m-0 text-xs text-text-secondary">
+        Commonplace opens your browser so you can authenticate with BlueSky.
+      </p>
       <div className="flex items-center gap-2">
         <Button variant="primaryBlue" size="sm" disabled={isDisabled} onClick={handleConnect}>
           {controller.isPending ? "Connecting..." : "Connect"}

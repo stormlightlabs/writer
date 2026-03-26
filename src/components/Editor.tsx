@@ -93,16 +93,17 @@ type EditorCompartments = {
 };
 
 const EDITOR_FONT_FAMILY_MAP: Record<EditorFontFamily, string> = {
-  "IBM Plex Mono": "\"Writer IBM Plex Mono\", \"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
+  "IBM Plex Mono":
+    "\"Commonplace IBM Plex Mono\", \"IBM Plex Mono\", \"SF Mono\", Monaco, \"Cascadia Code\", monospace",
   "IBM Plex Sans Variable":
-    "\"Writer IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
-  "IBM Plex Serif": "\"Writer IBM Plex Serif\", \"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
-  "Maple Mono": "\"Writer Maple Mono\", \"Maple Mono\", \"SF Mono\", Monaco, monospace",
-  "Monaspace Argon": "\"Writer Monaspace Argon\", \"Writer IBM Plex Mono\", monospace",
-  "Monaspace Krypton": "\"Writer Monaspace Krypton\", \"Writer IBM Plex Mono\", monospace",
-  "Monaspace Neon": "\"Writer Monaspace Neon\", \"Writer IBM Plex Mono\", monospace",
-  "Monaspace Radon": "\"Writer Monaspace Radon\", \"Writer IBM Plex Mono\", monospace",
-  "Monaspace Xenon": "\"Writer Monaspace Xenon\", \"Writer IBM Plex Mono\", monospace",
+    "\"Commonplace IBM Plex Sans\", \"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, sans-serif",
+  "IBM Plex Serif": "\"Commonplace IBM Plex Serif\", \"IBM Plex Serif\", Georgia, \"Times New Roman\", serif",
+  "Maple Mono": "\"Commonplace Maple Mono\", \"Maple Mono\", \"SF Mono\", Monaco, monospace",
+  "Monaspace Argon": "\"Commonplace Monaspace Argon\", \"Commonplace IBM Plex Mono\", monospace",
+  "Monaspace Krypton": "\"Commonplace Monaspace Krypton\", \"Commonplace IBM Plex Mono\", monospace",
+  "Monaspace Neon": "\"Commonplace Monaspace Neon\", \"Commonplace IBM Plex Mono\", monospace",
+  "Monaspace Radon": "\"Commonplace Monaspace Radon\", \"Commonplace IBM Plex Mono\", monospace",
+  "Monaspace Xenon": "\"Commonplace Monaspace Xenon\", \"Commonplace IBM Plex Mono\", monospace",
 };
 
 function getThemeExtension(theme: EditorTheme): Extension {

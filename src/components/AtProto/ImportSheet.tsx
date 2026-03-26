@@ -300,8 +300,8 @@ function ImportDestinationForm({ controller }: { controller: Controller }) {
       <div className="flex items-end justify-between gap-2">
         <p className="m-0 text-xs text-text-secondary">
           {isGithub
-            ? "Non-Markdown gists are imported as fenced code blocks so the resulting document stays readable in Writer."
-            : "Non-Markdown strings are imported as fenced code blocks so the resulting document stays readable in Writer."}
+            ? "Non-Markdown gists are imported as fenced code blocks so the resulting document stays readable in Commonplace."
+            : "Non-Markdown strings are imported as fenced code blocks so the resulting document stays readable in Commonplace."}
         </p>
         <Button variant="primaryBlue" size="sm" disabled={importDisabled} onClick={handleImport}>
           {controller.importState.isSaving ? "Importing..." : "Import"}

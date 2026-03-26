@@ -1,5 +1,5 @@
 import { POS_HIGHLIGHT_LEGEND } from "$editor/constants";
-import { useLayoutSettingsWriterToolsState } from "$state/selectors";
+import { useLayoutSettingsWritingState } from "$state/selectors";
 import { StyleMarkerStyle } from "$types";
 import { ChangeEvent, useCallback, useState } from "react";
 import { CustomPatternControls } from "./CustomPatternControls";
@@ -48,7 +48,7 @@ const PosHighlightLegend = () => (
 
 function StyleCheckSection() {
   const { styleCheckSettings, setStyleCheckSettings, setStyleCheckCategory, addCustomPattern, removeCustomPattern } =
-    useLayoutSettingsWriterToolsState();
+    useLayoutSettingsWritingState();
   const [showCustom, setShowCustom] = useState(false);
 
   const toggleFiller = useCallback(() => {
@@ -110,8 +110,8 @@ function StyleCheckSection() {
   );
 }
 
-export function WriterToolsSection() {
-  const { posHighlightingEnabled, togglePosHighlighting } = useLayoutSettingsWriterToolsState();
+export function WritingTools() {
+  const { posHighlightingEnabled, togglePosHighlighting } = useLayoutSettingsWritingState();
 
   return (
     <>

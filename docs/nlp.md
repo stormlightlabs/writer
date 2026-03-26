@@ -5,7 +5,7 @@ last_updated: 2026-02-28
 
 ## Current Features
 
-Writer includes two writing-assist features:
+Commonplace includes two writing-assist features:
 
 - Style Check
 - Parts-of-Speech (POS) highlighting

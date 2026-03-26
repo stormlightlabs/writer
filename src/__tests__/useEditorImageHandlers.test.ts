@@ -69,7 +69,7 @@ describe("useEditorImageHandlers", () => {
 
       expect(writeFile).toHaveBeenCalledOnce();
       const [writtenPath, writtenBytes] = vi.mocked(writeFile).mock.calls[0];
-      expect(writtenPath).toMatch(/^\/tmp\/writer-paste-\d+\.png$/);
+      expect(writtenPath).toMatch(/^\/tmp\/commonplace-paste-\d+\.png$/);
       expect(writtenBytes).toBeInstanceOf(Uint8Array);
 
       expect(mockImportImage).toHaveBeenCalledWith(7, expect.stringMatching(/\.png$/), "images");

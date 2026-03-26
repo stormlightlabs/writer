@@ -9,10 +9,10 @@
         Roboto, sans-serif;
     --font-headline: "Google Sans Variable", var(--font-sans);
     --font-serif:
-        "Writer IBM Plex Serif", "IBM Plex Serif", Georgia, "Times New Roman",
+        "Commonplace IBM Plex Serif", "IBM Plex Serif", Georgia, "Times New Roman",
         serif;
     --font-mono:
-        "JetBrains Mono Variable", "Writer IBM Plex Mono", "IBM Plex Mono",
+        "JetBrains Mono Variable", "Commonplace IBM Plex Mono", "IBM Plex Mono",
         "SF Mono", Monaco, "Cascadia Code", monospace;
 
     --radius: 0.125rem;

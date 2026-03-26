@@ -5,7 +5,7 @@ last_updated: 2026-03-21
 
 ## System Overview
 
-Writer is a desktop app with:
+Commonplace is a desktop app with:
 
 - Frontend: React + TypeScript (`src/`)
 - Backend: Tauri command layer (`src-tauri/`) + Rust workspace crates (`crates/`)

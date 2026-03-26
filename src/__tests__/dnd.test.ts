@@ -150,7 +150,7 @@ describe("resolveDestinationFromPointer", () => {
     const folderRow = document.createElement("div");
     folderRow.dataset.dropFolderRow = "true";
     folderRow.dataset.locationId = "4";
-    folderRow.dataset.folderPath = "projects/writer";
+    folderRow.dataset.folderPath = "projects/commonplace";
     folderRow.getBoundingClientRect = () =>
       ({
         left: 0,
@@ -169,7 +169,7 @@ describe("resolveDestinationFromPointer", () => {
     const resolved = resolveDestinationFromPointer(100, 304);
     expect(resolved?.destination.locationId).toBe(4);
     expect(resolved?.destination.targetType).toBe("folder");
-    expect(resolved?.destination.folderPath).toBe("projects/writer");
+    expect(resolved?.destination.folderPath).toBe("projects/commonplace");
     expect(extractClosestEdge(resolved?.destination)).toBe("top");
   });
 });
@@ -344,6 +344,6 @@ describe("normalizePointerCoordinates", () => {
 describe("announce", () => {
   it("creates a live region for screen reader updates", () => {
     announce("Dragging file");
-    expect(document.querySelector("#writer-dnd-live-region")).toBeTruthy();
+    expect(document.querySelector("#commonplace-dnd-live-region")).toBeTruthy();
   });
 });

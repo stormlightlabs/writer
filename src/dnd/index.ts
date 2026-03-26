@@ -46,9 +46,9 @@ export type DestinationData = {
   targetType?: "location" | "document" | "folder";
 };
 
-const INTERNAL_MIME = "application/x-writer-sidebar-dnd";
-const EDGE_KEY = "__writerClosestEdge";
-const LIVE_REGION_ID = "writer-dnd-live-region";
+const INTERNAL_MIME = "application/x-commonplace-sidebar-dnd";
+const EDGE_KEY = "__commonplaceClosestEdge";
+const LIVE_REGION_ID = "commonplace-dnd-live-region";
 const DROP_ROW_SELECTOR =
   "[data-drop-document-row][data-location-id], [data-drop-folder-row][data-location-id], [data-drop-location-root][data-location-id]";
 const LOCATION_SELECTOR = "[data-location-id]";
@@ -284,7 +284,7 @@ function startInternalDrag(event: DragEvent, args: DraggableArgs): void {
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(INTERNAL_MIME, "1");
-    event.dataTransfer.setData("text/plain", "writer-sidebar-drag");
+    event.dataTransfer.setData("text/plain", "commonplace-sidebar-drag");
 
     if (typeof event.dataTransfer.setDragImage === "function") {
       const ghost = document.querySelector<HTMLElement>("#sidebar-drag-ghost");

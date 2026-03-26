@@ -34,7 +34,7 @@ export function Support({ className }: SupportProps) {
           <HeartIcon size="lg" className="text-accent-primary" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-text-primary">Support Writer</h3>
+          <h3 className="text-base font-semibold text-text-primary">Support Commonplace</h3>
           <p className="text-sm text-text-secondary">Help keep the app alive and free</p>
         </div>
       </div>
@@ -55,10 +55,10 @@ export function Support({ className }: SupportProps) {
             rel="noopener noreferrer"
             className="font-medium hover:underline">
             Owais
-          </a>. Apps like Writer need your support to stay alive and free.
+          </a>. Apps like Commonplace need your support to stay alive and free.
         </p>
 
-        <p>If you find Writer useful, please consider supporting its development through one of the following:</p>
+        <p>If you find Commonplace useful, please consider supporting its development through one of the following:</p>
       </div>
 
       <div className="space-y-2">
@@ -69,7 +69,7 @@ export function Support({ className }: SupportProps) {
           description="Sponsor on GitHub" />
       </div>
 
-      <p className="text-sm text-text-secondary text-center">Thanks for using Writer!</p>
+      <p className="text-sm text-text-secondary text-center">Thanks for using Commonplace!</p>
     </div>
   );
 }

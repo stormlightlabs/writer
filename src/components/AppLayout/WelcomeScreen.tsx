@@ -82,7 +82,7 @@ type WelcomeAsideProps = { hasLocations: boolean; onAddLocation: () => void };
 function WelcomeAside({ hasLocations, onAddLocation }: WelcomeAsideProps) {
   const copy = hasLocations
     ? "Use the quick actions to stay in flow."
-    : "Once a location is added, Writer can create drafts locally and route imports into that workspace.";
+    : "Once a location is added, Commonplace can create drafts locally and route imports into that workspace.";
   const label = hasLocations ? "Add another location" : "Add your first location";
 
   return (
@@ -165,7 +165,7 @@ export function WelcomeScreen(
       headline: hasLocations ? "Welcome" : "Start by adding a location.",
       description: hasLocations
         ? "Create a fresh draft, reopen something from your library, or pull material in from an external source."
-        : "Writer needs a location before it can create drafts, save notes, or import anything into your workspace.",
+        : "Commonplace needs a location before it can create drafts, save notes, or import anything into your workspace.",
       locationSummary: hasLocations
         ? `${formatCount(locationCount, "location", "locations")} connected`
         : "No locations connected",
@@ -207,7 +207,7 @@ export function WelcomeScreen(
       iconContainerClassName: "bg-layer-03",
     }, {
       title: "Import Standard.Site Documents",
-      description: "Bring public posts into Writer for local editing and revision.",
+      description: "Bring public posts into Commonplace for local editing and revision.",
       icon: "standardSite",
       onClick: onOpenStandardSiteImportSheet,
       disabled: !hasLocations || !onOpenStandardSiteImportSheet,

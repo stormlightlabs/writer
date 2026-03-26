@@ -92,7 +92,7 @@ export function useEditorImageHandlers(
 
     void (async () => {
       try {
-        const tempPath = `/tmp/writer-paste-${Date.now()}.${ext}`;
+        const tempPath = `/tmp/commonplace-paste-${Date.now()}.${ext}`;
         const bytes = new Uint8Array(await file.arrayBuffer());
         await writeFile(tempPath, bytes);
         const assetPath = await importImage(locationId, tempPath, IMAGE_IMPORT_DIR);

@@ -49,7 +49,7 @@ export type ViewModeState = {
   focusModeSettings: FocusModeSettings;
 };
 
-export type WriterToolsState = { posHighlightingEnabled: boolean; styleCheckSettings: StyleCheckSettings };
+export type WritingToolsState = { posHighlightingEnabled: boolean; styleCheckSettings: StyleCheckSettings };
 
 export type LayoutChromeActions = {
   setSidebarCollapsed: (value: boolean) => void;
@@ -94,7 +94,7 @@ export type ViewModeActions = {
   togglePreviewVisible: () => void;
 };
 
-export type WriterToolsActions = {
+export type WritingToolsActions = {
   setPosHighlightingEnabled: (value: boolean) => void;
   togglePosHighlighting: () => void;
   setStyleCheckSettings: (settings: StyleCheckSettings) => void;
@@ -104,9 +104,9 @@ export type WriterToolsActions = {
   removeCustomPattern: (index: number) => void;
 };
 
-export type LayoutState = LayoutChromeState & EditorPresentationState & ViewModeState & WriterToolsState;
+export type LayoutState = LayoutChromeState & EditorPresentationState & ViewModeState & WritingToolsState;
 
-export type LayoutActions = LayoutChromeActions & EditorPresentationActions & ViewModeActions & WriterToolsActions;
+export type LayoutActions = LayoutChromeActions & EditorPresentationActions & ViewModeActions & WritingToolsActions;
 
 export type WorkspaceLocationsState = {
   locations: LocationDescriptor[];

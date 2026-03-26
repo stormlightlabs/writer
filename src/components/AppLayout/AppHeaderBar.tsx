@@ -55,8 +55,8 @@ function HeaderActions({ onOpenHelp, onOpenSupport, onOpenSettings }: HeaderActi
         variant="iconGhost"
         size="iconMd"
         onClick={onOpenSupport}
-        title="Support Writer"
-        aria-label="Support Writer">
+        title="Support Commonplace"
+        aria-label="Support Commonplace">
         <HeartIcon size="sm" />
       </Button>
       <Button variant="iconGhost" size="iconMd" onClick={onOpenSettings} title="Settings" aria-label="Settings">
@@ -71,14 +71,14 @@ function SupportModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      ariaLabel="Support Writer"
+      ariaLabel="Support Commonplace"
       containerClassName="flex items-center justify-center"
       panelClassName="w-full max-w-md bg-layer-01 rounded-xl shadow-xl border border-stroke-subtle/10 overflow-hidden"
       motionPreset="scale">
       <div className="flex items-center justify-between px-4 py-3 border-b border-stroke-subtle/10">
         <div className="flex items-center gap-2">
           <HeartIcon size="sm" className="text-accent-blue" />
-          <span className="text-base font-semibold text-text-primary">Support Writer</span>
+          <span className="text-base font-semibold text-text-primary">Support Commonplace</span>
         </div>
         <Button
           type="button"

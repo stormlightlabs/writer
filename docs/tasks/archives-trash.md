@@ -13,7 +13,7 @@ updated: 2026-03-21
 - [ ] Extend `DocMeta` struct with `status: DocStatus` and `status_changed_at: Option<DateTime<Utc>>`
 - [ ] Update all queries that list/fetch documents to include `status` field
   - Default sidebar queries filter to `status = 'active'`
-- [ ] Add `.writer-trash/` directory creation on location init
+- [ ] Add `.trash/` directory creation on location init
 
 ## Phase 2: Tauri Commands (Archive)
 
@@ -28,15 +28,15 @@ updated: 2026-03-21
 ## Phase 3: Tauri Commands (Trash)
 
 - [ ] Implement `doc_trash` command
-  - Move file to `.writer-trash/<encoded-path>__<timestamp>.md`
+  - Move file to `.trash/<encoded-path>__<timestamp>.md`
   - Update index: `status = 'trashed'`, `status_changed_at = now()`
 - [ ] Implement `doc_restore` command
-  - Move file from `.writer-trash/` back to original path
+  - Move file from `.trash/` back to original path
   - Handle name collisions (append `(restored)`)
   - Update index: `status = 'active'`
 - [ ] Modify existing `doc_delete` to only operate on trashed documents
   - Refuse to permanently delete `active` or `archived` docs
-  - Remove file from `.writer-trash/` and delete index row
+  - Remove file from `.trash/` and delete index row
 - [ ] Implement `trash_empty` command
   - Permanently delete all trashed documents in a location
   - Return count
@@ -75,8 +75,8 @@ updated: 2026-03-21
 ## File Watcher Sync
 
 - [ ] If a file reappears at a previously trashed path, update status to `active`
-- [ ] If a trashed file disappears from `.writer-trash/`, remove index row
-- [ ] Exclude `.writer-trash/` from normal document indexing
+- [ ] If a trashed file disappears from `.trash/`, remove index row
+- [ ] Exclude `.trash/` from normal document indexing
 
 ## Test Plan
 

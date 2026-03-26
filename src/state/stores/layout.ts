@@ -6,8 +6,8 @@ import type {
   LayoutState,
   ViewModeActions,
   ViewModeState,
-  WriterToolsActions,
-  WriterToolsState,
+  WritingToolsActions,
+  WritingToolsState,
 } from "$state/types";
 import { create } from "zustand";
 
@@ -18,8 +18,8 @@ export type LayoutStore =
   & EditorPresentationActions
   & ViewModeState
   & ViewModeActions
-  & WriterToolsState
-  & WriterToolsActions;
+  & WritingToolsState
+  & WritingToolsActions;
 
 function getInitialTheme(): "dark" | "light" {
   if (typeof globalThis.matchMedia === "function") {
@@ -57,7 +57,7 @@ export const getInitialViewModeState = (): ViewModeState => ({
   focusModeSettings: { typewriterScrollingEnabled: true, dimmingMode: "sentence", autoEnterFocusMode: true },
 });
 
-export const getInitialWriterToolsState = (): WriterToolsState => ({
+export const getInitialWritingToolsState = (): WritingToolsState => ({
   posHighlightingEnabled: false,
   styleCheckSettings: {
     enabled: false,
@@ -71,7 +71,7 @@ export const getInitialLayoutState = (): LayoutState => ({
   ...getInitialLayoutChromeState(),
   ...getInitialEditorPresentationState(),
   ...getInitialViewModeState(),
-  ...getInitialWriterToolsState(),
+  ...getInitialWritingToolsState(),
 });
 
 export const useLayoutStore = create<LayoutStore>()((set) => ({

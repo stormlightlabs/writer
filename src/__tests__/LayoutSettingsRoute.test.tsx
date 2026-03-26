@@ -63,7 +63,7 @@ describe("Layout settings routing", () => {
 
     expect(screen.queryByText("Part of Speech Colors")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Writer's Tools/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Writing Tools/ }));
     fireEvent.click(screen.getByRole("switch", { name: "Parts of Speech Highlighting" }));
 
     expect(screen.getByText("Part of Speech Colors")).toBeInTheDocument();

@@ -5,7 +5,7 @@ last_updated: 2026-03-24
 
 ## Overview
 
-Writer ships a unified export dialog with three primary output formats:
+Commonplace ships a unified export dialog with three primary output formats:
 
 - PDF
 - DOCX

@@ -5,7 +5,7 @@ last_updated: 2026-03-21
 
 ## Frontend State Model
 
-Writer uses multiple Zustand stores organized by domain under `src/state/stores/`.
+Commonplace uses multiple Zustand stores organized by domain under `src/state/stores/`.
 
 ## Store Slices
 

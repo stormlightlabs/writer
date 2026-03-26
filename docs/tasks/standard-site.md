@@ -50,4 +50,4 @@ Pull and push long-form posts from/to AT Protocol publishing platforms using Sta
 
 1. **Re-publish detection** — detect local modifications to previously published posts, surface "Update Post" action
 2. **Re-pull detection** — compare `updatedAt` / content hash to detect remote changes, prompt with diff
-3. **Publication management** — create new publications from Writer (future, dependent on Standard.Site ecosystem maturity)
+3. **Publication management** — create new publications from Commonplace (future, dependent on Standard.Site ecosystem maturity)

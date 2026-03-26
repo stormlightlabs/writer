@@ -15,7 +15,7 @@ All deletions are permanent and immediate — `std::fs::remove_file` / `remove_d
 ### Two Concepts
 
 1. **Archive** — User-initiated. Moves a document out of the active sidebar into a separate "Archive" section. The file stays on disk in its original location. Reversible.
-2. **Trash** — Triggered by "Delete". Soft-deletes the document. File moves to a `.writer-trash/` directory. Auto-purged after 30 days. Reversible within the retention window.
+2. **Trash** — Triggered by "Delete". Soft-deletes the document. File moves to a `.trash/` directory. Auto-purged after 30 days. Reversible within the retention window.
 
 ### Database Schema Changes
 
@@ -54,11 +54,11 @@ pub struct DocMeta {
 
 ```sh
 <location_root>/
-  .writer-trash/
+  .trash/
     <original-rel-path-urlencoded>__<timestamp>.md
 ```
 
-- When trashed, the file is **moved** from its original path into `.writer-trash/`.
+- When trashed, the file is **moved** from its original path into `.trash/`.
 - The filename encodes the original relative path (URL-encoded to flatten subdirs) and a timestamp for uniqueness.
 - The SQLite index retains the row with `status = 'trashed'` and the original `rel_path` for restore.
 
@@ -90,7 +90,7 @@ pub fn doc_unarchive(location_id: LocationId, rel_path: PathBuf) -> Result<bool,
 pub fn doc_trash(location_id: LocationId, rel_path: PathBuf) -> Result<bool, Error>
 ```
 
-- Moves file from original path → `.writer-trash/`.
+- Moves file from original path → `.trash/`.
 - Updates index: `status = 'trashed'`, `status_changed_at = now()`.
 
 #### `doc_restore`
@@ -100,7 +100,7 @@ pub fn doc_trash(location_id: LocationId, rel_path: PathBuf) -> Result<bool, Err
 pub fn doc_restore(location_id: LocationId, rel_path: PathBuf) -> Result<bool, Error>
 ```
 
-- Moves file from `.writer-trash/` back to original path.
+- Moves file from `.trash/` back to original path.
 - If original path is occupied (name collision), appends `(restored)` before the extension.
 - Updates index: `status = 'active'`, clears `status_changed_at`.
 
@@ -114,7 +114,7 @@ pub fn doc_delete(location_id: LocationId, rel_path: PathBuf) -> Result<bool, Er
 ```
 
 - Only operates on documents with `status = 'trashed'`.
-- Removes file from `.writer-trash/` and deletes the index row.
+- Removes file from `.trash/` and deletes the index row.
 - Refuses to permanently delete `active` or `archived` documents — they must be trashed first.
 
 #### `trash_empty`
@@ -190,7 +190,7 @@ The existing document list selectors must filter to `active` only, so archived/t
 When the file watcher detects changes:
 
 - If a file reappears at a previously trashed path (e.g., user manually moved it back), update status to `active`.
-- If a trashed file disappears from `.writer-trash/` (e.g., user manually deleted it), remove the index row.
+- If a trashed file disappears from `.trash/` (e.g., user manually deleted it), remove the index row.
 
 ---
 
@@ -210,6 +210,6 @@ When the file watcher detects changes:
 
 - Undo toast ("Document trashed — Undo") with immediate restore
 - Trash/archive for directories as first-class entities
-- Trash across locations (each location has its own `.writer-trash/`)
+- Trash across locations (each location has its own `.trash/`)
 - Version history / snapshots
 - Cloud sync of trash state

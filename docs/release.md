@@ -1,4 +1,4 @@
-# Releasing Writer
+# Releasing Commonplace
 
 Releases are produced by GitHub Actions workflow:
 

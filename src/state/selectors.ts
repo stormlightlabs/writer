@@ -103,7 +103,7 @@ export const useViewModeActions = () =>
     })),
   );
 
-export const useWriterToolsState = () =>
+export const useWritingToolsState = () =>
   useLayoutStore(
     useShallow((state) => ({
       posHighlightingEnabled: state.posHighlightingEnabled,
@@ -111,7 +111,7 @@ export const useWriterToolsState = () =>
     })),
   );
 
-export const useWriterToolsActions = () =>
+export const useWritingActions = () =>
   useLayoutStore(
     useShallow((state) => ({
       setPosHighlightingEnabled: state.setPosHighlightingEnabled,
@@ -341,7 +341,7 @@ export const useLayoutSettingsFocusState = () =>
     })),
   );
 
-export const useLayoutSettingsWriterToolsState = () =>
+export const useLayoutSettingsWritingState = () =>
   useLayoutStore(
     useShallow((state) => ({
       posHighlightingEnabled: state.posHighlightingEnabled,

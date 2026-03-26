@@ -1,6 +1,6 @@
 ---
-title: Manual — Writer
-description: Getting started with Writer.
+title: Manual — Commonplace
+description: Getting started with Commonplace.
 template: page
 ---
 
@@ -8,11 +8,11 @@ template: page
 
 ## Getting Started
 
-Writer is a local-first markdown editor. On first launch you'll see an empty workspace.
+Commonplace is a local-first markdown editor. On first launch you'll see an empty workspace.
 
 ### Adding a Workspace
 
-Click the folder icon in the sidebar and select any folder. Writer picks up the markdown files inside it and keeps them in sync.
+Click the folder icon in the sidebar and select any folder. Commonplace picks up the markdown files inside it and keeps them in sync.
 
 ```text
 Your Folder/
@@ -57,7 +57,7 @@ Toggle from the View menu or with a keyboard shortcut.
 
 ## Style Check
 
-Writer flags potential style issues in real-time:
+Commonplace flags potential style issues in real-time:
 
 - **Filler words** — very, really, just, etc.
 - **Redundancies** — "advance planning", "basic fundamentals"
@@ -71,7 +71,7 @@ Hover a highlight to see what was flagged. Add your own patterns in settings to 
 
 ## Quick Capture
 
-Set a global hotkey in settings. The capture window opens from anywhere — no need to switch to Writer first.
+Set a global hotkey in settings. The capture window opens from anywhere — no need to switch to Commonplace first.
 
 ### Capture Modes
 

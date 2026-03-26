@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD033 -->
-# ~~Writer~~ Commonplace
+# Commonplace
 
 Commonplace is a distraction-free markdown editor.
 

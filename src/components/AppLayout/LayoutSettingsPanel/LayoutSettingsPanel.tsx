@@ -13,7 +13,7 @@ import { EditorSettingsSection } from "./EditorSettings";
 import { FocusModeSection } from "./FocusModeSettings";
 import { QuickCaptureSection } from "./QuickCapture";
 import { SettingsHeader } from "./SettingsHeader";
-import { WriterToolsSection } from "./WriterTools";
+import { WritingTools } from "./WriterTools";
 
 type SettingsSheetLayout = { position: SheetPosition; size: SheetSize; className: string; backdropClassName: string };
 
@@ -70,11 +70,11 @@ const SettingsBody = (
           <FocusModeSection />
         </CollapsibleSection>
         <CollapsibleSection
-          title="Writer's Tools"
+          title="Writing Tools"
           description="Adjust writing analysis and guidance features."
           className="rounded-lg border border-stroke-subtle bg-layer-02/35 px-3.5 first:border-t shadow-sm"
           contentClassName="pb-3">
-          <WriterToolsSection />
+          <WritingTools />
         </CollapsibleSection>
         <CollapsibleSection
           title="Tangled"

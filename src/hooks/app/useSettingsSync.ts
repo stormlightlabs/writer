@@ -15,7 +15,7 @@ import {
   useViewModeState,
   useWorkspaceDocumentsActions,
   useWorkspaceDocumentsState,
-  useWriterToolsState,
+  useWritingToolsState,
 } from "$state/selectors";
 import { useLayoutStore } from "$state/stores/layout";
 import { useUiStore } from "$state/stores/ui";
@@ -29,7 +29,7 @@ export function useSettingsSync(): void {
   const { focusModeSettings } = useViewModeState();
   const { expandedLocationIds, expandedDirectoriesByLocation } = useWorkspaceDocumentsState();
   const { setSidebarTreeState } = useWorkspaceDocumentsActions();
-  const { styleCheckSettings } = useWriterToolsState();
+  const { styleCheckSettings } = useWritingToolsState();
   const [layoutSettingsHydrated, setLayoutSettingsHydrated] = useState(false);
   const [sidebarTreeHydrated, setSidebarTreeHydrated] = useState(false);
 
