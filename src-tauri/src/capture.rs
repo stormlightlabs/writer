@@ -1,4 +1,6 @@
 use super::AppState;
+use commonplace_core::{AppError, BackendEvent, DocId, ErrorCode, LocationId};
+use commonplace_store::{CaptureMode, GlobalCaptureSettings};
 use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -6,36 +8,78 @@ use tauri::{
     AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
-use writer_core::{AppError, BackendEvent, DocId, ErrorCode, LocationId};
-use writer_store::{CaptureMode, GlobalCaptureSettings};
 
-const QUICK_CAPTURE_WINDOW_LABEL: &str = "quick_capture";
-const MAIN_WINDOW_LABEL: &str = "main";
 const TRAY_ICON_ID: &str = "global_capture_tray";
-const MENU_ITEM_NEW_QUICK_NOTE: &str = "capture.new_quick_note";
-const MENU_ITEM_OPEN_WRITER: &str = "capture.open_writer";
-const MENU_ITEM_TOGGLE_SHORTCUT: &str = "capture.toggle_shortcut";
-const MENU_ITEM_QUIT: &str = "capture.quit";
-const MENU_ITEM_SHORTCUT_STATUS: &str = "capture.status.shortcut";
-const MENU_ITEM_TARGET_STATUS: &str = "capture.status.target";
+
+enum WindowLabels {
+    QuickCaptureWindow,
+    MainWindow,
+}
+
+impl WindowLabels {
+    fn as_str(&self) -> &'static str {
+        match self {
+            WindowLabels::QuickCaptureWindow => "quick_capture",
+            WindowLabels::MainWindow => "main",
+        }
+    }
+}
+
+enum MenuItemLabels {
+    NewQuickNote,
+    OpenCommonplace,
+    ToggleShortcut,
+    Quit,
+    ShortcutStatus,
+    TargetStatus,
+}
+
+impl MenuItemLabels {
+    fn as_str(&self) -> &'static str {
+        match self {
+            MenuItemLabels::NewQuickNote => "capture.new_quick_note",
+            MenuItemLabels::OpenCommonplace => "capture.open_commonplace",
+            MenuItemLabels::ToggleShortcut => "capture.toggle_shortcut",
+            MenuItemLabels::Quit => "capture.quit",
+            MenuItemLabels::ShortcutStatus => "capture.status.shortcut",
+            MenuItemLabels::TargetStatus => "capture.status.target",
+        }
+    }
+
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "capture.new_quick_note" => Some(MenuItemLabels::NewQuickNote),
+            "capture.open_commonplace" => Some(MenuItemLabels::OpenCommonplace),
+            "capture.toggle_shortcut" => Some(MenuItemLabels::ToggleShortcut),
+            "capture.quit" => Some(MenuItemLabels::Quit),
+            "capture.status.shortcut" => Some(MenuItemLabels::ShortcutStatus),
+            "capture.status.target" => Some(MenuItemLabels::TargetStatus),
+            _ => None,
+        }
+    }
+}
 
 /// Ensures the quick capture window exists and returns it.
 pub fn ensure_quick_capture_window(app: &AppHandle) -> Result<WebviewWindow, AppError> {
-    if let Some(window) = app.get_webview_window(QUICK_CAPTURE_WINDOW_LABEL) {
+    if let Some(window) = app.get_webview_window(WindowLabels::QuickCaptureWindow.as_str()) {
         return Ok(window);
     }
 
-    let window = WebviewWindowBuilder::new(app, QUICK_CAPTURE_WINDOW_LABEL, WebviewUrl::App("/".into()))
-        .title("Quick Capture")
-        .inner_size(560.0, 420.0)
-        .min_inner_size(360.0, 260.0)
-        .resizable(true)
-        .always_on_top(true)
-        .visible(false)
-        .center()
-        .focused(true)
-        .build()
-        .map_err(|e| AppError::io(format!("Failed to create quick capture window: {}", e)))?;
+    let window = WebviewWindowBuilder::new(
+        app,
+        WindowLabels::QuickCaptureWindow.as_str(),
+        WebviewUrl::App("/".into()),
+    )
+    .title("Quick Capture")
+    .inner_size(560.0, 420.0)
+    .min_inner_size(360.0, 260.0)
+    .resizable(true)
+    .always_on_top(true)
+    .visible(false)
+    .center()
+    .focused(true)
+    .build()
+    .map_err(|e| AppError::io(format!("Failed to create quick capture window: {}", e)))?;
 
     Ok(window)
 }
@@ -56,7 +100,7 @@ pub fn show_quick_capture_window(app: &AppHandle) -> Result<(), AppError> {
 
 /// Shows and focuses the main window.
 pub fn show_main_window(app: &AppHandle) -> Result<(), AppError> {
-    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+    if let Some(window) = app.get_webview_window(WindowLabels::MainWindow.as_str()) {
         window
             .show()
             .map_err(|e| AppError::io(format!("Failed to show main window: {}", e)))?;
@@ -144,11 +188,11 @@ fn toggle_shortcut_pause_from_tray(app: &AppHandle) -> Result<(), AppError> {
 }
 
 fn handle_tray_menu_action(app: &AppHandle, item_id: &str) -> Result<(), AppError> {
-    match item_id {
-        MENU_ITEM_NEW_QUICK_NOTE => show_quick_capture_window(app),
-        MENU_ITEM_OPEN_WRITER => show_main_window(app),
-        MENU_ITEM_TOGGLE_SHORTCUT => toggle_shortcut_pause_from_tray(app),
-        MENU_ITEM_QUIT => {
+    match MenuItemLabels::from_str(item_id) {
+        Some(MenuItemLabels::NewQuickNote) => show_quick_capture_window(app),
+        Some(MenuItemLabels::OpenCommonplace) => show_main_window(app),
+        Some(MenuItemLabels::ToggleShortcut) => toggle_shortcut_pause_from_tray(app),
+        Some(MenuItemLabels::Quit) => {
             app.exit(0);
             Ok(())
         }
@@ -166,13 +210,25 @@ pub fn build_or_update_tray_menu(app: &AppHandle, settings: &GlobalCaptureSettin
         return Ok(());
     }
 
-    let new_quick_note = MenuItem::with_id(app, MENU_ITEM_NEW_QUICK_NOTE, "New Quick Note", true, None::<&str>)
-        .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
-    let open_writer = MenuItem::with_id(app, MENU_ITEM_OPEN_WRITER, "Open Writer", true, None::<&str>)
-        .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
+    let new_quick_note = MenuItem::with_id(
+        app,
+        MenuItemLabels::NewQuickNote.as_str(),
+        "New Quick Note",
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
+    let open_commonplace = MenuItem::with_id(
+        app,
+        MenuItemLabels::OpenCommonplace.as_str(),
+        "Open Commonplace",
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
     let toggle_shortcut = MenuItem::with_id(
         app,
-        MENU_ITEM_TOGGLE_SHORTCUT,
+        MenuItemLabels::ToggleShortcut.as_str(),
         tray_pause_label(settings.paused),
         true,
         None::<&str>,
@@ -180,7 +236,7 @@ pub fn build_or_update_tray_menu(app: &AppHandle, settings: &GlobalCaptureSettin
     .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
     let shortcut_status = MenuItem::with_id(
         app,
-        MENU_ITEM_SHORTCUT_STATUS,
+        MenuItemLabels::ShortcutStatus.as_str(),
         tray_shortcut_status(settings),
         false,
         None::<&str>,
@@ -188,7 +244,7 @@ pub fn build_or_update_tray_menu(app: &AppHandle, settings: &GlobalCaptureSettin
     .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
     let target_status = MenuItem::with_id(
         app,
-        MENU_ITEM_TARGET_STATUS,
+        MenuItemLabels::TargetStatus.as_str(),
         tray_target_status(settings),
         false,
         None::<&str>,
@@ -198,14 +254,14 @@ pub fn build_or_update_tray_menu(app: &AppHandle, settings: &GlobalCaptureSettin
         .map_err(|e| AppError::io(format!("Failed to create tray menu separator: {}", e)))?;
     let separator_b = PredefinedMenuItem::separator(app)
         .map_err(|e| AppError::io(format!("Failed to create tray menu separator: {}", e)))?;
-    let quit = MenuItem::with_id(app, MENU_ITEM_QUIT, "Quit", true, None::<&str>)
+    let quit = MenuItem::with_id(app, MenuItemLabels::Quit.as_str(), "Quit", true, None::<&str>)
         .map_err(|e| AppError::io(format!("Failed to create tray menu item: {}", e)))?;
 
     let menu = Menu::with_items(
         app,
         &[
             &new_quick_note,
-            &open_writer,
+            &open_commonplace,
             &toggle_shortcut,
             &separator_a,
             &shortcut_status,
@@ -226,7 +282,7 @@ pub fn build_or_update_tray_menu(app: &AppHandle, settings: &GlobalCaptureSettin
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ICON_ID)
         .menu(&menu)
-        .tooltip("Writer")
+        .tooltip("Commonplace")
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| {
             let menu_id = event.id().as_ref();
@@ -295,7 +351,7 @@ pub fn validate_shortcut_format(shortcut: &str) -> Result<(), AppError> {
 /// Handles capture submission based on mode.
 pub async fn handle_capture_submit(
     app: &AppHandle, mode: CaptureMode, text: String, target_location_id: Option<i64>, inbox_dir: &str,
-    append_target: &Option<writer_store::CaptureDocRef>, close_after_save: bool,
+    append_target: &Option<commonplace_store::CaptureDocRef>, close_after_save: bool,
 ) -> Result<CaptureSubmitResult, AppError> {
     let state = app.state::<AppState>();
 

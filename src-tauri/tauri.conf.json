@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Writer",
+  "productName": "Commonplace",
   "version": "0.2.0",
-  "identifier": "org.stormlightlabs.writer",
+  "identifier": "org.stormlightlabs.commonplace",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Writer",
+        "title": "Commonplace",
         "width": 1200,
         "height": 800,
         "minWidth": 600,
@@ -26,7 +26,7 @@
       "iconPath": "icons/tray.png",
       "iconAsTemplate": true,
       "showMenuOnLeftClick": true,
-      "tooltip": "Writer"
+      "tooltip": "Commonplace"
     },
     "security": { "assetProtocol": { "enable": true, "scope": [] }, "csp": null }
   },

@@ -1,7 +1,7 @@
 use super::{AppState, CommandResponse};
+use commonplace_core::{CommandResult, LocationId};
 use std::path::PathBuf;
 use tauri::State;
-use writer_core::{CommandResult, LocationId};
 
 /// Imports an image into the given location, placing it in `target_dir`.
 ///
@@ -89,7 +89,7 @@ pub fn asset_resolve(
 /// Converts a location-scoped SVG asset to a PNG data URL.
 ///
 /// Resolves the asset path relative to the source document, then delegates to
-/// `writer_store::Store::svg_to_png`. Returns `data:image/png;base64,...`.
+/// `commonplace_store::Store::svg_to_png`. Returns `data:image/png;base64,...`.
 #[tauri::command]
 pub fn svg_to_png(
     state: State<'_, AppState>, location_id: i64, doc_rel_path: String, asset_path: String,

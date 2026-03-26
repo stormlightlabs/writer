@@ -1,5 +1,5 @@
 [package]
-name = "writer-store"
+name = "commonplace-store"
 version = "0.2.0"
 edition = "2024"
 
@@ -16,5 +16,5 @@ blake3 = "1"
 resvg = "0.44"
 base64 = "0.22"
 
-writer-core = { path = "../core" }
-writer-md = { path = "../markdown" }
+commonplace-core = { path = "../core" }
+commonplace-md = { path = "../markdown" }

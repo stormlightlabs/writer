@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use writer_core::{AppError, Encoding, SearchMatch};
+use commonplace_core::{AppError, Encoding, SearchMatch};
 
 pub fn hash_text(text: &str) -> String {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();

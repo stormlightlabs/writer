@@ -964,6 +964,86 @@ dependencies = [
 ]
 
 [[package]]
+name = "commonplace"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "commonplace-core",
+ "commonplace-md",
+ "commonplace-store",
+ "comrak",
+ "log",
+ "notify",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-log",
+ "tauri-plugin-opener",
+ "tauri-plugin-persisted-scope",
+ "tauri-plugin-store",
+ "tempfile",
+ "thiserror 2.0.18",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "commonplace-core"
+version = "0.2.0"
+dependencies = [
+ "aho-corasick",
+ "chrono",
+ "comrak",
+ "jacquard",
+ "log",
+ "octocrab",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "commonplace-md"
+version = "0.2.0"
+dependencies = [
+ "commonplace-core",
+ "comrak",
+ "docx-rs",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror 2.0.18",
+ "toml 0.9.12+spec-1.1.0",
+]
+
+[[package]]
+name = "commonplace-store"
+version = "0.2.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "commonplace-core",
+ "commonplace-md",
+ "dirs",
+ "log",
+ "resvg",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "compression-codecs"
 version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9081,86 +9161,6 @@ name = "writeable"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9edde0db4769d2dc68579893f2306b26c6ecfbe0ef499b013d731b7b9247e0b9"
-
-[[package]]
-name = "writer"
-version = "0.2.0"
-dependencies = [
- "async-trait",
- "chrono",
- "comrak",
- "log",
- "notify",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-log",
- "tauri-plugin-opener",
- "tauri-plugin-persisted-scope",
- "tauri-plugin-store",
- "tempfile",
- "thiserror 2.0.18",
- "unicode-segmentation",
- "writer-core",
- "writer-md",
- "writer-store",
-]
-
-[[package]]
-name = "writer-core"
-version = "0.2.0"
-dependencies = [
- "aho-corasick",
- "chrono",
- "comrak",
- "jacquard",
- "log",
- "octocrab",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "writer-md"
-version = "0.2.0"
-dependencies = [
- "comrak",
- "docx-rs",
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror 2.0.18",
- "toml 0.9.12+spec-1.1.0",
- "writer-core",
-]
-
-[[package]]
-name = "writer-store"
-version = "0.2.0"
-dependencies = [
- "base64 0.22.1",
- "blake3",
- "chrono",
- "dirs",
- "log",
- "resvg",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "writer-core",
- "writer-md",
-]
 
 [[package]]
 name = "wry"

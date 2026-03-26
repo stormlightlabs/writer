@@ -13,7 +13,7 @@ Full spec in [docs/integration/gh.md](../integration/gh.md).
 
 ### Implemented now
 
-1. **Backend gist service** in `writer-core` using `octocrab`.
+1. **Backend gist service** in `commonplace-core` using `octocrab`.
 2. **Tauri commands** `gist_list_public` and `gist_get` wired and registered.
 3. **Frontend import flow parity** in the shared AtProto import sheet:
 	- Tangled/GitHub mode switch

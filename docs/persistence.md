@@ -17,7 +17,7 @@ Frontend persists settings through Tauri commands rather than local browser pers
 
 ## SQLite Data
 
-Store location: app data directory under app identifier `org.stormlightlabs.writer`.
+Store location: app data directory under app identifier `org.stormlightlabs.commonplace`.
 
 Key persisted domains:
 

@@ -1,14 +1,16 @@
 use super::{AppState, CommandResponse};
+use commonplace_core::{AppError, CommandResult, LocationId};
+use commonplace_md::{
+    DocxExportResult, MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult, TextExportResult,
+};
 use std::path::PathBuf;
 use tauri::State;
-use writer_core::{AppError, CommandResult, LocationId};
-use writer_md::{DocxExportResult, MarkdownEngine, MarkdownProfile, PdfRenderResult, RenderResult, TextExportResult};
 
 /// Returns the markdown help guide content
 #[tauri::command]
 pub fn markdown_help_get() -> CommandResponse<String> {
     log::debug!("Fetching markdown help content");
-    Ok(CommandResult::ok(writer_store::get_markdown_help().to_string()))
+    Ok(CommandResult::ok(commonplace_store::get_markdown_help().to_string()))
 }
 
 /// Renders markdown text to HTML with metadata extraction
@@ -45,7 +47,7 @@ pub fn markdown_render(
         Err(e) => {
             log::error!("Failed to render markdown: {}", e);
             Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
+                commonplace_core::ErrorCode::Parse,
                 format!("Failed to render markdown: {}", e),
             )))
         }
@@ -86,7 +88,7 @@ pub fn markdown_render_for_pdf(
         Err(e) => {
             log::error!("Failed to render markdown for PDF: {}", e);
             Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
+                commonplace_core::ErrorCode::Parse,
                 format!("Failed to render markdown for PDF: {}", e),
             )))
         }
@@ -127,7 +129,7 @@ pub fn markdown_render_for_text(
         Err(e) => {
             log::error!("Failed to render markdown for text export: {}", e);
             Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
+                commonplace_core::ErrorCode::Parse,
                 format!("Failed to render markdown for text export: {}", e),
             )))
         }
@@ -169,7 +171,7 @@ pub fn markdown_render_for_docx(
         Err(e) => {
             log::error!("Failed to render markdown for DOCX: {}", e);
             Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Parse,
+                commonplace_core::ErrorCode::Parse,
                 format!("Failed to render markdown for DOCX: {}", e),
             )))
         }

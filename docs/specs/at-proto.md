@@ -118,11 +118,11 @@ src-tauri/src/
 │   └── strings.rs      # Tauri command wrappers for string CRUD
 ```
 
-`writer_core::atproto::AtProtoState` owns the Jacquard OAuth client plus persisted session metadata paths. Tauri keeps an `Arc<AtProtoState>` inside `AppState`, restores the existing session during app startup, and exposes the shared `SessionInfo` / `StringRecord` types from `writer_core::atproto`.
+`commonplace_core::atproto::AtProtoState` owns the Jacquard OAuth client plus persisted session metadata paths. Tauri keeps an `Arc<AtProtoState>` inside `AppState`, restores the existing session during app startup, and exposes the shared `SessionInfo` / `StringRecord` types from `commonplace_core::atproto`.
 
 **Tauri command boundary:**
 
-The commands remain in `src-tauri`, but they are thin wrappers around `writer_core::atproto` methods and types:
+The commands remain in `src-tauri`, but they are thin wrappers around `commonplace_core::atproto` methods and types:
 
 | Command                  | Args                                   | Returns                                | Auth      |
 | ------------------------ | -------------------------------------- | -------------------------------------- | --------- |
@@ -354,7 +354,7 @@ src-tauri/src/
 │   └── standard_site.rs  # publication/post command wrappers
 ```
 
-In the current codebase, the conversion logic belongs in `writer_core::atproto`, with `src-tauri` only responsible for exposing it through Tauri commands. Part 1 is implemented as [leaflet.rs](/Users/owais/Desktop/writer/crates/core/src/atproto/leaflet.rs); `standard_site.rs` remains the intended shared-core location for the record fetch/list helpers from later parts.
+In the current codebase, the conversion logic belongs in `commonplace_core::atproto`, with `src-tauri` only responsible for exposing it through Tauri commands. Part 1 is implemented as [leaflet.rs](/Users/owais/Desktop/writer/crates/core/src/atproto/leaflet.rs); `standard_site.rs` remains the intended shared-core location for the record fetch/list helpers from later parts.
 
 ### Tauri Commands
 
@@ -373,7 +373,7 @@ In the current codebase, the conversion logic belongs in `writer_core::atproto`,
 `PublicationListResult`: `publications`, `skipped_invalid_count` (`skippedInvalidCount` in the frontend) so malformed publication records can be skipped without failing the whole browse.
 `PostRecord`: `uri`, `tid`, `title`, `description`, `text_content`, `published_at`, `updated_at`, `tags`, `publication_uri`.
 
-`post_get_markdown` should perform Leaflet→Markdown conversion in `writer_core::atproto::leaflet`, with the Tauri command acting as a transport wrapper so the frontend receives ready-to-use content.
+`post_get_markdown` should perform Leaflet→Markdown conversion in `commonplace_core::atproto::leaflet`, with the Tauri command acting as a transport wrapper so the frontend receives ready-to-use content.
 
 ### Frontend Structure
 

@@ -1,19 +1,19 @@
 use super::capture;
 use super::locations::*;
+use commonplace_core::atproto::AtProtoState;
+use commonplace_core::github::GithubState;
+use commonplace_core::scan_style_matches;
+use commonplace_core::{
+    AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
+    SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch, StylePatternInput, StyleScanInput,
+};
+use commonplace_store::{SidebarTreeState, Store, StyleCheckSettings, UiLayoutSettings};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
-use writer_core::atproto::AtProtoState;
-use writer_core::github::GithubState;
-use writer_core::scan_style_matches;
-use writer_core::{
-    AppError, BackendEvent, CommandResult, DocContent, DocId, DocListOptions, DocMeta, LocationDescriptor, LocationId,
-    SaveResult, SearchFilters, SearchHit, StyleCategorySettings, StyleMatch, StylePatternInput, StyleScanInput,
-};
-use writer_store::{SidebarTreeState, Store, StyleCheckSettings, UiLayoutSettings};
 
 mod atproto;
 mod github;
@@ -56,7 +56,7 @@ impl AppState {
 #[tauri::command]
 pub fn app_version_get() -> CommandResponse<String> {
     Ok(CommandResult::ok(
-        option_env!("WRITER_APP_VERSION")
+        option_env!("COMMONPLACE_APP_VERSION")
             .unwrap_or(concat!("v", env!("CARGO_PKG_VERSION")))
             .to_string(),
     ))
@@ -105,7 +105,7 @@ pub async fn location_add_via_dialog(
         None => {
             log::debug!("Folder picker cancelled by user");
             Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::PermissionDenied,
+                commonplace_core::ErrorCode::PermissionDenied,
                 "No folder selected",
             )))
         }
@@ -235,7 +235,7 @@ pub fn sidebar_tree_set(state: State<'_, AppState>, state_value: SidebarTreeStat
 }
 
 #[tauri::command]
-pub fn session_last_doc_get(state: State<'_, AppState>) -> CommandResponse<Option<writer_store::CaptureDocRef>> {
+pub fn session_last_doc_get(state: State<'_, AppState>) -> CommandResponse<Option<commonplace_store::CaptureDocRef>> {
     log::debug!("Loading last opened document session state");
 
     match state.store.last_open_doc_get() {
@@ -249,7 +249,7 @@ pub fn session_last_doc_get(state: State<'_, AppState>) -> CommandResponse<Optio
 
 #[tauri::command]
 pub fn session_last_doc_set(
-    state: State<'_, AppState>, doc_ref: Option<writer_store::CaptureDocRef>,
+    state: State<'_, AppState>, doc_ref: Option<commonplace_store::CaptureDocRef>,
 ) -> CommandResponse<bool> {
     log::debug!("Persisting last opened document session state");
 
@@ -263,7 +263,7 @@ pub fn session_last_doc_set(
 }
 
 #[tauri::command]
-pub fn session_get(state: State<'_, AppState>) -> CommandResponse<writer_store::SessionState> {
+pub fn session_get(state: State<'_, AppState>) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!("Loading persisted session state");
 
     match state.store.session_get() {
@@ -277,8 +277,8 @@ pub fn session_get(state: State<'_, AppState>) -> CommandResponse<writer_store::
 
 #[tauri::command]
 pub fn session_open_tab(
-    state: State<'_, AppState>, doc_ref: writer_store::CaptureDocRef, title: String,
-) -> CommandResponse<writer_store::SessionState> {
+    state: State<'_, AppState>, doc_ref: commonplace_store::CaptureDocRef, title: String,
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!(
         "Opening session tab: location_id={}, rel_path={}",
         doc_ref.location_id,
@@ -295,7 +295,9 @@ pub fn session_open_tab(
 }
 
 #[tauri::command]
-pub fn session_select_tab(state: State<'_, AppState>, tab_id: String) -> CommandResponse<writer_store::SessionState> {
+pub fn session_select_tab(
+    state: State<'_, AppState>, tab_id: String,
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!("Selecting session tab: {}", tab_id);
 
     match state.store.session_select_tab(&tab_id) {
@@ -308,7 +310,9 @@ pub fn session_select_tab(state: State<'_, AppState>, tab_id: String) -> Command
 }
 
 #[tauri::command]
-pub fn session_close_tab(state: State<'_, AppState>, tab_id: String) -> CommandResponse<writer_store::SessionState> {
+pub fn session_close_tab(
+    state: State<'_, AppState>, tab_id: String,
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!("Closing session tab: {}", tab_id);
 
     match state.store.session_close_tab(&tab_id) {
@@ -323,7 +327,7 @@ pub fn session_close_tab(state: State<'_, AppState>, tab_id: String) -> CommandR
 #[tauri::command]
 pub fn session_reorder_tabs(
     state: State<'_, AppState>, tab_ids: Vec<String>,
-) -> CommandResponse<writer_store::SessionState> {
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!("Reordering session tabs: count={}", tab_ids.len());
 
     match state.store.session_reorder_tabs(&tab_ids) {
@@ -338,7 +342,7 @@ pub fn session_reorder_tabs(
 #[tauri::command]
 pub fn session_mark_tab_modified(
     state: State<'_, AppState>, tab_id: String, is_modified: bool,
-) -> CommandResponse<writer_store::SessionState> {
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!(
         "Marking session tab modified: tab_id={}, is_modified={}",
         tab_id,
@@ -356,9 +360,9 @@ pub fn session_mark_tab_modified(
 
 #[tauri::command]
 pub fn session_update_tab_doc(
-    state: State<'_, AppState>, location_id: i64, old_rel_path: String, new_doc_ref: writer_store::CaptureDocRef,
+    state: State<'_, AppState>, location_id: i64, old_rel_path: String, new_doc_ref: commonplace_store::CaptureDocRef,
     title: String,
-) -> CommandResponse<writer_store::SessionState> {
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!(
         "Updating session tab document: location_id={}, old_rel_path={}, new_rel_path={}",
         location_id,
@@ -381,7 +385,7 @@ pub fn session_update_tab_doc(
 #[tauri::command]
 pub fn session_drop_doc(
     state: State<'_, AppState>, location_id: i64, rel_path: String,
-) -> CommandResponse<writer_store::SessionState> {
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!(
         "Dropping document from session tabs: location_id={}, rel_path={}",
         location_id,
@@ -400,7 +404,7 @@ pub fn session_drop_doc(
 #[tauri::command]
 pub fn session_prune_locations(
     state: State<'_, AppState>, valid_location_ids: Vec<i64>,
-) -> CommandResponse<writer_store::SessionState> {
+) -> CommandResponse<commonplace_store::SessionState> {
     log::debug!("Pruning session tabs by locations: count={}", valid_location_ids.len());
 
     let valid_ids: HashSet<i64> = valid_location_ids.into_iter().collect();
@@ -851,7 +855,7 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
         Ok(watcher) => watcher,
         Err(error) => {
             return Ok(CommandResult::err(AppError::new(
-                writer_core::ErrorCode::Io,
+                commonplace_core::ErrorCode::Io,
                 format!("Failed to create watcher: {}", error),
             )));
         }
@@ -865,7 +869,7 @@ pub fn watch_enable(app: AppHandle, state: State<'_, AppState>, location_id: i64
             error
         );
         return Ok(CommandResult::err(AppError::new(
-            writer_core::ErrorCode::Io,
+            commonplace_core::ErrorCode::Io,
             format!("Failed to watch path: {}", error),
         )));
     }
@@ -964,7 +968,7 @@ pub fn style_check_scan(
 
 /// Gets global capture settings
 #[tauri::command]
-pub fn global_capture_get(state: State<'_, AppState>) -> CommandResponse<writer_store::GlobalCaptureSettings> {
+pub fn global_capture_get(state: State<'_, AppState>) -> CommandResponse<commonplace_store::GlobalCaptureSettings> {
     log::debug!("Loading global capture settings");
 
     match state.store.global_capture_get() {
@@ -979,7 +983,7 @@ pub fn global_capture_get(state: State<'_, AppState>) -> CommandResponse<writer_
 /// Sets global capture settings and reconciles runtime state
 #[tauri::command]
 pub fn global_capture_set(
-    app: AppHandle, state: State<'_, AppState>, settings: writer_store::GlobalCaptureSettings,
+    app: AppHandle, state: State<'_, AppState>, settings: commonplace_store::GlobalCaptureSettings,
 ) -> CommandResponse<bool> {
     log::debug!("Persisting global capture settings");
 
@@ -1019,8 +1023,8 @@ pub fn global_capture_open(app: AppHandle) -> CommandResponse<bool> {
 /// Submits a capture
 #[tauri::command]
 pub async fn global_capture_submit(
-    app: AppHandle, state: State<'_, AppState>, mode: writer_store::CaptureMode, text: String,
-    destination: Option<writer_store::CaptureDocRef>, open_main_after_save: Option<bool>,
+    app: AppHandle, state: State<'_, AppState>, mode: commonplace_store::CaptureMode, text: String,
+    destination: Option<commonplace_store::CaptureDocRef>, open_main_after_save: Option<bool>,
 ) -> CommandResponse<capture::CaptureSubmitResult> {
     log::debug!("Submitting capture: mode={:?}, text_len={}", mode, text.len());
 
@@ -1035,14 +1039,14 @@ pub async fn global_capture_submit(
     };
 
     let append_target = if let Some(ref dest) = destination {
-        Some(writer_store::CaptureDocRef { location_id: dest.location_id, rel_path: dest.rel_path.clone() })
+        Some(commonplace_store::CaptureDocRef { location_id: dest.location_id, rel_path: dest.rel_path.clone() })
     } else {
         settings.append_target.clone()
     };
 
     let quick_note_inbox_dir: &str = if matches!(
         mode,
-        writer_store::CaptureMode::QuickNote | writer_store::CaptureMode::WritingSession
+        commonplace_store::CaptureMode::QuickNote | commonplace_store::CaptureMode::WritingSession
     ) {
         if let Some(ref dest) = destination {
             let requested_dir = dest.rel_path.trim();

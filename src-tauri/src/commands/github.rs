@@ -1,8 +1,8 @@
 //! GitHub gist read commands
 
 use super::{AppState, CommandResponse};
+use commonplace_core::{github::GistRecord, CommandResult};
 use tauri::State;
-use writer_core::{github::GistRecord, CommandResult};
 
 #[tauri::command]
 pub async fn gist_list_public(state: State<'_, AppState>, username: String) -> CommandResponse<Vec<GistRecord>> {

@@ -21,15 +21,15 @@ fn build_log_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .clear_targets()
         .target(Target::new(TargetKind::Stdout));
 
-    if let Ok(store_dir) = writer_store::Store::default_app_dir() {
+    if let Ok(store_dir) = commonplace_store::Store::default_app_dir() {
         log_builder = log_builder.target(Target::new(TargetKind::Folder {
             path: store_dir.join("logs"),
-            file_name: Some("writer".to_string()),
+            file_name: Some("commonplace".to_string()),
         }));
     } else {
         eprintln!("Falling back to OS log directory because store directory could not be resolved.");
         log_builder = log_builder.target(Target::new(TargetKind::LogDir {
-            file_name: Some("writer".to_string()),
+            file_name: Some("commonplace".to_string()),
         }));
     }
 
@@ -49,7 +49,7 @@ pub fn run() {
         .setup(|app| {
             log::info!("Initializing application");
 
-            let store = match writer_store::Store::open_default() {
+            let store = match commonplace_store::Store::open_default() {
                 Ok(store) => {
                     log::info!("Store initialized successfully");
                     store

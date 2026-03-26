@@ -1,11 +1,11 @@
 //! Standard.Site publication/post commands
 
 use super::{AppState, CommandResponse};
-use tauri::State;
-use writer_core::{
+use commonplace_core::{
     atproto::{PostRecord, PublicationListResult, PublicationRecord},
     CommandResult,
 };
+use tauri::State;
 
 #[tauri::command]
 pub async fn publication_list(

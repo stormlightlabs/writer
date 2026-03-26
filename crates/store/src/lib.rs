@@ -1,4 +1,10 @@
 use chrono::{DateTime, Utc};
+use commonplace_core::{
+    AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
+    LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
+};
+use commonplace_core::{is_conflicted_filename, is_path_within_location, normalize_relative_path};
+use commonplace_md::{MarkdownEngine, MarkdownProfile};
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter, types::Value};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -7,12 +13,6 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use writer_core::{
-    AppError, DocContent, DocId, DocListOptions, DocMeta, DocSortField, Encoding, ErrorCode, LineEnding,
-    LocationDescriptor, LocationId, SavePolicy, SaveResult, SearchFilters, SearchHit, SortOrder,
-};
-use writer_core::{is_conflicted_filename, is_path_within_location, normalize_relative_path};
-use writer_md::{MarkdownEngine, MarkdownProfile};
 
 mod file_utils;
 mod settings;
@@ -72,7 +72,7 @@ impl Store {
     pub fn default_app_dir() -> Result<PathBuf, AppError> {
         dirs::data_dir()
             .ok_or_else(|| AppError::io("Could not determine data directory"))
-            .map(|data_dir| data_dir.join("org.stormlightlabs.writer"))
+            .map(|data_dir| data_dir.join("org.stormlightlabs.commonplace"))
     }
 
     pub fn default_db_path() -> Result<PathBuf, AppError> {
@@ -2320,25 +2320,25 @@ impl Store {
             return Err(AppError::new(ErrorCode::InvalidPath, "Image extension is required"));
         }
 
-        if !writer_core::SUPPORTED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+        if !commonplace_core::SUPPORTED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
             return Err(AppError::new(
                 ErrorCode::InvalidPath,
                 format!(
                     "Unsupported image format: .{}. Allowed: {}",
                     ext,
-                    writer_core::SUPPORTED_IMAGE_EXTENSIONS.join(", ")
+                    commonplace_core::SUPPORTED_IMAGE_EXTENSIONS.join(", ")
                 ),
             ));
         }
 
         let bytes_len = source_bytes.len() as u64;
-        if bytes_len > writer_core::IMAGE_SIZE_LIMIT_BYTES {
+        if bytes_len > commonplace_core::IMAGE_SIZE_LIMIT_BYTES {
             return Err(AppError::new(
                 ErrorCode::InvalidPath,
                 format!(
                     "Image exceeds size limit ({} bytes > {} bytes)",
                     bytes_len,
-                    writer_core::IMAGE_SIZE_LIMIT_BYTES
+                    commonplace_core::IMAGE_SIZE_LIMIT_BYTES
                 ),
             ));
         }
@@ -2385,7 +2385,7 @@ impl Store {
             .and_then(|e| e.to_str())
             .map(|e| e.to_lowercase())
             .unwrap_or_default();
-        if !writer_core::SUPPORTED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+        if !commonplace_core::SUPPORTED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
             return Err(AppError::invalid_path(format!(
                 "rel_path does not point to a supported image file: {}",
                 rel_path
@@ -2498,7 +2498,7 @@ mod tests {
         (store, temp_dir)
     }
 
-    fn create_test_location(store: &Store) -> (writer_core::LocationId, TempDir) {
+    fn create_test_location(store: &Store) -> (commonplace_core::LocationId, TempDir) {
         let location_dir = TempDir::new().unwrap();
         let settings = UiLayoutSettings { create_readme_in_new_locations: false, ..UiLayoutSettings::default() };
         store.ui_layout_set(&settings).unwrap();
@@ -3411,7 +3411,7 @@ mod tests {
         assert!(readme_path.exists(), "README.md should be created by default");
 
         let content = std::fs::read_to_string(&readme_path).unwrap();
-        assert!(content.starts_with("# Markdown Guide for Writer"));
+        assert!(content.starts_with("# Markdown Guide for Commonplace"));
     }
 
     #[test]
@@ -3527,7 +3527,7 @@ mod tests {
     fn test_image_import_size_limit() {
         let (store, _tmp) = create_test_store();
         let (location_id, _location_dir) = create_test_location(&store);
-        let oversized: Vec<u8> = vec![0u8; (writer_core::IMAGE_SIZE_LIMIT_BYTES + 1) as usize];
+        let oversized: Vec<u8> = vec![0u8; (commonplace_core::IMAGE_SIZE_LIMIT_BYTES + 1) as usize];
         let src = write_test_image(_tmp.path(), "big.png", &oversized);
         let result = store.image_import(location_id, &src, "");
 

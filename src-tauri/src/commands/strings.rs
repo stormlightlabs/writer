@@ -1,8 +1,8 @@
 //! Tangled.org string (snippets/gists) commands
 
 use super::{AppState, CommandResponse};
+use commonplace_core::{atproto::StringRecord, CommandResult};
 use tauri::State;
-use writer_core::{atproto::StringRecord, CommandResult};
 
 #[tauri::command]
 pub async fn string_create(

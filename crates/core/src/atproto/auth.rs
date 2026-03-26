@@ -384,10 +384,10 @@ mod tests {
         fs::write(
             dir.path().join(AUTH_STORE_FILENAME),
             r#"{
-              "did:plc:alice_writer-session": {
+              "did:plc:alice_commonplace-session": {
                 "OAuth": {
                   "account_did": "did:plc:alice",
-                  "session_id": "writer-session"
+                  "session_id": "commonplace-session"
                 }
               }
             }"#,
@@ -397,7 +397,7 @@ mod tests {
         let meta = state.read_session_meta_from_auth_store().expect("meta");
         assert_eq!(meta.did, "did:plc:alice");
         assert_eq!(meta.handle, "did:plc:alice");
-        assert_eq!(meta.session_id, "writer-session");
+        assert_eq!(meta.session_id, "commonplace-session");
     }
 
     #[test]

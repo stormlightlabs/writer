@@ -3,7 +3,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use super::text_utils;
-use writer_core::AppError;
+use commonplace_core::AppError;
 
 const INDEXABLE_EXTENSIONS: &[&str] = &["md", "markdown", "mdx", "txt"];
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];

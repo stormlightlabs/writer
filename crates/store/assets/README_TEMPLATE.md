@@ -1,12 +1,12 @@
-# Markdown Guide for Writer
+# Markdown Guide for Commonplace
 
-This guide covers every Markdown feature available in Writer's default rendering profile. Use the **Preview** pane (`⌘ P` or the split-view toggle) to see any of these examples rendered in real time.
+This guide covers every Markdown feature available in Commonplace's default rendering profile. Use the **Preview** pane (`⌘ P` or the split-view toggle) to see any of these examples rendered in real time.
 
 ---
 
 ## Headings
 
-Prefix a line with `#` characters. Writer supports six levels:
+Prefix a line with `#` characters. Commonplace supports six levels:
 
 ```md
 # Heading 1
@@ -69,16 +69,16 @@ so a `<br>` appears before this line.
 ### Inline Links
 
 ```md
-[Writer](https://example.com)
-[Writer](https://example.com "Homepage tooltip")
+[Commonplace](https://example.com)
+[Commonplace](https://example.com "Homepage tooltip")
 ```
 
-[Writer](https://example.com)
-[Writer](https://example.com "Homepage tooltip")
+[Commonplace](https://example.com)
+[Commonplace](https://example.com "Homepage tooltip")
 
 ### Autolinks
 
-Writer automatically converts bare URLs into clickable links:
+Commonplace automatically converts bare URLs into clickable links:
 
 ```md
 https://example.com
@@ -89,14 +89,14 @@ https://example.com
 ### Reference Links
 
 ```md
-[Writer][homepage]
+[Commonplace][homepage]
 
-[homepage]: https://example.com "Writer Homepage"
+[homepage]: https://example.com "Commonplace Homepage"
 ```
 
-[Writer][homepage]
+[Commonplace][homepage]
 
-[homepage]: https://example.com "Writer Homepage"
+[homepage]: https://example.com "Commonplace Homepage"
 
 ---
 
@@ -144,7 +144,7 @@ Use `-`, `*`, or `+` as bullet markers:
 
 ### Task Lists
 
-Writer supports GitHub-style task lists. They are tracked in the status bar with a completion counter.
+Commonplace supports GitHub-style task lists. They are tracked in the status bar with a completion counter.
 
 ```md
 - [x] Draft outline

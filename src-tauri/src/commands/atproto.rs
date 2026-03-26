@@ -1,7 +1,7 @@
 use super::{AppState, CommandResponse};
+use commonplace_core::atproto::SessionInfo;
+use commonplace_core::{AppError, CommandResult, ErrorCode, LocationId};
 use tauri::State;
-use writer_core::atproto::SessionInfo;
-use writer_core::{AppError, CommandResult, ErrorCode, LocationId};
 
 #[tauri::command]
 pub async fn atproto_login(state: State<'_, AppState>, handle: String) -> CommandResponse<SessionInfo> {

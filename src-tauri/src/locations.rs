@@ -1,12 +1,12 @@
 use super::AppState;
+use commonplace_core::{AppError, BackendEvent, DocId, FsChangeKind, FsEntryKind, LocationDescriptor, LocationId};
+use commonplace_store::Store;
 use notify::event::{ModifyKind, RemoveKind};
 use notify::{Event, EventKind};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_fs::FsExt;
-use writer_core::{AppError, BackendEvent, DocId, FsChangeKind, FsEntryKind, LocationDescriptor, LocationId};
-use writer_store::Store;
 
 fn should_process_watcher_event(kind: &EventKind) -> bool {
     matches!(kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_))
@@ -414,7 +414,7 @@ pub(super) fn ensure_default_capture_location(app: &AppHandle, state: &AppState)
 }
 
 pub(super) fn resolve_capture_target_location(
-    app: &AppHandle, state: &AppState, destination: &Option<writer_store::CaptureDocRef>,
+    app: &AppHandle, state: &AppState, destination: &Option<commonplace_store::CaptureDocRef>,
 ) -> Result<LocationId, AppError> {
     if let Some(destination_ref) = destination {
         let destination_id = LocationId(destination_ref.location_id);

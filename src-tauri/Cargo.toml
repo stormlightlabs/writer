@@ -1,5 +1,5 @@
 [package]
-name = "writer"
+name = "commonplace"
 version = "0.2.0"
 description = "A Tauri App"
 authors = ["Owais J."]
@@ -10,7 +10,7 @@ license = "AGPL-3.0-or-later"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "writer_lib"
+name = "commonplace_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -36,9 +36,9 @@ comrak = "0.50"
 reqwest = "0.12"
 unicode-segmentation = "1"
 
-writer-core = { path = "../crates/core" }
-writer-md = { path = "../crates/markdown" }
-writer-store = { path = "../crates/store" }
+commonplace-core = { path = "../crates/core" }
+commonplace-md = { path = "../crates/markdown" }
+commonplace-store = { path = "../crates/store" }
 
 [dev-dependencies]
 tempfile = "3.27"
