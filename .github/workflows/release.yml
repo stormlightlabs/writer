@@ -21,13 +21,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: 'Writer ${{ github.ref_name }}'
+          name: 'Commonplace ${{ github.ref_name }}'
           body: |
             See the assets to download and install this version.
 
             **macOS users:** The app is not yet signed/notarized. macOS will block it on first launch. To fix:
             1. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**, or
-            2. Run `xattr -c Writer*.dmg` in Terminal before opening the DMG.
+            2. Run `xattr -c Commonplace*.dmg` in Terminal before opening the DMG.
 
             Signing is in progress — this will be resolved in a future release.
           draft: true

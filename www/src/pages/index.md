@@ -1,10 +1,10 @@
 ---
-title: Writer - Local-First Markdown Editor
+title: Commonplace - Local-First Markdown Editor
 description: A distraction-free, local-first markdown editor.
 template: home
 ---
 
-# Everything in Writer
+# Everything in Commonplace
 
 ## Markdown Editor
 
@@ -45,7 +45,7 @@ The sidebar is a full file browser. Every operation is instant and reliable.
 - **Context Menu** - Right-click to move, rename, or delete
 - **Nested Directories** - Full folder tree support with create/rename/delete
 - **Filesystem Watching** - External changes are picked up automatically
-- **Conflict Detection** - Writer tells you when a file was modified outside the editor
+- **Conflict Detection** - Commonplace tells you when a file was modified outside the editor
 
 ![context menu in sidebar](/static/images/context-menu-in-sidebar.png)
 
@@ -71,10 +71,6 @@ Filenames are cleaned up automatically so you don't have to worry about special 
 
 ![pdf export](/static/images/pdf-export.png)
 
-## Session Persistence
-
-Close Writer, reopen it, and everything is where you left it. Open tabs, pane sizes, layout state are restored automatically.
-
 ## Open Source
 
-Writer is free and open source. The code is available to inspect, fork, and contribute to.
+Commonplace is free and open source. The code is available to inspect, fork, and contribute to.

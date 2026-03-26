@@ -32,6 +32,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.14
         version: 6.39.14
+      '@fontsource-variable/google-sans':
+        specifier: ^5.2.1
+        version: 5.2.1
       '@fontsource-variable/ibm-plex-sans':
         specifier: ^5.2.8
         version: 5.2.8
@@ -656,6 +659,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource-variable/google-sans@5.2.1':
+    resolution: {integrity: sha512-dMyMlJVRJgQvvYlJLcrg2oiVzlKAuIMrbDxIMchEiMBGmpOA6VnVblj3cPfJyA0/fNPQS6krZaiJyJjHJZmkzw==}
 
   '@fontsource-variable/ibm-plex-sans@5.2.8':
     resolution: {integrity: sha512-n5PF2iFa0CZT0QYTPzxvZ39opC9LnU0zdoRccoADbs+Dtsd+lbXOZF7RNuIPHcQX1dKjF63sxnRImQIB5eD0Ag==}
@@ -3586,6 +3592,8 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.14.1': {}
+
+  '@fontsource-variable/google-sans@5.2.1': {}
 
   '@fontsource-variable/ibm-plex-sans@5.2.8': {}
 

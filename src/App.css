@@ -5,9 +5,9 @@
 
 @theme {
     --font-sans:
-        "Libre Franklin Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Google Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
         Roboto, sans-serif;
-    --font-headline: "Space Grotesk Variable", var(--font-sans);
+    --font-headline: "Google Sans Variable", var(--font-sans);
     --font-serif:
         "Writer IBM Plex Serif", "IBM Plex Serif", Georgia, "Times New Roman",
         serif;

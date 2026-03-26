@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 const AppTitle = ({ version }: { version: string }) => (
   <div className="flex items-center gap-2.5 shrink-0">
     <PenIcon size="md" className="text-accent-blue" />
-    <h1 className="m-0 text-lg font-bold tracking-tighter text-text-primary font-headline">Writer</h1>
+    <h1 className="m-0 text-lg font-bold text-text-primary font-headline">Commonplace</h1>
     <Version value={version} />
   </div>
 );

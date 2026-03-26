@@ -15,11 +15,11 @@
     "lint:fix": "oxlint --fix",
     "check": "tsc --noEmit",
     "format": "dprint fmt .",
-    "www:dev": "pnpm --filter @writer/www dev",
-    "www:build": "pnpm --filter @writer/www build",
-    "www:serve": "pnpm --filter @writer/www serve",
-    "www:pages:deploy": "pnpm --filter @writer/www pages:deploy",
-    "www:pages:deploy:preview": "pnpm --filter @writer/www pages:deploy:preview"
+    "www:dev": "pnpm --filter @commonplace/www dev",
+    "www:build": "pnpm --filter @commonplace/www build",
+    "www:serve": "pnpm --filter @commonplace/www serve",
+    "www:pages:deploy": "pnpm --filter @commonplace/www pages:deploy",
+    "www:pages:deploy:preview": "pnpm --filter @commonplace/www pages:deploy:preview"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -30,6 +30,7 @@
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.14",
+    "@fontsource-variable/google-sans": "^5.2.1",
     "@fontsource-variable/ibm-plex-sans": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource-variable/libre-franklin": "^5.2.8",

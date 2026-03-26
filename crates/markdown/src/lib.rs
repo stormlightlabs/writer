@@ -447,7 +447,7 @@ impl MarkdownEngine {
 
         if options.include_footer {
             output.push_str("  <footer>\n");
-            output.push_str("    <p>Exported from Writer</p>\n");
+            output.push_str("    <p>Exported from Commonplace</p>\n");
             output.push_str("  </footer>\n");
         }
 
@@ -1230,7 +1230,7 @@ mod tests {
             .unwrap();
 
         assert!(html.contains("<footer>"));
-        assert!(html.contains("Exported from Writer"));
+        assert!(html.contains("Exported from Commonplace"));
     }
 
     #[test]

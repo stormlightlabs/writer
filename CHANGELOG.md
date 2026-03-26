@@ -55,7 +55,7 @@
 
 ## v0.1.0 — 2026-02-26
 
-- Initial stable release of Writer.
+- Initial stable release of ~~Writer~~ Commonplace.
 - Location system with scoped permissions, persisted access, and startup reconciliation.
 - Elm-style ports layer with structured command results and backend event channel.
 - Document catalog with atomic saves, conflict detection, and autosave loop.
