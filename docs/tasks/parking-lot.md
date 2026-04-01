@@ -2,7 +2,7 @@
 title: "Parking Lot"
 description: >
     A collection of ideas/proposals for new features and quick bug notes.
-updated: 2026-03-25
+updated: 2026-04-01
 ---
 
 - Consider using [ignore](https://crates.io/crates/ignore) crate for directory walking.
@@ -25,15 +25,14 @@ updated: 2026-03-25
 
 2. **Corrupted DMG / Gatekeeper quarantine**[^5][^6]
 
-   `release.yml` passes no Apple signing secrets to `tauri-action`[^7]; `tauri.conf.json` has no `macOS` signing block. Gatekeeper quarantines the unsigned DMG.
+   `release.yml` now imports the Apple Developer certificate on macOS runners, resolves a `Developer ID Application` signing identity, and passes the notarization environment to Tauri.[^7][^8] This still depends on the repository secrets being configured correctly and should be verified with a real test release.
 
    **Subtasks:**
    - [ ] Obtain Apple Developer credentials (Developer ID cert `.p12`, Apple ID, app-specific password, Team ID)
    - [ ] Add GitHub secrets: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
-   - [ ] Pass secrets as env vars to `tauri-apps/tauri-action` in `release.yml`
-   - [ ] Add `bundle.macOS.signingIdentity` to `tauri.conf.json`
+   - [x] Import the Apple certificate and resolve the signing identity in `release.yml`
+   - [x] Pass Apple signing and notarization env vars to `tauri-apps/tauri-action` in `release.yml`
    - [ ] Verify with `spctl --assess` after a test release
-   - [ ] Interim: add `xattr -c` workaround to release notes
 3. **Outline utilization**
    - Use Rust-generated `metadata.outline` from `markdown_render` in the UI for document structure navigation/jump-to-heading behavior
 4. **Perf**
@@ -50,3 +49,4 @@ updated: 2026-03-25
 [^5]: [Apple Gatekeeper and notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
 [^6]: [`xattr -c` workaround for quarantined DMGs](https://support.apple.com/en-us/102445)
 [^7]: [`tauri-apps/tauri-action` signing docs](https://v2.tauri.app/distribute/sign/macos/)
+[^8]: [Tauri environment variables reference](https://v2.tauri.app/reference/environment-variables/)
