@@ -29,7 +29,8 @@
       "$constants": ["./constants.ts"],
       "$dnd": ["./dnd/index.ts"],
       "$dnd/*": ["./dnd/*"]
-    }
+    },
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

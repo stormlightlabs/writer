@@ -2,51 +2,45 @@
 title: "Parking Lot"
 description: >
     A collection of ideas/proposals for new features and quick bug notes.
-updated: 2026-04-01
+updated: 2026-04-15
 ---
+
+## Ideas
 
 - Consider using [ignore](https://crates.io/crates/ignore) crate for directory walking.
+- Semantic search?
+- Audio support?
 
----
+## Planned
 
-1. **CJK Font Support**[^1][^2][^3] ✅
-
-   Maple Mono and Noto Sans CJK SC are now bundled for PDF rendering. `@react-pdf/renderer` has no fallback chains[^4] — CJK fonts must be registered and selected explicitly.
-
-   Noto SC/JP/KR subsets remain loaded for editor/browser display via `@fontsource`, while the PDF renderer uses bundled OTF/TTF assets from `public/fonts/`.
-
-   - [x] Bundle Maple Mono TTF in `public/fonts/` (`maple-mono-{400,700}-{normal,italic}.ttf`)
-   - [x] Extend `FontName` (`src/pdf/types.ts`), `EditorFontFamily` (`src/types.ts`), `FONT_PATHS` + `BUILTIN_FONT_FAMILY_MAP` (`src/pdf/fonts.ts`)
-   - [x] Add `@font-face` rules in `src/styles/fonts.css`; import Noto SC/JP/KR subsets for editor
-   - [x] Add `FontConfig` entries in `src/pdf/fonts.ts`
-   - [x] Add Maple Mono to `EDITOR_FONT_OPTIONS` (`FontRows.tsx`)
-   - [x] `hasCjkContent` + `resolvePdfFont` in `src/pdf/fonts.ts`; auto-switch to Maple Mono or Noto Sans CJK SC when the selected rendered font lacks CJK coverage; `PdfCjkWarning` banner in ExportOptions
-   - [x] Bundle Noto Sans CJK SC OTF assets in `public/fonts/` and register them like the other PDF fonts
-
-2. **Corrupted DMG / Gatekeeper quarantine**[^5][^6]
-
-   `release.yml` now imports the Apple Developer certificate on macOS runners, resolves a `Developer ID Application` signing identity, and passes the notarization environment to Tauri.[^7][^8] This still depends on the repository secrets being configured correctly and should be verified with a real test release.
-
-   **Subtasks:**
-   - [ ] Obtain Apple Developer credentials (Developer ID cert `.p12`, Apple ID, app-specific password, Team ID)
-   - [ ] Add GitHub secrets: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
-   - [x] Import the Apple certificate and resolve the signing identity in `release.yml`
-   - [x] Pass Apple signing and notarization env vars to `tauri-apps/tauri-action` in `release.yml`
-   - [ ] Verify with `spctl --assess` after a test release
-3. **Outline utilization**
-   - Use Rust-generated `metadata.outline` from `markdown_render` in the UI for document structure navigation/jump-to-heading behavior
+1. **CJK Font Support**
+   Released in v0.3.0
+2. **Corrupted DMG / Gatekeeper quarantine**
+   Resolved as of v0.3.0
+3. **Outline utilization** → [spec](../specs/outline.md)
+   - [ ] **Anchor generation** — populate `Heading.anchor` in `crates/markdown/src/parser.rs`, inject `id` attrs on rendered `<h1>`–`<h6>`, deduplicate collisions
+   - [ ] **State & selector** — add `outlinePanelOpen` to store, `useOutline()` selector returning `Heading[]` from active doc render result
+   - [ ] **OutlinePanel component** — `src/components/OutlinePanel/OutlinePanel.tsx`, indented heading list, truncation, empty state
+   - [ ] **Scroll-to-heading** — preview: `postMessage` → `scrollIntoView`; editor: find heading line → CM `scrollIntoView`
+   - [ ] **Layout integration** — right sidebar slot (mutual-exclusive with diagnostics), toolbar toggle, `Cmd+Shift+O` shortcut
+   - [ ] **Tests** — Rust: anchor generation + dedup; Frontend: OutlinePanel render, click→scroll, empty state
 4. **Perf**
    - Incremental render scheduling (debounce, worker thread)
    - Indexing in background with progress events with UI feedback
 5. **Recovery**
    - Corrupt settings/workspace → app resets safely
    - Missing location root → UI prompts to relink/remove
-
-[^1]: [Noto Sans CJK — Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+SC)
-[^2]: [Maple Mono — GitHub](https://github.com/subframe7536/maple-font)
-[^3]: [IBM Plex CJK coverage gap](https://github.com/IBM/plex/issues/148) — IBM Plex does not include CJK glyphs.
-[^4]: [`@react-pdf/renderer` font registration — no fallback chain](https://react-pdf.org/fonts#register)
-[^5]: [Apple Gatekeeper and notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
-[^6]: [`xattr -c` workaround for quarantined DMGs](https://support.apple.com/en-us/102445)
-[^7]: [`tauri-apps/tauri-action` signing docs](https://v2.tauri.app/distribute/sign/macos/)
-[^8]: [Tauri environment variables reference](https://v2.tauri.app/reference/environment-variables/)
+6. **Wikilinks** → [tasks](./syntax-extensions.md#wikilinks)
+   - [ ] Enable Comrak `wikilinks_title_after_pipe` on `GfmSafe`/`Extended` profiles
+   - [ ] `wikilink_resolve` command — fuzzy-match target against indexed docs
+   - [ ] Extract `metadata.wikilinks` during parse
+   - [ ] Editor `[[` autocomplete via `@codemirror/autocomplete` + `doc_list`
+   - [ ] Preview `data-wikilink` click → navigate
+   - [ ] Broken-link diagnostic
+   - [ ] Tests (Rust + Frontend)
+7. **Find in document** → [spec](../specs/find.md)
+   - [ ] Relocate focus mode from `Cmd+F` → `Cmd+E`
+   - [ ] Wire `@codemirror/search` extension + `searchKeymap` into editor (new compartment)
+   - [ ] Theme `.cm-search` panel for oxocarbon light/dark
+   - [ ] `Cmd+Shift+H` for find & replace
+   - [ ] Tests — shortcut rebinding, panel open/close
